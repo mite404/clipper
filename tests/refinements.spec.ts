@@ -131,6 +131,25 @@ test('marks a mouse position, centers it during zoom and reopens embedded media 
     .toBeGreaterThan(0.1);
 });
 
+test('ends mouse marking when its zoom is removed, and does not arm the next zoom', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await page.getByRole('button', { name: 'Add zoom at playhead' }).first().click();
+  await page.getByRole('button', { name: 'Mark mouse position' }).click();
+  await expect(page.getByRole('button', { name: 'Set mouse focus on screen' })).toBeVisible();
+  await page.getByRole('button', { name: 'Remove zoom' }).click();
+  await expect(page.getByText(/Recordings do not contain cursor metadata/)).toHaveCount(0);
+  // Shortcuts were dead while marking stayed armed with nothing left to cancel it.
+  await page.keyboard.press('l');
+  await expect(page.getByTestId('transport-state')).not.toHaveText('Paused');
+  await page.keyboard.press('k');
+  await page.getByRole('button', { name: 'Add zoom at playhead' }).first().click();
+  await expect(page.getByRole('button', { name: 'Mark mouse position' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Set mouse focus on screen' })).toHaveCount(0);
+});
+
 test('rejects a malformed project without replacing the current edit', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });

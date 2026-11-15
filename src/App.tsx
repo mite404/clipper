@@ -465,7 +465,7 @@ export function App() {
   const [muted, setMuted] = useState<Track[]>([]);
   const [message, setMessage] = useState('Ready for your next story.');
   const [help, setHelp] = useState(false);
-  const [markingMouse, setMarkingMouse] = useState(false);
+  const [markingZoomId, setMarkingZoomId] = useState<string | null>(null);
   const [exportWidth, setExportWidth] = useState<1920 | 3840>(1920);
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const exportAbort = useRef<AbortController | null>(null);
@@ -476,6 +476,8 @@ export function App() {
   const duration = Math.max(1, ...edit.clips.map((c) => c.start + c.duration));
   const asset = assets.find((a) => a.id === sourceId);
   const selectedZoom = edit.zooms.find((z) => z.id === selected);
+  // Marking belongs to one zoom, so it ends by itself when that zoom is removed, undone or deselected.
+  const markingMouse = markingZoomId !== null && selectedZoom?.id === markingZoomId;
   const screenMask = maskRect('screen', edit.layout); // → stage rect the mouse target covers
   const selectedClip = edit.clips.find((c) => c.id === selected);
   const compositionProps = useMemo(
@@ -730,7 +732,7 @@ export function App() {
   const openProject = async (file: File) => {
     setBusy(true);
     setSpeed(0);
-    setMarkingMouse(false);
+    setMarkingZoomId(null);
     const imported: Asset[] = [];
     try {
       const project = parseProject(await file.text());
@@ -760,7 +762,7 @@ export function App() {
   };
   const exportVideo = async () => {
     setSpeed(0);
-    setMarkingMouse(false);
+    setMarkingZoomId(null);
     setExportProgress(0);
     const controller = new AbortController();
     exportAbort.current = controller;
@@ -972,13 +974,13 @@ export function App() {
                           z.id === selectedZoom.id ? { ...z, x, y } : z,
                         ),
                       });
-                      setMarkingMouse(false);
+                      setMarkingZoomId(null);
                       setMessage(`Mouse focus marked at ${x}%, ${y}%. Preview the zoom hold.`);
                     }}
                     onKeyDown={(event) => {
                       if (event.key === 'Escape') {
                         event.preventDefault();
-                        setMarkingMouse(false);
+                        setMarkingZoomId(null);
                         return;
                       }
                       if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key))
@@ -1132,7 +1134,7 @@ export function App() {
             selected={selected}
             onSelect={(id) => {
               setSelected(id);
-              setMarkingMouse(false);
+              setMarkingZoomId(null);
             }}
             onSeek={seek}
             muted={muted}
@@ -1145,7 +1147,7 @@ export function App() {
             }
             onZoomSelect={(id) => {
               setSelected(id);
-              setMarkingMouse(false);
+              setMarkingZoomId(null);
             }}
             onTrim={(clip) => {
               setSpeed(0);
@@ -1167,7 +1169,7 @@ export function App() {
           onAddZoom={addZoom}
           onMarkMouse={() => {
             setSpeed(0);
-            setMarkingMouse((active) => !active);
+            setMarkingZoomId(markingMouse ? null : (selectedZoom?.id ?? null));
           }}
           markingMouse={markingMouse}
           onRemoveZoom={removeSelected}
