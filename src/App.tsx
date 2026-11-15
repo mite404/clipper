@@ -516,9 +516,6 @@ export function App() {
   useEffect(() => {
     assetsRef.current = assets;
   }, [assets]);
-  useEffect(() => {
-    frameRef.current = frame;
-  }, [frame]);
 
   const change = useCallback(
     (next: Edit) => {
@@ -574,11 +571,15 @@ export function App() {
       }
     };
     const ended = () => setSpeed(0);
+    // Painting is throttled while playing, so a pause shows the frame the player really holds.
+    const paused = () => setFrame(frameRef.current);
     ref.addEventListener('frameupdate', update);
     ref.addEventListener('ended', ended);
+    ref.addEventListener('pause', paused);
     return () => {
       ref.removeEventListener('frameupdate', update);
       ref.removeEventListener('ended', ended);
+      ref.removeEventListener('pause', paused);
     };
   }, [hasAssets]);
   useEffect(() => {
@@ -1050,7 +1051,7 @@ export function App() {
               <IconButton label="Go to start" onClick={() => seek(0)}>
                 <SkipBack size={16} />
               </IconButton>
-              <IconButton label="Previous frame" onClick={() => seek(frame - 1)}>
+              <IconButton label="Previous frame" onClick={() => seek(frameRef.current - 1)}>
                 <ArrowLeft size={15} />
               </IconButton>
               <button
@@ -1067,7 +1068,7 @@ export function App() {
                   <Play size={17} fill="currentColor" />
                 )}
               </button>
-              <IconButton label="Next frame" onClick={() => seek(frame + 1)}>
+              <IconButton label="Next frame" onClick={() => seek(frameRef.current + 1)}>
                 <ArrowRight size={15} />
               </IconButton>
               <span className="playback-state" data-testid="transport-state">

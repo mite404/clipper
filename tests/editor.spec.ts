@@ -225,3 +225,27 @@ test('leaves modified keys to the browser instead of editing the timeline', asyn
   await page.keyboard.press('Control+z');
   await expect(clips).toHaveCount(2);
 });
+
+test('shows the frame the preview holds after a pause', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const shown = async () => {
+    const [minutes, seconds, frames] = (await page.getByTestId('timecode').innerText())
+      .split(':')
+      .map(Number);
+    return (minutes * 60 + seconds) * 30 + frames;
+  };
+  // Painting is throttled during playback, so several pauses are needed to land between paints.
+  for (const playFor of [430, 470, 510, 550, 590]) {
+    await page.keyboard.press('l');
+    await page.waitForTimeout(playFor);
+    await page.keyboard.press('k');
+    await expect(page.getByTestId('transport-state')).toHaveText('Paused');
+    const paused = await shown();
+    // The arrow key steps from the frame the player really holds.
+    await page.keyboard.press('ArrowRight');
+    expect(await shown()).toBe(paused + 1);
+    await page.getByRole('button', { name: 'Previous frame' }).click();
+    expect(await shown()).toBe(paused);
+  }
+});
