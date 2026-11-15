@@ -25,6 +25,11 @@ and nowhere else. Other documents are records, not queues:
   `git push origin HEAD:main`. One ticket per push, one commit, no force-push. Subscribe to CI for
   the pushed commit. The slot is released when that run is green.
 - `.fallow-health-baseline.json` only shrinks. Put new logic in new modules with small functions.
+- A push gate audits the working tree as well as the commit. Push from a clean tree: stash or commit
+  work in progress first.
+- Author and committer are `Ethan Anderson <150651098+mite404@users.noreply.github.com>` and nothing
+  else. Check both with `git log --format='%ae %ce' -1` before every push. A rebase takes the
+  committer from `git config`, so set `user.email` in every checkout.
 - Correctness, performance and unblocking refactors go before the features that depend on them.
   Unrelated cleanup never delays CLIP-7 to CLIP-10.
 - No production deploy is authorized. Do not transfer the owner's recording, its sidecar, frames or
@@ -50,13 +55,13 @@ reading, complete) and the
 OpenScreen recording; the video and sidecar were not transferred, but four derived images are
 hosted, see [Known limits](#known-limits)).
 
-### Files while CLIP-7 is in flight
+### Files while CLIP-8 is in flight
 
-| Owner                    | Paths                                                                                                                                                                                                                                                                                       |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Reference features       | new `src/cursor.ts`, `src/cursor.test.ts`, `tests/cursor.spec.ts`; `src/media.ts`, `src/project.ts`, `src/project.test.ts`; new standalone `CursorControls` component; additions to `src/Editor.stories.tsx` and `src/components.tsx`; one `SourceMonitor` reset condition in `src/App.tsx` |
-| Queue thread             | `src/timeline.ts`, `src/timeline.test.ts`, new `src/stage.ts`, `src/export.ts`, `src/Composition.tsx`, `tests/export.spec.ts`                                                                                                                                                               |
-| Shared, keep edits small | `src/App.tsx` (features: import, open, save and asset state; refactors: geometry constants and transport), `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                                                      |
+| Owner                    | Paths                                                                                                                                                                                                                                                                 |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Reference features       | new `src/cursor-motion.ts` and its test; `src/cursor.ts`, `src/CursorControls.tsx`, `src/cursor.fixture.ts`, `tests/cursor.spec.ts`; the preview in `src/Composition.tsx`; `drawFrame` in `src/export.ts`; additions to `src/Editor.stories.tsx` and `src/styles.css` |
+| Queue thread             | `src/stage.ts`, `src/timeline.ts`, their tests, `src/project.ts` and `src/project.test.ts` (REF-4), the rest of `src/export.ts`, `tests/export.spec.ts`, `tests/performance.spec.ts`                                                                                  |
+| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                                                                                                                      |
 
 ## Status key
 
@@ -69,17 +74,24 @@ hosted, see [Known limits](#known-limits)).
 
 ## Delivered on main
 
-| Ticket   | What                                               | Commit                                                                                          | Evidence                                                                                                               |
-| -------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| CLIP-1   | Play responds without freezing the editor          | [`5a9bc1f`](https://github.com/mite404/clipper/commit/5a9bc1f44c21fad089a25c5cbd4ad05530624a9c) | [CI 43733454487](https://github.com/mite404/clipper/actions/runs/43733454487), steel thread record                     |
-| CLIP-2   | Swap sides, edge trims, scalable timeline          | `5a9bc1f`                                                                                       | same                                                                                                                   |
-| CLIP-3   | Manual fixed-point zoom ("mark mouse position")    | `5a9bc1f`                                                                                       | same                                                                                                                   |
-| CLIP-4   | Portable version-2 project save and reopen         | `5a9bc1f`                                                                                       | same                                                                                                                   |
-| CLIP-5   | Local HD and 4K export                             | `5a9bc1f`                                                                                       | same; WebM VP9/Opus only, see [Known limits](#known-limits)                                                            |
-| CLIP-6   | Shared records, tests, verification skill, CI gate | `5a9bc1f`                                                                                       | same                                                                                                                   |
-| BOOT-1   | Orb bootstrap `.agents/setup`                      | [`1a5a572`](https://github.com/mite404/clipper/commit/1a5a572a32f68106930c69806bbb4465f2d30da0) | [CI 43735176014](https://github.com/mite404/clipper/actions/runs/43735176014)                                          |
-| VERIFY-1 | Isolated verification CLI `verify.mjs`             | [`2bb8263`](https://github.com/mite404/clipper/commit/2bb8263ce692770f62d0ae37ca3bcb162424cadf) | [CI 43736808192](https://github.com/mite404/clipper/actions/runs/43736808192); its 4 CLI tests are local-only          |
-| DOC-1    | Baseline review record and this list               | [`f702568`](https://github.com/mite404/clipper/commit/f7025680e6144abc216097009f99d5e5ce363028) | [CI 43761407681](https://github.com/mite404/clipper/actions/runs/43761407681), [refactor01.md](refactor/refactor01.md) |
+| Ticket   | What                                                                                                                  | Commit                                                                                          | Evidence                                                                                                                                            |
+| -------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLIP-1   | Play responds without freezing the editor                                                                             | [`5a9bc1f`](https://github.com/mite404/clipper/commit/5a9bc1f44c21fad089a25c5cbd4ad05530624a9c) | [CI 43733454487](https://github.com/mite404/clipper/actions/runs/43733454487), steel thread record                                                  |
+| CLIP-2   | Swap sides, edge trims, scalable timeline                                                                             | `5a9bc1f`                                                                                       | same                                                                                                                                                |
+| CLIP-3   | Manual fixed-point zoom ("mark mouse position")                                                                       | `5a9bc1f`                                                                                       | same                                                                                                                                                |
+| CLIP-4   | Portable version-2 project save and reopen                                                                            | `5a9bc1f`                                                                                       | same                                                                                                                                                |
+| CLIP-5   | Local HD and 4K export                                                                                                | `5a9bc1f`                                                                                       | same; WebM VP9/Opus only, see [Known limits](#known-limits)                                                                                         |
+| CLIP-6   | Shared records, tests, verification skill, CI gate                                                                    | `5a9bc1f`                                                                                       | same                                                                                                                                                |
+| BOOT-1   | Orb bootstrap `.agents/setup`                                                                                         | [`1a5a572`](https://github.com/mite404/clipper/commit/1a5a572a32f68106930c69806bbb4465f2d30da0) | [CI 43735176014](https://github.com/mite404/clipper/actions/runs/43735176014)                                                                       |
+| VERIFY-1 | Isolated verification CLI `verify.mjs`                                                                                | [`2bb8263`](https://github.com/mite404/clipper/commit/2bb8263ce692770f62d0ae37ca3bcb162424cadf) | [CI 43736808192](https://github.com/mite404/clipper/actions/runs/43736808192); its 4 CLI tests are local-only                                       |
+| DOC-1    | Baseline review record and this list                                                                                  | [`f702568`](https://github.com/mite404/clipper/commit/f7025680e6144abc216097009f99d5e5ce363028) | [CI 43761407681](https://github.com/mite404/clipper/actions/runs/43761407681), [refactor01.md](refactor/refactor01.md)                              |
+| REF-5    | Split never mints a duplicate clip ID (#13)                                                                           | [`42324e3`](https://github.com/mite404/clipper/commit/42324e3623a56c6421b99bc9106b088fd28add4f) | [CI 43762022693](https://github.com/mite404/clipper/actions/runs/43762022693)                                                                       |
+| REF-2    | `covers` and `sourceFrame` helpers for timeline-to-source time (#22)                                                  | [`e2ad4b8`](https://github.com/mite404/clipper/commit/e2ad4b8b3380a73fac2e269c820c9e6381655759) | [CI 43762301972](https://github.com/mite404/clipper/actions/runs/43762301972)                                                                       |
+| CLIP-7   | Import, validate and persist OpenScreen pointer sidecars per source asset                                             | [`e9f99fc`](https://github.com/mite404/clipper/commit/e9f99fce4a02be914b6f6d8cb387c152326d737b) | [CI 43762946342](https://github.com/mite404/clipper/actions/runs/43762946342); proven on synthetic fixtures only, see [Known limits](#known-limits) |
+| REF-1    | One `src/stage.ts` for mask rects, cover crop and zoom projection; preview pan pinned (#1, #17)                       | [`4cc0761`](https://github.com/mite404/clipper/commit/4cc07610fb7f027324aab54287f2c1f1c7bc72a0) | [CI 43763390689](https://github.com/mite404/clipper/actions/runs/43763390689); preview screenshots byte-identical before and after                  |
+| REF-3    | `drawFrame` seam in the exporter, pooled decode canvases (#26, #25)                                                   | [`64e5578`](https://github.com/mite404/clipper/commit/64e5578c79f0195a3170538048efe6ce99c4b983) | [CI 43763669090](https://github.com/mite404/clipper/actions/runs/43763669090); pooled and unpooled decode matched on 180 frames                     |
+| VERIFY-2 | Retired `control-clipper.sh`; feature files use `verify.mjs`; story tally removed                                     | [`de27f06`](https://github.com/mite404/clipper/commit/de27f06c96166824c174dc82a9a8f8c214ca2029) | [CI 43764263393](https://github.com/mite404/clipper/actions/runs/43764263393); the three helper defects were reproduced first                       |
+| REF-4    | Zoom limits and overlap rule in `src/timeline.ts`, enforced by the project parser; ramp and pan pinned (#8, #10, #12) | [`43cb368`](https://github.com/mite404/clipper/commit/43cb368907755de265ea2a830761754965cb267d) | [CI 43764564172](https://github.com/mite404/clipper/actions/runs/43764564172)                                                                       |
 
 CLIP-3 is manual fixed-point zoom. It does not satisfy CLIP-7 to CLIP-10. BOOT-1 is on `main` but
 does not run for new orbs, because new orbs clone the Amp-hosted scaffold.
@@ -90,19 +102,13 @@ Top to bottom is the order of work. The two lanes run in parallel; pushes are se
 
 ### Mouse tracking and automatic zoom
 
-| Order | Ticket  | What                                                                                                              | Risk   | Status      | Owner              | Needs                            |
-| ----- | ------- | ----------------------------------------------------------------------------------------------------------------- | ------ | ----------- | ------------------ | -------------------------------- |
-| 1     | CLIP-7  | Import, validate and persist OpenScreen pointer sidecars per source asset                                         | Medium | In progress | Reference features | nothing                          |
-| 2     | REF-5   | Split never mints a duplicate clip ID (#13)                                                                       | Small  | Ready       | Queue thread       | nothing                          |
-| 3     | REF-2   | `covers` and `sourceFrame` helpers for timeline-to-source time (#22)                                              | Small  | Ready       | Queue thread       | nothing                          |
-| 4     | REF-1   | One `src/stage.ts` for mask rects, cover crop and zoom projection; pin the preview transform first (#1, #17)      | Medium | Ready       | Queue thread       | REF-2                            |
-| 5     | REF-3   | `drawFrame` seam in the exporter, canvas pool (#26, #25)                                                          | Medium | Ready       | Queue thread       | REF-1                            |
-| 6     | CLIP-8  | Smooth, trim-aware cursor in preview and export                                                                   | Medium | Blocked     | Reference features | CLIP-7, REF-1, REF-2, REF-3      |
-| 7     | REF-4   | Zoom placement rules in `src/timeline.ts`, enforced by the project parser; ramp and pan assertions (#8, #10, #12) | Small  | Blocked     | Queue thread       | CLIP-7 (shares `src/project.ts`) |
-| 8     | CLIP-9  | Editable zooms generated from recorded clicks                                                                     | Medium | Blocked     | Reference features | CLIP-7, REF-4, D-1               |
-| 9     | REF-6   | Performance gate fails on stalls, not only p95 (#16)                                                              | Medium | Ready       | Queue thread       | nothing                          |
-| 10    | CLIP-10 | Smooth follow framing                                                                                             | Large  | Blocked     | Reference features | CLIP-8, CLIP-9, REF-6            |
-| -     | CLIP-7b | Screen Studio `mousemoves`/`mouseclicks` metadata import                                                          | Medium | Decision    | Reference features | D-4                              |
+| Order | Ticket  | What                                                                                           | Risk   | Status      | Owner              | Needs                                    |
+| ----- | ------- | ---------------------------------------------------------------------------------------------- | ------ | ----------- | ------------------ | ---------------------------------------- |
+| 1     | CLIP-8  | Smooth, trim-aware cursor in preview and export                                                | Medium | In progress | Reference features | nothing                                  |
+| 2     | REF-6   | Performance gate fails on stalls, not only p95 (#16)                                           | Medium | In progress | Queue thread       | nothing                                  |
+| 3     | CLIP-9  | Editable zooms generated from recorded clicks, placed through `ZOOM_LIMITS` and `zoomsOverlap` | Medium | Ready       | Reference features | nothing; follows CLIP-8 in the same lane |
+| 4     | CLIP-10 | Smooth follow framing                                                                          | Large  | Blocked     | Reference features | CLIP-8, CLIP-9, REF-6                    |
+| -     | CLIP-7b | Screen Studio `mousemoves`/`mouseclicks` metadata import                                       | Medium | Decision    | Reference features | D-4                                      |
 
 ### Acceptance added by the real capture
 
@@ -132,27 +138,26 @@ and CLIP-8 in addition to the reference backlog.
 Take these when a push slot is free and the files do not overlap an in-flight ticket. Owner is the
 queue thread unless stated.
 
-| Ticket   | What                                                                                                         | Risk   | Status                                   | Findings                      |
-| -------- | ------------------------------------------------------------------------------------------------------------ | ------ | ---------------------------------------- | ----------------------------- |
-| REF-7    | Modified keys such as Cmd/Ctrl+S no longer split, delete or seek                                             | Small  | Ready                                    | #7                            |
-| REF-8    | Mouse-marking mode ends when its zoom is removed, undone or deselected                                       | Small  | Ready                                    | #6                            |
-| REF-9    | Timecode and frame-step buttons match the held frame after pause                                             | Small  | Ready                                    | #21                           |
-| REF-10   | Trim grip: a click commits nothing; a drag never writes a stale clip                                         | Small  | Ready                                    | #15, #38                      |
-| REF-11   | Multi-file import names its failures; demo fetch has a deadline                                              | Small  | Ready                                    | #9, #37                       |
-| REF-12   | Logo no longer reloads the page; warn before unloading unsaved work                                          | Small  | Ready                                    | #23                           |
-| REF-13   | CI compares the fallow baseline with the pre-push commit                                                     | Small  | Ready                                    | #4                            |
-| REF-14   | One constant each for music gain and peak rate; blob-URL test asserts no fetch                               | Small  | Ready                                    | #32, #33, #34                 |
-| REF-15   | Export audio mix cost follows clip count, not decoded buffer count                                           | Medium | Ready                                    | #2                            |
-| REF-16   | Undo takes one step per gesture and skips no-op edits                                                        | Medium | Ready                                    | #5                            |
-| REF-17   | Export pixel gate checks each panel and more than one frame                                                  | Medium | Ready                                    | #31                           |
-| REF-18   | Editor journeys also run against the production bundle                                                       | Medium | Ready                                    | #18                           |
-| REF-19   | Browser tests for delete, keyboard undo and seek clamping                                                    | Medium | Ready                                    | #20                           |
-| REF-20   | Rewind and export progress re-render at 10 Hz                                                                | Medium | Ready                                    | #36                           |
-| REF-21   | Save: size precheck with a clear message; unreadable or unused media cannot block it                         | Medium | Blocked on CLIP-7                        | #3, #28                       |
-| REF-22   | Project container without one giant JSON string (format version 3, reads version 2)                          | Large  | Proposal                                 | #3                            |
-| REF-23   | Zooms anchored to source time and source coordinates                                                         | Large  | Decision D-1                             | #14, #24                      |
-| REF-24   | Edit operations in a tested reducer outside `App.tsx`                                                        | Large  | Proposal; only if REF-19 proves too thin | #20                           |
-| VERIFY-2 | Retire or repair `control-clipper.sh` and the direct-command prose in the feature files; fix the story count | Small  | Ready, verification tools                | refactor01 agent-facing notes |
+| Ticket | What                                                                                 | Risk   | Status                                   | Findings      |
+| ------ | ------------------------------------------------------------------------------------ | ------ | ---------------------------------------- | ------------- |
+| REF-7  | Modified keys such as Cmd/Ctrl+S no longer split, delete or seek                     | Small  | Ready                                    | #7            |
+| REF-8  | Mouse-marking mode ends when its zoom is removed, undone or deselected               | Small  | Ready                                    | #6            |
+| REF-9  | Timecode and frame-step buttons match the held frame after pause                     | Small  | Ready                                    | #21           |
+| REF-10 | Trim grip: a click commits nothing; a drag never writes a stale clip                 | Small  | Ready                                    | #15, #38      |
+| REF-11 | Multi-file import names its failures; demo fetch has a deadline                      | Small  | Ready                                    | #9, #37       |
+| REF-12 | Logo no longer reloads the page; warn before unloading unsaved work                  | Small  | Ready                                    | #23           |
+| REF-13 | CI compares the fallow baseline with the pre-push commit                             | Small  | Ready                                    | #4            |
+| REF-14 | One constant each for music gain and peak rate; blob-URL test asserts no fetch       | Small  | Ready                                    | #32, #33, #34 |
+| REF-15 | Export audio mix cost follows clip count, not decoded buffer count                   | Medium | Ready                                    | #2            |
+| REF-16 | Undo takes one step per gesture and skips no-op edits                                | Medium | Ready                                    | #5            |
+| REF-17 | Export pixel gate checks each panel and more than one frame                          | Medium | Ready                                    | #31           |
+| REF-18 | Editor journeys also run against the production bundle                               | Medium | Ready                                    | #18           |
+| REF-19 | Browser tests for delete, keyboard undo and seek clamping                            | Medium | Ready                                    | #20           |
+| REF-20 | Rewind and export progress re-render at 10 Hz                                        | Medium | Ready                                    | #36           |
+| REF-21 | Save: size precheck with a clear message; unreadable or unused media cannot block it | Medium | Ready                                    | #3, #28       |
+| REF-22 | Project container without one giant JSON string (format version 3, reads version 2)  | Large  | Proposal                                 | #3            |
+| REF-23 | Zooms anchored to source time and source coordinates                                 | Large  | Decision D-1                             | #14, #24      |
+| REF-24 | Edit operations in a tested reducer outside `App.tsx`                                | Large  | Proposal; only if REF-19 proves too thin | #20           |
 
 REF-13 lifts the one-commit-per-push rule once it is green. REF-22 and REF-23 change saved data, so
 each needs the owner's go-ahead before code.
@@ -210,13 +215,15 @@ inventoried in the reference backlog and are not Clipper tickets.
 
 Work continues on the stated default until the owner says otherwise.
 
-| ID  | Question                                                                                                                          | Default in force                                                                                                          |
-| --- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| D-1 | Should zooms follow their footage (source time, source coordinates) instead of fixed timeline frames and mask percent? (#14, #24) | CLIP-9 stores generated zooms with a source anchor; manual version-2 zooms keep today's behavior until REF-23 is approved |
-| D-2 | Should CI also run on pull requests, and unit tests in the pre-commit hook? (#35)                                                 | No change: direct pushes to `main` with post-push CI                                                                      |
-| D-4 | Provide a real Screen Studio project to build CLIP-7b and CLIP-43 against                                                         | Both stay parked; nothing is inferred from screenshots of file names                                                      |
-| D-5 | Check the Remotion license before commercial or team use                                                                          | Not checked                                                                                                               |
-| D-6 | Four images derived from the real capture are hosted as Amp attachments in the Mac capture thread; keep or delete them            | Left untouched. No deletion is authorized                                                                                 |
+| ID  | Question                                                                                                                                                                                                                               | Default in force                                                                                                                                                                                                      |
+| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D-1 | Should zooms follow their footage (source time, source coordinates) instead of fixed timeline frames and mask percent? (#14, #24)                                                                                                      | CLIP-9 stores generated zooms with a source anchor; manual version-2 zooms keep today's behavior until REF-23 is approved                                                                                             |
+| D-2 | Should CI also run on pull requests, and unit tests in the pre-commit hook? (#35)                                                                                                                                                      | No change: direct pushes to `main` with post-push CI                                                                                                                                                                  |
+| D-4 | Provide a real Screen Studio project to build CLIP-7b and CLIP-43 against                                                                                                                                                              | Both stay parked; nothing is inferred from screenshots of file names                                                                                                                                                  |
+| D-5 | Check the Remotion license before commercial or team use                                                                                                                                                                               | Not checked                                                                                                                                                                                                           |
+| D-6 | Four images derived from the real capture are hosted as Amp attachments in the Mac capture thread; keep or delete them                                                                                                                 | Left untouched. No deletion is authorized                                                                                                                                                                             |
+| D-7 | After CLIP-8 lands, import the real OpenScreen recording into Clipper on the Mac and check the cursor lines up with the video                                                                                                          | Compatibility with real recordings stays unclaimed; work continues on synthetic fixtures                                                                                                                              |
+| D-8 | Three commits on public `main` carry a personal email address instead of the noreply address: `2bb8263` and `de27f06` (author and committer) and `e9f99fc` (committer). Rewrite `main` from `2bb8263` with a force-push to replace it? | Not rewritten: a force-push changes every later commit ID and needs the owner's approval. The old commits would stay fetchable on GitHub by ID until GitHub Support purges them. Both workers have fixed their config |
 
 Settled by the owner:
 
@@ -250,6 +257,7 @@ Settled by the owner:
 - Unsaved edits vanish on reload (REF-12 adds a warning; CLIP-38 adds persistence).
 - Verification ran in Chromium on Linux. Safari, Firefox, physical devices and speaker output are
   unverified.
+- CLIP-7 is proven on synthetic sidecars shaped like the real capture, not on the capture itself.
 - No real cursor recording has been imported into Clipper yet. The capture contract above comes from
   one recording inspected outside Clipper.
 - Cursor-free pixels are supported by 48 sampled positions in that recording, not by every frame.
