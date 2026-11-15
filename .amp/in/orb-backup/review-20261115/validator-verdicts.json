@@ -1,0 +1,52 @@
+{
+  "verdicts": [
+    {
+      "#": 1,
+      "status": "confirmed",
+      "protected_subject": null,
+      "reason": "Read at 5a9bc1f: the same stage table (1280x720, mask x 10/390/908, widths 880/362, top 10, height 700) is typed out separately at src/export.ts:157-171, src/Composition.tsx:38-41, src/App.tsx:815-816 and 938-941 and tests/export.spec.ts:153-177, cover-fit arithmetic exists only at export.ts:180-188 while the preview uses CSS objectFit (Composition.tsx:82-86), and project.ts:1 and export.ts:17 import Layout from the UI component; the four copies agree today, so the precondition is a future layout change or the planned cursor layer and no present preview/export mismatch was shown or measured."
+    },
+    {
+      "#": 2,
+      "status": "confirmed",
+      "protected_subject": null,
+      "reason": "src/export.ts:120-130 creates one AudioBufferSourceNode plus GainNode per decoded buffer and renders once at :133 before the first onProgress above 0 (:150), and my throwaway /tmp Playwright harness in headless Chrome 157 with that graph shape (2 tracks, 1024-frame buffers) rendered 8 s in 982 ms, 16 s in 4,579 ms and 32 s in 30,246 ms against 108 ms for 32 s with one source per clip; the precondition is an AAC/Opus audio clip longer than a few seconds on voice or music, and incidence through a real renderVideo export of such a file was not measured (the synthetic buffers stand in for mediabunny's per-sample buffers, media-sink.js buffers())."
+    },
+    {
+      "#": 3,
+      "status": "confirmed",
+      "protected_subject": null,
+      "reason": "src/project.ts:188-199 turns every asset into one binary string, one base64 data URL and then one JSON.stringify of all media with no size guard anywhere in src (rg found none), and in this repo's Node 26.13.1 (V8 14.6, MAX_STRING_LENGTH 536,870,888) JSON.stringify of two 300M-char media strings threw 'RangeError: Invalid string length' while one succeeded, which App.tsx:704-707 would surface verbatim; the precondition is roughly 400 MB of imported media, the throw was reproduced in Node rather than Chrome, and the 11x memory and timing figures were not re-measured."
+    },
+    {
+      "#": 4,
+      "status": "confirmed",
+      "protected_subject": null,
+      "reason": "Reproduced in a throwaway /tmp clone of 5a9bc1f with fallow from the installed node_modules: after commit A added 30 branches to zoomAt and re-saved the baseline, the exact .github/workflows/ci.yml:36 command exited 1 ('Baseline growth gate failed: ... 3 keys that HEAD^ does not have'), after an unrelated commit B on top it exited 0, and the same tip compared with HEAD~2 exited 1 again; ci.yml:4-5 runs only on push to main at the tip, so the precondition is a push of two or more commits with the growth not in the last one, and how often such pushes happen was not measured."
+    },
+    {
+      "#": 5,
+      "status": "confirmed",
+      "protected_subject": null,
+      "reason": "change() at src/App.tsx:507-513 pushes the previous edit unconditionally with a 50-entry cap and no equality check or coalescing, and the range inputs (App.tsx:265 via :1138, :337 via :1158), the marking-overlay arrow keys (:986) and Timeline.tsx:213/245 all call it per event; a throwaway vitest run showed trimClip(c,'left',-1), ('right',1), ('right',0) and ('left',0) each return a clip value-equal to the input, which onTrim still records; the slider flood itself was established from the code path, not driven in a browser."
+    },
+    {
+      "#": 6,
+      "status": "confirmed",
+      "protected_subject": null,
+      "reason": "removeSelected (src/App.tsx:542-545) and undo (:514-521) never clear markingMouse, and neither the Remove zoom button (:419), toolbar Delete (:1080-1083) nor Undo (:1068) is disabled while it is true, so after removal the keydown gate at :601 returns early, :468 hides all zooms, the banner at :998 stays, the Cancel button at :316-323 unmounts with the zoom, and addZoom (:631-646) selects a new zoom without resetting the flag; the only resets are :715, :745, :958, :964, :1107 and :1120 (open project also clears it, which the finding omits); traced from source, not driven in a browser."
+    },
+    {
+      "#": 7,
+      "status": "confirmed",
+      "protected_subject": null,
+      "reason": "The global keydown handler at src/App.tsx:600-626 lowercases event.key and tests metaKey/ctrlKey only for 'z' (:622), with no modifier or shiftKey check before preventDefault (:609-610), split (:620), removeSelected (:621) or the transport keys, so Ctrl/Cmd+S reaches split() and Ctrl+Shift+Z reaches undo(), which has no redo (:514-521); split only changes the timeline when the playhead is inside a selected clip (otherwise it shows a message), and the chords were not pressed in a browser."
+    },
+    {
+      "#": 8,
+      "status": "confirmed",
+      "protected_subject": null,
+      "reason": "The overlap predicate is written inline at src/App.tsx:638 and :1148-1153, the six-frame minimum at :632/:636/:377 and the 1-3 scale at :333-334 and project.ts:122, while parseProject (project.ts:112-130) has minimum duration 1 and no overlap check; a throwaway vitest run showed parseProject accepting zooms [0,100) and [50,150) plus a 1-frame zoom, with zoomAt at frame 75 returning the first match's scale 2 (timeline.ts:54); the precondition is an opened project file that was not written by this editor, or the planned click-zoom path."
+    }
+  ]
+}
