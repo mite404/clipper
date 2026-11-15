@@ -470,6 +470,8 @@ export function App() {
   const [sourceId, setSourceId] = useState('landscape');
   const [edit, setEdit] = useState<Edit>(INITIAL_EDIT);
   const [history, setHistory] = useState<Edit[]>([]);
+  // The edit the last Save wrote, compared by identity: undoing back to it is saved again.
+  const [savedEdit, setSavedEdit] = useState<Edit | null>(null);
   const [selected, setSelected] = useState('s1');
   const [frame, setFrame] = useState(0);
   const [speed, setSpeed] = useState(0);
@@ -535,6 +537,17 @@ export function App() {
     },
     [edit, assets],
   );
+  // ponytail: history keeps 50 steps, so undoing all of a longer session reads as saved.
+  // Add a saved marker to the edit itself if that ever costs someone work.
+  const unsaved = history.length > 0 && edit !== savedEdit;
+  const working = unsaved || exportProgress !== null;
+  useEffect(() => {
+    if (!working) return;
+    // The browser shows its own "leave site?" prompt; the text cannot be customised.
+    const warn = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [working]);
   const undo = useCallback(() => {
     const previous = history.at(-1);
     if (previous) {
@@ -734,6 +747,7 @@ export function App() {
         await serializeProject(edit, assets, muted),
         'developer-walkthrough.clipper.json',
       );
+      setSavedEdit(edit);
       setMessage('Portable project saved with source media included. No relinking needed.');
     } catch (error) {
       setMessage(
@@ -743,6 +757,9 @@ export function App() {
       setBusy(false);
     }
   };
+  // Opening replaces the whole edit and its undo history, so unsaved work needs a yes first.
+  const mayDiscard = () =>
+    !unsaved || window.confirm('Open this project and discard your unsaved edits?');
   const openProject = async (file: File) => {
     setBusy(true);
     setSpeed(0);
@@ -865,12 +882,12 @@ export function App() {
   return (
     <main className="editor">
       <header className="app-header">
-        <a className="brand" href="/" aria-label="Clipper home">
+        <span className="brand">
           <span className="brand-mark">
             <Clapperboard size={20} />
           </span>
           clipper<span className="beta">LAB</span>
-        </a>
+        </span>
         <div className="project-title">
           <h1>Developer walkthrough</h1>
           <span className="project-tag">LOCAL PROJECT</span>
@@ -888,7 +905,7 @@ export function App() {
               disabled={busy || exportProgress !== null}
               onChange={(event) => {
                 const file = event.target.files?.[0];
-                if (file) void openProject(file);
+                if (file && mayDiscard()) void openProject(file);
                 event.target.value = '';
               }}
             />

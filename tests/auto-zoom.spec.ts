@@ -51,6 +51,8 @@ test('generates editable click shots deliberately, undoes regeneration and keeps
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await page.getByRole('button', { name: 'Select zoom', exact: true }).first().click();
   await expect(page.getByLabel('Zoom level', { exact: true })).toHaveValue('1.8');
+  // The undo left the edit different from the saved one, so Open project asks first.
+  page.once('dialog', (dialog) => void dialog.accept());
   await page.getByLabel('Open local project').setInputFiles({
     name: 'clicks.clipper.json',
     mimeType: 'application/json',

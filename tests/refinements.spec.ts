@@ -183,10 +183,59 @@ test('ends mouse marking when its zoom is removed, and does not arm the next zoo
   await expect(page.getByRole('button', { name: 'Set mouse focus on screen' })).toHaveCount(0);
 });
 
+test('keeps unsaved edits through a logo click, a tab close and an opened project', async ({
+  page,
+}) => {
+  // What the browser asks the page when the tab closes or reloads: true means "warn the user".
+  const warnsOnUnload = () =>
+    page.evaluate(() => {
+      const event = new Event('beforeunload', { cancelable: true });
+      window.dispatchEvent(event);
+      return event.defaultPrevented;
+    });
+  const radius = page.getByRole('slider', { name: 'Corner radius' });
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  expect(await warnsOnUnload()).toBe(false);
+
+  await radius.fill('33');
+  expect(await warnsOnUnload()).toBe(true);
+  await page.evaluate(() => Object.assign(window, { samePage: true }));
+  await page.locator('.brand').click();
+  expect(await page.evaluate(() => 'samePage' in window)).toBe(true);
+  await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', '33px');
+
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const saved = (await (await downloaded).path())!;
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Portable project saved');
+  expect(await warnsOnUnload()).toBe(false);
+
+  await radius.fill('12');
+  expect(await warnsOnUnload()).toBe(true);
+  const questions: string[] = [];
+  page.once('dialog', (dialog) => {
+    questions.push(dialog.message());
+    void dialog.dismiss();
+  });
+  await page.getByLabel('Open local project').setInputFiles(saved);
+  await expect.poll(() => questions).toEqual([expect.stringContaining('unsaved')]);
+  await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', '12px');
+
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.getByLabel('Open local project').setInputFiles(saved);
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Project reopened', {
+    timeout: 30000,
+  });
+  await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', '33px');
+  expect(await warnsOnUnload()).toBe(false);
+});
+
 test('rejects a malformed project without replacing the current edit', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
   await page.getByRole('slider', { name: 'Corner radius' }).fill('33');
+  page.once('dialog', (dialog) => void dialog.accept());
   await page.getByLabel('Open local project').setInputFiles({
     name: 'invalid.clipper.json',
     mimeType: 'application/json',

@@ -70,8 +70,10 @@ the user-facing preview. Restart the editor service after source changes to rebu
 
 ## Deliberate limits
 
-- Unsaved edits still disappear on reload. Save project downloads media and edits in one JSON file;
-  Open project restores them locally. There is no automatic disk persistence or agent motion cards.
+- Unsaved edits still disappear on reload. The browser asks before a reload or tab close discards
+  them, and Open project asks before it replaces them. Save project downloads media and edits in one
+  JSON file; Open project restores them locally. There is no automatic disk persistence or agent
+  motion cards.
 - Reverse shuttle is silent. Forward playback uses the browser's supported audio/video codecs.
 - MP4 AVC/AAC is preferred when the browser can encode it; otherwise export uses WebM VP9/Opus.
   Unsupported encoders show an error rather than downloading a mislabeled file.
