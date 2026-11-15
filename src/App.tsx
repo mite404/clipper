@@ -54,6 +54,13 @@ export const INITIAL_EDIT: Edit = {
   layout: { radius: 22, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
 };
 
+// The status line for one import: the count of files read, then every failure by name.
+const importSummary = (count: number, failures: string[]) =>
+  [
+    ...(count ? [`Imported ${count} local file${count === 1 ? '' : 's'}. Nothing uploaded.`] : []),
+    ...failures,
+  ].join(' ');
+
 /** Source preview with explicit in/out points and track-targeted ripple insertion. */
 export function SourceMonitor({
   asset,
@@ -672,6 +679,7 @@ export function App() {
   const importFiles = async (files: FileList) => {
     setBusy(true);
     let count = 0;
+    const failures: string[] = [];
     for (const file of Array.from(files)) {
       try {
         const imported = await readMedia(file, file.name);
@@ -679,13 +687,14 @@ export function App() {
         setSourceId(imported.id);
         count++;
       } catch (error) {
-        setMessage(
+        failures.push(
           `Could not import ${file.name}. ${error instanceof Error ? error.message : 'Unsupported file.'}`,
         );
       }
     }
-    if (count)
-      setMessage(`Imported ${count} local file${count === 1 ? '' : 's'}. Nothing uploaded.`);
+    // One message after the loop, so a success cannot overwrite the failures before them.
+    const summary = importSummary(count, failures);
+    if (summary) setMessage(summary);
     setBusy(false);
   };
   const insert = useCallback(

@@ -16,6 +16,8 @@ export type Asset = {
   cursor?: CursorTrack;
 };
 
+const DEMO_DEADLINE_MS = 15000;
+
 /** Read metadata and decoded waveform locally. No media is uploaded.
  * @throws When the container or media codec cannot be decoded by this browser.
  */
@@ -84,16 +86,32 @@ export async function readMedia(
 
 /** Load the attributed, same-origin demo files through the same processing path as user imports. */
 export async function loadDemo(): Promise<Asset[]> {
-  return Promise.all(
+  // One deadline for all four downloads, so a stalled connection cannot hold the editor busy.
+  const signal = AbortSignal.timeout(DEMO_DEADLINE_MS);
+  const settled = await Promise.allSettled(
     [
       ['landscape.mp4', 'Flower study', 'landscape'],
       ['portrait.mp4', 'A conversation', 'portrait'],
       ['voice.wav', 'Voiceover', 'voice'],
       ['music.wav', 'Ambient bed', 'music'],
     ].map(async ([file, name, id]) => {
-      const response = await fetch(`/media/${file}`);
-      if (!response.ok) throw new Error(`Could not load demo ${file}. Import local media instead.`);
-      return readMedia(await response.blob(), name, id);
+      let blob: Blob;
+      try {
+        const response = await fetch(`/media/${file}`, { signal });
+        if (!response.ok) throw new Error(response.statusText);
+        blob = await response.blob();
+      } catch {
+        throw new Error(`Could not load demo ${file}. Import local media instead.`);
+      }
+      return readMedia(blob, name, id);
     }),
   );
+  const loaded = settled.flatMap((result) => (result.status === 'fulfilled' ? [result.value] : []));
+  const failure = settled.find((result) => result.status === 'rejected');
+  if (failure) {
+    // The demo is all or nothing, so the files that did load must not keep their object URLs.
+    loaded.forEach((asset) => URL.revokeObjectURL(asset.url));
+    throw failure.reason;
+  }
+  return loaded;
 }

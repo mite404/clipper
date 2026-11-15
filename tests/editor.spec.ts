@@ -194,6 +194,60 @@ test('keeps all tracks on screen and survives realistic difficult imports', asyn
     .toBeLessThanOrEqual(320);
 });
 
+test('names every file a mixed import could not read', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const { readFile } = await import('node:fs/promises');
+  const broken = (name: string) => ({
+    name,
+    mimeType: 'video/mp4',
+    buffer: Buffer.from('not a video'),
+  });
+  await page.getByLabel('Import local media').setInputFiles([
+    broken('first-broken.mp4'),
+    {
+      name: 'good.mp4',
+      mimeType: 'video/mp4',
+      buffer: await readFile('public/media/landscape.mp4'),
+    },
+    broken('last-broken.mp4'),
+  ]);
+  await expect(page.getByTestId('media-status')).toHaveText('5 assets ready', { timeout: 30000 });
+  const status = page.locator('.app-footer [role="status"]');
+  await expect(status).toContainText('Imported 1 local file.');
+  await expect(status).toContainText('Could not import first-broken.mp4.');
+  await expect(status).toContainText('Could not import last-broken.mp4.');
+});
+
+test('gives up on a stalled demo download and frees what it loaded', async ({ page }) => {
+  await page.addInitScript(() => {
+    const live = new Set<string>();
+    const create = URL.createObjectURL.bind(URL);
+    const revoke = URL.revokeObjectURL.bind(URL);
+    URL.createObjectURL = (blob) => {
+      const url = create(blob);
+      live.add(url);
+      return url;
+    };
+    URL.revokeObjectURL = (url) => {
+      live.delete(url);
+      revoke(url);
+    };
+    Object.assign(window, { liveUrls: live });
+  });
+  // The connection accepts the request and then never answers.
+  await page.route('**/media/music.wav', () => {});
+  await page.goto('/');
+  await expect(page.locator('.app-footer [role="status"]')).toContainText(
+    'Demo unavailable. Could not load demo music.wav.',
+    { timeout: 25000 },
+  );
+  await expect(page.getByLabel('Import local media')).toBeEnabled();
+  expect(
+    await page.evaluate(() => (window as unknown as { liveUrls: Set<string> }).liveUrls.size),
+  ).toBe(0);
+});
+
 test('shortcuts dialog traps focus and leaves edits untouched', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
