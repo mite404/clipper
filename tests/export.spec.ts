@@ -297,3 +297,56 @@ for (const width of [1920, 3840]) {
     ]);
   });
 }
+
+test('mixes long compressed audio in time proportional to its length', async ({ page }, info) => {
+  test.setTimeout(120000);
+  const file = info.outputPath('long.webm');
+  execFileSync('ffmpeg', [
+    '-v',
+    'error',
+    '-y',
+    '-f',
+    'lavfi',
+    '-i',
+    'sine=frequency=330:sample_rate=48000:duration=42',
+    '-ac',
+    '2',
+    '-c:a',
+    'libopus',
+    file,
+  ]);
+  await page.route('**/export-fixture', (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<html><body>Export fixture</body></html>' }),
+  );
+  await page.route('**/long-audio', (route) => route.fulfill({ path: file }));
+  await page.goto('/export-fixture');
+  const mixMs = await page.evaluate(async () => {
+    const mediaModule = '/src/media.ts',
+      exportModule = '/src/export.ts';
+    const { readMedia } = await import(mediaModule);
+    const { renderVideo } = await import(exportModule);
+    const asset = await readMedia(await (await fetch('/long-audio')).blob(), 'long', 'long');
+    const controller = new AbortController();
+    const started = performance.now();
+    let mixed = 0;
+    // The mix finishes before the first video frame; progress 0.1 marks that point.
+    await renderVideo({
+      assets: [asset],
+      clips: [{ id: 'v', assetId: 'long', track: 'voice', start: 0, duration: 1200, offset: 30 }],
+      zooms: [],
+      layout: { radius: 16, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
+      muted: [],
+      width: 1920,
+      signal: controller.signal,
+      onProgress: (value: number) => {
+        if (value < 0.1 || mixed) return;
+        mixed = performance.now() - started;
+        controller.abort();
+      },
+    }).catch(() => undefined);
+    return mixed;
+  });
+  expect(mixMs).toBeGreaterThan(0);
+  // One audio node per decoded packet took 13 s for these 40 s; one per clip takes under a second.
+  expect(mixMs).toBeLessThan(5000);
+});

@@ -52,9 +52,6 @@
     "src/media.ts": {
       "complexity_high": {
         "count": 1
-      },
-      "crap_high": {
-        "count": 1
       }
     }
   },
@@ -144,9 +141,6 @@
     },
     "src/media.ts\u0000readMedia": {
       "complexity_high": {
-        "count": 1
-      },
-      "crap_high": {
         "count": 1
       }
     }

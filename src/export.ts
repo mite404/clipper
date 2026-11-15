@@ -12,6 +12,7 @@ import {
   WebMOutputFormat,
   canEncodeAudio,
   canEncodeVideo,
+  type InputAudioTrack,
 } from 'mediabunny';
 import type { Asset } from './media';
 import { cameraTransform, coverRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
@@ -28,6 +29,60 @@ export type RenderVideoOptions = {
   onProgress: (progress: number) => void;
   signal?: AbortSignal;
 };
+
+// One clip's decoded audio as a single buffer whose first frame is the clip's source in-point.
+// Decoders hand back a buffer per packet, about 50 a second; one audio node per packet made the
+// mix quadratic in timeline length, so the packets are joined and each clip gets one node.
+async function clipAudio(
+  mixer: OfflineAudioContext,
+  track: InputAudioTrack,
+  clip: Clip,
+  check: () => void,
+): Promise<AudioBuffer | undefined> {
+  const start = clip.offset / FPS; // → source seconds
+  const end = start + clip.duration / FPS;
+  let joined: AudioBuffer | undefined;
+  for await (const { buffer, timestamp } of new AudioBufferSink(track).buffers(start, end)) {
+    check();
+    const rate = buffer.sampleRate;
+    joined ??= mixer.createBuffer(buffer.numberOfChannels, Math.ceil((end - start) * rate), rate);
+    const at = Math.round((timestamp - start) * rate); // → frame in joined; negative before the trim
+    if (at >= joined.length) continue;
+    for (let channel = 0; channel < joined.numberOfChannels; channel++)
+      joined.copyToChannel(
+        buffer.getChannelData(channel).subarray(Math.max(0, -at)),
+        channel,
+        Math.max(0, at),
+      );
+  }
+  return joined;
+}
+
+// The offline mix preserves resampling, source trims, overlapping clips and track gains.
+// ponytail: every clip's PCM and the whole mix are in memory at once, about 23 MB per stereo
+// minute each. Render in fixed windows and add each to the encoder if long exports run out.
+async function mixAudio(
+  inputs: Map<string, Input>,
+  clips: Clip[],
+  frames: number,
+  check: () => void,
+): Promise<AudioBuffer> {
+  const mixer = new OfflineAudioContext(2, Math.ceil((frames / FPS) * 48000), 48000);
+  for (const clip of clips) {
+    const track = await inputs.get(clip.assetId)!.getPrimaryAudioTrack();
+    if (!track || !(await track.canDecode()))
+      throw new Error(`Cannot decode audio in clip ${clip.id}.`);
+    const joined = await clipAudio(mixer, track, clip, check);
+    if (!joined) continue;
+    const source = mixer.createBufferSource();
+    source.buffer = joined;
+    const gain = mixer.createGain();
+    gain.gain.value = clip.track === 'music' ? 0.22 : 1;
+    source.connect(gain).connect(mixer.destination);
+    source.start(clip.start / FPS);
+  }
+  return mixer.startRendering();
+}
 
 // A decoded picture for one video track at the frame being drawn.
 type Layer = { track: Track; image: HTMLCanvasElement | OffscreenCanvas };
@@ -145,32 +200,8 @@ export async function renderVideo({
       );
       check();
     }
-    let mixed: AudioBuffer | undefined;
-    if (audio) {
-      // The offline mix preserves resampling, source trims, overlapping clips and track gains.
-      const mixer = new OfflineAudioContext(2, Math.ceil((frames / FPS) * 48000), 48000);
-      for (const clip of audioClips) {
-        const track = await inputs.get(clip.assetId)!.getPrimaryAudioTrack();
-        if (!track || !(await track.canDecode()))
-          throw new Error(`Cannot decode audio in clip ${clip.id}.`);
-        const start = clip.offset / FPS;
-        const end = start + clip.duration / FPS;
-        for await (const { buffer, timestamp } of new AudioBufferSink(track).buffers(start, end)) {
-          check();
-          const from = Math.max(start, timestamp);
-          const to = Math.min(end, timestamp + buffer.duration);
-          if (to <= from) continue;
-          const source = mixer.createBufferSource();
-          source.buffer = buffer;
-          const gain = mixer.createGain();
-          gain.gain.value = clip.track === 'music' ? 0.22 : 1;
-          source.connect(gain).connect(mixer.destination);
-          source.start(clip.start / FPS + from - start, from - timestamp, to - from);
-        }
-      }
-      mixed = await mixer.startRendering();
-      check();
-    }
+    const mixed = audio && (await mixAudio(inputs, audioClips, frames, check));
+    check();
     const visuals = [];
     for (const clip of clips.filter((clip) => clip.track === 'screen' || clip.track === 'camera')) {
       const track = await inputs.get(clip.assetId)!.getPrimaryVideoTrack();
