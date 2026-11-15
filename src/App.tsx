@@ -23,7 +23,16 @@ import { Composition, type Layout } from './Composition';
 import { IconButton, MediaLibrary, Waveform, timecode } from './components';
 import { type Asset, loadDemo, readMedia } from './media';
 import { Timeline, TRACKS } from './Timeline';
-import { FPS, type Clip, type Track, type Zoom, insertClip, splitClip } from './timeline';
+import {
+  FPS,
+  type Clip,
+  type Track,
+  type Zoom,
+  covers,
+  insertClip,
+  sourceFrame,
+  splitClip,
+} from './timeline';
 import { serializeProject, parseProject, validateSources, type Edit } from './project';
 import './styles.css';
 
@@ -779,12 +788,11 @@ export function App() {
         (c) =>
           (c.track === 'voice' || c.track === 'music') &&
           !muted.includes(c.track) &&
-          frame >= c.start &&
-          frame < c.start + c.duration,
+          covers(c, frame),
       )
       .map(
         (c) =>
-          (assets.find((a) => a.id === c.assetId)?.peaks[c.offset + frame - c.start] ?? 0) *
+          (assets.find((a) => a.id === c.assetId)?.peaks[sourceFrame(c, frame)] ?? 0) *
           (c.track === 'music' ? 0.22 : 1),
       ),
   );

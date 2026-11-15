@@ -17,6 +17,16 @@ export type Zoom = {
 };
 export const FPS = 30;
 
+/** Whether a clip or zoom is live at a timeline frame. */
+export function covers(span: { start: number; duration: number }, frame: number): boolean {
+  return frame >= span.start && frame < span.start + span.duration;
+}
+
+/** Source frame a clip shows at a timeline frame; unchanged by splits and left trims. */
+export function sourceFrame(clip: Clip, frame: number): number {
+  return clip.offset + frame - clip.start;
+}
+
 /** Split at a timeline frame, preserving the original source offsets. */
 export function splitClip(clips: Clip[], id: string, frame: number): Clip[] {
   // A ripple insert moves clips, so an earlier split may already own `${id}-${frame}`.
@@ -55,7 +65,7 @@ export function insertClip(clips: Clip[], clip: Clip, frame: number): Clip[] {
 
 /** Evaluate the eased zoom scale at an absolute composition frame. */
 export function zoomAt(zooms: Zoom[], frame: number): number {
-  const zoom = zooms.find((z) => frame >= z.start && frame < z.start + z.duration);
+  const zoom = zooms.find((z) => covers(z, frame));
   if (!zoom) return 1;
   const ramp = Math.min(24, zoom.duration / 2);
   const t = Math.min(1, (frame - zoom.start) / ramp, (zoom.start + zoom.duration - frame) / ramp);
@@ -81,7 +91,7 @@ export function trimClip(clip: Clip, edge: 'left' | 'right', delta: number): Cli
 
 /** Camera translation percentages center a manually marked mouse position during the zoom hold. */
 export function zoomCamera(zooms: Zoom[], frame: number): { scale: number; x: number; y: number } {
-  const zoom = zooms.find((z) => frame >= z.start && frame < z.start + z.duration);
+  const zoom = zooms.find((z) => covers(z, frame));
   const scale = zoomAt(zooms, frame);
   if (!zoom || scale === 1) return { scale: 1, x: 0, y: 0 };
   const weight = (scale - 1) / (zoom.scale - 1);

@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { splitClip, insertClip, zoomAt, trimClip, zoomCamera, type Clip } from './timeline';
+import {
+  covers,
+  insertClip,
+  sourceFrame,
+  splitClip,
+  trimClip,
+  zoomAt,
+  zoomCamera,
+  type Clip,
+} from './timeline';
 
 const clip: Clip = {
   id: 'screen',
@@ -26,6 +35,22 @@ describe('editing a timeline in frames', () => {
     const ids = splitClip(rippled, 'screen', 90).map((c) => c.id);
     expect(ids).toHaveLength(4);
     expect(new Set(ids).size).toBe(4);
+  });
+
+  it('maps a timeline frame to the same source frame through splits and left trims', () => {
+    // clip: timeline 30..179 shows source 60..209.
+    expect(sourceFrame(clip, 30)).toBe(60);
+    expect(sourceFrame(clip, 100)).toBe(130);
+    const [left, right] = splitClip([clip], 'screen', 90);
+    expect(sourceFrame(left, 89)).toBe(119);
+    expect(sourceFrame(right, 90)).toBe(120);
+    expect(sourceFrame(trimClip(clip, 'left', 45), 100)).toBe(130);
+    expect([29, 30, 179, 180].map((frame) => covers(clip, frame))).toEqual([
+      false,
+      true,
+      true,
+      false,
+    ]);
   });
 
   it('inserts into a track and ripples later material, leaving other tracks alone', () => {

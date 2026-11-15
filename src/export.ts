@@ -15,7 +15,7 @@ import {
 } from 'mediabunny';
 import type { Asset } from './media';
 import type { Layout } from './Composition';
-import { FPS, zoomCamera, type Clip, type Track, type Zoom } from './timeline';
+import { FPS, covers, sourceFrame, zoomCamera, type Clip, type Track, type Zoom } from './timeline';
 
 export type RenderVideoOptions = {
   clips: Clip[];
@@ -140,7 +140,7 @@ export async function renderVideo({
         throw new Error(`Cannot decode video in clip ${clip.id}.`);
       const times = Array.from(
         { length: clip.duration },
-        (_, frame) => (clip.offset + frame) / FPS,
+        (_, index) => sourceFrame(clip, clip.start + index) / FPS,
       );
       const iterator = new CanvasSink(track).canvasesAtTimestamps(times);
       iterators.push(iterator);
@@ -171,8 +171,7 @@ export async function renderVideo({
         context.translate(x + w / 2 + (zoom.x * w) / 100, 360 + (zoom.y * 700) / 100);
         context.scale(zoom.scale, zoom.scale);
         for (const { clip, iterator } of visuals) {
-          if (clip.track !== track || frame < clip.start || frame >= clip.start + clip.duration)
-            continue;
+          if (clip.track !== track || !covers(clip, frame)) continue;
           const sample = (await iterator.next()).value;
           check();
           if (!sample) continue;

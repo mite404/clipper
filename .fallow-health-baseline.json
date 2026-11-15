@@ -12,7 +12,7 @@
         "count": 2
       },
       "crap_moderate": {
-        "count": 4
+        "count": 3
       }
     },
     "src/Composition.tsx": {
@@ -105,11 +105,6 @@
     },
     "src/App.tsx\u0000openProject": {
       "crap_high": {
-        "count": 1
-      }
-    },
-    "src/App.tsx\u0000volume": {
-      "crap_moderate": {
         "count": 1
       }
     },
