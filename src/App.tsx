@@ -19,7 +19,7 @@ import {
   Trash2,
   ZoomIn,
 } from 'lucide-react';
-import { Composition, type Layout } from './Composition';
+import { Composition } from './Composition';
 import { IconButton, MediaLibrary, Waveform, timecode } from './components';
 import { type Asset, loadDemo, readMedia } from './media';
 import { Timeline, TRACKS } from './Timeline';
@@ -35,6 +35,7 @@ import {
 } from './timeline';
 import { serializeProject, parseProject, validateSources, type Edit } from './project';
 import { CursorControls } from './CursorControls';
+import { maskRect, STAGE, type Layout } from './stage';
 import './styles.css';
 
 export const INITIAL_EDIT: Edit = {
@@ -473,6 +474,7 @@ export function App() {
   const duration = Math.max(1, ...edit.clips.map((c) => c.start + c.duration));
   const asset = assets.find((a) => a.id === sourceId);
   const selectedZoom = edit.zooms.find((z) => z.id === selected);
+  const screenMask = maskRect('screen', edit.layout); // → stage rect the mouse target covers
   const selectedClip = edit.clips.find((c) => c.id === selected);
   const compositionProps = useMemo(
     () => ({ ...edit, zooms: markingMouse ? [] : edit.zooms, assets, muted }),
@@ -821,8 +823,8 @@ export function App() {
         component={Composition}
         inputProps={compositionProps}
         durationInFrames={duration}
-        compositionWidth={1280}
-        compositionHeight={720}
+        compositionWidth={STAGE.width}
+        compositionHeight={STAGE.height}
         fps={FPS}
         playbackRate={Math.max(1, speed)}
         controls={false}
@@ -928,7 +930,7 @@ export function App() {
                   Composition <span className="active-pill">LIVE</span>
                 </span>
                 <span className="muted-text">
-                  1280 × 720 <ChevronDown size={12} />
+                  {STAGE.width} × {STAGE.height} <ChevronDown size={12} />
                 </span>
               </div>
               <div className="compose-stage" data-testid="compose-monitor">
@@ -944,10 +946,10 @@ export function App() {
                     className="mouse-target"
                     aria-label="Set mouse focus on screen"
                     style={{
-                      left: `${((edit.layout.swapped ? 390 : 10) / 1280) * 100}%`,
-                      top: `${(10 / 720) * 100}%`,
-                      width: `${(880 / 1280) * 100}%`,
-                      height: `${(700 / 720) * 100}%`,
+                      left: `${(screenMask.x / STAGE.width) * 100}%`,
+                      top: `${(screenMask.y / STAGE.height) * 100}%`,
+                      width: `${(screenMask.width / STAGE.width) * 100}%`,
+                      height: `${(screenMask.height / STAGE.height) * 100}%`,
                       borderRadius: edit.layout.radius,
                     }}
                     onClick={(event) => {

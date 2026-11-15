@@ -14,7 +14,7 @@ import {
   canEncodeVideo,
 } from 'mediabunny';
 import type { Asset } from './media';
-import type { Layout } from './Composition';
+import { cameraTransform, coverRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
 import { FPS, covers, sourceFrame, zoomCamera, type Clip, type Track, type Zoom } from './timeline';
 
 export type RenderVideoOptions = {
@@ -154,40 +154,30 @@ export async function renderVideo({
     }
     for (let frame = 0; frame < frames; frame++) {
       check();
-      context.setTransform(width / 1280, 0, 0, height / 720, 0, 0);
+      context.setTransform(width / STAGE.width, 0, 0, height / STAGE.height, 0, 0);
       context.fillStyle = '#172324';
-      context.fillRect(0, 0, 1280, 720);
+      context.fillRect(0, 0, STAGE.width, STAGE.height);
       for (const track of ['screen', 'camera'] as const) {
-        const screen = track === 'screen';
-        const x = screen ? (layout.swapped ? 390 : 10) : layout.swapped ? 10 : 908;
-        const w = screen ? 880 : 362;
+        const mask = maskRect(track, layout); // → stage rect
         context.save();
         context.beginPath();
-        context.roundRect(x, 10, w, 700, Math.max(0, layout.radius));
+        context.roundRect(mask.x, mask.y, mask.width, mask.height, Math.max(0, layout.radius));
         context.clip();
         context.fillStyle = '#10181b';
-        context.fillRect(x, 10, w, 700);
-        const zoom = screen ? zoomCamera(zooms, frame) : { scale: 1, x: 0, y: 0 };
-        context.translate(x + w / 2 + (zoom.x * w) / 100, 360 + (zoom.y * 700) / 100);
-        context.scale(zoom.scale, zoom.scale);
+        context.fillRect(mask.x, mask.y, mask.width, mask.height);
+        const view = cameraTransform(
+          mask,
+          track === 'screen' ? zoomCamera(zooms, frame) : undefined,
+        ); // → mask-local to stage affine
+        context.translate(view.x, view.y);
+        context.scale(view.scale, view.scale);
         for (const { clip, iterator } of visuals) {
           if (clip.track !== track || !covers(clip, frame)) continue;
           const sample = (await iterator.next()).value;
           check();
           if (!sample) continue;
-          const image = sample.canvas;
-          const cover = Math.max(w / image.width, 700 / image.height);
-          const dw = image.width * cover,
-            dh = image.height * cover;
-          const px = screen ? layout.screenX : layout.cameraX;
-          const py = screen ? layout.screenY : layout.cameraY;
-          context.drawImage(
-            image,
-            -w / 2 + ((w - dw) * px) / 100,
-            -350 + ((700 - dh) * py) / 100,
-            dw,
-            dh,
-          );
+          const cover = coverRect(mask, sample.canvas, cropPosition(track, layout)); // → local rect
+          context.drawImage(sample.canvas, cover.x, cover.y, cover.width, cover.height);
         }
         context.restore();
       }

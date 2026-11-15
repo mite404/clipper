@@ -1,15 +1,8 @@
 import { AbsoluteFill, Audio, Sequence, Video, useCurrentFrame } from 'remotion';
 import type { Asset } from './media';
+import { cameraTransform, cropPosition, maskRect, type Layout } from './stage';
 import { type Clip, type Track, type Zoom, zoomCamera } from './timeline';
 
-export type Layout = {
-  swapped?: boolean;
-  radius: number;
-  screenX: number;
-  screenY: number;
-  cameraX: number;
-  cameraY: number;
-};
 export type CompositionProps = {
   clips: Clip[];
   assets: Asset[];
@@ -29,70 +22,69 @@ export function Composition({ clips, assets, zooms, layout, muted }: Composition
         color: '#fff',
       }}
     >
-      {(['screen', 'camera'] as const).map((track) => (
-        <div
-          key={track}
-          data-testid={`${track}-mask`}
-          style={{
-            position: 'absolute',
-            left: layout.swapped ? (track === 'screen' ? 390 : 10) : track === 'screen' ? 10 : 908,
-            top: 10,
-            width: track === 'screen' ? 880 : 362,
-            height: 700,
-            borderRadius: layout.radius,
-            overflow: 'hidden',
-            background: '#10181b',
-            boxShadow: '0 25px 65px #0005',
-          }}
-        >
+      {(['screen', 'camera'] as const).map((track) => {
+        const mask = maskRect(track, layout); // → stage rect
+        const view = cameraTransform(mask, track === 'screen' ? camera : undefined); // → affine
+        const crop = cropPosition(track, layout); // → percent
+        return (
           <div
-            data-testid={`${track}-content`}
+            key={track}
+            data-testid={`${track}-mask`}
             style={{
-              width: '100%',
-              height: '100%',
-              transform:
-                track === 'screen'
-                  ? `translate(${camera.x}%, ${camera.y}%) scale(${camera.scale})`
-                  : 'scale(1)',
-              transformOrigin: '50% 50%',
+              position: 'absolute',
+              left: mask.x,
+              top: mask.y,
+              width: mask.width,
+              height: mask.height,
+              borderRadius: layout.radius,
+              overflow: 'hidden',
+              background: '#10181b',
+              boxShadow: '0 25px 65px #0005',
             }}
           >
-            {clips
-              .filter((clip) => clip.track === track)
-              .map((clip) => {
-                const asset = assets.find((a) => a.id === clip.assetId);
-                return (
-                  asset && (
-                    <Sequence
-                      key={clip.id}
-                      from={clip.start}
-                      durationInFrames={clip.duration}
-                      premountFor={30}
-                      postmountFor={30}
-                    >
-                      <Video
-                        src={asset.url}
-                        trimBefore={clip.offset}
-                        muted
-                        pauseWhenBuffering
-                        style={{
-                          position: 'absolute',
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          objectPosition:
-                            track === 'screen'
-                              ? `${layout.screenX}% ${layout.screenY}%`
-                              : `${layout.cameraX}% ${layout.cameraY}%`,
-                        }}
-                      />
-                    </Sequence>
-                  )
-                );
-              })}
+            <div
+              data-testid={`${track}-content`}
+              style={{
+                width: '100%',
+                height: '100%',
+                transform: `translate(${view.x - mask.x}px, ${view.y - mask.y}px) scale(${view.scale})`,
+                transformOrigin: '0 0',
+              }}
+            >
+              {clips
+                .filter((clip) => clip.track === track)
+                .map((clip) => {
+                  const asset = assets.find((a) => a.id === clip.assetId);
+                  return (
+                    asset && (
+                      <Sequence
+                        key={clip.id}
+                        from={clip.start}
+                        durationInFrames={clip.duration}
+                        premountFor={30}
+                        postmountFor={30}
+                      >
+                        <Video
+                          src={asset.url}
+                          trimBefore={clip.offset}
+                          muted
+                          pauseWhenBuffering
+                          style={{
+                            position: 'absolute',
+                            width: '100%',
+                            height: '100%',
+                            objectFit: 'cover',
+                            objectPosition: `${crop.x}% ${crop.y}%`,
+                          }}
+                        />
+                      </Sequence>
+                    )
+                  );
+                })}
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
       {clips
         .filter((clip) => clip.track === 'voice' || clip.track === 'music')
         .map((clip) => {

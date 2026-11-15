@@ -82,7 +82,24 @@ test('marks a mouse position, centers it during zoom and reopens embedded media 
   await page.getByRole('slider', { name: 'Zoom level' }).fill('2');
   await page.getByRole('slider', { name: 'Timeline playhead' }).fill('60');
   await expect(page.getByTestId('screen-content')).toHaveCSS('transform', /matrix\(2, 0, 0, 2,/);
+  // The pan, not only the scale: the marked 25%, 65% point is held at the mask centre.
+  const held = async () => {
+    const mask = (await page.getByTestId('screen-mask').boundingBox())!;
+    const content = (await page.getByTestId('screen-content').boundingBox())!;
+    return {
+      scale: content.width / mask.width,
+      focusX: (content.x + content.width * 0.25 - mask.x) / mask.width,
+      focusY: (content.y + content.height * 0.65 - mask.y) / mask.height,
+    };
+  };
+  const before = await held();
+  expect(before.scale).toBeCloseTo(2, 2);
+  expect(before.focusX).toBeCloseTo(0.5, 2);
+  expect(before.focusY).toBeCloseTo(0.5, 2);
   await page.getByRole('button', { name: 'Composition: swap sides' }).click();
+  const swapped = await held();
+  expect(swapped.focusX).toBeCloseTo(0.5, 2);
+  expect(swapped.focusY).toBeCloseTo(0.5, 2);
   await page.getByRole('button', { name: 'Mute Voiceover', exact: true }).click();
   const downloaded = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Save project', exact: true }).click();

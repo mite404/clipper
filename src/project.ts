@@ -1,4 +1,4 @@
-import type { Layout } from './Composition';
+import type { Layout } from './stage';
 import type { Asset } from './media';
 import { FPS, type Clip, type Track, type Zoom } from './timeline';
 import { parseCursorTrack, type CursorTrack } from './cursor';
