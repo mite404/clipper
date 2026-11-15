@@ -1,5 +1,17 @@
 import { test, expect } from '@playwright/test';
 
+// ponytail: generous first bound. Local worst frame is 67 ms and worst task 64 ms under 4x
+// throttling; CI logged neither before this change. Tighten towards 250 once CI runs show rafMax.
+const STALL_MS = 500;
+
+type Perf = {
+  start: number;
+  done: boolean;
+  firstAdvance: number;
+  frames: number[];
+  longTasks: { startTime: number; duration: number }[];
+};
+
 test('play starts promptly without monopolizing the browser thread', async ({ page }) => {
   const cdp = await page.context().newCDPSession(page);
   await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
@@ -7,16 +19,36 @@ test('play starts promptly without monopolizing the browser thread', async ({ pa
   const url = process.env.PERF_URL || (process.env.CI ? 'http://127.0.0.1:5173' : '/');
   await page.goto(url);
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  // Sampling is armed before the click, so a stall inside the click itself is measured too.
   await page.evaluate(() => {
-    performance.mark('ready');
+    const perf: Perf = { start: 0, done: false, firstAdvance: 0, frames: [], longTasks: [] };
+    Object.assign(window, { __perf: perf });
+    new PerformanceObserver((list) => {
+      perf.longTasks.push(
+        ...list.getEntries().map(({ startTime, duration }) => ({ startTime, duration })),
+      );
+    }).observe({ type: 'longtask', buffered: false });
     document.addEventListener(
       'click',
       (event) => {
-        if (
+        const play =
           event.target instanceof Element &&
-          event.target.closest('[aria-label="Play composition"]')
-        )
-          performance.mark('play-click');
+          event.target.closest('[aria-label="Play composition"]');
+        if (!play || perf.start) return;
+        perf.start = performance.now();
+        let previous = perf.start;
+        const tick = (now: number) => {
+          perf.frames.push(now - previous); // → ms since the previous animation frame
+          previous = now;
+          const video = document.querySelector<HTMLVideoElement>(
+            '[data-testid="screen-mask"] video',
+          );
+          if (!perf.firstAdvance && video && !video.paused && video.currentTime > 0.05)
+            perf.firstAdvance = now - perf.start;
+          if (now - perf.start < 5000) requestAnimationFrame(tick);
+          else perf.done = true;
+        };
+        requestAnimationFrame(tick);
       },
       true,
     );
@@ -24,31 +56,22 @@ test('play starts promptly without monopolizing the browser thread', async ({ pa
   const before = await cdp.send('Performance.getMetrics');
   await page.getByRole('button', { name: 'Play composition', exact: true }).click();
   const result = await page.evaluate(async () => {
-    const longTasks: number[] = [];
-    const observer = new PerformanceObserver((list) => {
-      longTasks.push(...list.getEntries().map((entry) => entry.duration));
-    });
-    observer.observe({ type: 'longtask', buffered: false });
-    const start = performance.getEntriesByName('play-click').at(-1)?.startTime ?? performance.now();
-    let firstAdvance = 0;
-    let previous = performance.now();
-    const frames: number[] = [];
-    while (performance.now() - start < 5000) {
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      const now = performance.now();
-      frames.push(now - previous);
-      previous = now;
-      const video = document.querySelector<HTMLVideoElement>('[data-testid="screen-mask"] video');
-      if (!firstAdvance && video && !video.paused && video.currentTime > 0.05)
-        firstAdvance = now - start;
-    }
-    observer.disconnect();
-    frames.sort((a, b) => a - b);
+    const perf = (window as unknown as { __perf: Perf }).__perf;
+    if (!perf.start) throw new Error('The Play click was never observed.');
+    while (!perf.done) await new Promise((resolve) => setTimeout(resolve, 100));
+    const sorted = [...perf.frames].sort((a, b) => a - b);
     return {
-      firstAdvance,
-      longTasks,
-      rafP95: frames[Math.floor(frames.length * 0.95)],
-      rafCount: frames.length,
+      firstAdvance: perf.firstAdvance,
+      rafP95: sorted[Math.floor(sorted.length * 0.95)],
+      rafMax: sorted.at(-1) ?? Infinity,
+      rafCount: sorted.length,
+      // Long tasks that ran during the five seconds after the click, not during page load.
+      longTaskMax: Math.max(
+        0,
+        ...perf.longTasks
+          .filter((task) => task.startTime + task.duration > perf.start)
+          .map((task) => task.duration),
+      ),
     };
   });
   const after = await cdp.send('Performance.getMetrics');
@@ -68,4 +91,8 @@ test('play starts promptly without monopolizing the browser thread', async ({ pa
   expect(result.firstAdvance).toBeGreaterThan(0);
   expect(result.firstAdvance).toBeLessThan(1000);
   expect(result.rafP95).toBeLessThan(100);
+  // A percentile hides one long freeze, so the worst frame and the worst task are bounded too.
+  expect(result.rafCount).toBeGreaterThan(100);
+  expect(result.rafMax).toBeLessThan(STALL_MS);
+  expect(result.longTaskMax).toBeLessThan(STALL_MS);
 });
