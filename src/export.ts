@@ -16,6 +16,7 @@ import {
 import type { Asset } from './media';
 import { cameraTransform, coverRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
 import { FPS, covers, sourceFrame, zoomCamera, type Clip, type Track, type Zoom } from './timeline';
+import { cursorDrawing, decodeCursorImages } from './cursor-render';
 
 export type RenderVideoOptions = {
   clips: Clip[];
@@ -38,6 +39,7 @@ function drawFrame(
   layout: Layout,
   camera: { scale: number; x: number; y: number },
   layers: Layer[],
+  cursor: ReturnType<typeof cursorDrawing>,
 ): void {
   context.fillStyle = '#172324';
   context.fillRect(0, 0, STAGE.width, STAGE.height);
@@ -57,6 +59,8 @@ function drawFrame(
       const cover = coverRect(mask, layer.image, cropPosition(track, layout)); // → local rect
       context.drawImage(layer.image, cover.x, cover.y, cover.width, cover.height);
     }
+    if (track === 'screen' && cursor)
+      context.drawImage(cursor.image, cursor.x, cursor.y, cursor.width, cursor.height);
     context.restore();
   }
 }
@@ -127,6 +131,7 @@ export async function renderVideo({
   const iterators: AsyncGenerator<Awaited<ReturnType<CanvasSink['getCanvas']>>, void, unknown>[] =
     [];
   try {
+    const cursorImages = await decodeCursorImages(assets);
     for (const clip of clips) {
       if (inputs.has(clip.assetId)) continue;
       const asset = assets.find((item) => item.id === clip.assetId);
@@ -196,7 +201,13 @@ export async function renderVideo({
         check();
         if (sample) layers.push({ track: clip.track, image: sample.canvas });
       }
-      drawFrame(context, layout, zoomCamera(zooms, frame), layers);
+      drawFrame(
+        context,
+        layout,
+        zoomCamera(zooms, frame),
+        layers,
+        cursorDrawing(clips, assets, frame, layout, cursorImages),
+      );
       await video.add(frame / FPS, 1 / FPS);
       onProgress(0.1 + (0.85 * (frame + 1)) / frames);
     }

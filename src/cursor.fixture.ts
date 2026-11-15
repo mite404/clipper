@@ -35,3 +35,29 @@ export const cursorFixture = {
     },
   ],
 } satisfies CursorRecording;
+
+export const motionCursorFixture: CursorRecording = {
+  version: 2,
+  provider: 'native',
+  samples: Array.from({ length: 350 }, (_, i) => ({
+    timeMs: i * 43,
+    cx: 0.5 + Math.sin(i / 30) * 0.22,
+    cy: 0.5 + Math.sin(i / 45) * 0.2,
+    assetId: 'arrow',
+    visible: true,
+    interactionType: i % 100 === 0 ? 'click' : undefined,
+  })),
+  assets: [
+    {
+      id: 'arrow',
+      platform: 'synthetic',
+      width: 24,
+      height: 32,
+      hotspotX: 2,
+      hotspotY: 2,
+      scaleFactor: 1,
+      imageDataUrl:
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABgAAAAgEAQAAADyx6zwAAACCklEQVRIx72WP0hbURTGvzyUUAXNIUWLBkdL23RpqINQG0HUIh1sAl1KN4ciydKWQKfMbSFkKghOLgoiiH/AKbRIpFIndShkcijUQitpSKmlOR1OLu/lj+9/PfB4l3sf5zvf97vDAy6jiAInRHEQadN+99bkdX8IKPCVz/sPiEJX/4ODOIiY9efmE58dSC3dVavjpXD/7KHvAqEasDcn69r5WnTw0euEL1xURLsTzMzMZ3+Zp88kroHTT3kvXLR2m70asPUdeP4U+HU9lgZ+fPPEpdmBsTYndfhuuGhWH8zs+MDFzIEqt1wsHfjCxY4Dt1xsO/DExakDJ1xcOXDMxa0DO1w6nE7NY0Ax2LofArARAx4eKC5vEtVCJudYoBiUJlZVLbxcBbYDpgJq2tHfQOCD7N25AeAA6Nw6vf1n5vGRucz7kwsZ1O4xP/soma5XGvPOQOU9HLFy0vYW8Rgw/xZYrt/sV4sAfurnc2l5d4+8+GIrV6MD4+SRdyvXIlMLGhFzKW2wUGa+lVcuusYdCRiby9/GcIRIYjHWeqV+JXPJrG2B5uZyhp6+4tcoEXM1pQtUU/KtnKHHlkBzc1XhXDLrCbYSaNdczrvGiSR3LusCpXR9qKkFzUJA/dm1NlflC2zzIQywyyKkR8RMFPfUvwG2PrVAFkYXu7ddCrbKXVxZ3CBnLhQr+3n/AxkoiVWe6MFCAAAAAElFTkSuQmCC',
+    },
+  ],
+};

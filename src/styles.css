@@ -2043,3 +2043,27 @@ p {
 .cursor-error {
   color: #f2a69b;
 }
+.cursor-appearance {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+}
+.cursor-appearance label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cursor-appearance select,
+.cursor-appearance input[type='number'] {
+  min-height: 32px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: #dedfe2;
+  background: #171819;
+  font: inherit;
+}
+.cursor-appearance input[type='number'] {
+  width: 8ch;
+}

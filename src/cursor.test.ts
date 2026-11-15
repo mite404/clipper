@@ -48,3 +48,20 @@ it('rejects invalid timing adjustments when reopening projects', () => {
     /cursor/i,
   );
 });
+
+it('preserves rendering settings and rejects invalid saved cursor controls', () => {
+  const cursor = {
+    recording: cursorFixture,
+    offsetMs: 78,
+    settings: { mode: 'raw', size: 2.5, hidden: true },
+  };
+  expect(parseCursorTrack(cursor)).toEqual(cursor);
+  for (const settings of [
+    { ...cursor.settings, mode: 'spring' },
+    { ...cursor.settings, size: 0 },
+    { ...cursor.settings, size: Infinity },
+    { ...cursor.settings, hidden: 'false' },
+  ]) {
+    expect(() => parseCursorTrack({ ...cursor, settings })).toThrow(/cursor/i);
+  }
+});

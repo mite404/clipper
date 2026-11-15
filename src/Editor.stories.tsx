@@ -9,26 +9,27 @@ import { IconButton, MediaLibrary, Waveform } from './components';
 import { Timeline } from './Timeline';
 import { loadDemo, type Asset } from './media';
 import { CursorControls } from './CursorControls';
-import { cursorFixture } from './cursor.fixture';
+import { cursorFixture, motionCursorFixture } from './cursor.fixture';
 import type { CursorTrack } from './cursor';
 
-function CursorRecord() {
+function CursorRecord({ preview = false }: { preview?: boolean }) {
+  const fixture = preview ? motionCursorFixture : cursorFixture;
   const [mode, setMode] = useState('Demo data');
   const [cursor, setCursor] = useState<CursorTrack | undefined>({
-    recording: cursorFixture,
+    recording: fixture,
     offsetMs: 0,
   });
   const asset: Asset = {
     id: 'synthetic',
     kind: 'video',
     duration: 9000,
-    width: 1280,
-    height: 720,
+    width: 960,
+    height: 540,
     name:
       mode === 'Worst case'
         ? '录屏_👩🏽‍💻_Developer_Relations_Platform_Walkthrough_Review_v12_screen_recording_final.mp4'
         : 'Synthetic recording.mp4',
-    url: '',
+    url: '/media/landscape.mp4',
     peaks: [],
     thumbnail: '',
     hasAudio: false,
@@ -36,18 +37,51 @@ function CursorRecord() {
   };
   const choose = (next: string) => {
     setMode(next);
-    const counts: Record<string, number> = { 'Demo data': 5, 'Worst case': 8001, Empty: 0, One: 1 };
+    const counts: Record<string, number> = {
+      'Demo data': fixture.samples.length,
+      'Worst case': 8001,
+      Empty: 0,
+      One: 1,
+    };
     const samples = Array.from({ length: counts[next] }, (_, i) => ({
-      ...cursorFixture.samples[0],
+      ...fixture.samples[i % fixture.samples.length],
       timeMs: i * 43,
     }));
     setCursor({
-      recording: { ...cursorFixture, samples },
+      recording: { ...fixture, samples },
       offsetMs: next === 'Worst case' ? -9007199254740991 : 0,
     });
   };
   return (
     <div style={{ maxWidth: 760, paddingBlock: 24 }}>
+      {preview && (
+        <Player
+          component={Composition}
+          inputProps={{
+            assets: [asset],
+            clips: [
+              {
+                id: 'screen',
+                assetId: asset.id,
+                track: 'screen',
+                start: 0,
+                duration: 360,
+                offset: 0,
+              },
+            ],
+            layout: INITIAL_EDIT.layout,
+            zooms: [],
+            muted: [],
+          }}
+          compositionWidth={1280}
+          compositionHeight={720}
+          durationInFrames={360}
+          fps={30}
+          controls
+          loop
+          style={{ width: '100%' }}
+        />
+      )}
       <CursorControls key={mode} asset={asset} onChange={setCursor} />
       <div
         role="group"
@@ -286,3 +320,7 @@ export const MouseCenteredZoom: Story = {
 };
 export const PortableProjectAndExport: Story = { args: { view: 'editor' }, render: () => <App /> };
 export const CursorSidecar: Story = { args: { view: 'cursor' }, render: () => <CursorRecord /> };
+export const CursorMotion: Story = {
+  args: { view: 'cursor' },
+  render: () => <CursorRecord preview />,
+};

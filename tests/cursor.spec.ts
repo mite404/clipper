@@ -24,6 +24,11 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   await expect(page.getByLabel('Source out seconds')).toHaveValue('12');
   await expect(page.getByLabel('Cursor time offset (ms)')).toHaveValue('0');
   await page.getByLabel('Cursor time offset (ms)').fill('-78');
+  await page.getByLabel('Cursor motion', { exact: true }).selectOption('raw');
+  await page.getByLabel('Cursor size', { exact: true }).fill('');
+  await page.getByLabel('Cursor size', { exact: true }).pressSequentially('2.5');
+  await expect(page.getByLabel('Cursor size', { exact: true })).toHaveValue('2.5');
+  await page.getByLabel('Hide cursor', { exact: true }).check();
   await attach.setInputFiles({
     name: 'bad.json',
     mimeType: 'application/json',
@@ -72,6 +77,7 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   expect(saved.media.find((asset: { id: string }) => asset.id === 'landscape').cursor).toEqual({
     recording: cursorFixture,
     offsetMs: -78,
+    settings: { mode: 'raw', size: 2.5, hidden: true },
   });
   expect(
     saved.media.find((asset: { id: string }) => asset.id === 'portrait').cursor,
@@ -84,6 +90,9 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   });
   await expect(page.getByTestId('cursor-status')).toHaveText('5 samples · 1 cursor asset');
   await expect(page.getByLabel('Cursor time offset (ms)')).toHaveValue('-78');
+  await expect(page.getByLabel('Cursor motion', { exact: true })).toHaveValue('raw');
+  await expect(page.getByLabel('Cursor size', { exact: true })).toHaveValue('2.5');
+  await expect(page.getByLabel('Hide cursor', { exact: true })).toBeChecked();
   await page.getByRole('button', { name: 'Remove cursor sidecar' }).click();
   await expect(page.getByTestId('cursor-status')).toHaveText('No cursor sidecar');
   expect(uploads).toEqual([]);

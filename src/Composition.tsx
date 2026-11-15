@@ -1,7 +1,8 @@
-import { AbsoluteFill, Audio, Sequence, Video, useCurrentFrame } from 'remotion';
+import { AbsoluteFill, Audio, Img, Sequence, Video, useCurrentFrame } from 'remotion';
 import type { Asset } from './media';
 import { cameraTransform, cropPosition, maskRect, type Layout } from './stage';
 import { type Clip, type Track, type Zoom, zoomCamera } from './timeline';
+import { cursorFrame } from './cursor-render';
 
 export type CompositionProps = {
   clips: Clip[];
@@ -15,6 +16,7 @@ export type CompositionProps = {
 export function Composition({ clips, assets, zooms, layout, muted }: CompositionProps) {
   const frame = useCurrentFrame();
   const camera = zoomCamera(zooms, frame);
+  const cursor = cursorFrame(clips, assets, frame, layout);
   return (
     <AbsoluteFill
       style={{
@@ -81,6 +83,22 @@ export function Composition({ clips, assets, zooms, layout, muted }: Composition
                     )
                   );
                 })}
+              {track === 'screen' && cursor && (
+                <Img
+                  data-testid="cursor-preview"
+                  src={cursor.imageDataUrl}
+                  alt=""
+                  draggable={false}
+                  style={{
+                    position: 'absolute',
+                    left: cursor.x,
+                    top: cursor.y,
+                    width: cursor.width,
+                    height: cursor.height,
+                    pointerEvents: 'none',
+                  }}
+                />
+              )}
             </div>
           </div>
         );

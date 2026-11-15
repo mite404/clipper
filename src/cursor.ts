@@ -26,10 +26,15 @@ export type CursorRecording = Record<string, unknown> & {
   assets: CursorAsset[];
 };
 
+export type CursorSettings = { mode: 'raw' | 'smooth'; size: number; hidden: boolean };
+
+export const DEFAULT_CURSOR_SETTINGS: CursorSettings = { mode: 'smooth', size: 1, hidden: false };
+
 export type CursorTrack = {
   recording: CursorRecording;
   // Positive values delay the cursor relative to the source video's clock.
   offsetMs: number;
+  settings?: CursorSettings;
 };
 
 function object(value: unknown): Record<string, unknown> {
@@ -138,6 +143,14 @@ export function parseCursor(value: unknown): CursorRecording {
   return { ...root, version: 2, provider: 'native', samples, assets };
 }
 
+function parseSettings(value: unknown): CursorSettings {
+  const settings = object(value);
+  if (settings.mode !== 'raw' && settings.mode !== 'smooth')
+    throw new Error('Cursor motion must be raw or smooth.');
+  if (typeof settings.hidden !== 'boolean') throw new Error('Cursor visibility must be boolean.');
+  return { mode: settings.mode, size: finite(settings.size, 0.25, 4), hidden: settings.hidden };
+}
+
 /** Validates persisted source telemetry and its clock adjustment.
  * @throws When the recording or time offset is malformed.
  */
@@ -146,6 +159,7 @@ export function parseCursorTrack(value: unknown): CursorTrack {
   return {
     recording: parseCursor(track.recording),
     offsetMs: finite(track.offsetMs, -Number.MAX_SAFE_INTEGER),
+    ...(track.settings === undefined ? {} : { settings: parseSettings(track.settings) }),
   };
 }
 

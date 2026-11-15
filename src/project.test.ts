@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { Asset } from './media';
 import { parseProject, serializeProject, validateSources, type Edit } from './project';
 import { cursorFixture } from './cursor.fixture';
+import type { CursorTrack } from './cursor';
 
 const edit: Edit = {
   clips: [{ id: 'clip', assetId: 'video', track: 'screen', start: 0, duration: 30, offset: 15 }],
@@ -22,7 +23,11 @@ describe('portable project parsing', () => {
     const url = URL.createObjectURL(
       new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),
     );
-    const cursor = { recording: cursorFixture, offsetMs: -78 };
+    const cursor: CursorTrack = {
+      recording: cursorFixture,
+      offsetMs: -78,
+      settings: { mode: 'raw', size: 2.5, hidden: true },
+    };
     try {
       const saved = await serializeProject(edit, [{ ...asset, url, cursor }], []);
       expect(JSON.parse(await saved.text()).media[0].cursor).toEqual(cursor);
