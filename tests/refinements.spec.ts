@@ -131,6 +131,39 @@ test('marks a mouse position, centers it during zoom and reopens embedded media 
     .toBeGreaterThan(0.1);
 });
 
+test('a trim grip commits only real trims, on the clip as it is at release', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const undo = page.getByRole('button', { name: 'Undo', exact: true });
+  const clips = page.getByTestId('track-screen').getByRole('button');
+  const grip = clips.first().getByRole('slider', { name: 'Trim right edge' });
+  const center = async () => {
+    const box = (await grip.boundingBox())!;
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  };
+  // A click without a drag, and an arrow key in the direction a grip cannot move, edit nothing.
+  let at = await center();
+  await page.mouse.move(at.x, at.y);
+  await page.mouse.down();
+  await page.mouse.up();
+  await grip.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(undo).toBeDisabled();
+  // Split under a held grip: releasing must trim the shortened clip, not restore the old one.
+  await page.getByRole('slider', { name: 'Timeline playhead' }).fill('45');
+  await clips.first().click();
+  at = await center();
+  await page.mouse.move(at.x, at.y);
+  await page.mouse.down();
+  await page.mouse.move(at.x - 20, at.y, { steps: 5 });
+  await page.keyboard.press('s');
+  await expect(clips).toHaveCount(3);
+  await page.mouse.up();
+  const first = (await clips.nth(0).boundingBox())!;
+  const second = (await clips.nth(1).boundingBox())!;
+  expect(first.x + first.width).toBeLessThanOrEqual(second.x + 0.5);
+});
+
 test('ends mouse marking when its zoom is removed, and does not arm the next zoom', async ({
   page,
 }) => {

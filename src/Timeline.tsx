@@ -11,6 +11,18 @@ export const TRACKS = [
   { id: 'music', label: 'Music', detail: 'A2', Icon: Music2 },
 ] satisfies { id: Track; label: string; detail: string; Icon: typeof Film }[];
 
+// Report a trim only when it moved the edge. trimClip only shortens, so an equal duration means
+// nothing moved: a plain click on a grip, or an arrow key in the direction it cannot go.
+function commitTrim(
+  onTrim: ((clip: Clip) => void) | undefined,
+  clip: Clip,
+  edge: 'left' | 'right',
+  delta: number,
+): void {
+  const next = trimClip(clip, edge, delta); // → Clip
+  if (next.duration !== clip.duration) onTrim?.(next);
+}
+
 /** Multitrack timeline with a frame-accurate ruler and waveform playback highlighting. */
 export function Timeline({
   clips,
@@ -41,8 +53,10 @@ export function Timeline({
 }) {
   const seconds = duration / FPS;
   const [scale, setScale] = useState(40);
+  // A drag names its clip by ID and trims the clip as it is now, so a split, undo or delete made
+  // while a grip is held is never overwritten by a copy taken at pointerdown.
   const [drag, setDrag] = useState<{
-    clip: Clip;
+    clipId: string;
     edge: 'left' | 'right';
     x: number;
     width: number;
@@ -151,8 +165,8 @@ export function Timeline({
                   .filter((c) => c.track === id)
                   .map((originalClip) => {
                     const clip =
-                      drag?.clip.id === originalClip.id
-                        ? trimClip(drag.clip, drag.edge, drag.delta)
+                      drag?.clipId === originalClip.id
+                        ? trimClip(originalClip, drag.edge, drag.delta)
                         : originalClip;
                     const asset = assets.find((a) => a.id === clip.assetId);
                     const audio = id === 'voice' || id === 'music';
@@ -210,12 +224,11 @@ export function Timeline({
                               if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
                               event.preventDefault();
                               event.stopPropagation();
-                              onTrim?.(
-                                trimClip(
-                                  clip,
-                                  edge,
-                                  (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 10 : 1),
-                                ),
+                              commitTrim(
+                                onTrim,
+                                clip,
+                                edge,
+                                (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 10 : 1),
                               );
                             }}
                             onPointerDown={(event) => {
@@ -225,7 +238,7 @@ export function Timeline({
                               const lane = event.currentTarget.closest('.timeline-lane');
                               if (lane)
                                 setDrag({
-                                  clip,
+                                  clipId: clip.id,
                                   edge,
                                   x: event.clientX,
                                   width: lane.getBoundingClientRect().width,
@@ -242,14 +255,14 @@ export function Timeline({
                             }}
                             onPointerUp={(event) => {
                               if (!drag) return;
-                              onTrim?.(
-                                trimClip(
-                                  drag.clip,
-                                  drag.edge,
-                                  ((event.clientX - drag.x) / drag.width) * duration,
-                                ),
-                              );
                               setDrag(undefined);
+                              // Pointer capture means this grip is the one the drag started on.
+                              commitTrim(
+                                onTrim,
+                                originalClip,
+                                drag.edge,
+                                ((event.clientX - drag.x) / drag.width) * duration,
+                              );
                             }}
                             onPointerCancel={() => setDrag(undefined)}
                           />
