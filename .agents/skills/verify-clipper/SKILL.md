@@ -13,31 +13,39 @@ Open project restores them without relinking. Export video renders locally, not 
 
 ## Launch
 
-Run `npm ci` if dependencies are absent. In an Amp orb, launch an isolated verification server:
+Run `npm ci` if dependencies are absent. Install the lockfile's browser with
+`npx playwright install chromium` if doctor requests it. FFmpeg and ffprobe must be on PATH for
+export inspection. Orb bootstrap supplies these dependencies.
+
+Use the executable CLI from any working directory. From the repository root:
 
 ```bash
-.agents/skills/verify-clipper/scripts/control-clipper.sh launch
+.agents/skills/verify-clipper/scripts/verify.mjs --help
+.agents/skills/verify-clipper/scripts/verify.mjs doctor
+.agents/skills/verify-clipper/scripts/verify.mjs editor
 ```
 
-The helper uses a supervised Amp service, refuses a busy port, and checks page identity and all four
-demo assets. Default verification port is 4317. Concurrent runs must set distinct `VERIFY_PORT` and
-`VERIFY_RUN_ID` for launch, doctor, stop, and browser commands.
+Each journey starts fresh test-owned Playwright web servers on automatically selected loopback
+ports. It never reuses shared previews. Browser contexts, build directories, and evidence paths are
+unique per invocation. Port races fail through Vite's strict-port check rather than attaching to
+another worker's server. No Amp session, portal authentication, or existing server is required.
 
-For the user-facing editor and Storybook, `amp orb services ensure` starts the declared services. Do
-not stop those shared preview services during isolated verification cleanup.
+The production and Storybook builds are created only for journeys that need them, in temporary
+directories. Vite development serves export fixtures; a separate production preview serves the
+responsiveness test. `BASE_URL`, `PERF_URL`, and `STORYBOOK_URL` from the caller are deliberately
+replaced with isolated URLs. Use the existing `npm run test:ui` for an explicitly external target.
 
 ## Doctor
 
 ```bash
-.agents/skills/verify-clipper/scripts/control-clipper.sh doctor
-agent-browser --session verify-clipper open http://127.0.0.1:4317
-agent-browser --session verify-clipper set viewport 1440 1000 2
-agent-browser --session verify-clipper wait --text '4 assets ready'
+.agents/skills/verify-clipper/scripts/verify.mjs doctor
 ```
 
-Require `Clipper doctor OK` and `4 assets ready`. An HTTP 200 alone does not prove media decoded.
-Before screenshots, also wait for visible video elements to reach readyState 4. Use the official
-using-agent-browser skill for captures and interaction recordings.
+Require `Clipper CLI doctor OK`. Doctor checks bundled media files, launches the installed Chromium,
+opens a video-recording-capable context, closes it, and checks FFmpeg/ffprobe. It does not install
+anything, start a server, or prove playback. Journeys then require `4 assets ready` through the
+actual UI and assert the feature's observable result. `CHROME_PATH` optionally overrides the browser
+binary; it is not required with Playwright Chromium installed.
 
 ## Gate
 
@@ -56,7 +64,12 @@ npm test
 npm run build
 npm run build-storybook
 npm audit
+node --test .agents/skills/verify-clipper/scripts/verify.test.mjs
 ```
+
+The helper's Node tests are a local tooling gate, not currently wired into CI. Existing `npm test`,
+Playwright, Storybook, lint, typecheck, Fallow, and hook commands remain unchanged. Prettier covers
+the project skill; the staged JavaScript lint hook also covers its helpers.
 
 `build` runs strict TypeScript then Vite. Unit tests prove frame splits, ripple isolation, and zoom
 envelopes. They do not prove codecs, playback, DOM layout, import privacy, or audio synchronization.
@@ -68,20 +81,26 @@ The browser journeys live in `tests/*.spec.ts`. They use real H.264, WAV, blob i
 playback, and Mediabunny decoding. No media APIs are mocked.
 
 ```bash
-export CHROME_PATH=$(ls -d "$HOME"/.agent-browser/browsers/chrome-*/chrome | tail -1)
-BASE_URL=http://127.0.0.1:4317 PERF_URL=http://127.0.0.1:5173 npm run test:ui -- \
-  --trace on --output .amp/in/artifacts/verification
+.agents/skills/verify-clipper/scripts/verify.mjs media
+.agents/skills/verify-clipper/scripts/verify.mjs composition
+.agents/skills/verify-clipper/scripts/verify.mjs delivery
+.agents/skills/verify-clipper/scripts/verify.mjs export
+.agents/skills/verify-clipper/scripts/verify.mjs storybook
+.agents/skills/verify-clipper/scripts/verify.mjs performance
+.agents/skills/verify-clipper/scripts/verify.mjs all
 ```
 
-Storybook must be running on its declared port 6006. `STORYBOOK_URL` overrides it. `CHROME_PATH` may
-name an installed Chrome binary; otherwise Playwright uses its installed Chromium. Export fixture
-tests import Vite modules and require the isolated development server on `BASE_URL`. The performance
-test requires a production build on `PERF_URL`; never use development React as the responsiveness
-acceptance target. Run five repetitions without a CPU profiler. Its 4× CPU-throttled gate measures
-actual video advancement within one second and rAF p95 below 100ms over five seconds. For an
-authenticated Amp portal, supply a fresh login URL as `PERF_URL` from `amp portal login-url`. The
-default suite does not invoke Amp or need authentication. Never print the signed URL. For focused
-changes use `-g` with the exact test title listed in the matching feature file.
+`editor` runs editor and refinement specs. The other names select the existing feature specs or
+titles in `scripts/verify.mjs`. `all` discovers every spec, preserving the root configuration's
+separate editor/4K projects. All runs use one worker, no retries, and fail on skipped, flaky, or
+zero tests. New journeys belong in the same table, not a second browser implementation.
+
+`performance` runs five repetitions against a fresh production build with tracing and video disabled
+and the original 1x device scale. Do not run other browser/build jobs alongside that measurement.
+Its existing 4× CPU-throttled assertions require actual video advancement within one second and rAF
+p95 below 100ms over five seconds. `all` includes one uninstrumented performance smoke test; it does
+not replace the uninstrumented five-run gate. No command checks physical speaker output or claims
+that not-yet-implemented cursor sidecar/follow features work.
 
 ## Evidence
 
@@ -95,23 +114,46 @@ HD/4K files, decoded pixels and audio mix. Both tools must be installed. A statu
 not prove those side effects. Audio element timing proves the browser transport, not what a human
 hears from physical speakers. Rewind is deliberately silent.
 
-Retain Playwright traces in `.amp/in/artifacts/verification`. Save reviewed screenshots and clips
-under `.amp/in/artifacts/`, inspect them, and report the viewport and state. A capture without
-inspection is not visual verification. Report every mapped feature as verified, failed, or skipped.
+Every run prints a unique directory under `.amp/in/artifacts/verification/<journey>-<id>/`.
+`VERIFY_EVIDENCE` overrides the parent directory. Read `summary.json` for the verdict and allocated
+ports, `results.json` for each test and assertion failure, and `run.log` for build/server output.
+Browser subdirectories contain traces, final screenshots, and failure videos. Performance omits
+traces/videos to avoid measurement overhead. Editor captures use 2x; the performance project uses
+1x. Open a trace with `npx playwright show-trace <path-to-trace.zip>`.
+
+Inspect screenshots and clips before reporting visual quality. A capture without inspection is not
+visual verification. Report every mapped feature as verified, failed, or skipped. Exit 0 means the
+selected assertions passed, not that the entire feature map was swept. Unknown journeys exit 2;
+failed checks, build failures, and interrupts exit nonzero and retain diagnostics.
 
 ## Cleanup
 
+The CLI automatically closes its test-owned browsers and servers through Playwright and removes only
+its temporary build directory. SIGINT/SIGTERM is forwarded to the active command for normal
+teardown. Evidence remains on success, failure, and interruption. SIGKILL or an orb crash cannot run
+cleanup; inspect recorded ports and process ownership before stopping any leftover process. Never
+kill by process name or stop the shared editor/Storybook previews.
+
+## Manual browser inspection
+
+For a persistent instance to inspect with agent-browser, use the existing Amp-only helper:
+
 ```bash
+.agents/skills/verify-clipper/scripts/control-clipper.sh launch
+.agents/skills/verify-clipper/scripts/control-clipper.sh doctor
+agent-browser --session verify-clipper open http://127.0.0.1:4317
+agent-browser --session verify-clipper set viewport 1440 1000 2
+agent-browser --session verify-clipper wait --text '4 assets ready'
 agent-browser --session verify-clipper close
 .agents/skills/verify-clipper/scripts/control-clipper.sh stop
-test -d .amp/in/artifacts/verification
 ```
 
-This stops only the verification service owned by this run. Evidence remains. Do not delete user
-media, stop the shared editor/Storybook previews, or use process-name kills.
+Keep distinct `VERIFY_PORT` and `VERIFY_RUN_ID` values for concurrent manual sessions and preserve
+both values through launch, doctor, stop, and browser commands. This older helper's doctor checks
+page identity and media responses, not media decoding. Before captures, wait for visible videos to
+reach readyState 4. Load the official using-agent-browser skill for captures and recordings. Shared
+user previews still use `amp orb services ensure`; CLI cleanup never stops them.
 
 ## Helpers and maintenance
 
-Run `scripts/control-clipper.sh` as shown above. It requires Amp orb services. Outside an orb, use
-`npm run dev -- --port 4317 --strictPort` in a dedicated terminal and stop that process yourself.
 Use `/maintain-verification-skill` when features or selectors change.
