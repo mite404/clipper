@@ -6,6 +6,7 @@ export type Clip = {
   start: number;
   duration: number;
   offset: number;
+  originId?: string;
 };
 export type Zoom = {
   id: string;
@@ -14,6 +15,7 @@ export type Zoom = {
   scale: number;
   x: number;
   y: number;
+  source?: { assetId: string; clipId: string; start: number; x: number; y: number };
 };
 export const FPS = 30;
 /** Limits every zoom obeys, whether drawn in the inspector, opened from a file or generated. */
@@ -39,9 +41,10 @@ export function splitClip(clips: Clip[], id: string, frame: number): Clip[] {
     if (clip.id !== id || frame <= clip.start || frame >= clip.start + clip.duration) return [clip];
     const elapsed = frame - clip.start;
     return [
-      { ...clip, duration: elapsed },
+      { ...clip, originId: clip.originId ?? clip.id, duration: elapsed },
       {
         ...clip,
+        originId: clip.originId ?? clip.id,
         id: rightId,
         start: frame,
         duration: clip.duration - elapsed,

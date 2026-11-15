@@ -19,6 +19,48 @@ const project = () => ({
 });
 
 describe('portable project parsing', () => {
+  it('saves and reopens every source anchor and split lineage field', async () => {
+    const url = URL.createObjectURL(
+      new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),
+    );
+    const anchored: Edit = {
+      ...edit,
+      clips: [{ ...edit.clips[0], originId: 'original-take' }],
+      zooms: [
+        {
+          ...edit.zooms[0],
+          source: {
+            assetId: 'video',
+            clipId: 'original-take',
+            start: 15,
+            x: 0.27,
+            y: 0.64,
+          },
+        },
+      ],
+    };
+    try {
+      const saved = await serializeProject(anchored, [{ ...asset, url }], []);
+      expect(parseProject(await saved.text()).edit).toEqual(anchored);
+      for (const source of [
+        { ...anchored.zooms[0].source, x: -0.01 },
+        { ...anchored.zooms[0].source, start: 1.5 },
+        { ...anchored.zooms[0].source, start: 24 * 60 * 60 * 30 },
+        { ...anchored.zooms[0].source, assetId: 'missing' },
+        { ...anchored.zooms[0].source, clipId: 'unrelated-take' },
+      ]) {
+        const value = {
+          ...project(),
+          clips: anchored.clips,
+          zooms: [{ ...anchored.zooms[0], source }],
+        };
+        expect(() => parseProject(JSON.stringify(value))).toThrow(/source|anchor/i);
+      }
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+
   it('preserves all cursor fields and the source clock adjustment through save and reopen', async () => {
     const url = URL.createObjectURL(
       new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),

@@ -23,8 +23,8 @@ const clip: Clip = {
 describe('editing a timeline in frames', () => {
   it('splits a trimmed clip without repeating or losing source frames', () => {
     expect(splitClip([clip], 'screen', 90)).toEqual([
-      { ...clip, duration: 60 },
-      { ...clip, id: 'screen-90', start: 90, duration: 90, offset: 120 },
+      { ...clip, originId: 'screen', duration: 60 },
+      { ...clip, originId: 'screen', id: 'screen-90', start: 90, duration: 90, offset: 120 },
     ]);
     expect(splitClip([clip], 'screen', 30)).toEqual([clip]);
     expect(splitClip([clip], 'screen', 180)).toEqual([clip]);

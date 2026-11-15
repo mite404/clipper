@@ -9,11 +9,17 @@ import { IconButton, MediaLibrary, Waveform } from './components';
 import { Timeline } from './Timeline';
 import { loadDemo, type Asset } from './media';
 import { CursorControls } from './CursorControls';
+import { AutoZoomControls } from './AutoZoomControls';
 import { cursorFixture, motionCursorFixture } from './cursor.fixture';
 import type { CursorTrack } from './cursor';
+import type { Clip, Zoom } from './timeline';
 
 function CursorRecord({ preview = false }: { preview?: boolean }) {
   const fixture = preview ? motionCursorFixture : cursorFixture;
+  const [zooms, setZooms] = useState<Zoom[]>([]);
+  const clips: Clip[] = [
+    { id: 'screen', assetId: 'synthetic', track: 'screen', start: 0, duration: 360, offset: 0 },
+  ];
   const [mode, setMode] = useState('Demo data');
   const [cursor, setCursor] = useState<CursorTrack | undefined>({
     recording: fixture,
@@ -37,6 +43,7 @@ function CursorRecord({ preview = false }: { preview?: boolean }) {
   };
   const choose = (next: string) => {
     setMode(next);
+    setZooms([]);
     const counts: Record<string, number> = {
       'Demo data': fixture.samples.length,
       'Worst case': 8001,
@@ -59,18 +66,9 @@ function CursorRecord({ preview = false }: { preview?: boolean }) {
           component={Composition}
           inputProps={{
             assets: [asset],
-            clips: [
-              {
-                id: 'screen',
-                assetId: asset.id,
-                track: 'screen',
-                start: 0,
-                duration: 360,
-                offset: 0,
-              },
-            ],
+            clips,
             layout: INITIAL_EDIT.layout,
-            zooms: [],
+            zooms,
             muted: [],
           }}
           compositionWidth={1280}
@@ -82,6 +80,11 @@ function CursorRecord({ preview = false }: { preview?: boolean }) {
           style={{ width: '100%' }}
         />
       )}
+      <AutoZoomControls
+        edit={{ ...INITIAL_EDIT, clips, zooms }}
+        assets={[asset]}
+        onChange={setZooms}
+      />
       <CursorControls key={mode} asset={asset} onChange={setCursor} />
       <div
         role="group"
@@ -323,4 +326,11 @@ export const CursorSidecar: Story = { args: { view: 'cursor' }, render: () => <C
 export const CursorMotion: Story = {
   args: { view: 'cursor' },
   render: () => <CursorRecord preview />,
+};
+export const AutomaticZooms: Story = {
+  args: { view: 'cursor' },
+  render: () => <CursorRecord preview />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Generate zooms' }));
+  },
 };

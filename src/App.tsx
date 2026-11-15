@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Player, type PlayerRef } from '@remotion/player';
 import {
   ArrowDownToLine,
@@ -37,6 +37,8 @@ import {
 } from './timeline';
 import { serializeProject, parseProject, validateSources, type Edit } from './project';
 import { CursorControls } from './CursorControls';
+import { AutoZoomControls } from './AutoZoomControls';
+import { resolveZooms } from './zoom-generation';
 import { maskRect, STAGE, type Layout } from './stage';
 import './styles.css';
 
@@ -225,6 +227,7 @@ export function Inspector({
   onMarkMouse,
   markingMouse = false,
   duration,
+  children,
 }: {
   zoom?: Zoom;
   layout: Layout;
@@ -235,6 +238,7 @@ export function Inspector({
   onMarkMouse?: () => void;
   markingMouse?: boolean;
   duration: number;
+  children?: ReactNode;
 }) {
   return (
     <aside className="inspector">
@@ -242,6 +246,7 @@ export function Inspector({
         <span>Inspector</span>
         <Crop size={15} />
       </div>
+      {children}
       <div className="inspector-heading">
         <span className="mini-icon">
           <Clapperboard size={17} />
@@ -335,8 +340,7 @@ export function Inspector({
               {markingMouse ? 'Cancel mouse marking' : 'Mark mouse position'}
             </button>
             <p className="inspector-copy">
-              Manual mouse focus. Mark the cursor in the unzoomed frame; it will be centered during
-              the hold.
+              Mark focus in the unzoomed frame. Editing a generated shot makes it manual.
             </p>
             <label className="slider-label">
               Zoom level <output>{zoom.scale.toFixed(1)}×</output>
@@ -520,9 +524,9 @@ export function App() {
   const change = useCallback(
     (next: Edit) => {
       setHistory((previous) => [...previous.slice(-49), edit]);
-      setEdit(next);
+      setEdit({ ...next, zooms: resolveZooms(next.zooms, next.clips, assets, next.layout) });
     },
-    [edit],
+    [edit, assets],
   );
   const undo = useCallback(() => {
     const previous = history.at(-1);
@@ -744,7 +748,10 @@ export function App() {
       validateSources(project.edit, imported);
       const previous = assets;
       setAssets(imported);
-      setEdit(project.edit);
+      setEdit({
+        ...project.edit,
+        zooms: resolveZooms(project.edit.zooms, project.edit.clips, imported, project.edit.layout),
+      });
       setMuted(project.muted);
       setHistory([]);
       setSelected(project.edit.clips[0]?.id ?? '');
@@ -972,7 +979,7 @@ export function App() {
                       change({
                         ...edit,
                         zooms: edit.zooms.map((z) =>
-                          z.id === selectedZoom.id ? { ...z, x, y } : z,
+                          z.id === selectedZoom.id ? { ...z, x, y, source: undefined } : z,
                         ),
                       });
                       setMarkingZoomId(null);
@@ -1179,9 +1186,18 @@ export function App() {
               setMessage('Zooms cannot overlap.');
               return;
             }
-            change({ ...edit, zooms: edit.zooms.map((z) => (z.id === zoom.id ? zoom : z)) });
+            change({
+              ...edit,
+              zooms: edit.zooms.map((z) => (z.id === zoom.id ? { ...zoom, source: undefined } : z)),
+            });
           }}
-        />
+        >
+          <AutoZoomControls
+            edit={edit}
+            assets={assets}
+            onChange={(zooms) => change({ ...edit, zooms })}
+          />
+        </Inspector>
       </div>
       <footer className="app-footer">
         <span role="status">

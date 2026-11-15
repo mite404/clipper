@@ -45,7 +45,7 @@ export const motionCursorFixture: CursorRecording = {
     cy: 0.5 + Math.sin(i / 45) * 0.2,
     assetId: 'arrow',
     visible: true,
-    interactionType: i % 100 === 0 ? 'click' : undefined,
+    interactionType: i % 100 === 0 ? 'click' : i % 100 === 1 ? 'mouseup' : undefined,
   })),
   assets: [
     {

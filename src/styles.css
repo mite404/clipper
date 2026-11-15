@@ -2067,3 +2067,12 @@ p {
 .cursor-appearance input[type='number'] {
   width: 8ch;
 }
+.inspector .cursor-controls {
+  padding: 12px 0;
+}
+@media (min-width: 961px) {
+  .inspector {
+    max-height: calc(100dvh - 150px);
+    overflow-y: auto;
+  }
+}

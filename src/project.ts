@@ -51,6 +51,30 @@ function range(start: number, duration: number, field: string) {
   if (start + duration > MAX_FRAMES) throw new Error(`${field} range exceeds 24 hours.`);
 }
 
+function zoomSource(value: unknown, clips: Clip[], duration: number): NonNullable<Zoom['source']> {
+  const source = object(value, 'Zoom source anchor');
+  const assetId = string(source.assetId, 'source.assetId');
+  const clipId = string(source.clipId, 'source.clipId');
+  const start = frame(source.start, 'source.start');
+  range(start, duration, 'Zoom source');
+  if (
+    !clips.some(
+      (clip) =>
+        clip.track === 'screen' &&
+        clip.assetId === assetId &&
+        (clip.originId ?? clip.id) === clipId,
+    )
+  )
+    throw new Error('Zoom source anchor has no screen clip.');
+  return {
+    assetId,
+    clipId,
+    start,
+    x: number(source.x, 'source.x', 0, 1),
+    y: number(source.y, 'source.y', 0, 1),
+  };
+}
+
 /** Validates the portable envelope, not media codecs or decoded source durations. */
 export function parseProject(text: string): {
   edit: Edit;
@@ -110,7 +134,15 @@ export function parseProject(text: string): {
     const offset = frame(item.offset, `clips[${i}].offset`);
     range(start, duration, `Clip ${id} timeline`);
     range(offset, duration, `Clip ${id} source`);
-    return { id, assetId, track: track(item.track), start, duration, offset };
+    return {
+      id,
+      assetId,
+      track: track(item.track),
+      start,
+      duration,
+      offset,
+      ...(item.originId === undefined ? {} : { originId: string(item.originId, 'clip.originId') }),
+    };
   });
   unique(
     clips.map((c) => c.id),
@@ -130,6 +162,7 @@ export function parseProject(text: string): {
       scale: number(item.scale, `zooms[${i}].scale`, ZOOM_LIMITS.minScale, ZOOM_LIMITS.maxScale),
       x: number(item.x, `zooms[${i}].x`, 0, 100),
       y: number(item.y, `zooms[${i}].y`, 0, 100),
+      ...(item.source === undefined ? {} : { source: zoomSource(item.source, clips, duration) }),
     };
   });
   // Selection is one namespace, so a zoom may not reuse a clip's ID either.
