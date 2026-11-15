@@ -98,6 +98,7 @@ hosted, see [Known limits](#known-limits)).
 | REF-8    | Mouse-marking mode ends when its zoom is removed, undone or deselected (#6)                                           | [`fd16d0f`](https://github.com/mite404/clipper/commit/fd16d0fe0e3f8330464266b22d88bff226cb8cb7) | [CI 43766869839](https://github.com/mite404/clipper/actions/runs/43766869839)                                                                                                          |
 | REF-9    | Timecode, playhead and frame buttons match the frame the player holds after a pause (#21)                             | [`7661750`](https://github.com/mite404/clipper/commit/7661750f49e4283266311365ad93238bfc079584) | [CI 43767536538](https://github.com/mite404/clipper/actions/runs/43767536538); reproduced first: readout showed frame 6 while the player held frame 9                                  |
 | REF-10   | Trim grip: a click commits nothing; a release trims the clip as it is then (#15, #38)                                 | [`6eef40b`](https://github.com/mite404/clipper/commit/6eef40b5cd1690d56efec9322ab5a820408e1e85) | [CI 43768432875](https://github.com/mite404/clipper/actions/runs/43768432875); both defects reproduced first                                                                           |
+| REF-15   | Export audio mix cost follows clip count, not decoded packet count (#2)                                               | [`f9ef3c3`](https://github.com/mite404/clipper/commit/f9ef3c3e2397a09f0ba9ce668127de99f47affd4) | [CI 43769770918](https://github.com/mite404/clipper/actions/runs/43769770918); 40 s of Opus mixes in 0.3 s, was 13 s; audio matches the old build and an ffmpeg render equally         |
 
 CLIP-3 is manual fixed-point zoom. It does not satisfy CLIP-7 to CLIP-10. BOOT-1 is on `main` but
 does not run for new orbs, because new orbs clone the Amp-hosted scaffold.
@@ -156,7 +157,6 @@ queue thread unless stated.
 | REF-12 | Logo no longer reloads the page; warn before unloading unsaved work                  | Small  | Ready                                       | #23           |
 | REF-13 | CI compares the fallow baseline with the pre-push commit                             | Small  | Ready                                       | #4            |
 | REF-14 | One constant each for music gain and peak rate; blob-URL test asserts no fetch       | Small  | Ready                                       | #32, #33, #34 |
-| REF-15 | Export audio mix cost follows clip count, not decoded buffer count                   | Medium | Ready                                       | #2            |
 | REF-16 | Undo takes one step per gesture and skips no-op edits                                | Medium | Ready                                       | #5            |
 | REF-17 | Export pixel gate checks each panel and more than one frame                          | Medium | Ready                                       | #31           |
 | REF-18 | Editor journeys also run against the production bundle                               | Medium | Ready                                       | #18           |
