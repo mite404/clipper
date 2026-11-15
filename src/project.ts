@@ -1,7 +1,10 @@
 import type { Layout } from './stage';
 import type { Asset } from './media';
-import { FPS, type Clip, type Track, type Zoom } from './timeline';
+import { FPS, ZOOM_LIMITS, zoomsOverlap, type Clip, type Track, type Zoom } from './timeline';
 import { parseCursorTrack, type CursorTrack } from './cursor';
+
+// No clip or zoom may end later than this: 24 hours of timeline.
+const MAX_FRAMES = 24 * 60 * 60 * FPS;
 
 export type Edit = { clips: Clip[]; zooms: Zoom[]; layout: Layout };
 
@@ -45,8 +48,7 @@ function unique(ids: string[], field: string) {
 }
 
 function range(start: number, duration: number, field: string) {
-  if (!Number.isSafeInteger(start + duration))
-    throw new Error(`${field} range exceeds safe frames.`);
+  if (start + duration > MAX_FRAMES) throw new Error(`${field} range exceeds 24 hours.`);
 }
 
 /** Validates the portable envelope, not media codecs or decoded source durations. */
@@ -119,21 +121,21 @@ export function parseProject(text: string): {
     const item = object(entry, `zooms[${i}]`);
     const id = string(item.id, `zooms[${i}].id`);
     const start = frame(item.start, `zooms[${i}].start`);
-    const duration = frame(item.duration, `zooms[${i}].duration`, 1);
+    const duration = frame(item.duration, `zooms[${i}].duration`, ZOOM_LIMITS.minFrames);
     range(start, duration, `Zoom ${id}`);
     return {
       id,
       start,
       duration,
-      scale: number(item.scale, `zooms[${i}].scale`, 1, 3),
+      scale: number(item.scale, `zooms[${i}].scale`, ZOOM_LIMITS.minScale, ZOOM_LIMITS.maxScale),
       x: number(item.x, `zooms[${i}].x`, 0, 100),
       y: number(item.y, `zooms[${i}].y`, 0, 100),
     };
   });
-  unique(
-    zooms.map((z) => z.id),
-    'zoom',
-  );
+  // Selection is one namespace, so a zoom may not reuse a clip's ID either.
+  unique([...clips.map((c) => c.id), ...zooms.map((z) => z.id)], 'clip or zoom');
+  // ponytail: pairwise scan; sort by start and compare neighbours if files carry thousands of zooms
+  if (zooms.some((zoom) => zoomsOverlap(zooms, zoom))) throw new Error('Zooms cannot overlap.');
 
   const settings = object(root.layout, 'layout');
   const layout: Layout = {

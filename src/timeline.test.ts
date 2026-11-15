@@ -7,6 +7,7 @@ import {
   trimClip,
   zoomAt,
   zoomCamera,
+  zoomsOverlap,
   type Clip,
 } from './timeline';
 
@@ -73,6 +74,42 @@ describe('editing a timeline in frames', () => {
     expect(zoomAt([zoom], 45)).toBeGreaterThan(1);
     expect(zoomAt([zoom], 90)).toBe(2);
     expect(zoomAt([zoom], 150)).toBe(1);
+  });
+
+  it('ramps over 24 frames on a smoothstep curve, in and out', () => {
+    const zoom = { id: 'z', start: 30, duration: 120, scale: 2, x: 25, y: 60 };
+    expect(zoomAt([zoom], 36)).toBeCloseTo(1.15625, 10); // a linear ramp would give 1.25
+    expect(zoomAt([zoom], 42)).toBe(1.5);
+    expect(zoomAt([zoom], 53)).toBeLessThan(2);
+    expect(zoomAt([zoom], 54)).toBe(2);
+    expect(zoomAt([zoom], 126)).toBe(2);
+    expect(zoomAt([zoom], 138)).toBe(1.5);
+    expect(zoomAt([zoom], 149)).toBeCloseTo(1.00506, 4);
+  });
+
+  it('gives a short zoom half its length to ramp, so it peaks only at its midpoint', () => {
+    const zoom = { id: 'z', start: 100, duration: 20, scale: 3, x: 50, y: 50 };
+    expect(zoomAt([zoom], 109)).toBeLessThan(3);
+    expect(zoomAt([zoom], 110)).toBe(3);
+    expect(zoomAt([zoom], 111)).toBeLessThan(3);
+  });
+
+  it('pans toward the focus in step with the ramp instead of jumping to it', () => {
+    const zoom = { id: 'z', start: 30, duration: 120, scale: 2, x: 25, y: 65 };
+    expect(zoomCamera([zoom], 31).x).toBeGreaterThan(0);
+    expect(zoomCamera([zoom], 31).x).toBeLessThan(1);
+    expect(zoomCamera([zoom], 42).x).toBeCloseTo(18.75, 10);
+    expect(zoomCamera([zoom], 42).y).toBeCloseTo(-11.25, 10);
+  });
+
+  it('detects overlapping zooms, but not touching ones or the zoom being edited', () => {
+    const zooms = [{ id: 'a', start: 30, duration: 60, scale: 2, x: 50, y: 50 }];
+    expect(zoomsOverlap(zooms, { id: 'b', start: 0, duration: 30 })).toBe(false);
+    expect(zoomsOverlap(zooms, { id: 'b', start: 90, duration: 30 })).toBe(false);
+    expect(zoomsOverlap(zooms, { id: 'b', start: 0, duration: 31 })).toBe(true);
+    expect(zoomsOverlap(zooms, { id: 'b', start: 89, duration: 30 })).toBe(true);
+    expect(zoomsOverlap(zooms, { id: 'b', start: 40, duration: 6 })).toBe(true);
+    expect(zoomsOverlap(zooms, { id: 'a', start: 40, duration: 60 })).toBe(false);
   });
 
   it('shortens either edge without changing neighboring tracks or source timing', () => {

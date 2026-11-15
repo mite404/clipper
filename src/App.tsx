@@ -32,6 +32,8 @@ import {
   insertClip,
   sourceFrame,
   splitClip,
+  ZOOM_LIMITS,
+  zoomsOverlap,
 } from './timeline';
 import { serializeProject, parseProject, validateSources, type Edit } from './project';
 import { CursorControls } from './CursorControls';
@@ -341,8 +343,8 @@ export function Inspector({
               <input
                 aria-label="Zoom level"
                 type="range"
-                min="1"
-                max="3"
+                min={ZOOM_LIMITS.minScale}
+                max={ZOOM_LIMITS.maxScale}
                 step="0.1"
                 value={zoom.scale}
                 onChange={(e) => onZoom({ ...zoom, scale: Number(e.target.value) })}
@@ -377,7 +379,7 @@ export function Inspector({
                 <input
                   aria-label="Zoom duration seconds"
                   type="number"
-                  min="0.2"
+                  min={ZOOM_LIMITS.minFrames / FPS}
                   max={(duration - zoom.start) / FPS}
                   step="0.1"
                   value={Number((zoom.duration / FPS).toFixed(2))}
@@ -385,7 +387,7 @@ export function Inspector({
                     onZoom({
                       ...zoom,
                       duration: Math.max(
-                        6,
+                        ZOOM_LIMITS.minFrames,
                         Math.min(duration - zoom.start, Math.round(Number(e.target.value) * FPS)),
                       ),
                     })
@@ -641,17 +643,17 @@ export function App() {
   }, [duration, seek, split, removeSelected, undo, help, busy, exportProgress, markingMouse]);
 
   const addZoom = () => {
-    if (duration < 6) {
+    if (duration < ZOOM_LIMITS.minFrames) {
       setMessage('Add at least six frames before creating a zoom.');
       return;
     }
-    const start = Math.min(frameRef.current, duration - 6);
+    const start = Math.min(frameRef.current, duration - ZOOM_LIMITS.minFrames);
     const length = Math.min(120, duration - start);
-    if (edit.zooms.some((z) => start < z.start + z.duration && start + length > z.start)) {
+    const zoom = { id: crypto.randomUUID(), start, duration: length, scale: 1.8, x: 50, y: 50 };
+    if (zoomsOverlap(edit.zooms, zoom)) {
       setMessage('Zooms cannot overlap. Choose another time or edit the existing zoom.');
       return;
     }
-    const zoom = { id: crypto.randomUUID(), start, duration: length, scale: 1.8, x: 50, y: 50 };
     change({ ...edit, zooms: [...edit.zooms, zoom] });
     setSelected(zoom.id);
     setMessage('Zoom added. Adjust its timing and focus in the inspector.');
@@ -1166,14 +1168,7 @@ export function App() {
           markingMouse={markingMouse}
           onRemoveZoom={removeSelected}
           onZoom={(zoom) => {
-            if (
-              edit.zooms.some(
-                (z) =>
-                  z.id !== zoom.id &&
-                  zoom.start < z.start + z.duration &&
-                  zoom.start + zoom.duration > z.start,
-              )
-            ) {
+            if (zoomsOverlap(edit.zooms, zoom)) {
               setMessage('Zooms cannot overlap.');
               return;
             }

@@ -39,6 +39,12 @@ describe('portable project parsing', () => {
     expect(parseProject(JSON.stringify(swapped)).edit.layout.swapped).toBe(true);
   });
 
+  it('accepts zooms that touch without overlapping', () => {
+    const value = project();
+    value.zooms.push({ ...value.zooms[0], id: 'second', start: 30, duration: 6 });
+    expect(parseProject(JSON.stringify(value)).edit.zooms).toHaveLength(2);
+  });
+
   it('allows an empty project', () => {
     const value = { ...project(), clips: [], zooms: [], media: [], muted: [] };
     expect(parseProject(JSON.stringify(value)).edit.clips).toEqual([]);
@@ -177,6 +183,34 @@ describe('portable project parsing', () => {
         p.zooms[0].duration = -1;
       },
       /duration/i,
+    ],
+    [
+      'a zoom shorter than six frames',
+      (p: ReturnType<typeof project>) => {
+        p.zooms[0].duration = 5;
+      },
+      /duration/i,
+    ],
+    [
+      'overlapping zooms',
+      (p: ReturnType<typeof project>) => {
+        p.zooms.push({ ...p.zooms[0], id: 'second', start: 29 });
+      },
+      /overlap/i,
+    ],
+    [
+      'a zoom that shares a clip ID',
+      (p: ReturnType<typeof project>) => {
+        p.zooms[0].id = p.clips[0].id;
+      },
+      /duplicate/i,
+    ],
+    [
+      'a clip placed more than a day into the timeline',
+      (p: ReturnType<typeof project>) => {
+        p.clips[0].start = 24 * 60 * 60 * 30;
+      },
+      /range/i,
     ],
     [
       'empty ID',

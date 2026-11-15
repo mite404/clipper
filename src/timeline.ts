@@ -16,6 +16,8 @@ export type Zoom = {
   y: number;
 };
 export const FPS = 30;
+/** Limits every zoom obeys, whether drawn in the inspector, opened from a file or generated. */
+export const ZOOM_LIMITS = { minFrames: 6, minScale: 1, maxScale: 3 };
 
 /** Whether a clip or zoom is live at a timeline frame. */
 export function covers(span: { start: number; duration: number }, frame: number): boolean {
@@ -61,6 +63,19 @@ export function insertClip(clips: Clip[], clip: Clip, frame: number): Clip[] {
     ),
     { ...clip, start: frame },
   ];
+}
+
+/** Whether a zoom's span collides with another zoom's; a zoom never collides with itself. */
+export function zoomsOverlap(
+  zooms: Zoom[],
+  candidate: Pick<Zoom, 'id' | 'start' | 'duration'>,
+): boolean {
+  return zooms.some(
+    (zoom) =>
+      zoom.id !== candidate.id &&
+      candidate.start < zoom.start + zoom.duration &&
+      candidate.start + candidate.duration > zoom.start,
+  );
 }
 
 /** Evaluate the eased zoom scale at an absolute composition frame. */
