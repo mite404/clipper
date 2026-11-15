@@ -1,0 +1,60 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+SECONDS=0
+
+echo 'Checking system media and download tools'
+missing=()
+for package in curl xz-utils ffmpeg; do
+  if [[ "$(dpkg-query -W -f='${Status}' "$package" 2>/dev/null || true)" != 'install ok installed' ]]; then
+    missing+=("$package")
+  fi
+done
+if ((${#missing[@]})); then
+  sudo apt-get update
+  sudo apt-get install -y "${missing[@]}"
+fi
+
+node_version="$(cat .node-version)"
+if ! command -v node >/dev/null || [[ "$(node --version)" != "v$node_version" ]]; then
+  echo "Installing Node $node_version"
+  case "$(uname -m)" in
+    x86_64) arch=x64 ;;
+    aarch64) arch=arm64 ;;
+    *) echo 'Unsupported Node architecture' >&2; exit 1 ;;
+  esac
+  archive="node-v$node_version-linux-$arch.tar.xz"
+  download="$(mktemp -d)"
+  trap 'rm -rf "$download"' EXIT
+  curl --fail --silent --show-error --location "https://nodejs.org/dist/v$node_version/$archive" -o "$download/$archive"
+  curl --fail --silent --show-error --location "https://nodejs.org/dist/v$node_version/SHASUMS256.txt" -o "$download/SHASUMS256.txt"
+  (cd "$download"; grep "  $archive$" SHASUMS256.txt | sha256sum --check)
+  sudo mkdir -p /usr/local/lib/nodejs
+  sudo tar -xJf "$download/$archive" -C /usr/local/lib/nodejs
+  for binary in node npm npx; do
+    sudo ln -sf "/usr/local/lib/nodejs/node-v$node_version-linux-$arch/bin/$binary" "/usr/local/bin/$binary"
+  done
+fi
+
+npm_version="$(node -p 'JSON.parse(require("fs").readFileSync("package.json", "utf8")).packageManager.split("@")[1]')"
+if [[ "$(npm --version)" != "$npm_version" ]]; then
+  sudo npm install --global "npm@$npm_version"
+fi
+echo "Toolchain ready after ${SECONDS}s: Node $(node --version), npm $(npm --version)"
+
+echo 'Installing locked dependencies and Git hooks'
+npm ci --no-audit --no-fund
+echo "Dependencies ready after ${SECONDS}s"
+
+echo 'Installing and checking Playwright Chromium'
+npx --no-install playwright install chromium
+browser_check='const {chromium} = await import("@playwright/test"); const browser = await chromium.launch(); await browser.close();'
+if ! node --input-type=module -e "$browser_check"; then
+  npx --no-install playwright install-deps chromium
+  node --input-type=module -e "$browser_check"
+fi
+
+ffmpeg -version | head -n 1
+ffprobe -version | head -n 1
+echo "Orb setup complete in ${SECONDS}s. Start previews with: amp orb services ensure"
