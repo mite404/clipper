@@ -10,6 +10,7 @@ import { Timeline } from './Timeline';
 import { loadDemo, type Asset } from './media';
 import { CursorControls } from './CursorControls';
 import { AutoZoomControls } from './AutoZoomControls';
+import { ZoomMotionControls } from './ZoomMotionControls';
 import { cursorFixture, motionCursorFixture } from './cursor.fixture';
 import type { CursorTrack } from './cursor';
 import type { Clip, Zoom } from './timeline';
@@ -85,6 +86,13 @@ function CursorRecord({ preview = false }: { preview?: boolean }) {
         assets={[asset]}
         onChange={setZooms}
       />
+      {zooms.slice(0, 1).map((first) => (
+        <ZoomMotionControls
+          key={first.id}
+          zoom={first}
+          onChange={(zoom) => setZooms([zoom, ...zooms.slice(1)])}
+        />
+      ))}
       <CursorControls key={mode} asset={asset} onChange={setCursor} />
       <div
         role="group"

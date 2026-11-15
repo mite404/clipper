@@ -16,8 +16,9 @@ import {
 } from 'mediabunny';
 import type { Asset } from './media';
 import { cameraTransform, coverRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
-import { FPS, covers, sourceFrame, zoomCamera, type Clip, type Track, type Zoom } from './timeline';
+import { FPS, covers, sourceFrame, type Clip, type Track, type Zoom } from './timeline';
 import { cursorDrawing, decodeCursorImages } from './cursor-render';
+import { prepareFraming, framingAt } from './framing';
 
 export type RenderVideoOptions = {
   clips: Clip[];
@@ -223,6 +224,7 @@ export async function renderVideo({
       audio.close();
     }
     context.setTransform(width / STAGE.width, 0, 0, height / STAGE.height, 0, 0);
+    const paths = prepareFraming(zooms, clips, assets, layout);
     for (let frame = 0; frame < frames; frame++) {
       check();
       const layers: Layer[] = [];
@@ -235,7 +237,7 @@ export async function renderVideo({
       drawFrame(
         context,
         layout,
-        zoomCamera(zooms, frame),
+        framingAt(zooms, paths, frame),
         layers,
         cursorDrawing(clips, assets, frame, layout, cursorImages),
       );

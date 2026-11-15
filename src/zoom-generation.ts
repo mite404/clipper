@@ -121,6 +121,7 @@ export function generateZooms(
         scale: Math.max(ZOOM_LIMITS.minScale, Math.min(ZOOM_LIMITS.maxScale, scale)),
         x: 50,
         y: 50,
+        follow: 'focused',
         source: {
           assetId: asset.id,
           clipId: clip.originId ?? clip.id,

@@ -21,6 +21,12 @@ const clip: Clip = {
 };
 
 describe('editing a timeline in frames', () => {
+  it('skips both ramps only for an instant zoom', () => {
+    const zoom = { id: 'instant', start: 30, duration: 60, scale: 2, x: 40, y: 60, instant: true };
+    expect([29, 30, 89, 90].map((frame) => zoomAt([zoom], frame))).toEqual([1, 2, 2, 1]);
+    expect(zoomCamera([zoom], 30)).toEqual({ scale: 2, x: 20, y: -20 });
+  });
+
   it('splits a trimmed clip without repeating or losing source frames', () => {
     expect(splitClip([clip], 'screen', 90)).toEqual([
       { ...clip, originId: 'screen', duration: 60 },
