@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
+import { writeFileSync } from 'node:fs';
 
 test('rejects cancelled exports and stops an in-progress render', async ({ page }) => {
   test.setTimeout(60000);
@@ -180,17 +181,21 @@ for (const width of [1920, 3840]) {
         );
         expected.restore();
       }
-      let difference = 0,
-        channels = 0;
-      for (let y = 50; y < 680; y += 40)
-        for (let x = 50; x < 1250; x += 40) {
-          const actual = pixel(x, y),
-            wanted = expected.getImageData(x, y, 1, 1).data;
-          for (let channel = 0; channel < 3; channel++) {
-            difference += Math.abs(actual[channel] - wanted[channel]);
-            channels++;
+      // One mean error per panel: averaged together, a wrong camera hides behind a right screen.
+      const panelError = (from: number, to: number) => {
+        let difference = 0,
+          channels = 0;
+        for (let y = 50; y < 680; y += 40)
+          for (let x = from; x < to; x += 40) {
+            const actual = pixel(x, y),
+              wanted = expected.getImageData(x, y, 1, 1).data;
+            for (let channel = 0; channel < 3; channel++) {
+              difference += Math.abs(actual[channel] - wanted[channel]);
+              channels++;
+            }
           }
-        }
+        return difference / channels;
+      };
       const link = document.createElement('a');
       link.href = url;
       link.download = blob.type.includes('mp4') ? 'render.mp4' : 'render.webm';
@@ -200,7 +205,8 @@ for (const width of [1920, 3840]) {
         mime: blob.type,
         size: blob.size,
         progress,
-        meanPixelError: difference / channels,
+        cameraError: panelError(50, 372),
+        screenError: panelError(410, 1270),
         background: pixel(0, 0),
         camera: pixel(180, 350),
         screen: pixel(800, 350),
@@ -217,7 +223,11 @@ for (const width of [1920, 3840]) {
       result.background.every((value, index) => Math.abs(value - [23, 35, 36][index]) < 10),
     ).toBe(true);
     expect(result.camera).not.toEqual(result.screen);
-    expect(result.meanPixelError).toBeLessThan(15);
+    // A correct render scores about 4 (camera) and 1.4 (screen) at both widths. A camera drawn with
+    // the wrong crop or source offset scores 25 or more; a screen without its crop or zoom, 50.
+    console.log(`panel errors ${JSON.stringify([result.cameraError, result.screenError])}`);
+    expect(result.cameraError).toBeLessThan(8);
+    expect(result.screenError).toBeLessThan(4);
     const downloadPromise = page.waitForEvent('download');
     await page.locator('a').click();
     const download = await downloadPromise;
@@ -297,6 +307,113 @@ for (const width of [1920, 3840]) {
     ]);
   });
 }
+
+test('exports the exact source frame for every frame of both video tracks', async ({
+  page,
+}, info) => {
+  test.setTimeout(120000);
+  // Each source frame is black with one white bar that sits 10 px further right than in the frame
+  // before it, so the picture itself says which source frame it is.
+  const fixture = info.outputPath('frame-bars.mp4');
+  execFileSync('ffmpeg', [
+    '-v',
+    'error',
+    '-y',
+    '-f',
+    'lavfi',
+    '-i',
+    'color=c=black:s=640x360:r=30:d=2',
+    '-f',
+    'lavfi',
+    '-i',
+    'color=c=white:s=10x360:r=30:d=2',
+    '-filter_complex',
+    "[0:v][1:v]overlay=x='n*10':y=0:shortest=1,format=yuv420p",
+    '-c:v',
+    'libx264',
+    fixture,
+  ]);
+  await page.route('**/export-fixture', (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<html><body>Export fixture</body></html>' }),
+  );
+  await page.route('**/frame-bars', (route) => route.fulfill({ path: fixture }));
+  await page.goto('/export-fixture');
+  const frames = 12;
+  const offsets = { screen: 14, camera: 25 };
+  const bytes = await page.evaluate(
+    async ({ frames, offsets }) => {
+      const mediaModule = '/src/media.ts',
+        exportModule = '/src/export.ts';
+      const { readMedia } = await import(mediaModule);
+      const { renderVideo } = await import(exportModule);
+      const asset = await readMedia(await (await fetch('/frame-bars')).blob(), 'bars', 'bars');
+      const blob = await renderVideo({
+        assets: [asset],
+        clips: (['screen', 'camera'] as const).map((track) => ({
+          id: track,
+          assetId: 'bars',
+          track,
+          start: 0,
+          duration: frames,
+          offset: offsets[track],
+        })),
+        zooms: [],
+        layout: { radius: 0, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
+        muted: [],
+        width: 1920,
+        onProgress: () => undefined,
+      });
+      return Array.from(new Uint8Array(await blob.arrayBuffer()));
+    },
+    { frames, offsets },
+  );
+  const rendered = info.outputPath('frame-bars-export');
+  writeFileSync(rendered, Buffer.from(bytes));
+  // Every frame of a file in order, as one grey row through its vertical middle.
+  const middleRows = (file: string, width: number, height: number) =>
+    execFileSync('ffmpeg', [
+      '-v',
+      'error',
+      '-i',
+      file,
+      '-vf',
+      `scale=${width}:${height},format=gray,crop=${width}:1:0:${height / 2}`,
+      '-f',
+      'rawvideo',
+      '-',
+    ]);
+  // Centre of the white bar within one span of a row, in pixels of that row.
+  const barCentre = (rows: Buffer, width: number, frame: number, from: number, to: number) => {
+    let sum = 0,
+      count = 0;
+    for (let x = from; x < to; x++)
+      if (rows[frame * width + x] > 128) {
+        sum += x + 0.5;
+        count++;
+      }
+    return sum / count;
+  };
+  // Ground truth comes from the fixture file itself, not from how ffmpeg numbered its frames.
+  const source = middleRows(fixture, 640, 360);
+  const exported = middleRows(rendered, 1280, 720);
+  expect(exported.length).toBe(frames * 1280);
+  // Both masks are 700 px tall and crop the 640x360 source about its centre, so source x = 320
+  // lands on the mask centre and one source frame moves the bar 10 * 700 / 360 = 19.4 stage px.
+  const masks = { screen: [10, 890], camera: [908, 1270] } as const;
+  const errors = (['screen', 'camera'] as const).flatMap((track) =>
+    Array.from({ length: frames }, (_, frame) => {
+      const [from, to] = masks[track];
+      const stage = barCentre(exported, 1280, frame, from, to);
+      const shown = ((stage - (from + to) / 2) * 360) / 700 + 320; // → source px
+      return shown - barCentre(source, 640, offsets[track] + frame, 0, 640);
+    }),
+  );
+  // A quarter of the 10 px step between neighbouring source frames; a correct render is within 0.2.
+  expect(
+    Math.max(...errors.map(Math.abs)),
+    `source px off per frame, screen then camera: ${errors.map((error) => error.toFixed(1)).join(' ')}`,
+  ).toBeLessThan(2.5);
+});
 
 test('mixes long compressed audio in time proportional to its length', async ({ page }, info) => {
   test.setTimeout(120000);
