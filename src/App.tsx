@@ -620,6 +620,14 @@ export function App() {
       )
         return;
       const key = event.key.toLowerCase();
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        // Chords belong to the browser. Undo is the only one the editor takes; there is no redo.
+        if (key === 'z' && !event.altKey && !event.shiftKey) {
+          event.preventDefault();
+          undo();
+        }
+        return;
+      }
       if (['j', 'k', 'l', ' ', 'arrowleft', 'arrowright', 's', 'delete', 'backspace'].includes(key))
         event.preventDefault();
       if (key === 'j') setSpeed((s) => (s < 0 ? Math.max(-4, s * 2) : -1));
@@ -633,10 +641,6 @@ export function App() {
       if (key === 'arrowright') seek(frameRef.current + 1);
       if (key === 's') split();
       if (key === 'delete' || key === 'backspace') removeSelected();
-      if (key === 'z' && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault();
-        undo();
-      }
     };
     window.addEventListener('keydown', keydown);
     return () => window.removeEventListener('keydown', keydown);

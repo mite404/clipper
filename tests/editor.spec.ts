@@ -205,3 +205,23 @@ test('shortcuts dialog traps focus and leaves edits untouched', async ({ page })
   await expect(page.getByRole('dialog')).not.toBeVisible();
   await expect(page.getByRole('button', { name: 'Shortcuts' })).toBeFocused();
 });
+
+test('leaves modified keys to the browser instead of editing the timeline', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const clips = page.getByTestId('track-screen').getByRole('button');
+  await page.getByRole('slider', { name: 'Timeline playhead' }).fill('45');
+  await clips.first().click();
+  for (const chord of ['Control+s', 'Meta+s', 'Alt+s', 'Control+Backspace', 'Alt+ArrowRight']) {
+    await page.keyboard.press(chord);
+    await expect(clips).toHaveCount(2);
+    await expect(page.getByTestId('timecode')).toHaveText('00:01:15');
+  }
+  await page.keyboard.press('s');
+  await expect(clips).toHaveCount(3);
+  // There is no redo, so the redo chord must not undo a second time.
+  await page.keyboard.press('Control+Shift+z');
+  await expect(clips).toHaveCount(3);
+  await page.keyboard.press('Control+z');
+  await expect(clips).toHaveCount(2);
+});
