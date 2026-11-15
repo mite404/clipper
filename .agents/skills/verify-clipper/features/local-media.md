@@ -17,12 +17,11 @@ Insert onto track selector, and plus button named Insert source at playhead.
 
 ## Driving it with Playwright
 
-Preconditions: a fresh editor with four loaded demo assets.
-
-Run `npm run test:ui -- tests/editor.spec.ts -g 'imports local'`. It sets the file chooser using
-`getByLabel('Import local media')`, inserts video and audio, and requires zero non-GET requests. Run
-`npm run test:ui -- tests/editor.spec.ts -g 'difficult imports'` for corrupt and long filenames.
-Require six assets after the two valid imports, three screen clips, and two music clips.
+Run `.agents/skills/verify-clipper/scripts/verify.mjs media`. It starts a fresh editor, waits for
+four loaded demo assets, and runs both import journeys. It sets the file chooser using
+`getByLabel('Import local media')`, inserts video and audio, and requires zero non-GET requests. It
+also checks corrupt files and long filenames. Require six assets after the two valid imports, three
+screen clips, and two music clips.
 
 ## Gotchas
 

@@ -21,14 +21,14 @@ The composer window title is not an action. Undo restores the previous layout.
 
 ## Driving it with Playwright
 
-Preconditions: demo media loaded; seek to frame 90 before adding a zoom.
-
-Run `npm run test:ui -- tests/editor.spec.ts -g 'splice, scrub'`. Set Zoom level to 2, require a 2x
+Run `.agents/skills/verify-clipper/scripts/verify.mjs composition`. It starts a fresh editor and
+runs splice/scrub/zoom, swap/trim/scroll, and mouse-focus/save/reopen journeys. The splice journey
+loads demo media and seeks to frame 90 before adding a zoom. Set Zoom level to 2, require a 2x
 screen transform at frame 135 and identity at frame 270. Require both mask radii to be 22px. Read
 the actual downloaded JSON and require the split voice clips, radius, and zoom scale. Inspect
-screenshots at default and zoomed states. Confirm the talking-head transform stays at 1x. Run
-`tests/refinements.spec.ts` to mark 25%,65%, verify a 2× transform, swap sides and reopen the
-portable project. The `mouse-centered-zoom` Storybook story opens marking mode automatically.
+screenshots at default and zoomed states. Confirm the talking-head transform stays at 1x. The
+refinement journeys mark 25%,65%, verify a 2× transform, swap sides and reopen the portable project.
+The `mouse-centered-zoom` Storybook story opens marking mode automatically.
 
 ## Gotchas
 

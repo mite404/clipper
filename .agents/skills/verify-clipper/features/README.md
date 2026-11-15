@@ -18,8 +18,8 @@ checks prove horizontal overflow handling, not a physical phone or touch interac
 ## Executable journeys
 
 Run `.agents/skills/verify-clipper/scripts/verify.mjs <journey>` from the repository root. This
-launches and cleans up isolated servers automatically. The direct `npm run test:ui` examples in the
-feature files remain available for a manually launched instance.
+launches and cleans up isolated servers automatically. Feature files use this CLI so focused
+journeys cannot accidentally target a stale shared preview.
 
 - `media` runs both local import/privacy and difficult-import checks.
 - `composition` runs splice/scrub/zoom, swap/trim/scroll, and mouse-focus/save/reopen checks.
@@ -32,6 +32,7 @@ feature files remain available for a manually launched instance.
 
 The feature map defines coverage, not the command name. `export` alone does not run the separate
 UI-driven project-export checks in `refinements.spec.ts`; use `editor` or `all` too. Cursor sidecar
-import, trim-aware recorded cursor rendering, click-generated zoom, and smooth follow are future
-feature tickets, not coverage supplied by these existing manual-focus journeys. Add their real specs
-and feature records when implemented.
+import and its Storybook stress states run through `all`, which discovers `cursor.spec.ts`; `media`
+and `storybook` do not select that spec. It covers valid, invalid and absent sidecars, source-local
+offsets, removal, and portable save/reopen. Trim-aware recorded cursor rendering, click-generated
+zoom, and smooth follow remain future feature tickets, not coverage supplied by manual-focus tests.

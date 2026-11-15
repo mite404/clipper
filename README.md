@@ -24,7 +24,7 @@ portal URLs it prints rather than sharing localhost URLs.
 - Timed screen zooms with editable scale, manually marked mouse focus, and smooth in/hold/out.
 - Portable project save/reopen with embedded original media and no relinking requirement.
 - Local rendered video export at 1920×1080 or 3840×2160, with progress and cancellation.
-- Thirteen Storybook records, including mouse-marking mode, and realistic stress-data toggles.
+- Shared Storybook records, including mouse-marking mode, and realistic stress-data toggles.
 
 The layout follows the supplied desktop-plus-talking-head example and the source/compose workflow in
 Amp time capsules [5](https://ampcode.com/time-capsules/5) and

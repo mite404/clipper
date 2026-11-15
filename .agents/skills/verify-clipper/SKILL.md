@@ -136,23 +136,12 @@ kill by process name or stop the shared editor/Storybook previews.
 
 ## Manual browser inspection
 
-For a persistent instance to inspect with agent-browser, use the existing Amp-only helper:
-
-```bash
-.agents/skills/verify-clipper/scripts/control-clipper.sh launch
-.agents/skills/verify-clipper/scripts/control-clipper.sh doctor
-agent-browser --session verify-clipper open http://127.0.0.1:4317
-agent-browser --session verify-clipper set viewport 1440 1000 2
-agent-browser --session verify-clipper wait --text '4 assets ready'
-agent-browser --session verify-clipper close
-.agents/skills/verify-clipper/scripts/control-clipper.sh stop
-```
-
-Keep distinct `VERIFY_PORT` and `VERIFY_RUN_ID` values for concurrent manual sessions and preserve
-both values through launch, doctor, stop, and browser commands. This older helper's doctor checks
-page identity and media responses, not media decoding. Before captures, wait for visible videos to
-reach readyState 4. Load the official using-agent-browser skill for captures and recordings. Shared
-user previews still use `amp orb services ensure`; CLI cleanup never stops them.
+Use `amp orb services ensure` for persistent shared previews and load the official
+using-agent-browser skill for captures and recordings. Restart the shared editor service after
+source changes to rebuild its production preview. These previews are for manual inspection, not the
+target of focused verification commands. Use `verify.mjs` for fresh test-owned instances, readiness
+assertions, evidence, and automatic cleanup. It replaces the retired manual lifecycle helper and
+needs no ownership marker, fixed port, or separate stop command.
 
 ## Helpers and maintenance
 

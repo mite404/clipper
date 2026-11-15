@@ -19,14 +19,14 @@ Shortcuts shows the keyboard guide and pauses playback.
 
 ## Driving it with Playwright
 
-Preconditions: fresh demo, focus outside an input for keyboard actions.
-
-Run `npm run test:ui -- tests/editor.spec.ts -g 'splice, scrub'`. At timeline 7.5 seconds require
-screen source 8.5 seconds, camera source 7.5 seconds, and speech 7.5 seconds after splitting speech.
-Use `getByRole('slider', {name: 'Timeline playhead'})` to seek. Require actual audio playback after
-L and zero voice volume after Mute Voiceover. Run `-g 'shortcuts dialog'` for focus and keyboard
-isolation. Run `tests/refinements.spec.ts` for pointer trimming, undo and scrolling to the end. Run
-`tests/performance.spec.ts` against the production editor for measured playback responsiveness.
+Run `.agents/skills/verify-clipper/scripts/verify.mjs editor`. It starts an isolated editor and runs
+all editor and refinement journeys. Keyboard actions use a fresh demo with focus outside an input.
+At timeline 7.5 seconds require screen source 8.5 seconds, camera source 7.5 seconds, and speech 7.5
+seconds after splitting speech. Use `getByRole('slider', {name: 'Timeline playhead'})` to seek.
+Require actual audio playback after L and zero voice volume after Mute Voiceover. The same command
+tests shortcuts-dialog focus and keyboard isolation, pointer trimming, undo, and scrolling to the
+end. Run `.agents/skills/verify-clipper/scripts/verify.mjs performance` separately for five
+production playback responsiveness checks without trace/video overhead.
 
 ## Gotchas
 

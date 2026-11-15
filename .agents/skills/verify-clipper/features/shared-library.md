@@ -5,7 +5,7 @@ icon buttons, and whole editor used by the application.
 
 ## Sub-features
 
-- Thirteen stories with real demo media, not separate mock editor implementations.
+- Stories with real demo media, not separate mock editor implementations.
 - Demo data, Worst case, Empty, One, and 1,000-item toggles in media/timeline stories.
 - Long filenames, multilingual and one-character names, missing thumbnail, and empty waveform.
 - Narrow 320px layout and enlarged text without page overflow.
@@ -17,10 +17,9 @@ and use the fixed dataset switcher. The switcher exists only in Storybook, not t
 
 ## Driving it with Playwright
 
-Preconditions: editor and Storybook services from `amp orb services ensure` are healthy.
-
-Run `npm run test:ui -- tests/storybook.spec.ts`. It uses the real Storybook iframe URLs and tests
-the five dataset states, 1,000 rendered cards, 320px overflow, 24px root text, and
+Run `.agents/skills/verify-clipper/scripts/verify.mjs storybook`. It builds and serves an isolated
+Storybook without requiring shared preview services. It uses the real Storybook iframe URLs and
+tests the five dataset states, 1,000 rendered cards, 320px overflow, 24px root text, and
 composition/ruler. Require `0 assets ready`, `1 asset ready`, and `1000 assets ready` for the
 corresponding states. The stress selection persists in the iframe URL's `stress` parameter. The
 mouse-centered zoom story demonstrates the actual app's marking mode. The timeline story persists
