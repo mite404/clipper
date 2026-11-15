@@ -1,6 +1,7 @@
 import type { Layout } from './Composition';
 import type { Asset } from './media';
 import { FPS, type Clip, type Track, type Zoom } from './timeline';
+import { parseCursorTrack, type CursorTrack } from './cursor';
 
 export type Edit = { clips: Clip[]; zooms: Zoom[]; layout: Layout };
 
@@ -51,7 +52,7 @@ function range(start: number, duration: number, field: string) {
 /** Validates the portable envelope, not media codecs or decoded source durations. */
 export function parseProject(text: string): {
   edit: Edit;
-  media: { id: string; name: string; data: string }[];
+  media: { id: string; name: string; data: string; cursor?: CursorTrack }[];
   muted: Track[];
 } {
   let value: unknown;
@@ -84,7 +85,12 @@ export function parseProject(text: string): {
     } catch {
       throw new Error(`media[${i}].data contains invalid base64.`);
     }
-    return { id, name, data };
+    return {
+      id,
+      name,
+      data,
+      ...(item.cursor === undefined ? {} : { cursor: parseCursorTrack(item.cursor) }),
+    };
   });
   unique(
     media.map((m) => m.id),
@@ -173,7 +179,7 @@ export async function serializeProject(edit: Edit, assets: Asset[], muted: Track
   const snapshot = structuredClone(edit);
   const mutedSnapshot = [...muted];
   validateSources(snapshot, assets);
-  const media: { id: string; name: string; data: string }[] = [];
+  const media: ReturnType<typeof parseProject>['media'] = [];
   for (const asset of assets) {
     if (!asset.url.startsWith('blob:'))
       throw new Error(`Media ${asset.name} must have a local blob URL.`);
@@ -192,7 +198,12 @@ export async function serializeProject(edit: Edit, assets: Asset[], muted: Track
     const mime = /^(?:video|audio)\/[a-z0-9.+-]+$/.test(blob.type)
       ? blob.type
       : 'application/octet-stream';
-    media.push({ id: asset.id, name: asset.name, data: `data:${mime};base64,${btoa(binary)}` });
+    media.push({
+      id: asset.id,
+      name: asset.name,
+      data: `data:${mime};base64,${btoa(binary)}`,
+      ...(asset.cursor ? { cursor: asset.cursor } : {}),
+    });
   }
   const parsed = parseProject(
     JSON.stringify({ version: 2, fps: FPS, ...snapshot, media, muted: mutedSnapshot }),

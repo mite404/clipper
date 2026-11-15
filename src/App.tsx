@@ -34,6 +34,7 @@ import {
   splitClip,
 } from './timeline';
 import { serializeProject, parseProject, validateSources, type Edit } from './project';
+import { CursorControls } from './CursorControls';
 import './styles.css';
 
 export const INITIAL_EDIT: Edit = {
@@ -56,13 +57,13 @@ export function SourceMonitor({
   asset?: Asset;
   onInsert: (track: Track, offset: number, duration: number) => void;
 }) {
-  const [source, setSource] = useState(asset);
+  const [sourceUrl, setSourceUrl] = useState(() => asset?.url);
   const [track, setTrack] = useState<Track>(asset?.kind === 'audio' ? 'voice' : 'screen');
-  const [range, setRange] = useState({ start: 0, end: asset?.duration ?? 0 });
+  const [range, setRange] = useState(() => ({ start: 0, end: asset?.duration ?? 0 }));
   const [preview, setPreview] = useState({ playing: false, time: 0, error: '' });
   const video = useRef<HTMLVideoElement>(null);
-  if (asset !== source) {
-    setSource(asset);
+  if (asset?.url !== sourceUrl) {
+    setSourceUrl(asset?.url);
     setRange({ start: 0, end: asset?.duration ?? 0 });
     setTrack(asset?.kind === 'audio' ? 'voice' : 'screen');
     setPreview({ playing: false, time: 0, error: '' });
@@ -727,7 +728,7 @@ export function App() {
       const project = parseProject(await file.text());
       for (const media of project.media) {
         const response = await fetch(media.data);
-        imported.push(await readMedia(await response.blob(), media.name, media.id));
+        imported.push(await readMedia(await response.blob(), media.name, media.id, media.cursor));
       }
       validateSources(project.edit, imported);
       const previous = assets;
@@ -1019,6 +1020,17 @@ export function App() {
               </div>
             </section>
           </div>
+          <CursorControls
+            key={asset?.id}
+            asset={asset}
+            onChange={(cursor) =>
+              setAssets((previous) =>
+                previous.map((source) =>
+                  source.id === asset?.id ? { ...source, cursor } : source,
+                ),
+              )
+            }
+          />
           <div className="transport">
             <div className="transport-readout">
               <span data-testid="timecode">{timecode(frame)}</span>

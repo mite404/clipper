@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Asset } from './media';
 import { parseProject, serializeProject, validateSources, type Edit } from './project';
+import { cursorFixture } from './cursor.fixture';
 
 const edit: Edit = {
   clips: [{ id: 'clip', assetId: 'video', track: 'screen', start: 0, duration: 30, offset: 15 }],
@@ -17,6 +18,20 @@ const project = () => ({
 });
 
 describe('portable project parsing', () => {
+  it('preserves all cursor fields and the source clock adjustment through save and reopen', async () => {
+    const url = URL.createObjectURL(
+      new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),
+    );
+    const cursor = { recording: cursorFixture, offsetMs: -78 };
+    try {
+      const saved = await serializeProject(edit, [{ ...asset, url, cursor }], []);
+      expect(JSON.parse(await saved.text()).media[0].cursor).toEqual(cursor);
+      expect(parseProject(await saved.text()).media[0]).toEqual({ ...media[0], cursor });
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+
   it('reopens edit settings and embedded bytes without treating them as decoded media', () => {
     expect(parseProject(JSON.stringify(project()))).toEqual({ edit, media, muted: ['music'] });
     const swapped = project();

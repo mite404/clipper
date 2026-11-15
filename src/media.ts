@@ -1,5 +1,6 @@
 import { ALL_FORMATS, AudioBufferSink, BlobSource, CanvasSink, Input } from 'mediabunny';
 import { FPS } from './timeline';
+import { validateCursorImages, type CursorTrack } from './cursor';
 
 export type Asset = {
   id: string;
@@ -12,6 +13,7 @@ export type Asset = {
   peaks: number[];
   hasAudio: boolean;
   thumbnail: string;
+  cursor?: CursorTrack;
 };
 
 /** Read metadata and decoded waveform locally. No media is uploaded.
@@ -21,7 +23,9 @@ export async function readMedia(
   file: Blob,
   name: string,
   id: string = crypto.randomUUID(),
+  cursor?: CursorTrack,
 ): Promise<Asset> {
+  await validateCursorImages(cursor);
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
   try {
     const [durationSeconds, video, audio] = await Promise.all([
@@ -71,6 +75,7 @@ export async function readMedia(
       peaks,
       hasAudio: Boolean(audio),
       thumbnail,
+      cursor,
     };
   } finally {
     input.dispose();

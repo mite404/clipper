@@ -1989,3 +1989,57 @@ p {
     row-gap: 8px;
   }
 }
+
+.cursor-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  padding: 5px 22px;
+  border-top: 1px solid var(--line);
+  font-size: 11px;
+  color: var(--muted);
+}
+.cursor-summary {
+  min-width: 0;
+  flex: 1 1 150px;
+}
+.cursor-summary strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #dedfe2;
+  font-weight: 500;
+}
+.cursor-controls .text-button {
+  min-height: 32px;
+  white-space: normal;
+  text-align: left;
+}
+.cursor-offset {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cursor-offset input {
+  width: 23ch;
+  min-height: 32px;
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: #dedfe2;
+  background: #171819;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.cursor-note,
+.cursor-error {
+  width: 100%;
+  margin: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+.cursor-error {
+  color: #f2a69b;
+}

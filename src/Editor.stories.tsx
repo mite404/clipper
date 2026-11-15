@@ -8,6 +8,66 @@ import { Composition } from './Composition';
 import { IconButton, MediaLibrary, Waveform } from './components';
 import { Timeline } from './Timeline';
 import { loadDemo, type Asset } from './media';
+import { CursorControls } from './CursorControls';
+import { cursorFixture } from './cursor.fixture';
+import type { CursorTrack } from './cursor';
+
+function CursorRecord() {
+  const [mode, setMode] = useState('Demo data');
+  const [cursor, setCursor] = useState<CursorTrack | undefined>({
+    recording: cursorFixture,
+    offsetMs: 0,
+  });
+  const asset: Asset = {
+    id: 'synthetic',
+    kind: 'video',
+    duration: 9000,
+    width: 1280,
+    height: 720,
+    name:
+      mode === 'Worst case'
+        ? '录屏_👩🏽‍💻_Developer_Relations_Platform_Walkthrough_Review_v12_screen_recording_final.mp4'
+        : 'Synthetic recording.mp4',
+    url: '',
+    peaks: [],
+    thumbnail: '',
+    hasAudio: false,
+    cursor,
+  };
+  const choose = (next: string) => {
+    setMode(next);
+    const counts: Record<string, number> = { 'Demo data': 5, 'Worst case': 8001, Empty: 0, One: 1 };
+    const samples = Array.from({ length: counts[next] }, (_, i) => ({
+      ...cursorFixture.samples[0],
+      timeMs: i * 43,
+    }));
+    setCursor({
+      recording: { ...cursorFixture, samples },
+      offsetMs: next === 'Worst case' ? -9007199254740991 : 0,
+    });
+  };
+  return (
+    <div style={{ maxWidth: 760, paddingBlock: 24 }}>
+      <CursorControls key={mode} asset={asset} onChange={setCursor} />
+      <div
+        role="group"
+        aria-label="Cursor stress dataset"
+        style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: 22 }}
+      >
+        {['Demo data', 'Worst case', 'Empty', 'One'].map((value) => (
+          <button
+            className="text-button"
+            key={value}
+            aria-pressed={mode === value}
+            onClick={() => choose(value)}
+          >
+            {value}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function LibraryRecord({ view, worst = false }: { view: string; worst?: boolean }) {
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -225,3 +285,4 @@ export const MouseCenteredZoom: Story = {
   },
 };
 export const PortableProjectAndExport: Story = { args: { view: 'editor' }, render: () => <App /> };
+export const CursorSidecar: Story = { args: { view: 'cursor' }, render: () => <CursorRecord /> };
