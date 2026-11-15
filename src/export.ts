@@ -28,6 +28,39 @@ export type RenderVideoOptions = {
   signal?: AbortSignal;
 };
 
+// A decoded picture for one video track at the frame being drawn.
+type Layer = { track: Track; image: HTMLCanvasElement | OffscreenCanvas };
+
+// Paint one composition frame in stage pixels: backdrop, then each track's mask, crop and zoom.
+// Anything that must move with the screen, such as a recorded cursor, is drawn inside its clip.
+function drawFrame(
+  context: CanvasRenderingContext2D,
+  layout: Layout,
+  camera: { scale: number; x: number; y: number },
+  layers: Layer[],
+): void {
+  context.fillStyle = '#172324';
+  context.fillRect(0, 0, STAGE.width, STAGE.height);
+  for (const track of ['screen', 'camera'] as const) {
+    const mask = maskRect(track, layout); // → stage rect
+    context.save();
+    context.beginPath();
+    context.roundRect(mask.x, mask.y, mask.width, mask.height, Math.max(0, layout.radius));
+    context.clip();
+    context.fillStyle = '#10181b';
+    context.fillRect(mask.x, mask.y, mask.width, mask.height);
+    const view = cameraTransform(mask, track === 'screen' ? camera : undefined); // → affine
+    context.translate(view.x, view.y);
+    context.scale(view.scale, view.scale);
+    for (const layer of layers) {
+      if (layer.track !== track) continue;
+      const cover = coverRect(mask, layer.image, cropPosition(track, layout)); // → local rect
+      context.drawImage(layer.image, cover.x, cover.y, cover.width, cover.height);
+    }
+    context.restore();
+  }
+}
+
 /** Render and encode locally at 30fps. The Blob MIME identifies the negotiated container. */
 export async function renderVideo({
   clips,
@@ -142,7 +175,8 @@ export async function renderVideo({
         { length: clip.duration },
         (_, index) => sourceFrame(clip, clip.start + index) / FPS,
       );
-      const iterator = new CanvasSink(track).canvasesAtTimestamps(times);
+      // Each canvas is drawn before the next is requested, so two pooled canvases never collide.
+      const iterator = new CanvasSink(track, { poolSize: 2 }).canvasesAtTimestamps(times);
       iterators.push(iterator);
       visuals.push({ clip, iterator });
     }
@@ -152,35 +186,17 @@ export async function renderVideo({
       await audio.add(mixed);
       audio.close();
     }
+    context.setTransform(width / STAGE.width, 0, 0, height / STAGE.height, 0, 0);
     for (let frame = 0; frame < frames; frame++) {
       check();
-      context.setTransform(width / STAGE.width, 0, 0, height / STAGE.height, 0, 0);
-      context.fillStyle = '#172324';
-      context.fillRect(0, 0, STAGE.width, STAGE.height);
-      for (const track of ['screen', 'camera'] as const) {
-        const mask = maskRect(track, layout); // → stage rect
-        context.save();
-        context.beginPath();
-        context.roundRect(mask.x, mask.y, mask.width, mask.height, Math.max(0, layout.radius));
-        context.clip();
-        context.fillStyle = '#10181b';
-        context.fillRect(mask.x, mask.y, mask.width, mask.height);
-        const view = cameraTransform(
-          mask,
-          track === 'screen' ? zoomCamera(zooms, frame) : undefined,
-        ); // → mask-local to stage affine
-        context.translate(view.x, view.y);
-        context.scale(view.scale, view.scale);
-        for (const { clip, iterator } of visuals) {
-          if (clip.track !== track || !covers(clip, frame)) continue;
-          const sample = (await iterator.next()).value;
-          check();
-          if (!sample) continue;
-          const cover = coverRect(mask, sample.canvas, cropPosition(track, layout)); // → local rect
-          context.drawImage(sample.canvas, cover.x, cover.y, cover.width, cover.height);
-        }
-        context.restore();
+      const layers: Layer[] = [];
+      for (const { clip, iterator } of visuals) {
+        if (!covers(clip, frame)) continue;
+        const sample = (await iterator.next()).value; // → decoded canvas, reused two frames later
+        check();
+        if (sample) layers.push({ track: clip.track, image: sample.canvas });
       }
+      drawFrame(context, layout, zoomCamera(zooms, frame), layers);
       await video.add(frame / FPS, 1 / FPS);
       onProgress(0.1 + (0.85 * (frame + 1)) / frames);
     }
