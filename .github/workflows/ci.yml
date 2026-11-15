@@ -8,10 +8,6 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: true
-
 env:
   STORYBOOK_DISABLE_TELEMETRY: '1'
 
@@ -33,7 +29,13 @@ jobs:
       - run: npm run lint
       - run: npm run lint:typed
       - run: npm run typecheck
-      - run: npm run check:code -- --fail-on-baseline-growth --baseline-base HEAD^
+      # A push can carry several commits, so compare with the commit main held before it. HEAD^
+      # would let a hotspot and its re-saved baseline through in any commit but the last. No run
+      # is cancelled by a later push either: that push would compare against the unchecked one.
+      - name: Check code health against the commit before this push
+        env:
+          BASELINE_BASE: ${{ github.event_name == 'push' && github.event.before || 'HEAD^' }}
+        run: npm run check:code -- --fail-on-baseline-growth --baseline-base "$BASELINE_BASE"
       - run: npm test
       - run: npm run build
       - run: npm run build-storybook

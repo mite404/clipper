@@ -55,9 +55,11 @@ installed by Playwright. It builds both previews and runs all browser tests, inc
 export inspection with FFmpeg. CI does not need Amp, personal credentials, or global node tools.
 
 The approved Fallow health baseline records existing complexity debt, not resolved findings. Strict
-CI rejects new findings, stale baseline entries, and baseline growth compared with the previous
-commit. Reduce the baseline when fixing its findings; do not regenerate it to accept new debt.
-Defaults for other Fallow rules and complexity thresholds remain unchanged.
+CI rejects new findings, stale baseline entries, and baseline growth compared with the commit `main`
+held before the push (the previous commit for a manually started run). Every push gets its own full
+run; a later push does not cancel it. Reduce the baseline when fixing its findings; do not
+regenerate it to accept new debt. Defaults for other Fallow rules and complexity thresholds remain
+unchanged.
 
 The Playwright suite expects both editor and Storybook running. `BASE_URL` and `STORYBOOK_URL`
 override their default ports. Export fixtures require a Vite development server; point `BASE_URL`
