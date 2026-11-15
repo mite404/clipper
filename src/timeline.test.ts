@@ -20,6 +20,14 @@ describe('editing a timeline in frames', () => {
     expect(splitClip([clip], 'screen', 180)).toEqual([clip]);
   });
 
+  it('keeps clip IDs unique when a split repeats at a frame after a ripple insert', () => {
+    const halves = splitClip([{ ...clip, start: 0 }], 'screen', 90);
+    const rippled = insertClip(halves, { ...clip, id: 'new', duration: 60 }, 0);
+    const ids = splitClip(rippled, 'screen', 90).map((c) => c.id);
+    expect(ids).toHaveLength(4);
+    expect(new Set(ids).size).toBe(4);
+  });
+
   it('inserts into a track and ripples later material, leaving other tracks alone', () => {
     const audio: Clip = { ...clip, id: 'voice', track: 'voice' };
     const next = insertClip([clip, audio], { ...clip, id: 'new', duration: 45, offset: 0 }, 90);

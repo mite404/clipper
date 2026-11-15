@@ -19,6 +19,10 @@ export const FPS = 30;
 
 /** Split at a timeline frame, preserving the original source offsets. */
 export function splitClip(clips: Clip[], id: string, frame: number): Clip[] {
+  // A ripple insert moves clips, so an earlier split may already own `${id}-${frame}`.
+  const taken = new Set(clips.map((clip) => clip.id));
+  let rightId = `${id}-${frame}`;
+  for (let n = 2; taken.has(rightId); n++) rightId = `${id}-${frame}.${n}`;
   return clips.flatMap((clip) => {
     if (clip.id !== id || frame <= clip.start || frame >= clip.start + clip.duration) return [clip];
     const elapsed = frame - clip.start;
@@ -26,7 +30,7 @@ export function splitClip(clips: Clip[], id: string, frame: number): Clip[] {
       { ...clip, duration: elapsed },
       {
         ...clip,
-        id: `${id}-${frame}`,
+        id: rightId,
         start: frame,
         duration: clip.duration - elapsed,
         offset: clip.offset + elapsed,
