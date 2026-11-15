@@ -96,6 +96,8 @@ hosted, see [Known limits](#known-limits)).
 | REF-7    | Ctrl, Cmd and Alt chords no longer split, delete, seek or drive the transport (#7)                                    | [`de0d059`](https://github.com/mite404/clipper/commit/de0d0591b58bd3e6fa6e5245beeb5388c5601896) | [CI 43765744937](https://github.com/mite404/clipper/actions/runs/43765744937)                                                                                                          |
 | CLIP-8   | Smooth, trim-aware cursor in preview and export, with raw mode, size and visibility                                   | [`1195cda`](https://github.com/mite404/clipper/commit/1195cdaea0d94d99b9181c896a6b2264473216c0) | [CI 43766525052](https://github.com/mite404/clipper/actions/runs/43766525052); decoded cursor pixels checked across a cut, source offset, crop, swap and zoom; synthetic fixtures only |
 | REF-8    | Mouse-marking mode ends when its zoom is removed, undone or deselected (#6)                                           | [`fd16d0f`](https://github.com/mite404/clipper/commit/fd16d0fe0e3f8330464266b22d88bff226cb8cb7) | [CI 43766869839](https://github.com/mite404/clipper/actions/runs/43766869839)                                                                                                          |
+| REF-9    | Timecode, playhead and frame buttons match the frame the player holds after a pause (#21)                             | [`7661750`](https://github.com/mite404/clipper/commit/7661750f49e4283266311365ad93238bfc079584) | [CI 43767536538](https://github.com/mite404/clipper/actions/runs/43767536538); reproduced first: readout showed frame 6 while the player held frame 9                                  |
+| REF-10   | Trim grip: a click commits nothing; a release trims the clip as it is then (#15, #38)                                 | [`6eef40b`](https://github.com/mite404/clipper/commit/6eef40b5cd1690d56efec9322ab5a820408e1e85) | [CI 43768432875](https://github.com/mite404/clipper/actions/runs/43768432875); both defects reproduced first                                                                           |
 
 CLIP-3 is manual fixed-point zoom. It does not satisfy CLIP-7 to CLIP-10. BOOT-1 is on `main` but
 does not run for new orbs, because new orbs clone the Amp-hosted scaffold.
@@ -132,6 +134,14 @@ and CLIP-8 in addition to the reference backlog.
 - CLIP-8 picks the cursor image by `assetId`, never `cursorType`: all 28 `pointer` labels in the
   capture sit on the arrow image. It interpolates between samples and looks them up by binary
   search, not a per-frame scan.
+- Engineering defaults for CLIP-9, not owner decisions: a click pairs with the next mouseup and
+  duplicate mouseups are ignored. Unpaired clicks at the very end are left out of zoom generation as
+  a heuristic, on the unverified guess that they are the click on Stop; an unpaired click elsewhere
+  still counts. Raw samples are never altered.
+- Cursor bitmaps are drawn at their pixel size. Whether size and hotspot should be divided by
+  `scaleFactor` is unknown: OpenScreen 2.2.2 (`d7adf05`) declares the field in
+  `src/native/contracts.ts` without drawing semantics, and its macOS renderer draws its own theme
+  sprites, not captured bitmaps. The real capture has scale 1 only, so no rule was added.
 - Compatibility claim: OpenScreen 2.2.2, macOS, full display, scale 1. Scale 1 was inferred, not
   measured. Retina, window capture, multi-display and non-left buttons are untested.
 
@@ -142,8 +152,6 @@ queue thread unless stated.
 
 | Ticket | What                                                                                 | Risk   | Status                                      | Findings      |
 | ------ | ------------------------------------------------------------------------------------ | ------ | ------------------------------------------- | ------------- |
-| REF-9  | Timecode and frame-step buttons match the held frame after pause                     | Small  | Ready                                       | #21           |
-| REF-10 | Trim grip: a click commits nothing; a drag never writes a stale clip                 | Small  | Ready                                       | #15, #38      |
 | REF-11 | Multi-file import names its failures; demo fetch has a deadline                      | Small  | Ready                                       | #9, #37       |
 | REF-12 | Logo no longer reloads the page; warn before unloading unsaved work                  | Small  | Ready                                       | #23           |
 | REF-13 | CI compares the fallow baseline with the pre-push commit                             | Small  | Ready                                       | #4            |
@@ -227,6 +235,11 @@ Work continues on the stated default until the owner says otherwise.
 
 Settled by the owner:
 
+- Left clicks first: get OpenScreen's left-click flow working before right clicks, which are later
+  "extra credit". The owner wrote this in the
+  [capture research thread](https://ampcode.com/threads/T-6578f0a7-c740-4be3-b2f6-d9f39bdf1ecc) on
+  2026-11-15 at 22:06:51 UTC. He has not decided anything about sample rate, click pairing or cursor
+  scaling; those are engineering defaults, listed under the capture acceptance.
 - OpenScreen is the first capture route (was D-3). The owner wrote "1. confirmed openscreen first"
   in the
   [capture research thread](https://ampcode.com/threads/T-6578f0a7-c740-4be3-b2f6-d9f39bdf1ecc) on
