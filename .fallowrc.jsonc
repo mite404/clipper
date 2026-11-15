@@ -1,0 +1,8 @@
+{
+  "$schema": "./node_modules/fallow/schema.json",
+  "entry": ["src/main.tsx"],
+  "ignorePatterns": [".storybook/**"],
+  "audit": { "healthBaseline": ".fallow-health-baseline.json" },
+  // This absolute URL is fetched by Chromium inside page.evaluate, not resolved by Node.
+  "ignoreUnresolvedImports": ["/node_modules/mediabunny/dist/bundles/mediabunny.mjs"],
+}

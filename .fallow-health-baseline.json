@@ -1,0 +1,161 @@
+{
+  "kind": "health",
+  "finding_counts": {
+    "src/App.tsx": {
+      "complexity_critical": {
+        "count": 3
+      },
+      "crap_critical": {
+        "count": 3
+      },
+      "crap_high": {
+        "count": 2
+      },
+      "crap_moderate": {
+        "count": 4
+      }
+    },
+    "src/Composition.tsx": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "src/Editor.stories.tsx": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/Timeline.tsx": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "src/components.tsx": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/export.ts": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/media.ts": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    }
+  },
+  "identity_finding_counts": {
+    "src/App.tsx\u0000<arrow>": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/App.tsx\u0000App": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/App.tsx\u0000SourceMonitor": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/App.tsx\u0000exportVideo": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/App.tsx\u0000importFiles": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/App.tsx\u0000insert": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/App.tsx\u0000keydown": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/App.tsx\u0000openProject": {
+      "crap_high": {
+        "count": 1
+      }
+    },
+    "src/App.tsx\u0000volume": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/Composition.tsx\u0000<arrow>": {
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "src/Editor.stories.tsx\u0000LibraryRecord": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/Timeline.tsx\u0000<arrow>": {
+      "crap_critical": {
+        "count": 1
+      },
+      "crap_moderate": {
+        "count": 2
+      }
+    },
+    "src/components.tsx\u0000<arrow>": {
+      "crap_moderate": {
+        "count": 1
+      }
+    },
+    "src/export.ts\u0000renderVideo": {
+      "complexity_critical": {
+        "count": 1
+      },
+      "crap_critical": {
+        "count": 1
+      }
+    },
+    "src/media.ts\u0000readMedia": {
+      "complexity_high": {
+        "count": 1
+      },
+      "crap_high": {
+        "count": 1
+      }
+    }
+  },
+  "runtime_coverage_findings": [],
+  "target_keys": ["src/export.ts:complexity", "src/App.tsx:complexity"]
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+storybook-static/
+test-results/
+playwright-report/
+.fallow/
+.amp/*
+!.amp/services.yaml

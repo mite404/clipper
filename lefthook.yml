@@ -1,0 +1,10 @@
+pre-commit:
+  parallel: true
+  jobs:
+    - name: lint-staged
+      glob: '*.{ts,tsx,js,mjs,cjs}'
+      run: npx --no-install oxlint --deny-warnings --no-error-on-unmatched-pattern {staged_files}
+    - name: fallow
+      run: npm run check:deadcode
+    - name: typecheck
+      run: npm run typecheck

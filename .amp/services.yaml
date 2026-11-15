@@ -1,0 +1,7 @@
+services:
+  editor:
+    command: npm run build && npx vite preview --host 0.0.0.0 --port $PORT --strictPort
+    port: 5173
+  storybook:
+    command: npm run storybook
+    port: 6006
