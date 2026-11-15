@@ -280,6 +280,57 @@ test('leaves modified keys to the browser instead of editing the timeline', asyn
   await expect(clips).toHaveCount(2);
 });
 
+test('deletes and restores from the keyboard, refuses overlapping zooms and clamps seeking', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const clips = page.getByTestId('track-screen').getByRole('button');
+  const zooms = page.getByRole('button', { name: 'Select zoom', exact: true });
+  const status = page.locator('.app-footer [role="status"]');
+  const timecode = page.getByTestId('timecode');
+  const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
+  // Shortcuts are ignored while a form control has focus, so park focus on plain text first.
+  const leaveControls = () => page.locator('.project-title').click();
+
+  await clips.nth(1).click();
+  await page.keyboard.press('Delete');
+  await expect(clips).toHaveCount(1);
+  await page.keyboard.press('ControlOrMeta+z');
+  await expect(clips).toHaveCount(2);
+
+  const addZoom = page.getByRole('button', { name: 'Add zoom at playhead' }).first();
+  await addZoom.click();
+  await expect(zooms).toHaveCount(1);
+  await addZoom.click();
+  await expect(status).toContainText('Zooms cannot overlap');
+  await expect(zooms).toHaveCount(1);
+  // The new zoom is the selection, so Backspace removes it and leaves the clips alone.
+  await page.keyboard.press('Backspace');
+  await expect(zooms).toHaveCount(0);
+  await expect(clips).toHaveCount(2);
+
+  await playhead.fill('0');
+  await leaveControls();
+  await page.keyboard.press('ArrowLeft');
+  await expect(timecode).toHaveText('00:00:00');
+  await page.keyboard.press('ArrowRight');
+  await expect(timecode).toHaveText('00:00:01');
+  // The demo is 360 frames long, so its last frame is 11 s and 29 frames.
+  await playhead.fill((await playhead.getAttribute('max'))!);
+  await leaveControls();
+  await expect(timecode).toHaveText('00:11:29');
+  await page.keyboard.press('ArrowRight');
+  await expect(timecode).toHaveText('00:11:29');
+  await page.keyboard.press('ArrowLeft');
+  await expect(timecode).toHaveText('00:11:28');
+
+  await page.keyboard.press('Space');
+  await expect(page.getByRole('button', { name: 'Pause playback', exact: true })).toBeVisible();
+  await page.keyboard.press('Space');
+  await expect(page.getByRole('button', { name: 'Play composition', exact: true })).toBeVisible();
+});
+
 test('shows the frame the preview holds after a pause', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
