@@ -13,7 +13,7 @@ import { AutoZoomControls } from './AutoZoomControls';
 import { ZoomMotionControls } from './ZoomMotionControls';
 import { cursorFixture, motionCursorFixture } from './cursor.fixture';
 import type { CursorTrack } from './cursor';
-import type { Clip, Zoom } from './timeline';
+import type { Clip, Zoom } from './timeline-model';
 
 function CursorRecord({ preview = false }: { preview?: boolean }) {
   const fixture = preview ? motionCursorFixture : cursorFixture;

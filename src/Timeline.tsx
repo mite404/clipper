@@ -1,7 +1,7 @@
 import { Camera, Film, Mic, Music2, Volume2, VolumeX, ZoomIn } from 'lucide-react';
 import { useState } from 'react';
 import type { Asset } from './media';
-import { FPS, trimClip, type Clip, type Track, type Zoom } from './timeline';
+import { FPS, trimClip, type Clip, type Track, type Zoom } from './timeline-model';
 import { IconButton, Waveform, timecode } from './components';
 
 export const TRACKS = [

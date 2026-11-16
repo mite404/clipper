@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import type { Asset } from './media';
-import type { Clip } from './timeline';
+import type { Clip } from './timeline-model';
 import { cursorFixture } from './cursor.fixture';
 import { cursorFrame } from './cursor-render';
 

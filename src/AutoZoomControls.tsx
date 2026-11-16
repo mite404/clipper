@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Asset } from './media';
 import type { Edit } from './project';
-import { FPS, ZOOM_LIMITS, type Zoom } from './timeline';
+import { FPS, ZOOM_LIMITS, type Zoom } from './timeline-model';
 import { generateZooms } from './zoom-generation';
 
 /** Deliberate, undoable click-shot generation. Existing manual zooms are never replaced. */

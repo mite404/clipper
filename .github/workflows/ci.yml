@@ -29,6 +29,12 @@ jobs:
       - run: npm run lint
       - run: npm run lint:typed
       - run: npm run typecheck
+      # './Timeline' and './timeline' are one file on a case-insensitive disk (macOS, Windows), where
+      # imports then resolve to the wrong module. Linux cannot see that, so refuse such names here.
+      - name: Refuse file names that differ only by case
+        run: |
+          clash=$(git ls-files | sed -E 's/\.[^./]+$//' | sort -u | tr 'A-Z' 'a-z' | sort | uniq -d)
+          if [ -n "$clash" ]; then echo "Names differ only by case: $clash"; exit 1; fi
       # A push can carry several commits, so compare with the commit main held before it. HEAD^
       # would let a hotspot and its re-saved baseline through in any commit but the last. No run
       # is cancelled by a later push either: that push would compare against the unchecked one.

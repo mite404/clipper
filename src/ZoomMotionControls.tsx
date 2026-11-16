@@ -1,4 +1,4 @@
-import type { Zoom } from './timeline';
+import type { Zoom } from './timeline-model';
 
 /** Per-shot camera motion, shared by the editor inspector and its Storybook preview. */
 export function ZoomMotionControls({

@@ -1,7 +1,7 @@
 import type { Asset } from './media';
 import type { CursorTrack } from './cursor';
 import { coverRect, cropPosition, maskRect, type Layout } from './stage';
-import { covers, FPS, sourceFrame, zoomCamera, type Clip, type Zoom } from './timeline';
+import { covers, FPS, sourceFrame, zoomCamera, type Clip, type Zoom } from './timeline-model';
 
 type Point = { timeMs: number; x: number; y: number; targetX: number; targetY: number };
 type Path = {

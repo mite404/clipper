@@ -16,7 +16,7 @@ import {
 } from 'mediabunny';
 import type { Asset } from './media';
 import { cameraTransform, coverRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
-import { FPS, covers, sourceFrame, type Clip, type Track, type Zoom } from './timeline';
+import { FPS, covers, sourceFrame, type Clip, type Track, type Zoom } from './timeline-model';
 import { cursorDrawing, decodeCursorImages } from './cursor-render';
 import { prepareFraming, framingAt } from './framing';
 

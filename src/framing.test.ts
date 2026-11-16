@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import { prepareFraming, framingAt } from './framing';
 import { cursorFixture } from './cursor.fixture';
 import type { Asset } from './media';
-import { zoomCamera, type Clip, type Zoom } from './timeline';
+import { zoomCamera, type Clip, type Zoom } from './timeline-model';
 
 const layout = { radius: 22, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 };
 const clip: Clip = { id: 's', assetId: 'a', track: 'screen', start: 0, offset: 30, duration: 120 };

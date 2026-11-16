@@ -9,7 +9,7 @@ import {
   zoomCamera,
   zoomsOverlap,
   type Clip,
-} from './timeline';
+} from './timeline-model';
 
 const clip: Clip = {
   id: 'screen',

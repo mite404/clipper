@@ -1,5 +1,5 @@
 import { ALL_FORMATS, AudioBufferSink, BlobSource, CanvasSink, Input } from 'mediabunny';
-import { FPS } from './timeline';
+import { FPS } from './timeline-model';
 import { validateCursorImages, type CursorTrack } from './cursor';
 
 export type Asset = {

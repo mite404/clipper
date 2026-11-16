@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import type { Asset } from './media';
-import type { Clip, Zoom } from './timeline';
-import { splitClip, insertClip } from './timeline';
+import type { Clip, Zoom } from './timeline-model';
+import { splitClip, insertClip } from './timeline-model';
 import { cursorFixture } from './cursor.fixture';
 import { generateZooms, resolveZooms } from './zoom-generation';
 

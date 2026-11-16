@@ -1,5 +1,5 @@
 import type { Asset } from './media';
-import { covers, sourceFrame, FPS, type Clip } from './timeline';
+import { covers, sourceFrame, FPS, type Clip } from './timeline-model';
 import { coverRect, cropPosition, maskRect, type Layout, type Rect } from './stage';
 import { cursorAt } from './cursor-motion';
 

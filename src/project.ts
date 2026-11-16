@@ -1,6 +1,6 @@
 import type { Layout } from './stage';
 import type { Asset } from './media';
-import { FPS, ZOOM_LIMITS, zoomsOverlap, type Clip, type Track, type Zoom } from './timeline';
+import { FPS, ZOOM_LIMITS, zoomsOverlap, type Clip, type Track, type Zoom } from './timeline-model';
 import { parseCursorTrack, type CursorTrack } from './cursor';
 
 // No clip or zoom may end later than this: 24 hours of timeline.

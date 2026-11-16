@@ -2,7 +2,7 @@ import { AbsoluteFill, Audio, Img, Sequence, Video, useCurrentFrame } from 'remo
 import { useMemo } from 'react';
 import type { Asset } from './media';
 import { cameraTransform, coverRect, cropPosition, maskRect, type Layout } from './stage';
-import { type Clip, type Track, type Zoom } from './timeline';
+import { type Clip, type Track, type Zoom } from './timeline-model';
 import { cursorFrame } from './cursor-render';
 import { prepareFraming, framingAt } from './framing';
 

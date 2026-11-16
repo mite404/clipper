@@ -34,7 +34,7 @@ import {
   splitClip,
   ZOOM_LIMITS,
   zoomsOverlap,
-} from './timeline';
+} from './timeline-model';
 import { serializeProject, parseProject, validateSources, type Edit } from './project';
 import { CursorControls } from './CursorControls';
 import { AutoZoomControls } from './AutoZoomControls';

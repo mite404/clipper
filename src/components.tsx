@@ -1,7 +1,7 @@
 import { useMemo, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { Film, Music2, Plus, Upload } from 'lucide-react';
 import type { Asset } from './media';
-import { FPS } from './timeline';
+import { FPS } from './timeline-model';
 
 /** Format a composition frame as minutes, seconds, and frames at 30fps. */
 export function timecode(frame: number): string {

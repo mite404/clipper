@@ -1,6 +1,6 @@
 import type { Asset } from './media';
 import type { CursorSample } from './cursor';
-import { FPS, ZOOM_LIMITS, zoomsOverlap, type Clip, type Zoom } from './timeline';
+import { FPS, ZOOM_LIMITS, zoomsOverlap, type Clip, type Zoom } from './timeline-model';
 import { coverRect, cropPosition, maskRect, type Layout } from './stage';
 
 type Activity = { start: number; end: number; x: number; y: number };
