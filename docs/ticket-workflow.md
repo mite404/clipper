@@ -7,24 +7,13 @@ creation is part of this workflow.
 
 ## Continuous small-ticket Sonnet lane
 
-The owner's 2026-11-16 standing authorization supersedes the historical one-ticket Sonnet limits.
-Use the [saved workflow][sonnet-workflow] and the sole master queue to select genuinely small,
-bounded candidates whose dependencies and path ownership permit implementation.
+The owner's 2026-11-16 [saved workflow][sonnet-workflow] supersedes the historical one-ticket Sonnet
+limits. [Root ticket-delivery guidance](../AGENTS.md#ticket-delivery) governs model selection,
+required Sol and Fable reviews, failure repair, continuous assignment and safe thread archival. Use
+the sole master queue for current dependencies and reservations, not the historical trial limits.
 
-Run implementation on Sonnet 5.5 medium with poteto-mode and emil-design-eng. Every ticket requires
-an actual GPT-6.1 Sol medium code review of its exact diff, findings fixed, all verification gates,
-and green exact-delivered-head CI. CI alone is not code review. The coordinator retains shared-path
-ownership and the exclusive main push slot. Larger or already assigned Sol work stays with Sol.
-
-After a reviewed ticket lands green, start the next eligible Sonnet candidate without a new
-per-ticket approval request. Wait for dependencies and existing owners instead of taking their
-paths. REF-31 starts only after REF-20's green delivery releases its rewind reservation; its
-approved behavior pauses rewind on tab hide and ignores repeated Space toggles.
-
-When checks fail, get the Sonnet worker's actual failure report, assess it and direct corrections.
-Do not waive gates. Report substantive blockers and decisions outside approved scope. This standing
-authorization does not permit production deployment, private-media uploads, paid services, history
-rewrites or branch deletion.
+REF-31 starts only after REF-20's green delivery releases its rewind reservation; its approved
+behavior pauses rewind on tab hide and ignores repeated Space toggles.
 
 [sonnet-workflow]:
   https://ampcode.com/artifacts/skills/sonnet-ticket-workflow-6be44ca7-55ac-4f1c-b705-d1267f0d846c

@@ -36,8 +36,8 @@ and nowhere else. Other documents are records, not queues:
   crops anywhere; `view_media` on a local file uploads it as a hosted attachment, so do not use it
   on capture material. Fixtures are synthetic. See [Known limits](#known-limits) for what is already
   hosted.
-- New implementation workers load `poteto-mode` and `emil-design-eng`, and run on GPT-6.1 Sol medium
-  unless the owner authorizes otherwise. Opus and Fable are reserved for sparing research or review.
+- Follow [root ticket-delivery guidance](../AGENTS.md#ticket-delivery) for implementation models,
+  review gates, continuous bounded Sonnet assignments and delivered-thread archival.
 
 ## Owners
 
@@ -71,10 +71,8 @@ rewind/readout listener and export-progress hunks, focused editor/performance te
 The CLIP-25 copy action and render seam remain outside REF-20's reservation.
 
 The owner's 2026-11-16 standing authorization supersedes the earlier one-ticket Sonnet limits. Run
-small, bounded eligible tickets on Sonnet 5.5 medium with actual GPT-6.1 Sol medium code review,
-findings fixed, full gates and green exact-head CI. Start the next eligible candidate after each
-delivery without another approval request. Keep existing dependencies, path ownership and serialized
-push authority. See
+the lane under [root ticket-delivery guidance](../AGENTS.md#ticket-delivery), including both
+required reviews for source tickets and exact-main green CI before the next assignment. See
 [the continuous workflow](ticket-workflow.md#continuous-small-ticket-sonnet-lane).
 
 [REF-31](tickets/REF-31.md) includes approved pause-on-tab-hide rewind semantics. It starts only
@@ -720,8 +718,11 @@ template. The supported candidate uses `oxlint --type-aware --type-check` for ty
 `tsc --noEmit` as a separate compiler-safety CI step while the new path is experimental. Preserve
 main-push/manual triggers, comparison against the pre-push commit, all browser/performance projects
 and no cancellation that skips unchecked commits. Pin oxfmt and provide a usable format command;
-retain the existing Prettier format check unless parity proves a zero-churn migration. Formatter
-config may carry existing style options and disable default package sorting.
+Mite's newer direct request removes Prettier. Replace format:check with Oxfmt on the same explicit
+prior scope, remove Prettier dependency/config and the redundant extra formatter CI step. Preserve
+style options and disable default package sorting. Prove actual Markdown rejection under the
+verification skill, not only file discovery counts. Update that one live formatter-name reference;
+do not rewrite historical records or mass-format unrelated files.
 
 Reserve package.json, package-lock.json, .oxlintrc.json, formatter configuration and only necessary
 CI/hook/README command changes, including .github/workflows/ci.yml and lefthook.yml. No
@@ -737,13 +738,37 @@ and an inspected diff proving no mass reformat. Existing Fable reviews the exact
 candidate before landing, one ticket at a time. The coordinator retains the only main push slot;
 fetch/rebase, rerun affected gates, push once and wait for exact-SHA CI before release.
 
-Frozen tooling candidate
+Superseded frozen tooling candidate
 [`1c99a72`](https://github.com/mite404/clipper/commit/1c99a72d07d7812635a99527417702567587ac91) is
 on review-only branch `wip/verify5-review-1c99a72`, based on accepted `af649b8`. Five paths differ:
 package/lock, Oxfmt config, README commands and two additive CI gates. Transferred worker receipts
 show clean locked install, 135 units, builds, 55 browser cases and ten separate performance cases.
 Compiler-negative and formatter probes are included. Existing Fable has the exact-diff review; this
-is not main delivery or exact-head CI qualification. No source/test workload or hook changed.
+is not main delivery or exact-head CI qualification. The newer Prettier-removal request requires a
+new verified candidate and reviewed delta; do not land this old head as the completed request. No
+source/test workload or hook changed in the frozen head.
+
+The worker is preparing a corrected successor on accepted `7878c60`; no successor is accepted.
+Recursive formatter operands expanded Fallow's Vitest entry discovery and failed strict health.
+Separate directory-only and root-glob-only invocations reportedly restore the exact original
+32-entry list and pass health without helper changes. Oxfmt always skips lock files, and its stdin
+formatter changes npm's array layout. A read-only Node JSON parse/stringify comparison preserves the
+npm-generated lock layout without rewriting the lock or adding a dependency.
+
+The worker reports fourteen comparative category negatives plus docs rejection, rejection of
+malformed formatting in all 76 prior-scope files, and clean generated-lock acceptance. Whitespace,
+collapsed arrays, malformed JSON and empty or missing lock input fail. Actual Fallow-generated
+baseline bytes remain unchanged through checks and bare formatting. These are worker receipts, not
+coordinator acceptance. Transfer the exact final candidate and rerun required integration gates.
+Earlier file discovery counts do not prove coverage parity.
+
+The frozen-head review also found that formatter failure can skip the pre-push shrink guard. Exclude
+generated `.fallow-health-baseline.json` from Oxfmt and run the growth step with
+`if: ${{ !cancelled() }}` so earlier failures cannot skip it. `.fallowrc.jsonc` is the literal
+configuration-file alternative to the root `*.jsonc` glob, not the generated health baseline.
+Prettier removal resolves the conflicting dual-formatter gates. Keep all other CI workloads.
+Transfer the corrected candidate, exact base, delta against `1c99a72` and runnable receipts before
+the existing reviewer's successor review. No baseline growth or health suppression is granted.
 
 ## Export selection and responsiveness ownership
 
