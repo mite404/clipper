@@ -49,6 +49,10 @@ and nowhere else. Other documents are records, not queues:
 | Verification tools       | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc) | `.agents/skills/verify-clipper/**`                   |
 
 Evidence-only threads:
+[reuse research](https://ampcode.com/threads/T-01a1ddd8-535c-7129-a7d7-9a0c28f41449) (what the
+owner's `sequence-spear-fish` prototype can lend),
+[Premiere XML design](https://ampcode.com/threads/T-52bd93c4-0eb5-46f3-ae30-0d2ff60a23ff) (proposals
+CLIP-31a to CLIP-31c),
 [capture research](https://ampcode.com/threads/T-6578f0a7-c740-4be3-b2f6-d9f39bdf1ecc) (source
 reading, complete) and the Mac capture check, a thread on the owner's Mac that he has since deleted
 (three real OpenScreen recordings; the videos and sidecars were not transferred, but eight derived
@@ -56,11 +60,11 @@ images were hosted, see [Known limits](#known-limits)).
 
 ### Files while CLIP-11 is in flight
 
-| Owner                    | Paths                                                                                                                                                                                                                    |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Reference features       | `src/cursor*.ts`, `src/CursorControls.tsx`, `tests/cursor*.spec.ts`, their stories and styles; additions to `parseProject` for new cursor settings                                                                       |
-| Queue thread             | `change` and `undo` in `src/App.tsx` (REF-16); `serializeProject` in `src/project.ts` (REF-21); `src/stage.ts`, `src/export.ts`, `src/media.ts`, `src/Timeline.tsx`, `tests/export.spec.ts`, `tests/performance.spec.ts` |
-| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                                                                         |
+| Owner                    | Paths                                                                                                                                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Reference features       | `src/cursor*.ts`, `src/CursorControls.tsx`, `tests/cursor*.spec.ts`, their stories and styles; additions to `parseProject` for new cursor settings                                                           |
+| Queue thread             | `serializeProject` in `src/project.ts` and `importFiles` in `src/App.tsx` (REF-21); `src/stage.ts`, `src/export.ts`, `src/media.ts`, `src/Timeline.tsx`, `tests/export.spec.ts`, `tests/performance.spec.ts` |
+| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                                                             |
 
 ### Preservation branches
 
@@ -120,6 +124,7 @@ after both of its commits were on `main`.
 | REF-13    | CI compares the fallow baseline with the commit `main` held before the push, and no run is cancelled by a later push (#4)                                                                          | [`5ba3392`](https://github.com/mite404/clipper/commit/5ba3392f1017aee08e49d075d9ae6f8b79b0c052) | [CI 43772931127](https://github.com/mite404/clipper/actions/runs/43772931127); in a throwaway clone the old base passed a two-commit push that grew the baseline, the new base failed it                                                                                |
 | REF-17    | Export pixel gate scores the camera and screen panels separately, and a new test checks the exact source frame of every exported frame on both tracks (#31)                                        | [`4ed307d`](https://github.com/mite404/clipper/commit/4ed307dccc0b753a676612d8e09d47cb43ef73af) | [CI 43776617847](https://github.com/mite404/clipper/actions/runs/43776617847); five deliberately broken exporters fail it, two of which the old gate passed                                                                                                             |
 | REF-19    | One browser journey for Delete, Backspace, the undo chord, Space, seek clamping at both ends and the overlapping-zoom refusal (#20)                                                                | [`d4174be`](https://github.com/mite404/clipper/commit/d4174beacc53d133c4fdc99e444a5635f7f2de68) | [CI 43777308249](https://github.com/mite404/clipper/actions/runs/43777308249); eight deliberately broken editors fail it; the 50-step undo limit is left for REF-16                                                                                                     |
+| REF-16    | A slider drag or a held key is one undo step, and an edit that changes nothing is not a step, so one drag no longer pushes earlier edits out of the 50-step history (#5)                           | [`8fd4ae6`](https://github.com/mite404/clipper/commit/8fd4ae6ef9f92fa0e02609cdf7eaf052e1a23c58) | [CI 43780934384](https://github.com/mite404/clipper/actions/runs/43780934384); 119 unit tests and 37 browser checks; nine of ten deliberately broken versions failed the tests, the tenth led to one more test case; the 50-step limit now has a browser test           |
 | CAPTURE-1 | Manual OpenScreen sidecar checks under `tests/openscreen/`, not part of CI                                                                                                                         | [`d72d33c`](https://github.com/mite404/clipper/commit/d72d33c05d1a2213f6d0b6e662fb6907c6a425c1) | [CI 43776958967](https://github.com/mite404/clipper/actions/runs/43776958967); pushed by the Mac capture thread at the owner's request, outside the push slot and with the pre-commit hook skipped (see REF-25); inspected afterwards: four text files, no capture data |
 | REF-25    | `src/timeline.ts` is now `src/timeline-model.ts`, so no two files differ only by case; CI refuses such names                                                                                       | [`90cf4b4`](https://github.com/mite404/clipper/commit/90cf4b43de90d18092803fa9e7a947cc739c9723) | [CI 43779257417](https://github.com/mite404/clipper/actions/runs/43779257417); with imports resolved as a case-insensitive disk resolves them, the old tree gives the Mac's TS2305 and TS1149 errors and the new tree gives none; not yet rerun on the Mac itself       |
 
@@ -183,7 +188,6 @@ queue thread unless stated.
 | Ticket | What                                                                                 | Risk   | Status                                   | Findings      |
 | ------ | ------------------------------------------------------------------------------------ | ------ | ---------------------------------------- | ------------- |
 | REF-14 | One constant each for music gain and peak rate; blob-URL test asserts no fetch       | Small  | Ready                                    | #32, #33, #34 |
-| REF-16 | Undo takes one step per gesture and skips no-op edits                                | Medium | Ready                                    | #5            |
 | REF-18 | Editor journeys also run against the production bundle                               | Medium | Ready                                    | #18           |
 | REF-20 | Rewind and export progress re-render at 10 Hz                                        | Medium | Ready                                    | #36           |
 | REF-21 | Save: size precheck with a clear message; unreadable or unused media cannot block it | Medium | Ready                                    | #3, #28       |
@@ -195,48 +199,125 @@ REF-22 and REF-23 change saved data, so each needs the owner's go-ahead before c
 
 ## Feature backlog after CLIP-11
 
-Every row is a proposal from the reference backlog, which holds the source links. The default order
-is numeric, skipping rows with a gate. Nothing here is delivered.
+Every row is a proposal. Rows come from the reference backlog, which holds the source links, unless
+a subsection below names another source. The default order is numeric, skipping rows with a gate.
+Nothing here is delivered.
 
-| Ticket  | Capability                                                   | Gate                                                                  |
-| ------- | ------------------------------------------------------------ | --------------------------------------------------------------------- |
-| CLIP-12 | Click sounds with volume                                     | CLIP-7; needs a licensed or original sound                            |
-| CLIP-13 | Motion blur for cursor, zoom and pan                         | CLIP-10                                                               |
-| CLIP-14 | Keystroke overlays                                           | No key-event source: OpenScreen sidecars carry pointer data only      |
-| CLIP-15 | Audio scrub and reference hotkey parity                      | none                                                                  |
-| CLIP-16 | Clip retiming and typing-segment speed-up                    | typing suggestions need key events                                    |
-| CLIP-17 | Per-clip and whole-recording gain                            | REF-14                                                                |
-| CLIP-18 | Command menu and custom shortcuts                            | REF-7                                                                 |
-| CLIP-19 | Padding, proportions and arbitrary crop bounds               | REF-1                                                                 |
-| CLIP-20 | Background wallpaper, gradient, color, image, inset, shadow  | REF-1                                                                 |
-| CLIP-21 | Output aspect ratios and responsive composition              | REF-1                                                                 |
-| CLIP-22 | Camera hide, position, mirror, size, roundness               | REF-1                                                                 |
-| CLIP-23 | Timed camera layouts                                         | CLIP-22                                                               |
-| CLIP-24 | Blur and redaction masks, highlights                         | REF-1                                                                 |
-| CLIP-25 | Copy the current frame as an image                           | REF-3                                                                 |
-| CLIP-26 | Multicam angles and per-speaker mixes                        | none                                                                  |
-| CLIP-27 | Derived social clips from a timeline range                   | none                                                                  |
-| CLIP-28 | Teaser, title sequence and program assembly                  | CLIP-27                                                               |
-| CLIP-29 | Chapter markers                                              | none                                                                  |
-| CLIP-30 | Interactive player bundle with separate synchronized outputs | none                                                                  |
-| CLIP-31 | Final Cut and After Effects interchange                      | none                                                                  |
-| CLIP-32 | Local transcription                                          | new dependency and model download need approval                       |
-| CLIP-33 | Caption editor, SRT and VTT export                           | CLIP-32                                                               |
-| CLIP-34 | Transcript-suggested edits                                   | CLIP-32                                                               |
-| CLIP-35 | Editable Remotion graphics sequences                         | Remotion license check (D-5)                                          |
-| CLIP-36 | Caption reconstruction from a flat video pair                | CLIP-33                                                               |
-| CLIP-37 | Batch rendering and reusable graphics library                | CLIP-35                                                               |
-| CLIP-38 | Save-as, recent projects, unsaved-close warning              | REF-12, REF-22                                                        |
-| CLIP-39 | Styling presets                                              | CLIP-19, CLIP-20                                                      |
-| CLIP-40 | GIF, quality and frame-rate options, clipboard export        | REF-3                                                                 |
-| CLIP-41 | Preview quality and power-saving modes                       | none                                                                  |
-| CLIP-42 | Extract original screen, camera and audio tracks             | none                                                                  |
-| CLIP-43 | Native Screen Studio package ingestion                       | needs a real package fixture (D-4)                                    |
-| CLIP-44 | Hosted sharing links and timestamped comments                | needs hosting and a product decision; conflicts with local-only today |
-| CLIP-45 | Quick share, save and copy actions                           | CLIP-40                                                               |
-| CLIP-46 | Browser recording of display, window, camera and audio       | product decision: OpenScreen covers recording today                   |
-| CLIP-47 | Speaker-note teleprompter                                    | CLIP-46                                                               |
-| CLIP-48 | iPhone and iPad capture, device frames                       | native capture; not possible in a browser orb                         |
+| Ticket   | Capability                                                                                                                     | Gate                                                                  |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------- |
+| CLIP-12  | Click sounds with volume                                                                                                       | CLIP-7; needs a licensed or original sound                            |
+| CLIP-13  | Motion blur for cursor, zoom and pan                                                                                           | CLIP-10                                                               |
+| CLIP-14  | Keystroke overlays                                                                                                             | No key-event source: OpenScreen sidecars carry pointer data only      |
+| CLIP-15  | Audio scrub and reference hotkey parity                                                                                        | none                                                                  |
+| CLIP-16  | Clip retiming and typing-segment speed-up                                                                                      | typing suggestions need key events                                    |
+| CLIP-17  | Per-clip and whole-recording gain                                                                                              | REF-14                                                                |
+| CLIP-18  | Command menu and custom shortcuts                                                                                              | REF-7                                                                 |
+| CLIP-19  | Padding, proportions and arbitrary crop bounds                                                                                 | REF-1                                                                 |
+| CLIP-20  | Background wallpaper, gradient, color, image, inset, shadow; the image part is scoped [below](#clip-20-still-image-background) | REF-1                                                                 |
+| CLIP-21  | Output aspect ratios and responsive composition                                                                                | REF-1                                                                 |
+| CLIP-22  | Camera hide, position, mirror, size, roundness                                                                                 | REF-1                                                                 |
+| CLIP-23  | Timed camera layouts                                                                                                           | CLIP-22                                                               |
+| CLIP-24  | Blur and redaction masks, highlights                                                                                           | REF-1                                                                 |
+| CLIP-25  | Copy the current frame as an image                                                                                             | REF-3                                                                 |
+| CLIP-26  | Multicam angles and per-speaker mixes                                                                                          | none                                                                  |
+| CLIP-27  | Derived social clips from a timeline range                                                                                     | none                                                                  |
+| CLIP-28  | Teaser, title sequence and program assembly                                                                                    | CLIP-27                                                               |
+| CLIP-29  | Chapter markers                                                                                                                | none                                                                  |
+| CLIP-30  | Interactive player bundle with separate synchronized outputs                                                                   | none                                                                  |
+| CLIP-31  | Final Cut and After Effects interchange                                                                                        | none                                                                  |
+| CLIP-31a | Premiere: prove a synthetic FCP7 XML import contract in a real Premiere                                                        | a real Premiere installation (D-9)                                    |
+| CLIP-31b | Premiere: export an editable XML sequence with reviewed source paths                                                           | CLIP-31a; a push slot for its `App.tsx` change                        |
+| CLIP-31c | Premiere: qualify the file Clipper downloads in a named Premiere build                                                         | CLIP-31b; a real Premiere installation (D-9)                          |
+| CLIP-32  | Local transcription                                                                                                            | new dependency and model download need approval                       |
+| CLIP-33  | Caption editor, SRT and VTT export                                                                                             | CLIP-32                                                               |
+| CLIP-34  | Transcript-suggested edits                                                                                                     | CLIP-32                                                               |
+| CLIP-35  | Editable Remotion graphics sequences                                                                                           | Remotion license check (D-5)                                          |
+| CLIP-36  | Caption reconstruction from a flat video pair                                                                                  | CLIP-33                                                               |
+| CLIP-37  | Batch rendering and reusable graphics library                                                                                  | CLIP-35                                                               |
+| CLIP-38  | Save-as, recent projects, unsaved-close warning                                                                                | REF-12, REF-22                                                        |
+| CLIP-39  | Styling presets                                                                                                                | CLIP-19, CLIP-20                                                      |
+| CLIP-40  | GIF, quality and frame-rate options, clipboard export                                                                          | REF-3                                                                 |
+| CLIP-41  | Preview quality and power-saving modes                                                                                         | none                                                                  |
+| CLIP-42  | Extract original screen, camera and audio tracks                                                                               | none                                                                  |
+| CLIP-43  | Native Screen Studio package ingestion                                                                                         | needs a real package fixture (D-4)                                    |
+| CLIP-44  | Hosted sharing links and timestamped comments                                                                                  | needs hosting and a product decision; conflicts with local-only today |
+| CLIP-45  | Quick share, save and copy actions                                                                                             | CLIP-40                                                               |
+| CLIP-46  | Browser recording of display, window, camera and audio                                                                         | product decision: OpenScreen covers recording today                   |
+| CLIP-47  | Speaker-note teleprompter                                                                                                      | CLIP-46                                                               |
+| CLIP-48  | iPhone and iPad capture, device frames                                                                                         | native capture; not possible in a browser orb                         |
+
+### CLIP-20: still-image background
+
+Scope and acceptance for the image part of CLIP-20, added on 2026-11-16. The
+[reuse research thread](https://ampcode.com/threads/T-01a1ddd8-535c-7129-a7d7-9a0c28f41449) relayed
+it as the owner's explicit request; the queue thread did not see the owner's message itself. Ticket
+maintenance only: CLIP-20 keeps its place, its REF-1 gate and its other parts (wallpaper, gradient,
+color, inset, shadow). Not started.
+
+Outcome: import a local still image as the composition background. The file stays in the browser.
+
+Accepted when:
+
+- A background image can be chosen, replaced and removed.
+- It fills the stage behind the screen and camera panels with an aspect-preserving cover fit.
+- Preview and exported video place it the same way.
+- Project save and reopen keep the background together with the media.
+- An unsupported or corrupt image fails with a visible message and leaves the previous background in
+  place.
+- A replaced or removed background releases its object URL and decoded image.
+- Checked with landscape, portrait and alpha-bearing images, and with export and save round trips.
+
+First formats: PNG, JPEG and WebP, decoded by the browser.
+
+Outside this ticket: animated images, still images as timeline clips, remote image URLs, and any
+change to the original visual direction.
+
+Reuse: adapt the `Image.decode()` and object-URL lifecycle from the owner's prototype,
+[`src/routes/+page.svelte` lines 46 to 75](https://github.com/mite404/sequence-spear-fish/blob/4f646d2ab3ef91dbfacb1f19ba37e670bd7f39c5/src/routes/+page.svelte#L46-L75)
+(decode first, swap only on success, revoke the superseded or failed blob URL). The queue thread
+read those lines. Do not port its Svelte page or its compositor, which stretches every source to the
+frame. The prototype has no license file; reuse rests on it being the owner's own repository.
+Details are in the
+[reuse research](https://ampcode.com/artifacts/clipper-reuse-research-95b08ad7-f0ce-477e-acbd-9e9da46d4319).
+
+Facts about `main` that bear on it, read by the queue thread: the stage background is one fixed
+color today (`drawFrame` in `src/export.ts`), `Edit` has no background field, and `src/media.ts`
+reads video and audio only. Saving the background therefore adds to the project format, which is a
+decision for the implementer to raise before code.
+
+### CLIP-31a to CLIP-31c: Premiere XML export
+
+Proposals from the
+[Premiere XML design](https://ampcode.com/artifacts/premiere-xml-export-design-6703a309-dcf9-45cc-bfd4-fd84d677159a),
+written by its [research thread](https://ampcode.com/threads/T-52bd93c4-0eb5-46f3-ae30-0d2ff60a23ff)
+on 2026-11-16 at the owner's request, relayed by the Space. They narrow CLIP-31 to Premiere; CLIP-31
+itself stays a proposal. Nothing is implemented, and no file has been opened in Premiere. No
+compatibility is claimed until CLIP-31c passes.
+
+The design recommends Final Cut Pro 7 XML (`<xmeml version="5">`, a `.xml` file), which Adobe
+documents as a direct import. It rejects modern `.fcpxml`, which Adobe documents as needing
+conversion first.
+
+| Ticket   | Outcome                                                                                                                                                                                                                                        | Needs                                                                                                   | Files                                                                                                                                 |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| CLIP-31a | A synthetic XML fixture and the exact import contract Premiere accepts: cut frames, gaps, independent mono and stereo audio, mute, music gain, file paths, relinking after a move, duplicate file names, and which frame rates must be refused | A real Premiere installation; the design targets Premiere Pro 26.x on macOS and records the exact build | New `tests/interchange/` and `docs/premiere-xml.md`                                                                                   |
+| CLIP-31b | One downloaded XML that keeps the proven cuts and audio, with a dialog where the user reviews the path of every used source and acknowledges what is left out                                                                                  | CLIP-31a; a push slot                                                                                   | New `src/premiere-xml.ts`, `src/XmlExportDialog.tsx`, their tests and story, `tests/xml-export.spec.ts`; a small `src/App.tsx` action |
+| CLIP-31c | The file Clipper really downloads imports with the right media, cuts, audio and relink behavior in a named Premiere build                                                                                                                      | CLIP-31b; a real Premiere installation                                                                  | Extends `tests/interchange/`, `tests/xml-export.spec.ts`, `docs/premiere-xml.md`                                                      |
+
+Limits the design states, which the tickets keep:
+
+- The browser never learns a source file's path, only its name. The user supplies a media root and
+  per-source paths; the XML references the originals and does not carry them. Moved files are
+  relinked in Premiere.
+- The first release is cuts and audio only. Panel layout, rounded masks, crops, the cursor, zooms
+  and follow framing are left out, and the dialog says so. The imported sequence will not look like
+  Clipper's preview.
+- Only 30 fps constant-rate video with mono or stereo audio at first. Other rates and variable-rate
+  sources are refused with the reason, not relabeled as 30 fps.
+- The prototype holds an EDL plan and no exporter code, so what carries over is its rules
+  (integer-frame timing, stable source identity, validate before download), not code.
+- CLIP-31b does not touch `serializeProject`, `src/media.ts`, `src/export.ts` or the cursor modules,
+  and does not change the saved project format.
 
 Native-only Screen Studio settings (camera effects, notifications, Dock, licensing, diagnostics) are
 inventoried in the reference backlog and are not Clipper tickets.
@@ -253,6 +334,7 @@ Work continues on the stated default until the owner says otherwise.
 | D-5 | Check the Remotion license before commercial or team use                                                                                                                                                                               | Not checked                                                                                                                                                                                                           |
 | D-7 | CLIP-7 to CLIP-10 are on `main`: import a real OpenScreen recording into Clipper on the Mac, generate zooms, and check that the cursor, the zooms and the follow framing line up with the video                                        | Compatibility with real recordings stays unclaimed; work continues on synthetic fixtures                                                                                                                              |
 | D-8 | Three commits on public `main` carry a personal email address instead of the noreply address: `2bb8263` and `de27f06` (author and committer) and `e9f99fc` (committer). Rewrite `main` from `2bb8263` with a force-push to replace it? | Not rewritten: a force-push changes every later commit ID and needs the owner's approval. The old commits would stay fetchable on GitHub by ID until GitHub Support purges them. Both workers have fixed their config |
+| D-9 | CLIP-31a and CLIP-31c need someone to import files into a real Premiere Pro and report what it shows. Is Premiere installed on the Mac, and which version?                                                                             | CLIP-31a to CLIP-31c stay proposals; no Premiere compatibility is claimed                                                                                                                                             |
 
 Settled by the owner:
 
