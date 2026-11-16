@@ -1,6 +1,6 @@
 @layer ui-sdk;
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;600;650;700&family=IBM+Plex+Mono:wght@200;300;400;500&display=swap');
 
 :root {
   font-family: 'DM Sans', sans-serif;
@@ -9,9 +9,9 @@
   font-synthesis: none;
   font-size: 12px;
   font-weight: 450;
-  --line: #ffffff0e;
+  --clip-line: #ffffff0e;
   --muted: #8b8e96;
-  --green: #d8ec4b;
+  --clip-green: #d8ec4b;
   --violet: #b2a0ed;
 }
 * {
@@ -107,7 +107,7 @@ p {
 }
 .app-header {
   height: 73px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--clip-line);
   display: flex;
   align-items: center;
   padding: 0 25px;
@@ -126,7 +126,7 @@ p {
 .brand-mark {
   width: 31px;
   height: 31px;
-  background: var(--green);
+  background: var(--clip-green);
   color: #293b2c;
   display: grid;
   place-items: center;
@@ -162,7 +162,7 @@ p {
   font-size: 8px;
   letter-spacing: 1.2px;
   color: #747780;
-  border: 1px solid var(--line);
+  border: 1px solid var(--clip-line);
   padding: 4px 6px;
   border-radius: 4px;
 }
@@ -192,7 +192,7 @@ p {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--green);
+  background: var(--clip-green);
   color: #253321;
   padding: 10px 14px;
   border: 1px solid #d3e2cb;
@@ -207,7 +207,7 @@ p {
   gap: 26px;
   padding: 0 25px;
   height: 43px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--clip-line);
   font-size: 10px;
   color: #737880;
   letter-spacing: 0.1px;
@@ -256,7 +256,7 @@ p {
   border-radius: 4px;
 }
 .library {
-  border-right: 1px solid var(--line);
+  border-right: 1px solid var(--clip-line);
   background: #1b1c1e;
   padding: 0 16px;
   display: flex;
@@ -605,8 +605,8 @@ p {
   padding: 0 23px;
   height: 63px;
   min-height: 63px;
-  border-top: 1px solid var(--line);
-  border-bottom: 1px solid var(--line);
+  border-top: 1px solid var(--clip-line);
+  border-bottom: 1px solid var(--clip-line);
   background: #1c1d1f;
   gap: 16px;
 }
@@ -1018,7 +1018,7 @@ p {
   top: 0;
   bottom: 0;
   width: 1px;
-  background: var(--green);
+  background: var(--clip-green);
   box-shadow: 0 0 3px #12121288;
 }
 .playhead > span {
@@ -1027,7 +1027,7 @@ p {
   top: 0;
   width: 9px;
   height: 11px;
-  background: var(--green);
+  background: var(--clip-green);
   clip-path: polygon(0 0, 100% 0, 100% 65%, 50% 100%, 0 65%);
 }
 .timeline-end {
@@ -1056,13 +1056,13 @@ p {
   margin-left: 0;
 }
 .inspector {
-  border-left: 1px solid var(--line);
+  border-left: 1px solid var(--clip-line);
   background: #1c1d1f;
   padding: 0 17px;
   min-width: 0;
 }
 .inspector .section-title {
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--clip-line);
 }
 .inspector .section-title > svg {
   color: #7a818a;
@@ -1099,7 +1099,7 @@ p {
   color: #a8bf9e;
 }
 .inspector-section {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--clip-line);
   padding: 19px 0;
 }
 .inspector-section h3 {
@@ -1213,7 +1213,7 @@ p {
   color: #e6dcf5;
 }
 .inspector-tip {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--clip-line);
   display: flex;
   gap: 9px;
   padding-top: 18px;
@@ -1235,6 +1235,7 @@ p {
 }
 .numeric-pair {
   display: flex;
+  flex-direction: column;
   gap: 10px;
   margin: 14px 0;
 }
@@ -1244,48 +1245,17 @@ p {
   flex-direction: column;
   gap: 7px;
   min-width: 0;
-  font-size: 8px;
-  color: #838d99;
 }
-.number-field [data-slot='number-input-group'] {
-  display: flex;
-  align-items: stretch;
-  min-width: 0;
-  border: 1px solid #ffffff12;
-  border-radius: 5px;
-  background: #252729;
-}
-.number-field [data-slot='number-input-group']:has(:focus-visible) {
-  outline: 2px solid #c2b4ff;
-  outline-offset: 3px;
-}
-.number-field [data-slot='number-input-control'] {
-  flex: 1;
-  width: 100%;
-  padding: 6px 7px;
-  border: 0;
-  outline: 0;
-  background: transparent;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-}
-.number-field :is([data-slot='number-input-decrement'], [data-slot='number-input-increment']) {
-  flex: none;
-  width: 20px;
-  background: transparent;
-  color: #838d99;
-  font-size: 12px;
-  line-height: 1;
-}
-.number-field
-  :is([data-slot='number-input-decrement'], [data-slot='number-input-increment']):hover {
-  color: #dedfe2;
-}
-.number-field
-  :is([data-slot='number-input-decrement'], [data-slot='number-input-increment'])[data-disabled] {
-  opacity: 0.35;
-  cursor: not-allowed;
+/* The hardware skin paints for a light panel and has no dark variant. Each skinned control sits on
+   its own panel, so it reads on the dark editor instead of being repainted. */
+.number-field,
+[data-kit='collapsible'],
+[data-kit='slider'] {
+  padding: 8px 10px;
+  border-radius: 6px;
+  color: var(--ink);
+  background: var(--paper);
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.85);
 }
 .ease-curve {
   height: 65px;
@@ -1321,7 +1291,7 @@ p {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--clip-line);
   padding: 7px 23px;
   background: #161719;
   gap: 20px;
@@ -1378,7 +1348,7 @@ p {
   align-items: center;
   gap: 16px;
   padding: 9px 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--clip-line);
   font-size: 10px;
   color: #aab2bd;
 }
@@ -1462,7 +1432,7 @@ p {
     display: grid;
     grid-template-columns: 130px 1fr;
     column-gap: 12px;
-    border-top: 1px solid var(--line);
+    border-top: 1px solid var(--clip-line);
     margin-top: 10px;
     padding-top: 12px;
     order: 2;
@@ -1580,7 +1550,7 @@ p {
   .inspector {
     grid-column: 1/-1;
     border-left: 0;
-    border-top: 1px solid var(--line);
+    border-top: 1px solid var(--clip-line);
     display: grid;
     grid-template-columns: 160px 1fr 1fr;
     gap: 20px;
@@ -1671,7 +1641,7 @@ p {
   }
   .workspace .library {
     border-right: 0;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--clip-line);
     padding: 0 13px;
     display: grid;
     grid-template-columns: 1fr 125px;
@@ -1809,7 +1779,7 @@ p {
     margin: 12px 0 20px;
   }
   .inspector-section {
-    border-top: 1px solid var(--line);
+    border-top: 1px solid var(--clip-line);
     padding: 17px 0;
   }
   .layout-swatch {
@@ -2076,7 +2046,7 @@ p {
   align-items: center;
   gap: 6px 16px;
   padding: 5px 22px;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--clip-line);
   font-size: 11px;
   color: var(--muted);
 }
@@ -2112,7 +2082,7 @@ p {
 .cursor-offset [data-slot='number-input-group'] {
   width: 23ch;
   min-height: 32px;
-  border-color: var(--line);
+  border-color: var(--clip-line);
   border-radius: 4px;
   background: #171819;
 }
@@ -2141,7 +2111,7 @@ p {
 .cursor-appearance input[type='number'] {
   min-height: 32px;
   padding: 5px 8px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--clip-line);
   border-radius: 4px;
   color: #dedfe2;
   background: #171819;
@@ -2150,49 +2120,25 @@ p {
 .cursor-appearance input[type='number'] {
   width: 8ch;
 }
-.cursor-behavior {
+[data-kit='collapsible'] {
   flex-basis: 100%;
   min-width: 0;
 }
-.cursor-behavior-trigger {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 32px;
-  padding: 8px 0;
-  background: transparent;
-  text-align: left;
+[data-kit='collapsible'] .cursor-note {
+  margin-top: 8px;
 }
-.cursor-behavior-trigger > svg {
-  transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-.cursor-behavior-trigger[data-open] > svg {
-  transform: rotate(90deg);
-}
-.cursor-behavior-panel {
-  transition:
-    opacity 200ms cubic-bezier(0.23, 1, 0.32, 1),
-    transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-.cursor-behavior-panel:is([data-starting-style], [data-ending-style]) {
-  opacity: 0;
-  transform: translateY(-4px);
-}
-.cursor-behavior:has(:focus-visible) :is(.cursor-behavior-panel, .cursor-behavior-trigger > svg) {
-  transition: none;
+/* The skin slides its tray on every activation, keyboard included, and its reduced-motion rule
+   loses to its own :not(#_) specificity. Keyboard activation and reduced motion stay instant. */
+[data-kit='collapsible']:has(:focus-visible)
+  :is([data-kit='accordion-panel'], [data-kit='accordion-trigger']),
+[data-kit='collapsible']:has(:focus-visible) [data-kit='accordion-trigger']::after {
+  transition: none !important;
 }
 @media (prefers-reduced-motion: reduce) {
-  .cursor-behavior-panel,
-  .cursor-behavior-panel:is([data-starting-style], [data-ending-style]) {
-    transition-property: opacity;
-    transform: none;
+  [data-kit='collapsible'] :is([data-kit='accordion-panel'], [data-kit='accordion-trigger']),
+  [data-kit='collapsible'] [data-kit='accordion-trigger']::after {
+    transition: none !important;
   }
-  .cursor-behavior-trigger > svg {
-    transition: none;
-  }
-}
-.cursor-behavior .cursor-note {
-  margin-top: 8px;
 }
 .inspector .cursor-controls {
   padding: 12px 0;
@@ -2292,7 +2238,7 @@ p {
 .select-item-check {
   margin-left: auto;
   padding-left: 10px;
-  color: var(--green);
+  color: var(--clip-green);
 }
 @media (prefers-reduced-motion: reduce) {
   .select-popup,
