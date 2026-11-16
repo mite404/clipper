@@ -5,7 +5,7 @@ import path from 'node:path';
 const root = path.resolve(import.meta.dirname, '..');
 const master = readFileSync(path.join(root, 'docs/master-tickets.md'), 'utf8');
 const review = readFileSync(path.join(root, 'docs/refactor/refactor01.md'), 'utf8');
-const idPattern = /\b(?:CLIP|REF|VERIFY|BOOT|DOC|CAPTURE|D)-\d+[a-z]?\b/g;
+const idPattern = /\b(?:CLIP|REF|VERIFY|BOOT|DOC|CAPTURE|UI|D)-\d+[a-z]?\b/g;
 const definitions = [
   ...master.matchAll(/<a id="([a-z]+-\d+[a-z]?)"><\/a>\[([^\]]+)\]\(([^)]+)\)/g),
 ];

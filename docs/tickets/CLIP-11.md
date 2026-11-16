@@ -21,9 +21,28 @@ Commit `7b23be8` delivers recorded, fixed-first and Touch styles, idle hide, sha
 or return endings. Its CI passed; 127 units and 39 browser checks passed locally. Endings apply per
 trimmed clip, not once per whole video. Commit `bea0526` adds source-time segment hiding with
 [green CI](https://github.com/mite404/clipper/actions/runs/43794298710). Its half-open ranges apply
-before ending effects and are independent of telemetry offset. Rotation, cursor-type stabilization
-and cursor speed styles remain open. See the
+before ending effects and are independent of telemetry offset. Commit `a6f0448` adds optional 100 ms
+recorded-shape stabilization with
+[green CI](https://github.com/mite404/clipper/actions/runs/43797731005). Interactions remain
+immediate; missing/disconnected tracking resets the shape candidate. Commit `e3428ee` adds
+default-off movement rotation with
+[green CI](https://github.com/mite404/clipper/actions/runs/43800623105). Its source-time 100 ms
+lookback and ±12° cap around the scaled hotspot are explicit Clipper choices. The worker verified
+133 units, 43 browser checks and ten isolated performance checks with rotation and stabilization
+enabled. Speed styles are delivered at `bd6120fa070f1386fa92324e7459cea459918178` with
+[green CI](https://github.com/mite404/clipper/actions/runs/43805205300), independently verified by
+the queue owner. Smooth retains existing arithmetic; Medium and Rapid traverse the final 75% and 50%
+of each sample interval; None steps at sample times and Raw bypasses styling. These fractions are
+Clipper choices, not upstream parity. Local gates passed 135 units, seven helper tests, 44 browser
+cases and ten isolated performance cases. The selected implementation unit is complete; full CLIP-11
+retains video-wide ending and real-Mac qualification limits. See the
 [source requirements](../reference-features.md#motion-acceptance).
+
+The expanded cursor-control layout is not accepted UX. The owner's 2026-11-16 feedback suggests
+cursor animation options in the inspector to preserve sequence-timeline room. Before assigning UI
+changes, [the research owner](https://ampcode.com/threads/T-0ddac938-5168-453a-a1f3-ec16bba82ba9)
+compares OpenScreen's recorded-metadata options and recommends inspector placement. This note is
+not an implementation assignment; existing disjoint work continues.
 
 ## Approach
 
@@ -32,9 +51,9 @@ event stream, per-source clock and common preview/export projection.
 
 ## Scope
 
-In: the three remaining behavior controls, persistence, shared controls, synthetic stress states.
-Out: native capture, new cursor inference from video pixels, and an implicit video-wide ending
-claim. Decide any video-wide ending change explicitly rather than relabeling the current unit.
+In: the remaining speed-style control, persistence, shared controls, synthetic stress states. Out:
+native capture, new cursor inference from video pixels, and an implicit video-wide ending claim.
+Decide any video-wide ending change explicitly rather than relabeling the current unit.
 
 ## Steps
 
@@ -71,7 +90,7 @@ current main. Account for drift in cursor modules before writing.
 
 ## Done when
 
-All three remaining behaviors have red-to-green tests, portable settings and matching rendered
+The remaining behavior has red-to-green tests, portable settings and matching rendered
 preview/export evidence. Full gates and exact-SHA CI pass. The master explicitly retains any
 video-wide ending and real-Mac limits rather than claiming reference parity without evidence.
 
