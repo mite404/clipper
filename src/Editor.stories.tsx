@@ -353,6 +353,6 @@ export const AutomaticZooms: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByText('4 assets ready', {}, { timeout: 30000 });
-    await userEvent.click(canvas.getByRole('button', { name: /^Generate zooms$/ }));
+    await userEvent.click(canvas.getByRole('button', { name: /^Add zoom$/ }));
   },
 };

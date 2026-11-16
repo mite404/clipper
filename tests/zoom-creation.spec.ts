@@ -5,7 +5,7 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
 });
 
-test('Generate zooms creates a four-second playhead region without cursor metadata and reopens it', async ({
+test('Add zoom creates a four-second playhead region without cursor metadata and reopens it', async ({
   page,
 }, testInfo) => {
   const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
@@ -18,7 +18,7 @@ test('Generate zooms creates a four-second playhead region without cursor metada
     page.getByRole('button', { name: 'Remove automatic zooms', exact: true }),
   ).toHaveCount(0);
   await playhead.fill('45');
-  await page.getByRole('button', { name: 'Generate zooms', exact: true }).click();
+  await page.getByRole('button', { name: 'Add zoom', exact: true }).click();
   await expect(regions).toHaveCount(1);
   await expect(page.getByLabel('Zoom start seconds', { exact: true })).toHaveValue('1.5');
   await expect(page.getByLabel('Zoom duration seconds', { exact: true })).toHaveValue('4');
@@ -26,7 +26,7 @@ test('Generate zooms creates a four-second playhead region without cursor metada
   await expect(page.getByLabel('Zoom level', { exact: true })).toHaveValue('1.8');
   await playhead.fill('90');
   await expect(page.getByTestId('screen-content')).toHaveCSS('transform', /matrix\(1\.8,/);
-  await page.getByRole('button', { name: 'Generate zooms', exact: true }).click();
+  await page.getByRole('button', { name: 'Add zoom', exact: true }).click();
   await expect(page.locator('.app-footer [role="status"]')).toContainText('Zooms cannot overlap');
   await expect(regions).toHaveCount(1);
   await expect(page.getByLabel('Zoom start seconds', { exact: true })).toHaveValue('1.5');
@@ -105,9 +105,7 @@ test('B creates once per press, ignores editable targets and modifier chords, an
   await expect(page.getByLabel('Zoom duration seconds', { exact: true })).toHaveValue('4');
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(regions).toHaveCount(1);
-  await expect(page.getByRole('button', { name: 'Generate zooms', exact: true })).toContainText(
-    'B',
-  );
+  await expect(page.getByRole('button', { name: 'Add zoom', exact: true })).toContainText('B');
   await page.getByRole('button', { name: 'Shortcuts', exact: true }).click();
   await expect(page.getByRole('dialog', { name: 'Keyboard shortcuts' })).toContainText(
     'Create zoom at playhead',

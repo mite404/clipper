@@ -7,8 +7,8 @@ after shared editor, timeline, composition, or media changes.
 - [Local media](local-media.md) covers import, source in/out, errors, and privacy.
 - [Timeline and transport](timeline-transport.md) covers splices, seeking, audio, and J/K/L.
 - [Composition](composition.md) covers masks, crops, manual mouse zooms, zoom fields, and undo.
-- [Cursor and automatic zoom](cursor.md) covers pointer sidecars, the drawn cursor, click-generated
-  zooms, camera follow, and hidden ranges.
+- [Cursor and zoom creation](cursor.md) covers pointer sidecars, the drawn cursor, playhead zoom
+  creation, legacy source anchors, camera follow, and hidden ranges.
 - [Project delivery](project-delivery.md) covers portable save/reopen, unsaved-edit guards and real
   rendered video export.
 - [Frame copy](frame-copy.md) covers Copy frame, the held output frame as a clipboard PNG.
@@ -24,7 +24,9 @@ verification, and nothing in this skill may report it as verified:
 
 - Inspector redesign and the drawer or timeline scrolling changes (UI-2 and related UI work). Only
   the shared IconButton tooltip (UI-1) is delivered.
-- Zoom ramp controls, a B shortcut, and resizing a zoom with timeline edge handles (CLIP-9b).
+- Full zoom ramp controls and resizing a zoom with timeline edge handles (CLIP-9b). Playhead
+  creation and B are delivered at `ad40248` with exact-main CI 43934129560; this does not complete
+  the ramp scope.
 - Moving clips on the timeline other than the existing trim, split and ripple edits.
 - Still-image import, still-image backgrounds and still clips (CLIP-20). Import accepts video and
   audio only.

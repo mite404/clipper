@@ -1420,11 +1420,11 @@ export function App() {
           <section className="cursor-controls" aria-label="Zoom creation">
             <button
               className="secondary-button"
-              aria-label="Generate zooms"
+              aria-label="Add zoom"
               title="Create a 4-second cursor zoom at the playhead (B)"
               onClick={addZoom}
             >
-              Generate zooms <kbd>B</kbd>
+              Add zoom <kbd>B</kbd>
             </button>
             <p className="cursor-note">
               Create one 4-second zoom at the playhead. No tracking required.

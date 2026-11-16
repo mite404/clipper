@@ -105,7 +105,7 @@ exact-SHA green CI before releasing the slot.
 | Zoom regions             | [T-46d4a5ee](https://ampcode.com/threads/T-46d4a5ee-39f1-46ae-bde0-eced0da19a5a) | Narrow CLIP-9b creation/panel-removal integration, Sol medium |
 | Cursor preservation      | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94) | Frozen original CLIP-11 work, no implementation or push       |
 | Editor and bootstrap     | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da) | `.agents/setup`, `.agents/resume`                             |
-| Verification tools       | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc) | `.agents/skills/verify-clipper/**`                            |
+| Verification tools       | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc) | Archived after delivery; no active path reservation           |
 | Canonical preview        | [T-6dd30293](https://ampcode.com/threads/T-6dd30293-c740-418a-8174-5d2a1b69da89) | Accepted-main promotion and revision/check receipts           |
 
 The archival audit has coordinator ownership clearance for the completed UI-3 worker/reviewer,
@@ -925,7 +925,7 @@ original note for every row.
 | <a id="ref-36"></a>[REF-36](#ref-36)                 | Prove delivery recovery and individual audio mute                | Medium | Ready                                                                                                                                                                               | UI cancel and retry; failed export and partial-open recovery; one muted track at a time                 |
 | <a id="ref-37"></a>[REF-37](#ref-37)                 | Qualify video cadence, rewind, scrub and large telemetry         | Medium | Verification remains open; broad stall investigation stopped unless standalone recurrence or new Amp-view request                                                                   | Preserve existing performance thresholds; inspector ownership retained pending explicit closure         |
 | <a id="verify-3"></a>[VERIFY-3](tickets/VERIFY-3.md) | Bring the feature map in line with delivered motion and controls | Small  | Delivered at [f76a702](https://github.com/mite404/clipper/commit/f76a702f85a0bcdf64f7c8bc2b0726823c447003); [green CI](https://github.com/mite404/clipper/actions/runs/43798560663) | frame-step and zoom-field journeys; current cursor and follow coverage                                  |
-| <a id="clip-9b"></a>[CLIP-9b](#clip-9b)              | Visible zoom regions, editable ramps and numeric equivalents     | Medium | Reviewed creation slice in main delivery; fresh full 73/73 and isolated performance 20/20; exact-main CI pending; Add zoom follow-up and full ramps open                            | Exact-SHA green CI before acceptance; preserve CLIP-9/10                                                |
+| <a id="clip-9b"></a>[CLIP-9b](#clip-9b)              | Visible zoom regions, editable ramps and numeric equivalents     | Medium | Creation accepted at ad40248 with green CI43934129560; Add zoom label/map follow-up verified and reviewed, exact-main CI pending; full ramps open                                   | Follow-up exact-SHA green CI before UI-7 release; preserve CLIP-9/10                                    |
 
 | Ticket ID                                  | Feature                                                                                                      | State and dependency                                                     |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
@@ -946,11 +946,23 @@ and restores the baseline byte-identical to `19c571e`; runtime and performance b
 Source blobs match that reviewed tree on accepted `6365288`; the Fallow baseline is unchanged. Fresh
 coordinator gates pass 132 unit tests, seven CLI-helper tests, full 73/73 and isolated performance
 20/20, with zero skipped or flaky browser cases. The rebuilt AutomaticZooms story also creates one
-four-second zoom. The slice is in serialized main delivery, awaiting exact-main CI; this is not
-acceptance of the whole ticket. Keep the owner's subsequent **Add zoom** panel label and stale
-cursor feature-map update as the next follow-up under CLIP-9b, after the reviewed slice, not a
-duplicate ticket. Choose the panel accessible name explicitly because toolbar/inspector already have
-Add zoom actions; update exact-name story/spec consumers together. Full ramp scope remains open.
+four-second zoom. That slice delivered at
+[`ad40248`](https://github.com/mite404/clipper/commit/ad402482fc0d9eda67a1b9273f239b5107996ca8),
+with [green exact-main CI43934129560](https://github.com/mite404/clipper/actions/runs/43934129560)
+and canonical preview promotion. This is not acceptance of the whole ticket.
+
+The same coordinator owns the bounded **Add zoom** label/map follow-up on that accepted base: App
+panel accessible/visible name, Editor.stories exact-name selector, existing zoom-creation spec, and
+verify-clipper's cursor page/index. Keep the toolbar/inspector's existing **Add zoom at playhead**
+names; the panel is exactly **Add zoom**. No runtime logic, CLI, baseline or performance workload
+changes. The former verification owner is archived with no unshipped work or active assignment; only
+those two feature-map paths are released for this correction. The old-name product red and three
+focused greens are recorded. Fresh strict/Fallow shrink-only gates, 132 units and full 73/73 pass,
+with no skipped or flaky browser cases. The rebuilt story creates exactly one duration-four zoom
+through the unique **Add zoom** name; the renamed control's rendering was inspected. The existing
+reviewer returns LAND for exact five-path tree `5eb12a812f000a222fd5673eb728b37af4bffbdb`,
+independently reproduced by the coordinator; the master-only status delta adds no source change.
+This follow-up is in serialized main delivery, awaiting exact-main CI. Full ramp scope remains open.
 
 The coordinator verified the transferred complete-history bundle, nine-path dirty/untracked draft
 and receipt archive against `clip-9b-SHA256SUMS.txt`. The frozen base and HEAD are both `b9596c6`;

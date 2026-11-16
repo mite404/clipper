@@ -1,7 +1,7 @@
-# Cursor and automatic zoom
+# Cursor and zoom creation
 
-Attach an OpenScreen pointer sidecar to a source, draw its cursor in preview and export, generate
-zooms from recorded clicks, and let a zoom follow the cursor.
+Attach an OpenScreen pointer sidecar to a source, draw its cursor in preview and export, create
+playhead zooms without tracking, and let a zoom follow the cursor.
 
 ## Sub-features
 
@@ -16,8 +16,10 @@ zooms from recorded clicks, and let a zoom follow the cursor.
   capped at 12 degrees, about the recorded hotspot), Animation (Smooth, Medium, Rapid or None;
   disabled while motion is Raw), Cursor ending (Recorded ending, Stop early, Return to start per
   trimmed clip), and hidden source-time ranges.
-- Generate zooms, Regenerate zooms and Remove automatic zooms from recorded left clicks. Editing a
-  generated zoom makes it manual.
+- Add zoom or plain B creates one focused four-second zoom at the playhead without a sidecar.
+  Shorten the outpoint at the sequence end; refuse overlap or fewer than six remaining frames.
+- Existing source-anchored zooms still reopen, resolve through clip edits, and export. Batch click
+  generation and its amount, hold, regenerate and remove controls are no longer available.
 - Camera follow on a selected zoom: Fixed focus, Focused or Smooth.
 
 ## How to get to it (user POV)
@@ -44,9 +46,12 @@ Run `.agents/skills/verify-clipper/scripts/verify.mjs all`; no narrower journey 
 - `cursor-shapes.spec.ts` requires the cursor image shown with Stabilize recorded shapes to match
   the encoded frames' pixels through trimmed, repeated source cuts, to change when the option is
   cleared, and to hold the same image per frame in Raw and Smooth motion.
-- `auto-zoom.spec.ts` generates zooms from clicks, regenerates, undoes, saves, reopens, and requires
-  the source anchor in the saved JSON. A second test requires a source-offset click to be centred
-  identically in preview and decoded export.
+- `zoom-creation.spec.ts` creates through Add zoom and B without cursor metadata, verifies four
+  seconds and focused follow, rejects overlap, undoes, saves and reopens. It covers six-versus-five
+  remaining frames, outpoint shortening, repeat and text/modifier guards, and the shortcut hint.
+- `auto-zoom.spec.ts` opens legacy source-anchored shots, undoes manual edits, saves, reopens, and
+  checks the source anchor in the downloaded JSON. A second test requires a source-offset click to
+  be centred identically in preview and decoded export; neither test invokes a removed generator.
 - `framing.spec.ts` requires follow to place the same pixels in preview and export for two targets,
   to be stable across seeks, and to accept Fixed focus, Focused and Smooth.
 - `frame-image.spec.ts` also reads the cursor, including the rotated one, from a copied frame; see
