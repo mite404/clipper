@@ -26,9 +26,13 @@ jobs:
       - run: npm install --global npm@10.9.10
       - run: npm ci
       - run: npm run format:check
+      - name: Check Oxfmt formatting without rewriting
+        run: npm run format -- --check
       - run: npm run lint
       - run: npm run lint:typed
       - run: npm run typecheck
+      - name: Check standalone TypeScript diagnostics
+        run: npm run typecheck:tsc
       - name: Check ticket identity and review coverage
         run: node scripts/check-tickets.mjs
       # './Timeline' and './timeline' are one file on a case-insensitive disk (macOS, Windows), where

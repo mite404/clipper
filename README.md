@@ -41,12 +41,18 @@ npm run format:check
 npm run lint
 npm run lint:typed
 npm run typecheck
+npm run typecheck:tsc
 npm run check:code
 npm test
 npm run build
 npm run build-storybook
 CHROME_PATH=/path/to/chrome npm run test:ui
 ```
+
+`npm run typecheck` uses Oxlint's experimental compiler diagnostics through `oxlint-tsgolint`. CI
+also runs `typecheck:tsc` to retain the standalone TypeScript compiler gate.
+`npm run format -- path/to/file` formats selected files with Oxfmt; `npm run format -- --check` only
+checks formatting. The existing Prettier `format:check` gate remains in place.
 
 Node and npm versions are pinned in `.node-version` and `package.json`. Lefthook checks staged
 JavaScript/TypeScript without modifying or restaging files, then runs whole-project dead-code and
