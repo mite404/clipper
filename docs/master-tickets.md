@@ -45,9 +45,9 @@ their linked research. Current accepted main is `d8776cde2f1fc381da7bd4a5b069501
 
 1. Finish the already reviewed CLIP-9b creation/panel-removal slice, then its owner-requested **Add
    zoom** label and stale verification-map follow-up under the same ID. Full ramps stay open.
-2. Deliver UI-7 on that accepted successor, then UI-5 pane resizing. Both extend UI-2 rather than
-   replacing its mounted drawer or scrolling rules. Reproduce REF-32 before UI-8 changes source
-   preview lifecycle; repair a demonstrated defect in its own tested ticket.
+2. Deliver UI-7 on that accepted successor, then UI-5 side-pane and timeline resizing. Both extend
+   UI-2 rather than replacing its mounted drawer or scrolling rules. Reproduce REF-32 before UI-8
+   changes source preview lifecycle; repair a demonstrated defect in its own tested ticket.
 3. Integrate REF-27 real export formats/resolution before CLIP-20b's image export changes, then
    deliver CLIP-20b media-kind support and CLIP-2c stable tracks/insertion/Background role. These
    are feature foundations, not a generic model rewrite. Preserve CLIP-2c's pointer-release lane
@@ -236,9 +236,9 @@ rules.
 
 ### Resizable workspace panes
 
-| Ticket ID                      | Scope                                            | Owner                                                                              | State                                              |
-| ------------------------------ | ------------------------------------------------ | ---------------------------------------------------------------------------------- | -------------------------------------------------- |
-| <a id="ui-5"></a>[UI-5](#ui-5) | Drag-adjust media-pool and inspector pane widths | [Sol research](https://ampcode.com/threads/T-e1ee6ff4-16fb-49e6-b05b-45a0b6fcecff) | Read-only after UI-2/inspector shared-path release |
+| Ticket ID                      | Scope                                                                          | Owner                                                                                    | State                                                                                   |
+| ------------------------------ | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| <a id="ui-5"></a>[UI-5](#ui-5) | Panel resizing, timeline layout controls and visible playhead/scrub affordance | [Existing Sol owner](https://ampcode.com/threads/T-e1ee6ff4-16fb-49e6-b05b-45a0b6fcecff) | Research-only; implementation follows accepted CLIP-9b and UI-7 with exact-path release |
 
 Use the requested Yaklabs implementation as the source reference, not a new splitter dependency.
 Research located `apps/web/src/shell/sidebar-resize.tsx` and `sidebar-width.ts` in mite404/yaklabs:
@@ -255,7 +255,65 @@ provenance and no third-party wrapper. The
 proposes release commit, Escape/cancel/lost-capture rollback, 16/64px keyboard changes, responsive
 reset, visit-only desired widths and handles hidden at widths up to 960px. Coordinator accepts these
 design defaults pending rendering; pane minima/maxima and center reserve must hold jointly on the
-delivered successor. No Timeline edit or persistence expansion is approved.
+delivered successor. No project-persistence expansion is approved.
+
+The owner's human post `M-034yiRcvqo7mjFoO7JIOiW` expands this same ticket to a vertically draggable
+timeline divider, not another worker or ticket. Place a full-width horizontal separator above
+`.sequence-area`; upward dragging enlarges the complete timeline region, downward reduces it. Reuse
+the same captured-pointer/direct-CSS handle across both axes. Pointer-up commits; Escape, cancel and
+unexpected capture loss roll back. Keyboard Up/Down changes height by 16px, Shift by 64px; Home/End
+choose effective bounds and double-click restores the responsive default. Expose the sequence
+target, horizontal separator orientation and effective height/range accessibly.
+
+Solve side widths and timeline height jointly so preview, inspector, transport and track scrolling
+stay usable. Research revision 3 proposes a timeline minimum of max(320px, measured transport,
+toolbar and footer plus 160px usable scroll), an upper-row reserve of 240px, and a maximum based on
+actual remaining workspace height after chrome and divider. These numbers are provisional pending
+rendering, not accepted pixel guarantees. Retain desired size through temporary effective clamping;
+use the accepted stacked/page-scroll fallback when bounds cannot fit. Initially hide desktop
+dividers at widths up to 960px. No drag-to-collapse, editor undo, saved layout or playback remount.
+
+The owner's follow-up `M-034yiVE5syDttd2HDFppuX` adds two buttons left of the timeline timecode. One
+hides the timeline and relocates to the bottom status bar while hidden, where it restores the
+timeline. Keep that restore control reachable by keyboard and move focus with the relocated control
+when needed. The other toggles responsive default height versus the most recent user-selected
+height. Preserve the remembered custom height across default, hidden and restored states, and
+through temporary viewport clamps. Before a custom height exists, retain the responsive default.
+Only a changed, committed manual resize updates remembered height; reset/default, hide/restore and
+clamping do not overwrite it. Hide/restore retains the prior height mode; cancel restores both mode
+and height. Place the footer restore button outside status live text. Explicit hide is distinct from
+dragging to minimum. Hiding does not pause/remount playback or discard edit/selection/scroll state.
+These are visit-only layout controls, not project/history edits.
+
+The same owner coordinates the timeline playhead follow-ups `M-034yiWzlDdTdDmnzlowqDk` and
+`M-034yiXtJgBU0IAlTJFSN8l`. The playhead must extend through elapsed-time ticks to the top of the
+ruler, making current time obvious. The owner reports scrubbing requires dragging an invisible
+handle and rejects that discoverability. Reproduce it on the accepted successor and propose a
+visible playhead/scrub affordance; do not assume a replacement gesture or treat a longer painted
+line as interaction acceptance. Preserve clip selection, move/trim hit targets, ruler seeking,
+keyboard access and zoom/scroll/resize alignment. Check both ruler and track alignment at multiple
+frames/scales and after horizontal/vertical scrolling; show pointer and keyboard scrubbing with
+neighboring clip controls. No specific new gesture is approved by these requirements.
+
+Current accepted research baseline is `0b5584ef9d5dd8a8005bbaeedf0bc91993524936`, which already
+contains UI-2, cursor-inspector and UI-3 deliveries; the worker's `6abc9df` checkout is stale.
+Implementation remains after accepted CLIP-9b and UI-7. At that release the coordinator supplies
+their exact accepted successor SHA and grants `src/PanelResizeHandle.tsx`, `src/App.tsx` workspace/
+sequence state, divider, timecode-adjacent buttons and status-bar restore hunks, `src/styles.css`
+workspace columns/rows/handles/control placement, and `tests/workspace-layout.spec.ts`. The App
+boundary explicitly includes `.app-footer` for the relocated restore control. This is the planned
+path boundary, not a source release now. No header, inspector-control, cursor, model/parser, or
+exporter edits are granted. The playhead/scrub follow-ups may require a separately enumerated
+`src/Timeline.tsx` ruler/playhead hunk and matching browser checks after reproduction and a scoped
+interaction proposal; those paths remain held, not implicitly released with panel resizing.
+
+Acceptance covers all three combined extremes, short/tall and narrow windows, pointer release and
+rollback, keyboard isolation, dynamic ARIA bounds, reset, playback continuity, scrollable tracks/
+inspector and stable px/s/ruler geometry when width is unchanged. Inspect default, expanded,
+reduced, hidden/restored and narrow states plus a real-pointer recording. Check custom-to-default-
+to-custom and hide/restore after either mode, including viewport clamp/restore without losing the
+custom height. Retain full strict gates and required exact-candidate review. The existing Timeline
+ResizeObserver should need no forced scale update.
 
 ### Selected obsolete UI deletion
 
@@ -1437,7 +1495,7 @@ support them but do not replace them. No GitHub or Linear issue creation is impl
 | Hide media pool, increase timeline room, scroll both axes, adaptive min/max scale and narrow ruler                                        | [UI-2](#ui-2)                                                                |
 | Remove branding/title and move Save without changing save behavior                                                                        | [UI-3](#ui-3)                                                                |
 | Horizontal label scrubbing across numeric properties, not booleans/enums                                                                  | [UI-4](#ui-4)                                                                |
-| Drag media-pool/inspector widths using owner-authored Yaklabs pattern                                                                     | [UI-5](#ui-5)                                                                |
+| Resize side panes/timeline, hide/restore and default/custom height controls, visible ruler playhead and scrub affordance                  | [UI-5](#ui-5)                                                                |
 | Media before Save, temporary left-edge media-pool peek and Space-only timeline control                                                    | [UI-7](#ui-7)                                                                |
 | Cursor metadata import from source panel or targeted composition/timeline sidecar drop                                                    | [CLIP-11b](tickets/CLIP-11b.md)                                              |
 | Remove ORIGINAL, obsolete above-timeline cursor panel, L/R meter, Paused and selected slogans/tags                                        | [UI-6](#ui-6), with cursor access preserved by [CLIP-11](tickets/CLIP-11.md) |
