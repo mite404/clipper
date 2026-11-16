@@ -80,3 +80,57 @@ it('keeps hiding on source time through trimmed, cut and repeated uses with tele
   expect(cursorFrame(repeated, [hidden], 33, layout)?.x).toBeCloseTo(499.65);
   expect(cursorFrame(repeated, [hidden], 34, layout)).toBeDefined();
 });
+
+it('leans around the scaled hotspot from source motion, resets at cuts and ignores seek order', () => {
+  const rotating: Asset = {
+    ...asset,
+    cursor: { ...asset.cursor, settings: { ...asset.cursor.settings, rotate: true } },
+  };
+  expect(cursorFrame(clips, [asset], 31, layout)).toMatchObject({ rotation: 0 });
+  for (const [frame, rotation] of [
+    [30, 0],
+    [31, 12],
+    [33, 0],
+    [34, -12],
+    [31, 12],
+  ]) {
+    expect(cursorFrame(clips, [rotating], frame, layout)).toMatchObject({
+      rotation,
+      hotspotX: 0.35,
+      hotspotY: 0.7,
+    });
+    expect(cursorFrame(clips, [rotating], frame, layout)?.x).toBeCloseTo(
+      cursorFrame(clips, [asset], frame, layout)!.x,
+    );
+  }
+  const advanced: Asset = { ...rotating, cursor: { ...rotating.cursor!, offsetMs: -50 } };
+  expect(cursorFrame(clips, [advanced], 31, layout)).toMatchObject({ rotation: -12 });
+});
+
+it('keeps vertical or stopped movement upright and starts fresh after missing tracking', () => {
+  const rotating: Asset = {
+    ...asset,
+    cursor: {
+      ...asset.cursor,
+      offsetMs: 0,
+      settings: { ...asset.cursor.settings, rotate: true },
+      recording: {
+        ...asset.cursor.recording,
+        samples: [
+          { timeMs: 0, cx: 0.4, cy: 0.1, assetId: 'arrow' },
+          { timeMs: 100, cx: 0.45, cy: 0.4, assetId: 'arrow' },
+          { timeMs: 200, cx: 0.45, cy: 0.8, assetId: 'arrow' },
+          { timeMs: 300, cx: 0.45, cy: 0.8, assetId: 'arrow' },
+          { timeMs: 400, cx: 0.8, cy: 0.8, assetId: 'arrow', visible: false },
+          { timeMs: 500, cx: 0.2, cy: 0.8, assetId: 'arrow' },
+        ],
+      },
+    },
+  };
+  const continuous: Clip[] = [{ ...clips[0], start: 0, offset: 0, duration: 20 }];
+  expect(cursorFrame(continuous, [rotating], 3, layout)?.rotation).toBeCloseTo(6);
+  expect(cursorFrame(continuous, [rotating], 6, layout)).toMatchObject({ rotation: 0 });
+  expect(cursorFrame(continuous, [rotating], 9, layout)).toMatchObject({ rotation: 0 });
+  expect(cursorFrame(continuous, [rotating], 12, layout)).toBeUndefined();
+  expect(cursorFrame(continuous, [rotating], 15, layout)).toMatchObject({ rotation: 0 });
+});

@@ -34,6 +34,8 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   await page.getByLabel('Hide when idle (1 s)', { exact: true }).check();
   await page.getByLabel('Remove small shakes', { exact: true }).check();
   await page.getByLabel('Stabilize recorded shapes', { exact: true }).check();
+  await expect(page.getByLabel('Rotate with movement', { exact: true })).not.toBeChecked();
+  await page.getByLabel('Rotate with movement', { exact: true }).check();
   await page.getByLabel('Cursor ending', { exact: true }).selectOption('loop');
   await page.getByLabel('Hide cursor from (source seconds)').fill('0.15');
   await page.getByLabel('Hide cursor until (source seconds)').fill('0.1');
@@ -105,6 +107,7 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
       hideIdle: true,
       removeShakes: true,
       stabilizeShapes: true,
+      rotate: true,
       ending: 'loop',
       hiddenRanges: [{ startMs: 150, endMs: 300 }],
     },
@@ -128,6 +131,7 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   await expect(page.getByLabel('Hide when idle (1 s)', { exact: true })).toBeChecked();
   await expect(page.getByLabel('Remove small shakes', { exact: true })).toBeChecked();
   await expect(page.getByLabel('Stabilize recorded shapes', { exact: true })).toBeChecked();
+  await expect(page.getByLabel('Rotate with movement', { exact: true })).toBeChecked();
   await expect(page.getByLabel('Cursor ending', { exact: true })).toHaveValue('loop');
   await expect(page.getByText('0.15 to 0.3 s', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Remove hidden range 1', exact: true }).click();
@@ -175,6 +179,10 @@ test('cursor controls retain actions with long filenames, empty telemetry and la
       await stabilize.scrollIntoViewIfNeeded();
       await stabilize.check();
       await expect(stabilize).toBeChecked();
+      const rotate = page.getByLabel('Rotate with movement', { exact: true });
+      await rotate.scrollIntoViewIfNeeded();
+      await rotate.check();
+      await expect(rotate).toBeChecked();
       await expect(page.getByLabel('Cursor ending', { exact: true })).toBeInViewport();
       const addRange = page.getByRole('button', { name: 'Add hidden range', exact: true });
       await addRange.scrollIntoViewIfNeeded();

@@ -3,7 +3,13 @@ import { covers, sourceFrame, FPS, type Clip } from './timeline-model';
 import { coverRect, cropPosition, maskRect, type Layout, type Rect } from './stage';
 import { cursorAt, TOUCH_CURSOR_ASSET } from './cursor-motion';
 
-export type CursorFrame = Rect & { imageDataUrl: string };
+export type CursorFrame = Rect & {
+  imageDataUrl: string;
+  // Clockwise degrees about the scaled bitmap hotspot, not its center.
+  rotation: number;
+  hotspotX: number;
+  hotspotY: number;
+};
 
 /** Project one frame's source cursor into the screen mask's local pixel coordinates. */
 export function cursorFrame(
@@ -15,11 +21,16 @@ export function cursorFrame(
   const clip = clips.find((item) => item.track === 'screen' && covers(item, frame));
   const source = assets.find((asset) => asset.id === clip?.assetId);
   if (!clip || !source?.cursor) return undefined;
-  const pose = cursorAt(source.cursor, (sourceFrame(clip, frame) / FPS) * 1000, undefined, {
+  const sourceMs = (sourceFrame(clip, frame) / FPS) * 1000;
+  const range = {
     startMs: (clip.offset / FPS) * 1000,
     endMs: ((clip.offset + clip.duration - 1) / FPS) * 1000,
-  });
+  };
+  const pose = cursorAt(source.cursor, sourceMs, undefined, range);
   if (!pose) return undefined;
+  const previous = source.cursor.settings?.rotate
+    ? cursorAt(source.cursor, Math.max(range.startMs, sourceMs - 100), undefined, range)
+    : undefined;
   const mask = maskRect('screen', layout);
   const cover = coverRect(mask, source, cropPosition('screen', layout));
   const size = cover.scale * (source.cursor.settings?.size ?? 1);
@@ -29,6 +40,9 @@ export function cursorFrame(
     width: pose.asset.width * size,
     height: pose.asset.height * size,
     imageDataUrl: pose.asset.imageDataUrl,
+    rotation: previous ? Math.max(-12, Math.min(12, (pose.cx - previous.cx) * 120)) : 0,
+    hotspotX: pose.asset.hotspotX * size,
+    hotspotY: pose.asset.hotspotY * size,
   };
 }
 

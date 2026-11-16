@@ -14,6 +14,7 @@ const BEHAVIOR_FLAGS = [
   ['hideIdle', 'Hide when idle (1 s)'],
   ['removeShakes', 'Remove small shakes'],
   ['stabilizeShapes', 'Stabilize recorded shapes'],
+  ['rotate', 'Rotate with movement'],
 ] as const;
 
 function countLabel(count: number, singular: string): string {
@@ -147,7 +148,9 @@ function CursorBehavior({
         Ending effects use the last 0.5 s of each trimmed clip, or half of shorter clips.
         Small-shake removal holds movements within 0.5% of the source. Clicks stay exact.
         Stabilization holds the previous shape until a new shape is confirmed by samples at least
-        100 ms apart. Interaction shapes appear immediately; tracking gaps reset it.
+        100 ms apart. Interaction shapes appear immediately; tracking gaps reset it. Rotation leans
+        up to 12° with horizontal movement over the previous 100 ms, around the recorded hotspot.
+        Each trimmed clip starts upright.
       </p>
       <CursorHiddenRanges settings={settings} onChange={onChange} />
     </details>

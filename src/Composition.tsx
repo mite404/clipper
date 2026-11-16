@@ -101,6 +101,8 @@ export function Composition({ clips, assets, zooms, layout, muted }: Composition
                     top: cursor.y,
                     width: cursor.width,
                     height: cursor.height,
+                    transform: `rotate(${cursor.rotation}deg)`,
+                    transformOrigin: `${cursor.hotspotX}px ${cursor.hotspotY}px`,
                     pointerEvents: 'none',
                   }}
                 />

@@ -115,8 +115,19 @@ function drawFrame(
       const cover = coverRect(mask, layer.image, cropPosition(track, layout)); // → local rect
       context.drawImage(layer.image, cover.x, cover.y, cover.width, cover.height);
     }
-    if (track === 'screen' && cursor)
-      context.drawImage(cursor.image, cursor.x, cursor.y, cursor.width, cursor.height);
+    if (track === 'screen' && cursor) {
+      context.save();
+      context.translate(cursor.x + cursor.hotspotX, cursor.y + cursor.hotspotY);
+      context.rotate((cursor.rotation * Math.PI) / 180);
+      context.drawImage(
+        cursor.image,
+        -cursor.hotspotX,
+        -cursor.hotspotY,
+        cursor.width,
+        cursor.height,
+      );
+      context.restore();
+    }
     context.restore();
   }
 }
