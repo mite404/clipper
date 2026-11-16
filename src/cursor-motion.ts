@@ -187,6 +187,12 @@ export function cursorAt(
   mode: 'raw' | 'smooth' = track.settings?.mode ?? 'smooth',
   range?: { startMs: number; endMs: number },
 ): CursorPose | undefined {
+  if (
+    track.settings?.hiddenRanges?.some(
+      ({ startMs, endMs }) => sourceMs >= startMs && sourceMs < endMs,
+    )
+  )
+    return undefined;
   const ending = track.settings?.ending;
   if (!ending || !range || range.endMs <= range.startMs) return motionAt(track, sourceMs, mode);
   const fromMs = range.endMs - Math.min(500, (range.endMs - range.startMs) / 2);

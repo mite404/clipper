@@ -19,6 +19,89 @@ function countLabel(count: number, singular: string): string {
   return `${count.toLocaleString()} ${singular}${count === 1 ? '' : 's'}`;
 }
 
+function CursorHiddenRanges({
+  settings,
+  onChange,
+}: {
+  settings: CursorSettings;
+  onChange: (settings: CursorSettings) => void;
+}) {
+  const ranges = settings.hiddenRanges ?? [];
+  const end = useRef<HTMLInputElement>(null);
+  return (
+    <section aria-label="Hidden cursor ranges">
+      <p className="cursor-note">
+        Hide sections by source video time, in seconds. Start is included; end is excluded. Applies
+        to every use of this source, regardless of cursor offset.
+      </p>
+      {ranges.length === 0 && <p className="cursor-note">No hidden ranges.</p>}
+      {ranges.map((range, index) => (
+        <div className="cursor-appearance" key={`${range.startMs}-${range.endMs}-${index}`}>
+          <span>
+            {range.startMs / 1000} to {range.endMs / 1000} s
+          </span>
+          <button
+            type="button"
+            className="text-button"
+            aria-label={`Remove hidden range ${index + 1}`}
+            onClick={() =>
+              onChange({ ...settings, hiddenRanges: ranges.filter((_, i) => i !== index) })
+            }
+          >
+            Remove
+          </button>
+        </div>
+      ))}
+      <form
+        className="cursor-appearance"
+        onSubmit={(event) => {
+          event.preventDefault();
+          const data = new FormData(event.currentTarget);
+          const startMs = Number(data.get('start')) * 1000;
+          const endMs = Number(data.get('end')) * 1000;
+          if (endMs <= startMs) {
+            end.current?.setCustomValidity('End must be after start.');
+            end.current?.reportValidity();
+            return;
+          }
+          onChange({ ...settings, hiddenRanges: [...ranges, { startMs, endMs }] });
+          event.currentTarget.reset();
+        }}
+        onInput={() => end.current?.setCustomValidity('')}
+      >
+        <label>
+          From (s)
+          <input
+            type="number"
+            name="start"
+            aria-label="Hide cursor from (source seconds)"
+            min="0"
+            max={Number.MAX_SAFE_INTEGER / 1000}
+            step="any"
+            required
+          />
+        </label>
+        <label>
+          Until (s)
+          <input
+            ref={end}
+            type="number"
+            name="end"
+            aria-label="Hide cursor until (source seconds)"
+            min="0"
+            max={Number.MAX_SAFE_INTEGER / 1000}
+            step="any"
+            required
+          />
+        </label>
+        <button type="submit" className="text-button">
+          Add hidden range
+        </button>
+      </form>
+    </section>
+  );
+}
+
 function CursorBehavior({
   settings,
   onChange,
@@ -63,6 +146,7 @@ function CursorBehavior({
         Ending effects use the last 0.5 s of each trimmed clip, or half of shorter clips.
         Small-shake removal holds movements within 0.5% of the source. Clicks stay exact.
       </p>
+      <CursorHiddenRanges settings={settings} onChange={onChange} />
     </details>
   );
 }

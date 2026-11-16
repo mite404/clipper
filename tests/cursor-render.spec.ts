@@ -154,6 +154,13 @@ test('draws source-offset cursors through a cut, crop, side swap and zoom in pre
         },
         probes: [[0, 1010, 80]],
       },
+      {
+        cursor: {
+          ...cursor,
+          settings: { ...cursor.settings, hiddenRanges: [{ startMs: 100, endMs: 200 }] },
+        },
+        probes: [[0, 1178, 154]],
+      },
     ]) {
       const url = URL.createObjectURL(source);
       try {
@@ -212,6 +219,7 @@ test('draws source-offset cursors through a cut, crop, side swap and zoom in pre
       expect(channel).toBeLessThan(210);
     }
   for (const channel of result.pixels[5].slice(0, 3)) expect(channel).toBeLessThan(40);
+  for (const channel of result.pixels[7].slice(0, 3)) expect(channel).toBeLessThan(40);
   await page.getByLabel('Open local project').setInputFiles({
     name: 'synthetic-cursor.clipper.json',
     mimeType: 'application/json',
@@ -254,4 +262,16 @@ test('draws source-offset cursors through a cut, crop, side swap and zoom in pre
   );
   await page.getByLabel('Hide cursor', { exact: true }).check();
   await expect(cursor).toHaveCount(0);
+  await page.getByLabel('Hide cursor', { exact: true }).uncheck();
+  await page.getByLabel('Cursor ending', { exact: true }).selectOption('none');
+  await page.getByLabel('Hide cursor from (source seconds)').fill('0.1');
+  await page.getByLabel('Hide cursor until (source seconds)').fill('0.2');
+  await page.getByRole('button', { name: 'Add hidden range', exact: true }).click();
+  await expect(cursor).toHaveCount(0);
+  await page.getByRole('button', { name: 'Next frame', exact: true }).click();
+  await expect(cursor).toBeVisible();
+  await page.getByRole('button', { name: 'Previous frame', exact: true }).click();
+  await expect(cursor).toHaveCount(0);
+  await page.getByRole('button', { name: 'Remove hidden range 1', exact: true }).click();
+  await expect(cursor).toBeVisible();
 });

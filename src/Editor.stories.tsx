@@ -15,6 +15,18 @@ import { cursorFixture, motionCursorFixture, behaviorCursorFixture } from './cur
 import type { CursorTrack } from './cursor';
 import type { Clip, Zoom } from './timeline-model';
 
+const CURSOR_STRESS_SETTINGS: Record<string, CursorTrack['settings']> = {
+  'Worst case': {
+    mode: 'smooth',
+    size: 1,
+    hidden: false,
+    hiddenRanges: [
+      { startMs: 123.456, endMs: 789.123 },
+      { startMs: 86399000.125, endMs: 86400000.875 },
+    ],
+  },
+};
+
 function CursorRecord({ preview = false }: { preview?: boolean }) {
   const fixture = preview ? motionCursorFixture : cursorFixture;
   const [zooms, setZooms] = useState<Zoom[]>([]);
@@ -60,6 +72,7 @@ function CursorRecord({ preview = false }: { preview?: boolean }) {
     setCursor({
       recording: { ...selected, samples },
       offsetMs: next === 'Worst case' ? -9007199254740991 : 0,
+      settings: CURSOR_STRESS_SETTINGS[next],
     });
   };
   return (

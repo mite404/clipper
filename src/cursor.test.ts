@@ -61,6 +61,7 @@ it('preserves rendering settings and rejects invalid saved cursor controls', () 
       hideIdle: false,
       removeShakes: true,
       ending: 'loop',
+      hiddenRanges: [{ startMs: 0, endMs: 123.5 }],
     },
   };
   expect(parseCursorTrack(cursor)).toEqual(cursor);
@@ -73,6 +74,15 @@ it('preserves rendering settings and rejects invalid saved cursor controls', () 
     { ...cursor.settings, removeShakes: 1 },
     { ...cursor.settings, style: 'native' },
     { ...cursor.settings, ending: 'warp' },
+    ...[
+      null,
+      {},
+      [{ startMs: -1, endMs: 3 }],
+      [{ startMs: 3, endMs: 3 }],
+      [{ startMs: 4, endMs: 3 }],
+      [{ startMs: 0, endMs: Infinity }],
+      [{ startMs: '0', endMs: 3 }],
+    ].map((hiddenRanges) => ({ ...cursor.settings, hiddenRanges })),
   ]) {
     expect(() => parseCursorTrack({ ...cursor, settings })).toThrow(/cursor/i);
   }

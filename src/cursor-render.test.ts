@@ -62,3 +62,21 @@ it('returns to each trimmed clip start on its last rendered frame, including aft
     cursorFrame(clips, [loop], 30, layout),
   );
 });
+
+it('keeps hiding on source time through trimmed, cut and repeated uses with telemetry offset', () => {
+  const hidden: Asset = {
+    ...asset,
+    cursor: {
+      ...asset.cursor,
+      settings: {
+        ...asset.cursor.settings,
+        hiddenRanges: [{ startMs: 100, endMs: 200 }],
+      },
+    },
+  };
+  const repeated: Clip[] = [...clips, { ...clips[0], id: 'repeat', start: 40 }];
+  for (const frame of [30, 32, 40, 42])
+    expect(cursorFrame(repeated, [hidden], frame, layout)).toBeUndefined();
+  expect(cursorFrame(repeated, [hidden], 33, layout)?.x).toBeCloseTo(499.65);
+  expect(cursorFrame(repeated, [hidden], 34, layout)).toBeDefined();
+});

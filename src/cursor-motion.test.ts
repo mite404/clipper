@@ -177,3 +177,26 @@ it('returns to the trimmed clip start or stops at its ending without depending o
   expect(cursorAt(stop, 3000, 'raw', range)?.cx).toBeCloseTo(0.4);
   expect(cursorAt(loop, 4000, 'raw')?.cx).toBeCloseTo(0.5);
 });
+
+it('hides half-open source-video ranges independently of offsets, seeks and ending effects', () => {
+  const original = structuredClone(path.recording);
+  const hidden = {
+    ...path,
+    offsetMs: 50,
+    settings: {
+      mode: 'raw' as const,
+      size: 1,
+      hidden: false,
+      ending: 'loop' as const,
+      hiddenRanges: [{ startMs: 200, endMs: 260 }],
+    },
+  };
+  const range = { startMs: 150, endMs: 300 };
+  expect(cursorAt(hidden, 259, 'raw', range)).toBeUndefined();
+  expect(cursorAt(hidden, 199, 'raw', range)).toBeDefined();
+  expect(cursorAt(hidden, 200, 'smooth', range)).toBeUndefined();
+  expect(cursorAt(hidden, 260, 'raw', range)).toBeDefined();
+  expect(cursorAt(hidden, 220)).toBeUndefined();
+  expect(cursorAt(hidden, 150)).toBeDefined();
+  expect(path.recording).toEqual(original);
+});

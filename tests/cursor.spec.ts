@@ -34,6 +34,20 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   await page.getByLabel('Hide when idle (1 s)', { exact: true }).check();
   await page.getByLabel('Remove small shakes', { exact: true }).check();
   await page.getByLabel('Cursor ending', { exact: true }).selectOption('loop');
+  await page.getByLabel('Hide cursor from (source seconds)').fill('0.15');
+  await page.getByLabel('Hide cursor until (source seconds)').fill('0.1');
+  await page.getByRole('button', { name: 'Add hidden range', exact: true }).click();
+  expect(
+    await page
+      .getByLabel('Hide cursor until (source seconds)')
+      .evaluate((element: HTMLInputElement) => element.validationMessage),
+  ).toBe('End must be after start.');
+  await expect(page.getByText('No hidden ranges.', { exact: true })).toBeVisible();
+  await page.getByLabel('Hide cursor until (source seconds)').fill('0.3');
+  await page.getByRole('button', { name: 'Add hidden range', exact: true }).click();
+  await expect(
+    page.getByRole('button', { name: 'Remove hidden range 1', exact: true }),
+  ).toBeVisible();
   await attach.setInputFiles({
     name: 'bad.json',
     mimeType: 'application/json',
@@ -90,6 +104,7 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
       hideIdle: true,
       removeShakes: true,
       ending: 'loop',
+      hiddenRanges: [{ startMs: 150, endMs: 300 }],
     },
   });
   expect(
@@ -111,6 +126,9 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   await expect(page.getByLabel('Hide when idle (1 s)', { exact: true })).toBeChecked();
   await expect(page.getByLabel('Remove small shakes', { exact: true })).toBeChecked();
   await expect(page.getByLabel('Cursor ending', { exact: true })).toHaveValue('loop');
+  await expect(page.getByText('0.15 to 0.3 s', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Remove hidden range 1', exact: true }).click();
+  await expect(page.getByText('No hidden ranges.', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Remove cursor sidecar' }).click();
   await expect(page.getByTestId('cursor-status')).toHaveText('No cursor sidecar');
   expect(uploads).toEqual([]);
@@ -151,6 +169,17 @@ test('cursor controls retain actions with long filenames, empty telemetry and la
       await expect(page.getByLabel('Hide when idle (1 s)', { exact: true })).toBeInViewport();
       await expect(page.getByLabel('Remove small shakes', { exact: true })).toBeInViewport();
       await expect(page.getByLabel('Cursor ending', { exact: true })).toBeInViewport();
+      const addRange = page.getByRole('button', { name: 'Add hidden range', exact: true });
+      await addRange.scrollIntoViewIfNeeded();
+      await expect(addRange).toBeInViewport();
+      if (mode === 'Worst case') {
+        const removeRange = page.getByRole('button', {
+          name: 'Remove hidden range 2',
+          exact: true,
+        });
+        await removeRange.scrollIntoViewIfNeeded();
+        await expect(removeRange).toBeInViewport();
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
         width,
       );

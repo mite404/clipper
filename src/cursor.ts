@@ -34,6 +34,8 @@ export type CursorSettings = {
   removeShakes?: boolean;
   style?: 'recorded' | 'default' | 'touch';
   ending?: 'stop' | 'loop';
+  // Half-open intervals on the source video's clock, unaffected by telemetry offset.
+  hiddenRanges?: { startMs: number; endMs: number }[];
 };
 
 export const DEFAULT_CURSOR_SETTINGS: CursorSettings = { mode: 'smooth', size: 1, hidden: false };
@@ -169,6 +171,18 @@ function optionalChoice<T extends string>(value: unknown, options: T[]): T | und
   return choice;
 }
 
+function parseHiddenRanges(value: unknown): CursorSettings['hiddenRanges'] {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) throw new Error('Cursor hidden ranges must be an array.');
+  return value.map((entry) => {
+    const range = object(entry);
+    const startMs = finite(range.startMs, 0);
+    const endMs = finite(range.endMs, 0);
+    if (endMs <= startMs) throw new Error('Cursor hidden range must end after its start.');
+    return { startMs, endMs };
+  });
+}
+
 function parseSettings(value: unknown): CursorSettings {
   const settings = object(value);
   if (settings.mode !== 'raw' && settings.mode !== 'smooth')
@@ -180,6 +194,7 @@ function parseSettings(value: unknown): CursorSettings {
     hidden: settings.hidden,
     style: optionalChoice(settings.style, ['recorded', 'default', 'touch']),
     ending: optionalChoice(settings.ending, ['stop', 'loop']),
+    hiddenRanges: parseHiddenRanges(settings.hiddenRanges),
     ...parseFlags(settings),
   };
 }
