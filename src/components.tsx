@@ -1,5 +1,6 @@
 import { useMemo, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { Film, Music2, Plus, Upload } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@ui-sdk/react/tooltip';
 import type { Asset } from './media';
 import { FPS } from './timeline-model';
 
@@ -10,7 +11,7 @@ export function timecode(frame: number): string {
     .join(':');
 }
 
-/** Accessible icon button with a visible native tooltip. */
+/** Native icon button with the same label visible on hover and keyboard focus. */
 export function IconButton({
   label,
   children,
@@ -20,9 +21,20 @@ export function IconButton({
   children: ReactNode;
 }) {
   return (
-    <button type="button" className="icon-button" aria-label={label} title={label} {...props}>
-      {children}
-    </button>
+    <Tooltip type="label" delay={400} disabled={props.disabled}>
+      <TooltipTrigger
+        type="button"
+        className="icon-button"
+        aria-label={label}
+        {...props}
+        title={undefined}
+      >
+        {children}
+      </TooltipTrigger>
+      <TooltipContent className="icon-button-tooltip" sideOffset={8} collisionPadding={8}>
+        {label}
+      </TooltipContent>
+    </Tooltip>
   );
 }
 
