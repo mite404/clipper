@@ -38,11 +38,14 @@ cases and ten isolated performance cases. The selected implementation unit is co
 retains video-wide ending and real-Mac qualification limits. See the
 [source requirements](../reference-features.md#motion-acceptance).
 
-The expanded cursor-control layout is not accepted UX. The owner's 2026-11-16 feedback suggests
-cursor animation options in the inspector to preserve sequence-timeline room. Before assigning UI
-changes, [the research owner](https://ampcode.com/threads/T-0ddac938-5168-453a-a1f3-ec16bba82ba9)
-compares OpenScreen's recorded-metadata options and recommends inspector placement. This note is
-not an implementation assignment; existing disjoint work continues.
+The expanded cursor-control layout is not accepted UX. Following the recorded-metadata comparison,
+the owner approved the Screen Studio-inspired inspector workflow on 2026-11-16.
+[Sol owner](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) reorganizes existing
+controls into the selected-screen-clip inspector, with explicit recording-wide semantics and no new
+effects or clip-local overrides. An explicit library selection may clear clip selection to reach
+that recording's settings. Final integration follows UI-1 and REF-20; the later UI-2 drawer/layout
+unit integrates the inspector before its own combined gates. The master records shared-path
+reservations and disclosure-only test exceptions.
 
 ## Approach
 
