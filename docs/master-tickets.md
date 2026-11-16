@@ -41,17 +41,17 @@ and nowhere else. Other documents are records, not queues:
 
 ## Owners
 
-| Lane                     | Thread                                                                           | Owns                                                        |
-| ------------------------ | -------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| Queue and implementation | [T-6706048a](https://ampcode.com/threads/T-6706048a-c051-4e23-9ec6-68afd669b492) | This file, REF and CLIP tickets, exclusive main push slot   |
-| Cursor implementation    | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant  |
-| Cursor inspector         | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) | Inspector delivered; no active implementation grant         |
-| Workspace layout         | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | UI-2 delivered; no active implementation grant              |
-| Transport lifecycle      | [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59) | REF-31 hidden-tab rewind and held-Space, Sol medium         |
-| Zoom regions             | [T-46d4a5ee](https://ampcode.com/threads/T-46d4a5ee-39f1-46ae-bde0-eced0da19a5a) | CLIP-9b research only until shared-path release, Sol medium |
-| Cursor preservation      | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94) | Frozen original CLIP-11 work, no implementation or push     |
-| Editor and bootstrap     | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da) | `.agents/setup`, `.agents/resume`                           |
-| Verification tools       | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc) | `.agents/skills/verify-clipper/**`                          |
+| Lane                     | Thread                                                                           | Owns                                                          |
+| ------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------- |
+| Queue and implementation | [T-6706048a](https://ampcode.com/threads/T-6706048a-c051-4e23-9ec6-68afd669b492) | This file, REF and CLIP tickets, exclusive main push slot     |
+| Cursor implementation    | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant    |
+| Cursor inspector         | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) | Inspector delivered; no active implementation grant           |
+| Workspace layout         | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | UI-2 delivered; no active implementation grant                |
+| Transport lifecycle      | [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59) | REF-31 delivered; no active implementation grant              |
+| Zoom regions             | [T-46d4a5ee](https://ampcode.com/threads/T-46d4a5ee-39f1-46ae-bde0-eced0da19a5a) | Narrow CLIP-9b creation/panel-removal integration, Sol medium |
+| Cursor preservation      | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94) | Frozen original CLIP-11 work, no implementation or push       |
+| Editor and bootstrap     | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da) | `.agents/setup`, `.agents/resume`                             |
+| Verification tools       | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc) | `.agents/skills/verify-clipper/**`                            |
 
 The owner's one-ticket Sonnet 5.5 trial for VERIFY-3 in
 [T-24b3f0ad](https://ampcode.com/threads/T-24b3f0ad-9a83-4b3b-b297-6f86319b8e81) concluded with
@@ -80,16 +80,15 @@ rewind/readout listener and export-progress hunks, focused editor/performance te
 REF-20's reservation is released. The inspector owner now rebases its preserved candidate onto
 `612486f` for combined acceptance; UI-2 follows that accepted successor.
 
-The owner's 2026-11-16 standing authorization supersedes the earlier one-ticket Sonnet limits. Run
-the lane under [root ticket-delivery guidance](../AGENTS.md#ticket-delivery), including both
-required reviews for source tickets and exact-main green CI before the next assignment. See
-[the continuous workflow](ticket-workflow.md#continuous-small-ticket-sonnet-lane).
+The owner's latest 2026-11-16 model decision supersedes the earlier Sonnet lane authorization. All
+implementation workers use GPT-6.1 Sol medium. Opus and Fable are reserved for sparing research and
+review, not continuous implementation or coordination. Preserve the existing exact-ticket Fable
+source verdict and exact-main green CI gates. The baseline review is not repeated.
 
-[REF-31](tickets/REF-31.md) includes approved pause-on-tab-hide rewind semantics. It starts only
-after REF-20's green delivery and reservation release. The scope is rewind visibility lifecycle,
-repeated-Space handling, a focused transport test and its brief. The existing Sol medium transport
-worker now owns this unit on accepted UI-3. No zoom, layout or general shortcut expansion is
-granted.
+[REF-31](tickets/REF-31.md) delivered pause-on-tab-hide rewind and repeated-Space handling at
+[`9132ecf`](https://github.com/mite404/clipper/commit/9132ecfa925389b5167e10a1ccc2ded27ee4a3ce),
+with [green exact-main CI](https://github.com/mite404/clipper/actions/runs/43898463793). Its
+transport reservation is released. No zoom, layout or general shortcut expansion was included.
 
 Frozen REF-31 candidate `e40ba83` is transferred by verified bundle on accepted `57f5864`, with only
 App transport, `tests/transport-lifecycle.spec.ts` and its brief changed. The worker's product reds,
@@ -103,10 +102,9 @@ thirty seconds for the port inside the existing sixty-second native test. That e
 delta is applied with source bytes unchanged; its identity patch is transferred to the reviewer. The
 startup cause is not established. The corrected coordinator invocation passed full 70/70, then
 isolated performance 20/20, both with zero skips or flakes. Fable's source LAND condition is
-satisfied; exact-main CI is still required before REF-31 delivery or reservation release. Separate
-verification follow-ups are the new spec's missing named `editor`/feature-map coverage and its
-direct Chromium launch ignoring `CHROME_PATH`; neither is silently represented as verified by this
-candidate.
+satisfied, and exact-main CI passed at `9132ecf`. Separate verification follow-ups are the new
+spec's missing named `editor`/feature-map coverage and its direct Chromium launch ignoring
+`CHROME_PATH`; neither is silently represented as verified by this candidate.
 
 ### Next bounded Sonnet candidate
 
@@ -260,17 +258,17 @@ images were hosted, see [Known limits](#known-limits)).
 
 ### Current path reservations
 
-| Owner                    | Paths                                                                                                                                            |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                   |
-| Cursor inspector         | No active implementation reservation after green inspector delivery                                                                              |
-| Workspace layout         | No active implementation reservation after green UI-2 delivery                                                                                   |
-| Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                   |
-| Transport lifecycle      | REF-31 App rewind visibility and repeated-Space hunks, tests/transport-lifecycle.spec.ts and ticket brief; no zoom/layout/general shortcut edits |
-| Zoom regions             | Research only; future App/Timeline/inspector/styles/model/parser edits wait for inspector and UI-2 release; no REF-20/31 transport overlap       |
-| Oxc tooling              | VERIFY-5 package/lock, Oxc/formatter config, necessary CI/hook/README command changes only; no source migration or bulk reformat                 |
-| Queue implementation     | Queue/docs and acceptance; sole main push slot; REF-31 transport reservation remains exclusive                                                   |
-| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                 |
+| Owner                    | Paths                                                                                                                                                       |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                              |
+| Cursor inspector         | No active implementation reservation after green inspector delivery                                                                                         |
+| Workspace layout         | No active implementation reservation after green UI-2 delivery                                                                                              |
+| Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                              |
+| Transport lifecycle      | No active reservation after green REF-31 delivery; preserve accepted REF-20/31 transport behavior                                                           |
+| Zoom regions             | CLIP-9b narrow App creation/B/hints, AutoZoomControls deletion, zoom-generation removal and listed test/story consumers; no Timeline/model/ramp/style edits |
+| Oxc tooling              | VERIFY-5 package/lock, Oxc/formatter config, necessary CI/hook/README command changes only; no source migration or bulk reformat                            |
+| Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                                                              |
+| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                            |
 
 ### Preservation branches
 
@@ -626,7 +624,7 @@ original note for every row.
 | <a id="ref-28"></a>[REF-28](#ref-28)                 | Define missing decoded-frame behavior                                        | Medium | Proposal                                                                                                                                                                            | reproduce null and early-end decoder cases                                                              |
 | <a id="ref-29"></a>[REF-29](#ref-29)                 | Assess complexity-score baseline blind spots                                 | Small  | Deferred proposal                                                                                                                                                                   | only if count-only baseline permits real growth                                                         |
 | <a id="ref-30"></a>[REF-30](#ref-30)                 | Progress and cancellation for import, Open and Save                          | Large  | Proposal                                                                                                                                                                            | define bounded-memory and cancellation behavior with REF-22                                             |
-| <a id="ref-31"></a>[REF-31](tickets/REF-31.md)       | Prevent hidden-tab rewind jumps and held-Space toggles                       | Small  | Local qualification passed; source LAND condition applied; exact-main CI pending                                                                                                    | Serialized main delivery and green exact-SHA CI before reservation release                              |
+| <a id="ref-31"></a>[REF-31](tickets/REF-31.md)       | Prevent hidden-tab rewind jumps and held-Space toggles                       | Small  | Delivered at [9132ecf](https://github.com/mite404/clipper/commit/9132ecfa925389b5167e10a1ccc2ded27ee4a3ce); [green CI](https://github.com/mite404/clipper/actions/runs/43898463793) | Transport reservation released                                                                          |
 | <a id="ref-32"></a>[REF-32](#ref-32)                 | Correct source-preview playback error and busy lifecycle                     | Medium | Ready                                                                                                                                                                               | reproduce pause, switch and export races                                                                |
 | <a id="ref-33"></a>[REF-33](#ref-33)                 | Qualify download URL lifetime outside Chromium                               | Medium | Blocked                                                                                                                                                                             | another supported WebCodecs browser                                                                     |
 | <a id="ref-34"></a>[REF-34](#ref-34)                 | Remove Player listener lifetime assumptions                                  | Small  | Deferred proposal                                                                                                                                                                   | reproduce a listener lifecycle defect first                                                             |
@@ -634,7 +632,7 @@ original note for every row.
 | <a id="ref-36"></a>[REF-36](#ref-36)                 | Prove delivery recovery and individual audio mute                            | Medium | Ready                                                                                                                                                                               | UI cancel and retry; failed export and partial-open recovery; one muted track at a time                 |
 | <a id="ref-37"></a>[REF-37](#ref-37)                 | Interaction stalls plus video cadence, rewind and scrub with large telemetry | Medium | Sole read-only live-preview investigation by inspector owner                                                                                                                        | Proven stall path before fix grant; preserve existing performance thresholds                            |
 | <a id="verify-3"></a>[VERIFY-3](tickets/VERIFY-3.md) | Bring the feature map in line with delivered motion and controls             | Small  | Delivered at [f76a702](https://github.com/mite404/clipper/commit/f76a702f85a0bcdf64f7c8bc2b0726823c447003); [green CI](https://github.com/mite404/clipper/actions/runs/43798560663) | frame-step and zoom-field journeys; current cursor and follow coverage                                  |
-| <a id="clip-9b"></a>[CLIP-9b](#clip-9b)              | Visible zoom regions, editable ramps and numeric equivalents                 | Medium | Narrow creation draft frozen in T-46d4a5ee; backup verified; full ramps held                                                                                                        | Accepted REF-31 exact-main CI before integration/performance-setup grant; preserve CLIP-9/10            |
+| <a id="clip-9b"></a>[CLIP-9b](#clip-9b)              | Visible zoom regions, editable ramps and numeric equivalents                 | Medium | Narrow creation/panel-removal integration granted to T-46d4a5ee on accepted 9132ecf; full ramps held                                                                                | Reviewed combined candidate, strict/full and isolated performance gates; preserve CLIP-9/10             |
 
 CLIP-9b retains the reference inventory's remaining zoom-edge interaction. `Timeline.tsx` renders
 zoom intervals as selection buttons only; inspector start/duration fields do not supply timeline
@@ -643,7 +641,12 @@ edge dragging. CLIP-9's delivered row describes generation, not completion of th
 The coordinator verified the transferred complete-history bundle, nine-path dirty/untracked draft
 and receipt archive against `clip-9b-SHA256SUMS.txt`. The frozen base and HEAD are both `b9596c6`;
 there are no implementation commits above it. Backups remain under `.amp/in/orb-backup/`, without
-source import, rebase, rerun or push. Integration and performance-setup holds remain unchanged.
+source import, rebase, rerun or push during preservation. REF-31's exact-main CI is now green. The
+existing Sol medium owner may integrate the narrow creation/panel-removal draft onto fetched
+`9132ecf` or its accepted successor, preserving all newer source and test changes. Do not restore
+stale files or the old Fallow baseline wholesale. Performance setup-only migration is released for
+the preserved two-shot legacy workload, without threshold, repeat, assertion or sampling changes.
+The sole push slot stays with the coordinator. Full Timeline/model/ramp ownership remains held.
 
 The owner expanded this existing ticket with visible zoom FX regions, a stepped multiplier, gradient
 in/out ramps, vertical ramp-duration handles and exact numeric inspector equivalents. The approved B
@@ -674,10 +677,9 @@ helper, and removal-only consumers in zoom-generation unit tests, auto-zoom brow
 stories and zoom-creation tests. Retain resolveZooms and legacy source-anchor resolution unchanged;
 replace generation-dependent fixtures with explicit legacy anchored zooms while preserving decoded
 parity, undo and save/reopen coverage. Performance setup-only migration preserves the exact existing
-two-shot workload/thresholds/repeats/sampling and waits for REF-20's delivered successor,
-coordinated with inspector Cleanup and UI-3 focus-locator changes. No superseded naming-only commit.
-Full Timeline/model/ramp ownership remains held, with no transport, inspector-placement or style
-grant.
+two-shot workload/thresholds/repeats/sampling on REF-31's delivered successor, coordinated with
+inspector Cleanup and UI-3 focus-locator changes. No superseded naming-only commit. Full
+Timeline/model/ramp ownership remains held, with no transport, inspector-placement or style grant.
 
 The full region/ramp unit waits for cursor-inspector and UI-2 successors; its narrow creation slice
 may implement disjoint hunks now. Do not duplicate the ticket or treat expanded medium scope as a
@@ -746,7 +748,7 @@ imply the entire recommendation is done. The full source wording stays in the hi
 | [REF-28](#ref-28)                                       | R5     | Missing or early-ended decoded frames                | Open; exporter still omits missing samples                                                |
 | [REF-29](#ref-29)                                       | R6     | Count-only Fallow baseline blind spots               | Deferred; REF-13 fixed comparison base, not score tracking                                |
 | [REF-30](#ref-30)                                       | R7     | Import, Open and Save progress and cancel            | Open; REF-21 limits size but does not add cancellation                                    |
-| [REF-31](#ref-31)                                       | R8     | Hidden-tab rewind and held Space                     | Open; no visibility or repeat guard in relevant delta                                     |
+| [REF-31](#ref-31)                                       | R8     | Hidden-tab rewind and held Space                     | Delivered `9132ecf`; exact-main CI green                                                  |
 | [REF-32](#ref-32)                                       | R9     | SourceMonitor play rejection and busy lifecycle      | Open; no corresponding repair in delta                                                    |
 | [REF-33](#ref-33)                                       | R10    | Download lifetime outside Chromium                   | Open; Chromium downloads alone are proven                                                 |
 | [REF-34](#ref-34)                                       | R11    | Player listener attachment assumptions               | Deferred; effect still depends on `hasAssets`                                             |
@@ -1062,8 +1064,8 @@ Keep processing local; do not upload private capture material.
 
 Neither owner has shared implementation or push permission yet. They may inspect and reproduce.
 After REF-20, inspector and UI-2 delivery, sequence shared edits as CLIP-9b, CLIP-2b, then CLIP-20b
-unless reproduction proves disjoint ownership. REF-31 retains its separate transport reservation
-after REF-20. Model/parser/render/export grants wait for exact path needs and reproduction results.
+unless reproduction proves disjoint ownership. REF-31 is delivered and its transport reservation
+released. Model/parser/render/export grants wait for exact path needs and reproduction results.
 Serialize REF-27 container selection before CLIP-20b image export changes on its delivered
 successor. CLIP-20b's accepted still contract uses a five-second editable default, screen/camera
 tracks only, and clip-owned duration, with legacy reopen and decoded alpha/aspect parity required.
