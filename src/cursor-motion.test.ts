@@ -34,6 +34,50 @@ it('smooths movement without overshooting a reversal or moving recorded clicks',
   }
 });
 
+it('shortens animated travel without retiming clicks, raw motion or arbitrary source seeks', () => {
+  const original = structuredClone(path.recording);
+  for (const [animationStyle, x] of [
+    ['smooth', 0.8125],
+    ['medium', 0.7518518518518519],
+    ['rapid', 0.6],
+    ['none', 0.1],
+  ] as const) {
+    const styled: CursorTrack = {
+      ...path,
+      offsetMs: 50,
+      settings: { mode: 'smooth', size: 1, hidden: false, animationStyle },
+    };
+    expect(cursorAt(styled, 250)).toMatchObject({ cx: 0.9, cy: 0.2 });
+    expect(cursorAt(styled, 225)?.cx).toBeCloseTo(x);
+    expect(cursorAt(styled, 225, 'raw')?.cx).toBeCloseTo(0.7);
+    expect(cursorAt(styled, 150)).toMatchObject({ cx: 0.1, cy: 0.8 });
+    expect(cursorAt(styled, 225)?.cx).toBeCloseTo(x);
+    expect(cursorAt({ ...styled, offsetMs: -50 }, 125)?.cx).toBeCloseTo(x);
+    expect(cursorAt(styled, 149)).toBeUndefined();
+  }
+  expect(path.recording).toEqual(original);
+});
+
+it('holds None until the next sample and leaves gaps and visibility unchanged for every speed style', () => {
+  for (const animationStyle of ['smooth', 'medium', 'rapid', 'none'] as const) {
+    const styled: CursorTrack = {
+      ...track([
+        { timeMs: 0, cx: 0.1, cy: 0.8, assetId: 'arrow' },
+        { timeMs: 100, cx: 0.9, cy: 0.2, assetId: 'arrow' },
+        { timeMs: 200, cx: 0.4, cy: 0.6, assetId: 'arrow', visible: false },
+        { timeMs: 600, cx: 0.7, cy: 0.3, assetId: 'arrow' },
+      ]),
+      settings: { mode: 'smooth', size: 1, hidden: false, animationStyle },
+    };
+    expect(cursorAt(styled, 150)).toMatchObject({ cx: 0.9, cy: 0.2 });
+    expect(cursorAt(styled, 200)).toBeUndefined();
+    expect(cursorAt(styled, 500)).toBeUndefined();
+    expect(cursorAt(styled, 600)).toMatchObject({ cx: 0.7, cy: 0.3 });
+    expect(cursorAt(styled, 99.999)?.cx).toBeCloseTo(animationStyle === 'none' ? 0.1 : 0.9, 3);
+    expect(cursorAt(styled, 100)).toMatchObject({ cx: 0.9, cy: 0.2 });
+  }
+});
+
 it('takes the last sample at a repeated timestamp and picks bitmaps by asset ID', () => {
   const cursor = track([
     { timeMs: 0, cx: 0.1, cy: 0.2, assetId: 'arrow' },

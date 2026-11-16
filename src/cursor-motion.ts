@@ -1,4 +1,4 @@
-import type { CursorAsset, CursorSample, CursorTrack } from './cursor';
+import type { CursorAsset, CursorSample, CursorSettings, CursorTrack } from './cursor';
 import touchImage from './cursor-touch.png?inline';
 
 export type CursorPose = Pick<CursorSample, 'cx' | 'cy'> & { asset: CursorAsset };
@@ -139,12 +139,25 @@ function interpolate(
   );
 }
 
+function animationTime(
+  style: CursorSettings['animationStyle'],
+  start: number,
+  end: number,
+  time: number,
+): number {
+  if (!style || style === 'smooth') return time;
+  if (style === 'none') return start;
+  const travel = style === 'medium' ? 0.75 : 0.5;
+  return Math.max(start, end - (end - time) / travel);
+}
+
 function interpolatedPose(
   samples: CursorSample[],
   left: number,
   timeMs: number,
   mode: 'raw' | 'smooth',
   asset: CursorAsset,
+  animationStyle: CursorSettings['animationStyle'],
 ): CursorPose | undefined {
   const sample = samples[left];
   const next = samples[left + 1];
@@ -152,9 +165,11 @@ function interpolatedPose(
   const right = lastAt(samples, next.timeMs);
   if (samples[right].timeMs - sample.timeMs > MAX_GAP_MS) return undefined;
   if (!connected(sample, samples[right])) return { cx: sample.cx, cy: sample.cy, asset };
+  const time =
+    mode === 'raw' ? timeMs : animationTime(animationStyle, sample.timeMs, next.timeMs, timeMs);
   return {
-    cx: interpolate(samples, left, right, timeMs, 'cx', mode),
-    cy: interpolate(samples, left, right, timeMs, 'cy', mode),
+    cx: interpolate(samples, left, right, time, 'cx', mode),
+    cy: interpolate(samples, left, right, time, 'cy', mode),
     asset,
   };
 }
@@ -193,7 +208,7 @@ function motionAt(
     return undefined;
   const asset = styledAsset(track, sample.assetId);
   if (!asset) return undefined;
-  return interpolatedPose(samples, left, timeMs, mode, asset);
+  return interpolatedPose(samples, left, timeMs, mode, asset, track.settings?.animationStyle);
 }
 
 /** Evaluate source-time cursor motion independently of seek/playback history.

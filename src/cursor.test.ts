@@ -62,6 +62,7 @@ it('preserves rendering settings and rejects invalid saved cursor controls', () 
       removeShakes: true,
       stabilizeShapes: true,
       rotate: true,
+      animationStyle: 'rapid',
       ending: 'loop',
       hiddenRanges: [{ startMs: 0, endMs: 123.5 }],
     },
@@ -76,6 +77,7 @@ it('preserves rendering settings and rejects invalid saved cursor controls', () 
     { ...cursor.settings, removeShakes: 1 },
     { ...cursor.settings, stabilizeShapes: 'true' },
     { ...cursor.settings, rotate: 'true' },
+    { ...cursor.settings, animationStyle: 'spring' },
     { ...cursor.settings, style: 'native' },
     { ...cursor.settings, ending: 'warp' },
     ...[

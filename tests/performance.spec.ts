@@ -36,6 +36,9 @@ for (const follow of [false, true]) {
       const rotate = page.getByLabel('Rotate with movement', { exact: true });
       await rotate.check();
       await expect(rotate).toBeChecked();
+      const animation = page.getByLabel('Cursor animation style', { exact: true });
+      await animation.selectOption('rapid');
+      await expect(animation).toHaveValue('rapid');
       await page.getByLabel('Automatic zoom hold seconds').fill('10');
       await page.getByRole('button', { name: 'Generate zooms', exact: true }).click();
       await expect(page.getByLabel('Automatic zoom result')).toContainText('2 automatic');

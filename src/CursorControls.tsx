@@ -10,6 +10,8 @@ import {
 
 type ImportState = { kind: 'idle' } | { kind: 'reading' } | { kind: 'error'; message: string };
 
+const ANIMATION_STYLES = ['smooth', 'medium', 'rapid', 'none'] as const;
+
 const BEHAVIOR_FLAGS = [
   ['hideIdle', 'Hide when idle (1 s)'],
   ['removeShakes', 'Remove small shakes'],
@@ -126,6 +128,27 @@ function CursorBehavior({
           </label>
         ))}
         <label>
+          Animation
+          <select
+            aria-label="Cursor animation style"
+            value={settings.animationStyle ?? 'smooth'}
+            disabled={settings.mode === 'raw'}
+            title="Raw motion bypasses animation styles."
+            onChange={(event) => {
+              const animationStyle = ANIMATION_STYLES.find(
+                (style) => style === event.currentTarget.value,
+              );
+              if (animationStyle) onChange({ ...settings, animationStyle });
+            }}
+          >
+            {ANIMATION_STYLES.map((style) => (
+              <option key={style} value={style}>
+                {style[0].toUpperCase() + style.slice(1)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
           Ending
           <select
             aria-label="Cursor ending"
@@ -150,7 +173,9 @@ function CursorBehavior({
         Stabilization holds the previous shape until a new shape is confirmed by samples at least
         100 ms apart. Interaction shapes appear immediately; tracking gaps reset it. Rotation leans
         up to 12° with horizontal movement over the previous 100 ms, around the recorded hotspot.
-        Each trimmed clip starts upright.
+        Each trimmed clip starts upright. Medium and Rapid animate over the final 75% and 50% of
+        each sample interval; None steps at recorded sample times. Raw motion bypasses animation
+        styles.
       </p>
       <CursorHiddenRanges settings={settings} onChange={onChange} />
     </details>

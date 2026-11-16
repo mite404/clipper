@@ -56,6 +56,7 @@ test('CI and isolated projects send UI journeys to production and source fixture
       'cursor-render',
       'cursor-shapes',
       'cursor-rotation',
+      'cursor-speeds',
       'frame-image',
     ];
     const visit = (suite) => {

@@ -13,6 +13,7 @@ const fixtures = [
   '**/cursor-render.spec.ts',
   '**/cursor-shapes.spec.ts',
   '**/cursor-rotation.spec.ts',
+  '**/cursor-speeds.spec.ts',
   '**/frame-image.spec.ts',
 ];
 const separate = ['**/performance.spec.ts', '**/storybook.spec.ts'];

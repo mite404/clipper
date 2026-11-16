@@ -34,6 +34,7 @@ export type CursorSettings = {
   removeShakes?: boolean;
   stabilizeShapes?: boolean;
   rotate?: boolean;
+  animationStyle?: 'smooth' | 'medium' | 'rapid' | 'none';
   style?: 'recorded' | 'default' | 'touch';
   ending?: 'stop' | 'loop';
   // Half-open intervals on the source video's clock, unaffected by telemetry offset.
@@ -195,6 +196,7 @@ function parseSettings(value: unknown): CursorSettings {
     mode: settings.mode,
     size: finite(settings.size, 0.25, 4),
     hidden: settings.hidden,
+    animationStyle: optionalChoice(settings.animationStyle, ['smooth', 'medium', 'rapid', 'none']),
     style: optionalChoice(settings.style, ['recorded', 'default', 'touch']),
     ending: optionalChoice(settings.ending, ['stop', 'loop']),
     hiddenRanges: parseHiddenRanges(settings.hiddenRanges),
