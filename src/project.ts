@@ -155,6 +155,10 @@ export function parseProject(text: string): {
     const start = frame(item.start, `zooms[${i}].start`);
     const duration = frame(item.duration, `zooms[${i}].duration`, ZOOM_LIMITS.minFrames);
     range(start, duration, `Zoom ${id}`);
+    if (item.follow !== undefined && item.follow !== 'focused' && item.follow !== 'smooth')
+      throw new Error('Zoom follow must be focused or smooth.');
+    if (item.instant !== undefined && typeof item.instant !== 'boolean')
+      throw new Error('Zoom instant must be a boolean.');
     return {
       id,
       start,
@@ -162,6 +166,8 @@ export function parseProject(text: string): {
       scale: number(item.scale, `zooms[${i}].scale`, ZOOM_LIMITS.minScale, ZOOM_LIMITS.maxScale),
       x: number(item.x, `zooms[${i}].x`, 0, 100),
       y: number(item.y, `zooms[${i}].y`, 0, 100),
+      ...(item.follow === undefined ? {} : { follow: item.follow }),
+      ...(item.instant === undefined ? {} : { instant: item.instant }),
       ...(item.source === undefined ? {} : { source: zoomSource(item.source, clips, duration) }),
     };
   });

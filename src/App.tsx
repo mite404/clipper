@@ -38,6 +38,7 @@ import {
 import { serializeProject, parseProject, validateSources, type Edit } from './project';
 import { CursorControls } from './CursorControls';
 import { AutoZoomControls } from './AutoZoomControls';
+import { ZoomMotionControls } from './ZoomMotionControls';
 import { resolveZooms } from './zoom-generation';
 import { maskRect, STAGE, type Layout } from './stage';
 import './styles.css';
@@ -349,6 +350,7 @@ export function Inspector({
             <p className="inspector-copy">
               Mark focus in the unzoomed frame. Editing a generated shot makes it manual.
             </p>
+            <ZoomMotionControls zoom={zoom} onChange={onZoom} />
             <label className="slider-label">
               Zoom level <output>{zoom.scale.toFixed(1)}×</output>
               <input
@@ -438,7 +440,7 @@ export function Inspector({
               <svg viewBox="0 0 160 34">
                 <path d="M2 30 C30 30 24 4 55 4 H108 C138 4 128 30 158 30" />
               </svg>
-              <span>Smooth in & out</span>
+              <span>Automatic ease in & out · optional instant</span>
             </div>
             <button className="text-button danger" onClick={onRemoveZoom}>
               <Trash2 size={13} /> Remove zoom

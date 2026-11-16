@@ -19,6 +19,34 @@ const project = () => ({
 });
 
 describe('portable project parsing', () => {
+  it('round trips optional follow and instant settings without changing version 2 defaults', async () => {
+    const url = URL.createObjectURL(
+      new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),
+    );
+    try {
+      for (const follow of ['focused', 'smooth'] as const) {
+        for (const instant of [true, false]) {
+          const next: Edit = { ...edit, zooms: [{ ...edit.zooms[0], follow, instant }] };
+          const saved = await serializeProject(next, [{ ...asset, url }], []);
+          expect(JSON.parse(await saved.text()).version).toBe(2);
+          expect(parseProject(await saved.text()).edit).toEqual(next);
+        }
+      }
+      expect(parseProject(JSON.stringify(project())).edit).toEqual(edit);
+      for (const fields of [
+        { follow: 'unknown' },
+        { follow: true },
+        { instant: 1 },
+        { instant: null },
+      ]) {
+        const invalid = { ...project(), zooms: [{ ...edit.zooms[0], ...fields }] };
+        expect(() => parseProject(JSON.stringify(invalid))).toThrow(/follow|instant/i);
+      }
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+
   it('saves and reopens every source anchor and split lineage field', async () => {
     const url = URL.createObjectURL(
       new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),

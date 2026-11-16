@@ -1,8 +1,10 @@
 import { AbsoluteFill, Audio, Img, Sequence, Video, useCurrentFrame } from 'remotion';
+import { useMemo } from 'react';
 import type { Asset } from './media';
-import { cameraTransform, cropPosition, maskRect, type Layout } from './stage';
-import { type Clip, type Track, type Zoom, zoomCamera } from './timeline';
+import { cameraTransform, coverRect, cropPosition, maskRect, type Layout } from './stage';
+import { type Clip, type Track, type Zoom } from './timeline';
 import { cursorFrame } from './cursor-render';
+import { prepareFraming, framingAt } from './framing';
 
 export type CompositionProps = {
   clips: Clip[];
@@ -15,7 +17,11 @@ export type CompositionProps = {
 /** Frame-driven video masks, source trims, audio and camera motion share Remotion's clock. */
 export function Composition({ clips, assets, zooms, layout, muted }: CompositionProps) {
   const frame = useCurrentFrame();
-  const camera = zoomCamera(zooms, frame);
+  const paths = useMemo(
+    () => prepareFraming(zooms, clips, assets, layout),
+    [zooms, clips, assets, layout],
+  );
+  const camera = framingAt(zooms, paths, frame);
   const cursor = cursorFrame(clips, assets, frame, layout);
   return (
     <AbsoluteFill
@@ -57,30 +63,30 @@ export function Composition({ clips, assets, zooms, layout, muted }: Composition
                 .filter((clip) => clip.track === track)
                 .map((clip) => {
                   const asset = assets.find((a) => a.id === clip.assetId);
+                  if (!asset) return null;
+                  const cover = coverRect(mask, asset, crop);
                   return (
-                    asset && (
-                      <Sequence
-                        key={clip.id}
-                        from={clip.start}
-                        durationInFrames={clip.duration}
-                        premountFor={30}
-                        postmountFor={30}
-                      >
-                        <Video
-                          src={asset.url}
-                          trimBefore={clip.offset}
-                          muted
-                          pauseWhenBuffering
-                          style={{
-                            position: 'absolute',
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'cover',
-                            objectPosition: `${crop.x}% ${crop.y}%`,
-                          }}
-                        />
-                      </Sequence>
-                    )
+                    <Sequence
+                      key={clip.id}
+                      from={clip.start}
+                      durationInFrames={clip.duration}
+                      premountFor={30}
+                      postmountFor={30}
+                    >
+                      <Video
+                        src={asset.url}
+                        trimBefore={clip.offset}
+                        muted
+                        pauseWhenBuffering
+                        style={{
+                          position: 'absolute',
+                          left: cover.x,
+                          top: cover.y,
+                          width: cover.width,
+                          height: cover.height,
+                        }}
+                      />
+                    </Sequence>
                   );
                 })}
               {track === 'screen' && cursor && (

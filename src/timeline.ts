@@ -15,6 +15,8 @@ export type Zoom = {
   scale: number;
   x: number;
   y: number;
+  follow?: 'focused' | 'smooth';
+  instant?: boolean;
   source?: { assetId: string; clipId: string; start: number; x: number; y: number };
 };
 export const FPS = 30;
@@ -85,6 +87,7 @@ export function zoomsOverlap(
 export function zoomAt(zooms: Zoom[], frame: number): number {
   const zoom = zooms.find((z) => covers(z, frame));
   if (!zoom) return 1;
+  if (zoom.instant) return zoom.scale;
   const ramp = Math.min(24, zoom.duration / 2);
   const t = Math.min(1, (frame - zoom.start) / ramp, (zoom.start + zoom.duration - frame) / ramp);
   const eased = t * t * (3 - 2 * t);

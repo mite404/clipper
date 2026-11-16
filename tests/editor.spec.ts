@@ -44,11 +44,13 @@ test('splice, scrub, play, rewind and animate a real media composition', async (
   await page.getByLabel('Zoom focus Y', { exact: true }).fill('65');
   await scrub.fill('135');
   await expect(page.getByTestId('screen-content')).toHaveCSS('transform', /matrix\(2,/);
+  const screenVideo = page.locator('[data-testid="screen-mask"] video:visible');
+  const beforeCrop = await screenVideo.boundingBox();
   await page.getByLabel('screen horizontal crop').fill('25');
-  await expect(page.locator('[data-testid="screen-mask"] video:visible')).toHaveCSS(
-    'object-position',
-    '25% 50%',
-  );
+  // 960×540 covers 880×700. A 25-point crop shift reveals one quarter of its horizontal overflow.
+  await expect
+    .poll(async () => ((await screenVideo.boundingBox())!.x - beforeCrop!.x) / beforeCrop!.width)
+    .toBeCloseTo(0.073214, 3);
   await expect(page.getByTestId('camera-content')).toHaveCSS(
     'transform',
     'matrix(1, 0, 0, 1, 0, 0)',
