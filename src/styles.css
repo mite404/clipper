@@ -1260,6 +1260,15 @@ p {
 [data-kit='slider'] {
   margin-bottom: 12px;
 }
+/* The skin strips native appearance from every input, which leaves Clipper's own checkboxes a
+   2px dot with no checked state and its native selects without an arrow. Neither is skinned here. */
+[data-skin='hardware'] :is(input[type='checkbox'], select):not([data-kit]) {
+  appearance: auto;
+}
+[data-skin='hardware'] input[type='checkbox']:not([data-kit]) {
+  width: 13px;
+  height: 13px;
+}
 .ease-curve {
   height: 65px;
   background: #b9a1de08;
