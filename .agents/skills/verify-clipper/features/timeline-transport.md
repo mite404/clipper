@@ -6,6 +6,8 @@ Splice video and speech, seek synchronized media, and shuttle with keyboard cont
 
 - Two video tracks, two audio tracks, ruler, selected clip, and frame playhead.
 - Split, delete, undo, and track-local ripple insertion.
+- Previous frame and Next frame buttons and the arrow keys step exactly one frame and stop at the
+  first and last frame.
 - Play/pause via transport and Space; J rewind, K pause, L play, repeated J/L for faster speeds.
 - Audio mute, decoded waveform progress, and silent reverse playback.
 - Left/right edge sliders shorten clips by pointer drag or arrows; Shift adjusts ten frames.
@@ -25,8 +27,11 @@ At timeline 7.5 seconds require screen source 8.5 seconds, camera source 7.5 sec
 seconds after splitting speech. Use `getByRole('slider', {name: 'Timeline playhead'})` to seek.
 Require actual audio playback after L and zero voice volume after Mute Voiceover. The same command
 tests shortcuts-dialog focus and keyboard isolation, pointer trimming, undo, and scrolling to the
-end. Run `.agents/skills/verify-clipper/scripts/verify.mjs performance` separately for five
-production playback responsiveness checks without trace/video overhead.
+end. `all` also runs `tests/controls.spec.ts`: from frame 29 Next frame must read 00:01:00 with the
+playhead at 30 and the camera video at 1.0 s, Previous frame must return to 00:00:29, and three Next
+clicks must read 00:01:02. Previous at frame 0 and Next at frame 359 must not move. Run
+`.agents/skills/verify-clipper/scripts/verify.mjs performance` separately for five production
+playback responsiveness checks without trace/video overhead.
 
 ## Gotchas
 

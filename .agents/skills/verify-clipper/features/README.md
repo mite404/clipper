@@ -6,7 +6,9 @@ after shared editor, timeline, composition, or media changes.
 
 - [Local media](local-media.md) covers import, source in/out, errors, and privacy.
 - [Timeline and transport](timeline-transport.md) covers splices, seeking, audio, and J/K/L.
-- [Composition](composition.md) covers masks, crops, manual mouse zooms, and undo.
+- [Composition](composition.md) covers masks, crops, manual mouse zooms, zoom fields, and undo.
+- [Cursor and automatic zoom](cursor.md) covers pointer sidecars, the drawn cursor, click-generated
+  zooms, camera follow, and hidden ranges.
 - [Project delivery](project-delivery.md) covers portable save/reopen and real rendered video
   export.
 - [Shared library](shared-library.md) covers Storybook and worst-case layouts.
@@ -28,11 +30,11 @@ journeys cannot accidentally target a stale shared preview.
 - `editor` runs all editor and refinement checks, including UI-driven HD/4K project export.
 - `storybook` builds and tests the shared library and its stress states.
 - `performance` builds production code and repeats the responsiveness assertions five times.
-- `all` builds both previews and discovers the entire existing suite, including new spec files.
+- `all` builds both previews and discovers the entire existing suite, including new spec files. It
+  is the only command that runs `controls.spec.ts`, `cursor.spec.ts`, `cursor-render.spec.ts`,
+  `cursor-shapes.spec.ts`, `auto-zoom.spec.ts` and `framing.spec.ts`.
 
 The feature map defines coverage, not the command name. `export` alone does not run the separate
-UI-driven project-export checks in `refinements.spec.ts`; use `editor` or `all` too. Cursor sidecar
-import and its Storybook stress states run through `all`, which discovers `cursor.spec.ts`; `media`
-and `storybook` do not select that spec. It covers valid, invalid and absent sidecars, source-local
-offsets, removal, and portable save/reopen. Trim-aware recorded cursor rendering, click-generated
-zoom, and smooth follow remain future feature tickets, not coverage supplied by manual-focus tests.
+UI-driven project-export checks in `refinements.spec.ts`; use `editor` or `all` too. The `media` and
+`storybook` journeys do not select the cursor, click-zoom, follow or controls specs; run `all` for
+those, then read [cursor.md](cursor.md) for what each one proves and what stays unproven.
