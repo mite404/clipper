@@ -41,9 +41,22 @@ test('visible native playhead aligns with ruler and tracks through seeking, scal
     expect((await marker.boundingBox())!.y).toBeCloseTo((await ruler.boundingBox())!.y, 0);
   }
   await page.setViewportSize({ width: 1280, height: 720 });
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
   await scale.fill((await scale.getAttribute('min')) ?? '40');
-  const r = (await ruler.boundingBox())!;
+  await expect
+    .poll(() =>
+      page
+        .getByTestId('timeline-scroll')
+        .evaluate((element) => element.scrollWidth - element.clientWidth),
+    )
+    .toBeLessThanOrEqual(1);
   await input.fill('0');
+  const r = (await ruler.boundingBox())!;
   await page.mouse.move(r.x, r.y + 7);
   await page.mouse.down();
   await page.mouse.move(r.x + r.width * 0.6, r.y + 7, { steps: 12 });

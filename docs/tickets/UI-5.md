@@ -101,3 +101,28 @@ Corrected coordinator results on accepted `07db762`, before this evidence-only p
 Original and correction patches, browser-red traces, strict logs and final captures remain preserved
 in the coordinator workspace. Delivery state and exact-main CI belong only in the master ticket
 list. These local receipts do not assert deployment or private-recording qualification.
+
+## Remote CI ruler-test correction
+
+[CI43975169102](https://github.com/mite404/clipper/actions/runs/43975169102) on `78a75bd` passed 83
+tests but failed the new ruler drag at expected frame 216, actual frame 0. The unchanged test
+reproduced two failures in six local runs under CI's 1x device scale. A separate instrumented run
+also failed twice in six repetitions. Failed drag starts hit the sticky TRACKS label at x=34;
+passing starts hit the actual ruler input at x=174.
+
+The test read the old fit minimum before viewport delivery after its 3x-scale, 140px-scroll check.
+Filling that old minimum retained the scroll, placing the ruler's start under the sticky labels. The
+correction waits for viewport layout before reading the minimum, requires no horizontal overflow and
+takes ruler bounds after filling frame zero. It preserves every seeking, endpoint, alignment,
+keyboard and neighboring-clip assertion and tolerance. No runtime file changes.
+
+The 1,089-byte patch SHA-256 is `965b2ae1b3a6593fd03288544228899a270d41dc1a7b22b210f3813a59333b2d`.
+It produces tree `61f83bcbd7c7f10e61b6a2f3550ed4f6fbb5ddfc` on `78a75bd`, before this prose update.
+Both existing reviewers qualified that exact delta with LAND, static only. Ten corrected CI-style
+repetitions passed without retries. Original CI artifacts, both local red runs and the corrected
+repetitions remain in `ui5-coordinator/ci-*` in the coordinator workspace.
+
+Fresh strict gates and all 132 unit tests passed. The corrected full `verify.mjs all` run passed 84
+tests with zero skipped, unexpected or flaky results. Its receipt is
+`ui5-coordinator/all-QcRx4J/summary.json`. The prior isolated 20-check performance receipt remains
+applicable to the unchanged runtime; this test-only correction does not claim another isolated run.
