@@ -25,16 +25,16 @@ export-content evidence.
 
 ## Guards and recovery
 
-`editor` runs the delivery guards in `refinements.spec.ts`; `delivery` does not. A logo click no
-longer reloads, and the `beforeunload` handler asks before a reload or tab close with unsaved edits
-or a running export. Open project asks before replacing unsaved edits. A source that a clip uses and
-that can no longer be read (for example its file changed on disk) makes Save and Export fail with a
-message naming the file, and no download starts. Importing a compatible file with the same name
-repairs that source in place; an incompatible same-name file is refused. Media no clip uses is
-embedded while it fits and can be read; otherwise Save omits it and names it. Save refuses at once,
-reading none of the media, when clips on the timeline use more than 375 MB. The spec uses a sparse
-400 MB file. Headless Chromium shows no native `beforeunload` prompt, so the handler is tested
-through the event, not the browser's dialog.
+`editor` runs the delivery guards in `refinements.spec.ts`; `delivery` does not. The `beforeunload`
+handler asks before a reload or tab close with unsaved edits or a running export. Open project asks
+before replacing unsaved edits. A source that a clip uses and that can no longer be read (for
+example its file changed on disk) makes Save and Export fail with a message naming the file, and no
+download starts. Importing a compatible file with the same name repairs that source in place; an
+incompatible same-name file is refused. Media no clip uses is embedded while it fits and can be
+read; otherwise Save omits it and names it. Save refuses at once, reading none of the media, when
+clips on the timeline use more than 375 MB. The spec uses a sparse 400 MB file. Headless Chromium
+shows no native `beforeunload` prompt, so the handler is tested through the event, not the browser's
+dialog.
 
 ## Limits
 

@@ -41,16 +41,16 @@ and nowhere else. Other documents are records, not queues:
 
 ## Owners
 
-| Lane                     | Thread                                                                           | Owns                                                          |
-| ------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| Queue and implementation | [T-6706048a](https://ampcode.com/threads/T-6706048a-c051-4e23-9ec6-68afd669b492) | This file, REF and CLIP tickets, exclusive main push slot     |
-| Cursor implementation    | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant    |
-| Cursor inspector         | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) | Inspector delivered; no active implementation grant           |
-| Workspace layout         | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | UI-2 drawer, timeline room and two-axis scrolling, Sol medium |
-| Zoom regions             | [T-46d4a5ee](https://ampcode.com/threads/T-46d4a5ee-39f1-46ae-bde0-eced0da19a5a) | CLIP-9b research only until shared-path release, Sol medium   |
-| Cursor preservation      | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94) | Frozen original CLIP-11 work, no implementation or push       |
-| Editor and bootstrap     | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da) | `.agents/setup`, `.agents/resume`                             |
-| Verification tools       | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc) | `.agents/skills/verify-clipper/**`                            |
+| Lane                     | Thread                                                                           | Owns                                                        |
+| ------------------------ | -------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| Queue and implementation | [T-6706048a](https://ampcode.com/threads/T-6706048a-c051-4e23-9ec6-68afd669b492) | This file, REF and CLIP tickets, exclusive main push slot   |
+| Cursor implementation    | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant  |
+| Cursor inspector         | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) | Inspector delivered; no active implementation grant         |
+| Workspace layout         | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | UI-2 delivered; no active implementation grant              |
+| Zoom regions             | [T-46d4a5ee](https://ampcode.com/threads/T-46d4a5ee-39f1-46ae-bde0-eced0da19a5a) | CLIP-9b research only until shared-path release, Sol medium |
+| Cursor preservation      | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94) | Frozen original CLIP-11 work, no implementation or push     |
+| Editor and bootstrap     | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da) | `.agents/setup`, `.agents/resume`                           |
+| Verification tools       | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc) | `.agents/skills/verify-clipper/**`                          |
 
 The owner's one-ticket Sonnet 5.5 trial for VERIFY-3 in
 [T-24b3f0ad](https://ampcode.com/threads/T-24b3f0ad-9a83-4b3b-b297-6f86319b8e81) concluded with
@@ -90,9 +90,9 @@ repeated-Space handling, a focused transport test and its brief. No Sonnet worke
 
 ### Next bounded Sonnet candidate
 
-| Ticket ID                      | Scope                                                                        | State                                                                                                               | Needs                                                                                     |
-| ------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| <a id="ui-3"></a>[UI-3](#ui-3) | Remove header branding/title and move existing Save project into their place | [Sonnet candidate active](https://ampcode.com/threads/T-01a1e30f-4a97-7574-a857-b9073dd1ef6a) on delivered VERIFY-4 | Inspector/UI-2 confirm no header overlap; actual Sol medium review and green exact-SHA CI |
+| Ticket ID                      | Scope                                                                        | State                                                              | Needs                                                                    |
+| ------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| <a id="ui-3"></a>[UI-3](#ui-3) | Remove header branding/title and move existing Save project into their place | Local qualification passed on accepted UI-2; exact-main CI pending | Sol PASS and Fable LAND; serialized main delivery and green exact-SHA CI |
 
 Mite requested this cleanup from the stable preview at 617 × 1295. Remove the header `clipper` brand
 and `Developer walkthrough` title. Move the existing Save project control into their place,
@@ -111,6 +111,21 @@ corrected isolated full run passed 56/56 and separate five-repeat performance pa
 ticket checks also passed. These receipts qualify the frozen candidate, not a rebased successor;
 rerun applicable gates after integration. No push grant. LOCAL PROJECT was removed with its wrapper;
 privacy remains for UI-6.
+
+Rebased candidate `f6b6292` is transferred by verified bundle on accepted UI-2 `ceb40bb`. Runtime
+and style changes match the reviewed patch; newer transport/editor checks use header padding for
+neutral focus after title removal. The worker's full run passed 67/67, but standalone performance
+failed 4/20 and its accepted-base control failed 6/20. These receipts remain preserved; no source
+cause or absence of UI-3 impact is established. One independent coordinator invocation per side
+passed candidate 20/20, then base 20/20, with unchanged gates and no concurrent browser/build work.
+These qualify local gates, not matched-rendering nonregression. Coordinator strict/shrink-only
+gates, 135 units, seven helpers and the full 67/67 integration journey passed. The existing Fable
+reviewer returned LAND for the exact source/navigation delta. Its obsolete logo-click test step and
+documentation reference were removed without runtime changes; both affected Save/unsaved-edit checks
+passed again. Production pointer/Tab/Enter saving and a downloaded 5,445,100-byte version-2 project
+with five clips and four embedded media assets were verified. UI-3 awaits exact-main green CI before
+delivery is claimed. The pre-existing focused-Save Space interception is a separate review advisory
+for the REF-31 shortcut audit, not a UI-3 fix or a proven performance cause.
 
 ### Numeric property label scrubbing
 
@@ -219,10 +234,11 @@ images were hosted, see [Known limits](#known-limits)).
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                             |
 | Cursor inspector         | No active implementation reservation after green inspector delivery                                                                        |
-| Workspace layout         | UI-2 App drawer/workspace shell, outer inspector sizing, Timeline scroll/scale bounds and scoped CSS/tests; no playback/cursor internals   |
+| Workspace layout         | No active implementation reservation after green UI-2 delivery                                                                             |
+| Header cleanup           | UI-3 App header, scoped header CSS and title-dependent editor/refinement test locators; no workspace/inspector/playback changes            |
 | Zoom regions             | Research only; future App/Timeline/inspector/styles/model/parser edits wait for inspector and UI-2 release; no REF-20/31 transport overlap |
 | Oxc tooling              | VERIFY-5 package/lock, Oxc/formatter config, necessary CI/hook/README command changes only; no source migration or bulk reformat           |
-| Queue implementation     | Queue/docs and acceptance only; UI-2 reservation remains exclusive; inspector and REF-20 are delivered and released                        |
+| Queue implementation     | Queue/docs and acceptance only; UI-3 header reservation remains exclusive; UI-2, inspector and REF-20 are delivered and released           |
 | Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                           |
 
 ### Preservation branches
@@ -489,7 +505,11 @@ passed 66/66, and its separate unchanged performance invocation passed 20/20. Fi
 and all receipts remain preserved. Coordinator strict/shrink-only gates, 135 units and seven helper
 tests passed; its fresh integrated browser invocation passed 66/66 with no skips or flakes. The
 coordinator's separate unchanged performance journey passed 20/20 on its first invocation. Delivery
-is prepared; exact-main green CI remains required before UI-2 acceptance and reservation release.
+is accepted at
+[`ceb40bb`](https://github.com/mite404/clipper/commit/ceb40bbe3136aee4331356f11f2dea048b536e75),
+with green [exact-main CI](https://github.com/mite404/clipper/actions/runs/43871531117). UI-2's
+reservation is released. UI-3 may rebase its preserved reviewed header candidate onto this accepted
+successor; no deployment is authorized.
 
 Final integration order is UI-1, REF-20, cursor inspector, then UI-2. REF-31 begins only after
 REF-20; its playback hunks stay disjoint from both layout units. No worker may overwrite another

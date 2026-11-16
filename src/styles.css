@@ -114,58 +114,6 @@ p {
   gap: 30px;
   background: #191a1c;
 }
-.brand {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 25px;
-  font-weight: 650;
-  letter-spacing: -1px;
-  min-width: 208px;
-}
-.brand-mark {
-  width: 31px;
-  height: 31px;
-  background: var(--green);
-  color: #293b2c;
-  display: grid;
-  place-items: center;
-  border-radius: 8px;
-  transform: rotate(-5deg);
-}
-.beta {
-  font-size: 8px;
-  font-weight: 500;
-  letter-spacing: 1px;
-  color: #999f95;
-  border: 1px solid #ffffff16;
-  padding: 3px 4px;
-  border-radius: 4px;
-  align-self: flex-start;
-  margin-top: 6px;
-  margin-left: 2px;
-}
-.project-title {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  min-width: 0;
-}
-.project-title h1 {
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.project-tag {
-  font-size: 8px;
-  letter-spacing: 1.2px;
-  color: #747780;
-  border: 1px solid var(--line);
-  padding: 4px 6px;
-  border-radius: 4px;
-}
 .header-actions {
   display: flex;
   align-items: center;
@@ -1483,14 +1431,8 @@ p {
     font-size: 10px;
     gap: 5px;
   }
-  .brand {
-    min-width: 158px;
-  }
   .workspace-label {
     min-width: 158px;
-  }
-  .project-tag {
-    display: none;
   }
   .inspector {
     padding: 0 13px;
@@ -1561,9 +1503,6 @@ p {
   .library {
     padding: 0 13px;
   }
-  .project-title h1 {
-    font-size: 12px;
-  }
   .privacy {
     display: none;
   }
@@ -1573,9 +1512,6 @@ p {
   .app-header {
     gap: 20px;
     padding: 0 18px;
-  }
-  .brand {
-    min-width: 135px;
   }
   .workspace-bar {
     padding: 0 18px;
@@ -1598,21 +1534,6 @@ p {
     height: 62px;
     padding: 0 12px;
     gap: 16px;
-  }
-  .brand {
-    font-size: 21px;
-    min-width: 0;
-  }
-  .brand-mark {
-    width: 27px;
-    height: 27px;
-  }
-  .beta {
-    display: none;
-  }
-  .project-title h1 {
-    font-size: 10px;
-    max-width: 130px;
   }
   .save-button {
     font-size: 9px;
@@ -1854,15 +1775,9 @@ p {
   }
 }
 @media (max-width: 360px) {
-  .project-title h1 {
-    max-width: 85px;
-  }
-  .header-actions .save-button {
+  .app-header .save-button {
     font-size: 8px;
     padding: 7px 6px;
-  }
-  .brand {
-    gap: 5px;
   }
   .app-header {
     gap: 10px;

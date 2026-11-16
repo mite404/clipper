@@ -37,6 +37,31 @@ test('keeps project delivery controls readable at desktop and narrow widths', as
   }
 });
 
+test('puts Save project first in the header and saves by pointer and keyboard at 617×1295', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 617, height: 1295 });
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await expect(page.locator('.brand')).toHaveCount(0);
+  await expect(page.getByRole('heading', { name: 'Developer walkthrough' })).toHaveCount(0);
+  const save = page.getByRole('button', { name: 'Save project', exact: true });
+  const header = (await page.locator('.app-header').boundingBox())!;
+  const box = (await save.boundingBox())!;
+  expect(box.x - header.x).toBeLessThanOrEqual(20);
+  expect(box.y - header.y).toBeLessThanOrEqual(20);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(617);
+
+  const pointer = page.waitForEvent('download');
+  await save.click();
+  expect((await pointer).suggestedFilename()).toBe('developer-walkthrough.clipper.json');
+
+  await save.focus();
+  const keyboard = page.waitForEvent('download');
+  await page.keyboard.press('Enter');
+  expect((await keyboard).suggestedFilename()).toBe('developer-walkthrough.clipper.json');
+});
+
 test('swaps frames, trims with edge handles and scrolls to the timeline end', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
@@ -194,9 +219,7 @@ test('ends mouse marking when its zoom is removed, and does not arm the next zoo
   await expect(page.getByRole('button', { name: 'Set mouse focus on screen' })).toHaveCount(0);
 });
 
-test('keeps unsaved edits through a logo click, a tab close and an opened project', async ({
-  page,
-}) => {
+test('keeps unsaved edits through a tab close and an opened project', async ({ page }) => {
   // What the browser asks the page when the tab closes or reloads: true means "warn the user".
   const warnsOnUnload = () =>
     page.evaluate(() => {
@@ -211,9 +234,6 @@ test('keeps unsaved edits through a logo click, a tab close and an opened projec
 
   await radius.fill('33');
   expect(await warnsOnUnload()).toBe(true);
-  await page.evaluate(() => Object.assign(window, { samePage: true }));
-  await page.locator('.brand').click();
-  expect(await page.evaluate(() => 'samePage' in window)).toBe(true);
   await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', '33px');
 
   const downloaded = page.waitForEvent('download');

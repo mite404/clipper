@@ -137,7 +137,7 @@ for (const cpuThrottle of [4, 1]) {
     const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
     for (const presses of [1, 2, 3]) {
       await playhead.fill('330');
-      await page.locator('.project-title').click();
+      await page.locator('.app-header').click({ position: { x: 4, y: 4 } });
       for (let press = 0; press < presses; press++) await page.keyboard.press('j');
       const speed = 2 ** (presses - 1);
       await expect(page.getByTestId('transport-state')).toHaveText(`Rewinding · ${speed}×`);

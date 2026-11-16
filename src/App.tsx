@@ -1028,16 +1028,13 @@ export function App() {
   return (
     <main className="editor">
       <header className="app-header">
-        <span className="brand">
-          <span className="brand-mark">
-            <Clapperboard size={20} />
-          </span>
-          clipper<span className="beta">LAB</span>
-        </span>
-        <div className="project-title">
-          <h1>Developer walkthrough</h1>
-          <span className="project-tag">LOCAL PROJECT</span>
-        </div>
+        <button
+          className="save-button"
+          onClick={() => void saveProject()}
+          disabled={busy || exportProgress !== null}
+        >
+          <ArrowDownToLine size={14} /> Save project
+        </button>
         <div className="header-actions">
           <span className="privacy">
             <span className="status-dot" /> On your device
@@ -1056,13 +1053,6 @@ export function App() {
               }}
             />
           </label>
-          <button
-            className="save-button"
-            onClick={() => void saveProject()}
-            disabled={busy || exportProgress !== null}
-          >
-            <ArrowDownToLine size={14} /> Save project
-          </button>
           <div className="export-controls">
             <select
               aria-label="Export resolution"

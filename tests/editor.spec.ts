@@ -5,7 +5,6 @@ test('splice, scrub, play, rewind and animate a real media composition', async (
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Developer walkthrough' })).toBeVisible();
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
   await page.getByRole('button', { name: 'Play source', exact: true }).click();
   await expect
@@ -293,7 +292,7 @@ test('deletes and restores from the keyboard, refuses overlapping zooms and clam
   const timecode = page.getByTestId('timecode');
   const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
   // Shortcuts are ignored while a form control has focus, so park focus on plain text first.
-  const leaveControls = () => page.locator('.project-title').click();
+  const leaveControls = () => page.locator('.app-header').click({ position: { x: 4, y: 4 } });
 
   await clips.nth(1).click();
   await page.keyboard.press('Delete');
@@ -425,7 +424,7 @@ test('clamps the rewind clock when undo shortens the timeline', async ({ page })
   await page.getByRole('button', { name: 'Insert source at playhead' }).click();
   await expect(playhead).toHaveAttribute('max', '779');
   await playhead.fill('719');
-  await page.locator('.project-title').click();
+  await page.locator('.app-header').click({ position: { x: 4, y: 4 } });
   await page.keyboard.press('j');
   await page.waitForTimeout(300);
   await page.evaluate(() => {
@@ -475,7 +474,7 @@ test('holds the last rewind seek at every speed and at the start boundary', asyn
   const timecode = page.getByTestId('timecode');
   for (const presses of [1, 2, 3]) {
     await playhead.fill('150');
-    await page.locator('.project-title').click();
+    await page.locator('.app-header').click({ position: { x: 4, y: 4 } });
     for (let press = 0; press < presses; press++) await page.keyboard.press('j');
     await expect(page.getByTestId('transport-state')).toHaveText(
       `Rewinding · ${2 ** (presses - 1)}×`,
@@ -528,7 +527,7 @@ test('holds the last rewind seek at every speed and at the start boundary', asyn
     await expect(playhead).toHaveValue(String(held));
   }
   await playhead.fill('5');
-  await page.locator('.project-title').click();
+  await page.locator('.app-header').click({ position: { x: 4, y: 4 } });
   await page.keyboard.press('j');
   await expect(page.getByTestId('transport-state')).toHaveText('Paused');
   await expect(timecode).toHaveText('00:00:00');

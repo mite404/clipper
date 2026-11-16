@@ -11,7 +11,7 @@ test('keeps the final forward frame when fast playback ends', async ({ page }) =
   const ended = [];
   for (let attempt = 0; attempt < 8; attempt++) {
     await playhead.fill('200');
-    await page.locator('.project-title').click();
+    await page.locator('.app-header').click({ position: { x: 4, y: 4 } });
     for (let press = 0; press < 3; press++) await page.keyboard.press('l');
     await expect(page.getByTestId('transport-state')).toHaveText('Playing · 4×');
     await expect(page.getByTestId('transport-state')).toHaveText('Paused', { timeout: 30000 });
