@@ -245,9 +245,18 @@ User story: As an editor, I want to resize the side panes and timeline, hide/res
 switch between default and remembered custom height, and clearly see and scrub the current time
 without sacrificing preview room or accidentally selecting/trimming a clip.
 
-| Ticket ID                      | Scope                                                                          | Owner                                                                                    | State                                                                                |
-| ------------------------------ | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| <a id="ui-5"></a>[UI-5](#ui-5) | Panel resizing, timeline layout controls and visible playhead/scrub affordance | [Existing Sol owner](https://ampcode.com/threads/T-e1ee6ff4-16fb-49e6-b05b-45a0b6fcecff) | Released on accepted b9c2e83 under the bounded grant below; no worker push authority |
+| Ticket ID                      | Scope                                                                          | Owner                                                                                    | State                                                                                                 |
+| ------------------------------ | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| <a id="ui-5"></a>[UI-5](#ui-5) | Panel resizing, timeline layout controls and visible playhead/scrub affordance | [Existing Sol owner](https://ampcode.com/threads/T-e1ee6ff4-16fb-49e6-b05b-45a0b6fcecff) | Delivered at 601ba78 with green exact-main CI43978647729; paths released; preview promotion requested |
+
+Accepted main is
+[`601ba78`](https://github.com/mite404/clipper/commit/601ba7891571c436da6360ec1a981b6dd468c0f7),
+with successful required
+[CI43978647729](https://github.com/mite404/clipper/actions/runs/43978647729). The ruler correction
+changes only test layout preconditions, retaining all seeking expectations. Local acceptance passed
+132 unit tests, ten corrected ruler repetitions and the full 84-browser-test gate without retries or
+skips. Both existing exact-delta reviewers returned LAND. Canonical preview promotion requires its
+owner's actual revision and verification receipt before it is claimed.
 
 Use the requested Yaklabs implementation as the source reference, not a new splitter dependency.
 Research located `apps/web/src/shell/sidebar-resize.tsx` and `sidebar-width.ts` in mite404/yaklabs:
@@ -517,7 +526,8 @@ images were hosted, see [Known limits](#known-limits)).
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                              |
 | Cursor inspector         | No active implementation reservation after green inspector delivery                                                                                         |
-| Workspace layout         | UI-5 bounded resize/layout/ruler grant above; existing Sol owner, accepted b9c2e83; coordinator retains main delivery                                       |
+| Workspace layout         | UI-5 delivered at accepted 601ba78 with green exact-main CI; resize/layout/ruler reservation released                                                       |
+| Source-preview lifecycle | REF-32 bounded App SourceMonitor/busy-state and tests/editor.spec.ts grant to existing Sol medium T-fd12a7e5; no UI-8 implementation or worker push         |
 | Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                              |
 | Media drawer follow-up   | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                                 |
 | Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5, accepted UI-7 successor and exact-path grant before edits                                        |
@@ -668,6 +678,31 @@ movement/insertion drops are different gestures and retain their owners; REF-27 
 geometry/hit-target seams. Research actual existing state/history before changing shared paths. Do
 not infer new metadata format support or attach by filename guess. Publish this new mapping at the
 next appropriate doc delivery; a local entry is not remote implementation.
+
+Owner clarification, relayed by the Space from `M-034yqB8CMOD13t0F7AHfIn`: attach and synchronize
+cursor metadata once per screen recording source. Many zoom timeline clips can mark when to zoom
+within that recording; they are not metadata attachment targets and require no per-zoom manual
+synchronization. Every use of the recording shares its source-time cursor data and synchronization
+offset. Preserve source-time mapping through clip edits. This clarification does not approve the
+separate D-1/REF-23 migration of existing manual zoom anchors.
+
+Recording-wide association and persistence in the Clipper project do not mean telemetry is embedded
+in the video container. The existing owner's
+[source research](https://ampcode.com/artifacts/openscreen-metadata-workflow-269d1a1c-08e6-4a7d-83d2-727a67d2cdf6)
+pins OpenScreen v2.2.2 and Clipper main `601ba78`. Editable capture records video and cursor data
+during one take, then writes the original video and sibling `<videoPath>.cursor.json`. It rebases
+cursor times to the video start and compacts pauses. Start with source offset 0, not a second
+subtraction of the capture delay. No automatic calibration or sidecar/video fingerprint guarantee
+exists. A click timestamp alone cannot align video without a matching visible or audible anchor.
+
+The current Inspector attachment stores `Asset.cursor` once; cuts and cursor-follow zooms reuse its
+source-time mapping. Save project retains original media and cursor data in Clipper JSON, not MP4
+telemetry. Standard rendered OpenScreen and Clipper exports flatten the cursor into picture frames;
+Clipper does not extract editable telemetry from those MP4s. Keep the original recording and sidecar
+for editing. Source-panel/drop entry points and attachment undo/dirty handling remain pending
+CLIP-11b. Successful replacement currently resets offset/settings; undo must restore the prior
+track. These are source findings, not a new native capture/export run or real-recording acceptance.
+CLIP-11b remains read-only under its existing owner.
 
 ### Audited experiment and inspector scopes
 
@@ -945,7 +980,7 @@ original note for every row.
 | <a id="ref-29"></a>[REF-29](#ref-29)                 | Assess complexity-score baseline blind spots                     | Small  | Deferred proposal                                                                                                                                                                   | only if count-only baseline permits real growth                                                         |
 | <a id="ref-30"></a>[REF-30](#ref-30)                 | Progress and cancellation for import, Open and Save              | Large  | Proposal                                                                                                                                                                            | define bounded-memory and cancellation behavior with REF-22                                             |
 | <a id="ref-31"></a>[REF-31](tickets/REF-31.md)       | Prevent hidden-tab rewind jumps and held-Space toggles           | Small  | Delivered at [9132ecf](https://github.com/mite404/clipper/commit/9132ecfa925389b5167e10a1ccc2ded27ee4a3ce); [green CI](https://github.com/mite404/clipper/actions/runs/43898463793) | Transport reservation released                                                                          |
-| <a id="ref-32"></a>[REF-32](#ref-32)                 | Correct source-preview playback error and busy lifecycle         | Medium | Ready                                                                                                                                                                               | reproduce pause, switch and export races                                                                |
+| <a id="ref-32"></a>[REF-32](#ref-32)                 | Correct source-preview playback error and busy lifecycle         | Medium | Bounded implementation granted to existing Sol medium T-fd12a7e5 on accepted 601ba78; coordinator owns review/integration/main delivery                                             | Reproduce existing native-media baselines, red/green regressions, strict/full gates                     |
 | <a id="ref-33"></a>[REF-33](#ref-33)                 | Qualify download URL lifetime outside Chromium                   | Medium | Blocked                                                                                                                                                                             | another supported WebCodecs browser                                                                     |
 | <a id="ref-34"></a>[REF-34](#ref-34)                 | Remove Player listener lifetime assumptions                      | Small  | Deferred proposal                                                                                                                                                                   | reproduce a listener lifecycle defect first                                                             |
 | <a id="ref-35"></a>[REF-35](#ref-35)                 | Close edit and project-boundary test gaps                        | Medium | Ready                                                                                                                                                                               | asymmetric ripple, fractional trim, parser bounds, source-track rules, save snapshot and chunking cases |
