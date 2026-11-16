@@ -44,8 +44,8 @@ alone are not delivery. The audit compared the master with active repository/pro
 their linked research. The audit baseline was accepted main
 `d8776cde2f1fc381da7bd4a5b069501c5ded73c5`; this is not a moving latest-main pointer.
 
-1. Finish the already reviewed CLIP-9b creation/panel-removal slice, then its owner-requested **Add
-   zoom** label and stale verification-map follow-up under the same ID. Full ramps stay open.
+1. CLIP-9b creation/panel removal and the **Add zoom** label/map follow-up are accepted at
+   `acb62f7`, with green exact-main CI43938067635. Full ramps stay open; they do not hold UI-7.
 2. Deliver UI-7 on that accepted successor, then UI-5 side-pane and timeline resizing. Both extend
    UI-2 rather than replacing its mounted drawer or scrolling rules. Reproduce REF-32 before UI-8
    changes source preview lifecycle; repair a demonstrated defect in its own tested ticket. CLIP-2e
@@ -376,9 +376,9 @@ feature's browser tests. No nominal-ordinal or complete WebM/VFR compatibility c
 
 ### Media header and temporary drawer peek
 
-| Ticket ID                      | Scope                                                          | State                    | Needs                                                  |
-| ------------------------------ | -------------------------------------------------------------- | ------------------------ | ------------------------------------------------------ |
-| <a id="ui-7"></a>[UI-7](#ui-7) | Media before Save, temporary left-edge peek and Space behavior | Sol medium research only | Accepted CLIP-9b successor and exact shared-path grant |
+| Ticket ID                      | Scope                                                          | State                                                  | Needs                                                                |
+| ------------------------------ | -------------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------- |
+| <a id="ui-7"></a>[UI-7](#ui-7) | Media before Save, temporary left-edge peek and Space behavior | Existing Sol medium worker released for implementation | Accepted acb62f7; bounded paths below; coordinator retains push slot |
 
 The owner requested moving Media into the header immediately left of Save project and temporarily
 sliding the media pool in when hovering the left edge. Reuse the owner-authored Yaklabs pattern in
@@ -389,18 +389,24 @@ selection and playback. Keep transient peek distinct from persistent open state 
 pointer exit, narrow layouts, touch fallback and reduced-motion behavior.
 
 Extend UI-2's delivered mounted accessible drawer at `ceb40bb`, already in accepted main; do not
-build a second hide/show implementation. UI-7 has completed read-only reference research and
-reproduced the focused-Media Space deviation in the production UI, but has no implementation yet.
+build a second hide/show implementation. UI-7 completed reference research and reproduced the
+focused-Media Space deviation in the production UI before its implementation release.
 
 The existing [Sol medium worker](https://ampcode.com/threads/T-93cc1d51-b15d-443e-afc8-5267ef98ab33)
-may research the reference and current behavior on accepted `19c571e`, but has no source reservation
-or push grant. Its exact implementation base and App/header/drawer/style/test paths follow the
-accepted CLIP-9b successor and coordinator grant. Do not duplicate this worker or the ticket. Update
-UI-3's superseded Save-within-20-pixels header assertion. Replace header `(4, 4)` focus parking in
-affected transport/performance tests if it intersects the peek zone, preserving their transport
-assertions and performance workload, thresholds, repeats and sampling. Require real pointer/keyboard
-verification, inspected public/synthetic captures, strict/full gates and exact-main green CI.
-Existing review gates and the coordinator's exclusive push slot remain unchanged.
+is released on accepted `acb62f748fa0a6625b93e2140b3d5fb0d2dbc3f6`, with green exact-main
+CI43938067635. Its grant covers App media visibility/state, header toggle, workspace/drawer event
+and accessibility hunks; scoped header/drawer/peek styles; workspace-layout and refinements tests;
+and `docs/tickets/UI-7.md` for acceptance evidence. `src/useMediaDrawer.ts` is permitted only if it
+owns the actual timer/listener state rather than forwarding callbacks. Exact test paths are
+`tests/workspace-layout.spec.ts` and `tests/refinements.spec.ts`. In `tests/transport-end.spec.ts`,
+`tests/transport-lifecycle.spec.ts` and `tests/performance.spec.ts`, focus-parking coordinates alone
+may change if the peek zone demonstrably intersects them; workload, thresholds, repeats, sampling
+and transport assertions stay unchanged. No Timeline/model/parser/renderer, insertion, source
+monitor, zoom, export, baseline or verification-tool edits are released. No push grant is
+transferred. Do not duplicate this worker or the ticket. Update UI-3's superseded
+Save-within-20-pixels header assertion. Require real pointer/keyboard verification, inspected
+public/synthetic captures, strict/full gates and exact-main green CI. Existing review gates and the
+coordinator's exclusive push slot remain unchanged.
 
 ### Media-pool views and source scrubbing
 
@@ -925,7 +931,7 @@ original note for every row.
 | <a id="ref-36"></a>[REF-36](#ref-36)                 | Prove delivery recovery and individual audio mute                | Medium | Ready                                                                                                                                                                               | UI cancel and retry; failed export and partial-open recovery; one muted track at a time                 |
 | <a id="ref-37"></a>[REF-37](#ref-37)                 | Qualify video cadence, rewind, scrub and large telemetry         | Medium | Verification remains open; broad stall investigation stopped unless standalone recurrence or new Amp-view request                                                                   | Preserve existing performance thresholds; inspector ownership retained pending explicit closure         |
 | <a id="verify-3"></a>[VERIFY-3](tickets/VERIFY-3.md) | Bring the feature map in line with delivered motion and controls | Small  | Delivered at [f76a702](https://github.com/mite404/clipper/commit/f76a702f85a0bcdf64f7c8bc2b0726823c447003); [green CI](https://github.com/mite404/clipper/actions/runs/43798560663) | frame-step and zoom-field journeys; current cursor and follow coverage                                  |
-| <a id="clip-9b"></a>[CLIP-9b](#clip-9b)              | Visible zoom regions, editable ramps and numeric equivalents     | Medium | Creation accepted at ad40248 with green CI43934129560; Add zoom label/map follow-up verified and reviewed, exact-main CI pending; full ramps open                                   | Follow-up exact-SHA green CI before UI-7 release; preserve CLIP-9/10                                    |
+| <a id="clip-9b"></a>[CLIP-9b](#clip-9b)              | Visible zoom regions, editable ramps and numeric equivalents     | Medium | Creation accepted at ad40248; Add zoom label/map follow-up accepted at acb62f7 with green CI43938067635; full ramps open                                                            | UI-7 released; full ramps follow the audited feature order; preserve CLIP-9/10                          |
 
 | Ticket ID                                  | Feature                                                                                                      | State and dependency                                                     |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
@@ -961,8 +967,11 @@ focused greens are recorded. Fresh strict/Fallow shrink-only gates, 132 units an
 with no skipped or flaky browser cases. The rebuilt story creates exactly one duration-four zoom
 through the unique **Add zoom** name; the renamed control's rendering was inspected. The existing
 reviewer returns LAND for exact five-path tree `5eb12a812f000a222fd5673eb728b37af4bffbdb`,
-independently reproduced by the coordinator; the master-only status delta adds no source change.
-This follow-up is in serialized main delivery, awaiting exact-main CI. Full ramp scope remains open.
+independently reproduced by the coordinator; the master-only status delta adds no source change. The
+follow-up delivered at
+[`acb62f7`](https://github.com/mite404/clipper/commit/acb62f748fa0a6625b93e2140b3d5fb0d2dbc3f6),
+with [green exact-main CI43938067635](https://github.com/mite404/clipper/actions/runs/43938067635).
+UI-7's source hold is released on that accepted base. Full ramp scope remains open.
 
 The coordinator verified the transferred complete-history bundle, nine-path dirty/untracked draft
 and receipt archive against `clip-9b-SHA256SUMS.txt`. The frozen base and HEAD are both `b9596c6`;
