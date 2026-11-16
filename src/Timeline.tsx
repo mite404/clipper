@@ -1,5 +1,5 @@
 import { Camera, Film, Mic, Music2, Volume2, VolumeX, ZoomIn } from 'lucide-react';
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import type { Asset } from './media';
 import { FPS, trimClip, type Clip, type Track, type Zoom } from './timeline-model';
 import { IconButton, Waveform, timecode } from './components';
@@ -21,6 +21,42 @@ function commitTrim(
 ): void {
   const next = trimClip(clip, edge, delta); // → Clip
   if (next.duration !== clip.duration) onTrim?.(next);
+}
+
+function useTimelineScale(seconds: number) {
+  const viewport = useRef<HTMLDivElement>(null);
+  const label = useRef<HTMLDivElement>(null);
+  const [dimensions, setDimensions] = useState({ width: 0, label: 152 });
+  const [chosenScale, setScale] = useState(40);
+  const minScale = dimensions.width ? (dimensions.width - dimensions.label) / seconds : 20;
+  const maxScale = minScale * 32;
+  const scale = Math.max(minScale, Math.min(maxScale, chosenScale));
+  if (scale !== chosenScale) setScale(scale);
+  useLayoutEffect(() => {
+    const scroll = viewport.current!;
+    const heading = label.current!;
+    const measure = () => {
+      const style = getComputedStyle(scroll);
+      const width =
+        scroll.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+      const label = heading.getBoundingClientRect().width;
+      setDimensions({ width, label });
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(scroll);
+    observer.observe(heading);
+    return () => observer.disconnect();
+  }, []);
+  return {
+    viewport,
+    label,
+    minScale,
+    maxScale,
+    scale,
+    setScale,
+    width: dimensions.label + seconds * scale,
+  };
 }
 
 /** Multitrack timeline with a frame-accurate ruler and waveform playback highlighting. */
@@ -52,7 +88,8 @@ export function Timeline({
   onTrim?: (clip: Clip) => void;
 }) {
   const seconds = duration / FPS;
-  const [scale, setScale] = useState(40);
+  const { viewport, label, minScale, maxScale, scale, setScale, width } = useTimelineScale(seconds);
+  const ticks = Math.max(2, Math.min(9, Math.floor((seconds * scale) / 64) + 1));
   // A drag names its clip by ID and trims the clip as it is now, so a split, undo or delete made
   // while a grip is held is never overwritten by a copy taken at pointerdown.
   const [drag, setDrag] = useState<{
@@ -69,32 +106,49 @@ export function Timeline({
         <input
           aria-label="Timeline scale"
           type="range"
-          min="20"
-          max="160"
-          step="10"
+          min={minScale}
+          max={maxScale}
+          step="any"
           value={scale}
+          disabled={!clips.length}
+          aria-valuetext={`${(scale / minScale).toFixed(1)} times fit`}
           onChange={(event) => setScale(Number(event.target.value))}
         />
-        <output>{scale} px/s</output>
+        <output>{Number(scale.toFixed(2))} px/s</output>
       </label>
       <div
         className="timeline-scroll"
+        ref={viewport}
         data-testid="timeline-scroll"
         tabIndex={0}
+        role="region"
         aria-label="Scrollable timeline"
+        onKeyDown={(event) => {
+          if (
+            event.target === event.currentTarget &&
+            [
+              'ArrowLeft',
+              'ArrowRight',
+              'ArrowUp',
+              'ArrowDown',
+              'Home',
+              'End',
+              'PageUp',
+              'PageDown',
+            ].includes(event.key)
+          )
+            event.stopPropagation();
+        }}
       >
-        <div
-          className="timeline-grid"
-          style={{ width: Math.max(560, 152 + seconds * scale), minWidth: '100%' }}
-        >
-          <div className="ruler-label">
+        <div className="timeline-grid" style={{ width, minWidth: '100%' }}>
+          <div className="ruler-label" ref={label}>
             <span>TRACKS</span>
             <span>30 FPS</span>
           </div>
           <div className="ruler">
-            {Array.from({ length: 9 }, (_, i) => (
-              <span key={i} style={{ left: `${(i / 8) * 100}%` }}>
-                {timecode(Math.round((i / 8) * duration)).slice(0, 5)}
+            {Array.from({ length: ticks }, (_, i) => (
+              <span key={i} style={{ left: `${(i / (ticks - 1)) * 100}%` }}>
+                {timecode(Math.round((i / (ticks - 1)) * duration)).slice(0, 5)}
               </span>
             ))}
             <input

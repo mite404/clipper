@@ -762,7 +762,8 @@ p {
   color: #626974;
 }
 .timeline-scroll {
-  padding: 0 22px;
+  --timeline-gutter: 22px;
+  padding: 0 var(--timeline-gutter);
   overflow-x: auto;
   scrollbar-width: thin;
 }
@@ -813,7 +814,7 @@ p {
 .ruler > span:first-child {
   transform: none;
 }
-.ruler > span:nth-child(9) {
+.ruler > span:last-of-type {
   transform: translateX(-100%);
 }
 .ruler input {
@@ -1511,7 +1512,7 @@ p {
     padding: 0 18px;
   }
   .timeline-scroll {
-    padding: 0 18px;
+    --timeline-gutter: 18px;
   }
   .timeline-toolbar .edit-tools {
     gap: 5px;
@@ -1737,7 +1738,7 @@ p {
     gap: 4px;
   }
   .timeline-scroll {
-    padding: 0 13px;
+    --timeline-gutter: 13px;
   }
   .timeline-grid {
     min-width: 530px;
@@ -1919,8 +1920,9 @@ p {
 }
 .timeline-scroll {
   min-width: 0;
-  flex-shrink: 0;
-  overscroll-behavior-x: contain;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
 }
 .clip-grip {
   width: 12px;
@@ -2205,5 +2207,140 @@ p {
     overflow-y: auto;
     overscroll-behavior-y: contain;
     scrollbar-gutter: stable;
+  }
+}
+
+.workspace-bar > .media-toggle {
+  margin-left: 0;
+  min-height: 32px;
+  padding-inline: 8px;
+}
+.media-drawer {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+.media-drawer[hidden] {
+  display: none;
+}
+.media-drawer > .library {
+  flex: 1;
+}
+.sequence-area {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: #17181a;
+  border-top: 1px solid var(--line);
+}
+.sequence-area > :not(.timeline-scroll) {
+  flex-shrink: 0;
+}
+.sequence-area .transport {
+  height: 54px;
+  min-height: 54px;
+}
+.sequence-area .timeline-toolbar {
+  height: 44px;
+}
+.sequence-area .sequence-footer {
+  height: 28px;
+  padding-top: 6px;
+}
+.sequence-area .timeline-scroll {
+  flex: 1;
+  max-height: clamp(160px, 30dvh, 360px);
+}
+.timeline-scroll .track-label,
+.timeline-scroll .ruler-label {
+  position: sticky;
+  left: 0;
+  background: #17181a;
+  z-index: 4;
+}
+.timeline-scroll .track-label::before,
+.timeline-scroll .ruler-label::before {
+  content: '';
+  position: absolute;
+  right: 100%;
+  top: 0;
+  bottom: -1px;
+  width: var(--timeline-gutter);
+  background: inherit;
+}
+.timeline-scroll .ruler {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background-color: #17181a;
+}
+.timeline-scroll .ruler-label {
+  top: 0;
+  z-index: 6;
+}
+.workspace.media-hidden {
+  grid-template-columns: minmax(0, 1fr) 236px;
+}
+@media (min-width: 1650px) {
+  .workspace.media-hidden {
+    grid-template-columns: minmax(0, 1fr) 264px;
+  }
+}
+@media (min-width: 961px) and (max-width: 1250px) {
+  .workspace.media-hidden {
+    grid-template-columns: minmax(0, 1fr) 210px;
+  }
+}
+@media (min-width: 961px) {
+  .editor {
+    height: 100dvh;
+    overflow: hidden;
+  }
+  .editor > :not(.workspace) {
+    flex-shrink: 0;
+  }
+  .workspace {
+    grid-template-rows: minmax(0, 1fr) minmax(320px, 60%);
+    overflow: hidden;
+  }
+  .workspace > * {
+    min-height: 0;
+  }
+  .workspace > .inspector {
+    height: 100%;
+  }
+  .media-drawer,
+  .editing-area {
+    overflow: auto;
+  }
+  .media-drawer > .library {
+    align-self: flex-start;
+    min-height: 100%;
+  }
+  .editing-area .monitors {
+    min-height: 0;
+    flex: none;
+  }
+  .sequence-area .timeline-scroll {
+    max-height: none;
+  }
+}
+@media (max-width: 960px) {
+  .workspace.media-hidden {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 620px) {
+  .workspace-bar {
+    gap: 8px;
+  }
+  .workspace-label {
+    min-width: 0;
+  }
+  .sequence-area {
+    grid-row: auto;
   }
 }

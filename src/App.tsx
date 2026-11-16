@@ -20,6 +20,8 @@ import {
   Copy,
   Crop,
   Maximize2,
+  PanelLeftClose,
+  PanelLeftOpen,
   Pause,
   Play,
   Plus,
@@ -530,6 +532,7 @@ export function App() {
   const [muted, setMuted] = useState<Track[]>([]);
   const [message, setMessage] = useState('Ready for your next story.');
   const [help, setHelp] = useState(false);
+  const [mediaOpen, setMediaOpen] = useState(true);
   const [markingZoomId, setMarkingZoomId] = useState<string | null>(null);
   const [exportWidth, setExportWidth] = useState<1920 | 3840>(1920);
   const [exportProgress, setExportProgress] = useState<number | null>(null);
@@ -1093,7 +1096,19 @@ export function App() {
         <span className="workspace-label">
           <span className="workspace-dot" /> EDIT WORKSPACE
         </span>
-        <span>Make something worth watching.</span>
+        <button
+          className="text-button media-toggle"
+          aria-label={mediaOpen ? 'Hide media pool pane' : 'Show media pool pane'}
+          aria-expanded={mediaOpen}
+          aria-controls="media-drawer"
+          onClick={() => setMediaOpen((open) => !open)}
+          onKeyDown={(event) => {
+            if (event.key === ' ' || event.key === 'Enter') event.stopPropagation();
+          }}
+        >
+          {mediaOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+          Media
+        </button>
         <button
           className="text-button"
           onClick={() => {
@@ -1113,8 +1128,13 @@ export function App() {
           </button>
         </div>
       )}
-      <div className="workspace" inert={exportProgress !== null || busy}>
-        {libraryView}
+      <div
+        className={`workspace${mediaOpen ? '' : ' media-hidden'}`}
+        inert={exportProgress !== null || busy}
+      >
+        <div id="media-drawer" className="media-drawer" hidden={!mediaOpen}>
+          {libraryView}
+        </div>
         <section className="editing-area">
           <div className="monitors">
             {sourceView}
@@ -1216,6 +1236,8 @@ export function App() {
               </div>
             </section>
           </div>
+        </section>
+        <section className="sequence-area" aria-label="Main sequence">
           <div className="transport">
             <div className="transport-readout">
               <span data-testid="timecode">{timecode(frame)}</span>

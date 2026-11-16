@@ -45,7 +45,7 @@ and nowhere else. Other documents are records, not queues:
 | ------------------------ | -------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | Queue and implementation | [T-6706048a](https://ampcode.com/threads/T-6706048a-c051-4e23-9ec6-68afd669b492) | This file, REF and CLIP tickets, exclusive main push slot     |
 | Cursor implementation    | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant    |
-| Cursor inspector         | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) | Approved inspector reorganization, Sol medium; no new effects |
+| Cursor inspector         | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) | Inspector delivered; no active implementation grant           |
 | Workspace layout         | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | UI-2 drawer, timeline room and two-axis scrolling, Sol medium |
 | Zoom regions             | [T-46d4a5ee](https://ampcode.com/threads/T-46d4a5ee-39f1-46ae-bde0-eced0da19a5a) | CLIP-9b research only until shared-path release, Sol medium   |
 | Cursor preservation      | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94) | Frozen original CLIP-11 work, no implementation or push       |
@@ -215,15 +215,15 @@ images were hosted, see [Known limits](#known-limits)).
 
 ### Current path reservations
 
-| Owner                    | Paths                                                                                                                                                                            |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                                                   |
-| Cursor inspector         | App cursor placement/selection, CursorControls organization, non-tooltip inspector CSS, focused inspector tests; minimal cursor.spec.ts/cursor-speeds.spec.ts disclosure updates |
-| Workspace layout         | UI-2 App drawer/workspace shell, Timeline scroll markup and scoped media/workspace/timeline CSS; no playback/cursor internals                                                    |
-| Zoom regions             | Research only; future App/Timeline/inspector/styles/model/parser edits wait for inspector and UI-2 release; no REF-20/31 transport overlap                                       |
-| Oxc tooling              | VERIFY-5 package/lock, Oxc/formatter config, necessary CI/hook/README command changes only; no source migration or bulk reformat                                                 |
-| Queue implementation     | Queue/docs and acceptance only; cursor-inspector and UI-2 reservations remain exclusive; REF-20 is delivered and released                                                        |
-| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                                 |
+| Owner                    | Paths                                                                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                             |
+| Cursor inspector         | No active implementation reservation after green inspector delivery                                                                        |
+| Workspace layout         | UI-2 App drawer/workspace shell, outer inspector sizing, Timeline scroll/scale bounds and scoped CSS/tests; no playback/cursor internals   |
+| Zoom regions             | Research only; future App/Timeline/inspector/styles/model/parser edits wait for inspector and UI-2 release; no REF-20/31 transport overlap |
+| Oxc tooling              | VERIFY-5 package/lock, Oxc/formatter config, necessary CI/hook/README command changes only; no source migration or bulk reformat           |
+| Queue implementation     | Queue/docs and acceptance only; UI-2 reservation remains exclusive; inspector and REF-20 are delivered and released                        |
+| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                           |
 
 ### Preservation branches
 
@@ -470,14 +470,26 @@ synthetic before/after captures. The worker reports a red/green gutter hit-test,
 dataset/width combinations, 16 focused browser checks and 135 units passing. These are preliminary
 checks, not final combined acceptance. See the
 [stress evidence](https://ampcode.com/artifacts/timeline-clip-region-stress-fc0f5a96-848e-47ff-9a37-179ab2f8a11d).
-The inspector candidate is integrated locally for final combined gates; no delivered successor is
-available to UI-2 yet.
+The inspector successor is delivered at
+[`27bae5a`](https://github.com/mite404/clipper/commit/27bae5ab956c02b391aaef3d54abc459ae0ae79e),
+with green [exact-main CI](https://github.com/mite404/clipper/actions/runs/43862475576). UI-2 is
+released to rebase its preserved work onto that successor and complete combined acceptance.
 
 The owner additionally requires both timeline-scale bounds to adapt proportionately to total
 sequence duration and actual available timeline width. Grant Timeline scale state/bounds and
 workspace-layout tests only. Retain a chosen scale while valid, clamp only outside new bounds, and
 update after duration, resize and media-pool visibility changes. Check empty/short/long,
 growth/shrink and resizing without touching trim/seek/model, zoom handles or playback internals.
+
+UI-2 candidate `df6ba3c` is transferred by verified Git bundle and integrated locally on accepted
+`27bae5a`; the original `5119fbd` checkpoint remains preserved. The worker's first full run was
+65/66: the radius drag targeted an offscreen slider, not an undo defect. A granted single native
+scroll step before its bounding-box measurement preserves all assertions. Its corrected full run
+passed 66/66, and its separate unchanged performance invocation passed 20/20. First-failure trace
+and all receipts remain preserved. Coordinator strict/shrink-only gates, 135 units and seven helper
+tests passed; its fresh integrated browser invocation passed 66/66 with no skips or flakes. The
+coordinator's separate unchanged performance journey passed 20/20 on its first invocation. Delivery
+is prepared; exact-main green CI remains required before UI-2 acceptance and reservation release.
 
 Final integration order is UI-1, REF-20, cursor inspector, then UI-2. REF-31 begins only after
 REF-20; its playback hunks stay disjoint from both layout units. No worker may overwrite another
@@ -503,8 +515,11 @@ receipts are transferred and hash-verified. These are strict local gate passes, 
 nonregression or a universal guarantee. The coordinator integrated the exact frozen source for final
 combined acceptance; fresh static/shrink-only gates, 135 units and seven helper tests passed. Full
 browser gates passed 62/62 in the single final integrated invocation, with no skips, flakes or
-retries. Inspector delivery is prepared; exact-main CI remains required before acceptance and UI-2
-release. No deployment is authorized or claimed.
+retries. Delivered at
+[`27bae5a`](https://github.com/mite404/clipper/commit/27bae5ab956c02b391aaef3d54abc459ae0ae79e),
+with green [exact-main CI](https://github.com/mite404/clipper/actions/runs/43862475576). The
+inspector reservation is released to UI-2's outer-layout integration only; no cursor behavior change
+is granted. No deployment is authorized or claimed.
 
 ### Not blocking mouse work
 

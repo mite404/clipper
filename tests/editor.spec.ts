@@ -347,6 +347,7 @@ test('undoes a slider drag in one step and ignores edits that change nothing', a
   await expect(clips).toHaveCount(3);
 
   // A real drag: the slider reports every value it passes, 22 up to about 50.
+  await radius.scrollIntoViewIfNeeded();
   const box = (await radius.boundingBox())!;
   const y = box.y + box.height / 2;
   await page.mouse.move(box.x + (box.width * 22) / 60, y);
