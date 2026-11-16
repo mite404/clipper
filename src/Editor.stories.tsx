@@ -20,6 +20,7 @@ const CURSOR_STRESS_SETTINGS: Record<string, CursorTrack['settings']> = {
     mode: 'smooth',
     size: 1,
     hidden: false,
+    stabilizeShapes: true,
     hiddenRanges: [
       { startMs: 123.456, endMs: 789.123 },
       { startMs: 86399000.125, endMs: 86400000.875 },

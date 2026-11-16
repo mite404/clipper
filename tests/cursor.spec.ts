@@ -33,6 +33,7 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   await page.getByText('Advanced cursor', { exact: true }).click();
   await page.getByLabel('Hide when idle (1 s)', { exact: true }).check();
   await page.getByLabel('Remove small shakes', { exact: true }).check();
+  await page.getByLabel('Stabilize recorded shapes', { exact: true }).check();
   await page.getByLabel('Cursor ending', { exact: true }).selectOption('loop');
   await page.getByLabel('Hide cursor from (source seconds)').fill('0.15');
   await page.getByLabel('Hide cursor until (source seconds)').fill('0.1');
@@ -103,6 +104,7 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
       style: 'touch',
       hideIdle: true,
       removeShakes: true,
+      stabilizeShapes: true,
       ending: 'loop',
       hiddenRanges: [{ startMs: 150, endMs: 300 }],
     },
@@ -125,6 +127,7 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   await page.getByText('Advanced cursor', { exact: true }).click();
   await expect(page.getByLabel('Hide when idle (1 s)', { exact: true })).toBeChecked();
   await expect(page.getByLabel('Remove small shakes', { exact: true })).toBeChecked();
+  await expect(page.getByLabel('Stabilize recorded shapes', { exact: true })).toBeChecked();
   await expect(page.getByLabel('Cursor ending', { exact: true })).toHaveValue('loop');
   await expect(page.getByText('0.15 to 0.3 s', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Remove hidden range 1', exact: true }).click();
@@ -168,6 +171,10 @@ test('cursor controls retain actions with long filenames, empty telemetry and la
       await page.getByLabel('Cursor ending', { exact: true }).selectOption('stop');
       await expect(page.getByLabel('Hide when idle (1 s)', { exact: true })).toBeInViewport();
       await expect(page.getByLabel('Remove small shakes', { exact: true })).toBeInViewport();
+      const stabilize = page.getByLabel('Stabilize recorded shapes', { exact: true });
+      await stabilize.scrollIntoViewIfNeeded();
+      await stabilize.check();
+      await expect(stabilize).toBeChecked();
       await expect(page.getByLabel('Cursor ending', { exact: true })).toBeInViewport();
       const addRange = page.getByRole('button', { name: 'Add hidden range', exact: true });
       await addRange.scrollIntoViewIfNeeded();

@@ -29,6 +29,10 @@ for (const follow of [false, true]) {
         mimeType: 'application/json',
         buffer: Buffer.from(JSON.stringify(motionCursorFixture)),
       });
+      await page.getByText('Advanced cursor', { exact: true }).click();
+      const stabilize = page.getByLabel('Stabilize recorded shapes', { exact: true });
+      await stabilize.check();
+      await expect(stabilize).toBeChecked();
       await page.getByLabel('Automatic zoom hold seconds').fill('10');
       await page.getByRole('button', { name: 'Generate zooms', exact: true }).click();
       await expect(page.getByLabel('Automatic zoom result')).toContainText('2 automatic');

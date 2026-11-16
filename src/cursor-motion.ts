@@ -67,12 +67,31 @@ function isActivity(sample: CursorSample, previous?: CursorSample): boolean {
   );
 }
 
+function stableShapes(samples: CursorSample[]): CursorSample[] {
+  let accepted = samples[0];
+  let candidate = samples[0];
+  return samples.map((sample, index) => {
+    const previous = samples[index - 1];
+    if (!previous || !connected(previous, sample) || isInteraction(sample)) {
+      accepted = sample;
+      candidate = sample;
+    } else {
+      if (sample.assetId !== candidate.assetId) candidate = sample;
+      if (sample.timeMs - candidate.timeMs >= 100) accepted = sample;
+    }
+    return { ...sample, assetId: accepted.assetId };
+  });
+}
+
 function preparedSamples(track: CursorTrack): MotionSample[] {
   const cached = paths.get(track);
   if (cached) return cached;
   let activeMs = 0;
   const samples: MotionSample[] = [];
-  for (const original of track.recording.samples) {
+  const source = track.settings?.stabilizeShapes
+    ? stableShapes(track.recording.samples)
+    : track.recording.samples;
+  for (const original of source) {
     const previous = samples[samples.length - 1];
     const sample = track.settings?.removeShakes
       ? { ...original, ...steadyPosition(original, previous) }

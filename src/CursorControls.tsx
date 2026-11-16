@@ -13,6 +13,7 @@ type ImportState = { kind: 'idle' } | { kind: 'reading' } | { kind: 'error'; mes
 const BEHAVIOR_FLAGS = [
   ['hideIdle', 'Hide when idle (1 s)'],
   ['removeShakes', 'Remove small shakes'],
+  ['stabilizeShapes', 'Stabilize recorded shapes'],
 ] as const;
 
 function countLabel(count: number, singular: string): string {
@@ -145,6 +146,8 @@ function CursorBehavior({
       <p className="cursor-note">
         Ending effects use the last 0.5 s of each trimmed clip, or half of shorter clips.
         Small-shake removal holds movements within 0.5% of the source. Clicks stay exact.
+        Stabilization holds the previous shape until a new shape is confirmed by samples at least
+        100 ms apart. Interaction shapes appear immediately; tracking gaps reset it.
       </p>
       <CursorHiddenRanges settings={settings} onChange={onChange} />
     </details>

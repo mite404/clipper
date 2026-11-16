@@ -32,6 +32,7 @@ export type CursorSettings = {
   hidden: boolean;
   hideIdle?: boolean;
   removeShakes?: boolean;
+  stabilizeShapes?: boolean;
   style?: 'recorded' | 'default' | 'touch';
   ending?: 'stop' | 'loop';
   // Half-open intervals on the source video's clock, unaffected by telemetry offset.
@@ -154,8 +155,8 @@ export function parseCursor(value: unknown): CursorRecording {
 }
 
 function parseFlags(settings: Record<string, unknown>) {
-  const flags: Pick<CursorSettings, 'hideIdle' | 'removeShakes'> = {};
-  for (const key of ['hideIdle', 'removeShakes'] as const) {
+  const flags: Pick<CursorSettings, 'hideIdle' | 'removeShakes' | 'stabilizeShapes'> = {};
+  for (const key of ['hideIdle', 'removeShakes', 'stabilizeShapes'] as const) {
     const value = settings[key];
     if (value === undefined) continue;
     if (typeof value !== 'boolean') throw new Error(`Cursor ${key} must be boolean.`);

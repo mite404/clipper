@@ -153,6 +153,66 @@ it('can retain recorded PNG changes, fix the first captured shape, or use a cent
   expect(cursorAt(touch, 100)?.asset.imageDataUrl).not.toBe(cursorFixture.assets[0].imageDataUrl);
 });
 
+it('stabilizes short shape changes on the source clock without rewriting telemetry or seek history', () => {
+  const cursor = track(
+    [
+      { timeMs: 0, cx: 0.2, cy: 0.6, assetId: 'arrow' },
+      { timeMs: 40, cx: 0.3, cy: 0.5, assetId: 'hand' },
+      { timeMs: 90, cx: 0.4, cy: 0.4, assetId: 'arrow' },
+      { timeMs: 140, cx: 0.5, cy: 0.3, assetId: 'hand' },
+      { timeMs: 239, cx: 0.6, cy: 0.2, assetId: 'hand' },
+      { timeMs: 240, cx: 0.7, cy: 0.1, assetId: 'hand' },
+    ],
+    50,
+  );
+  cursor.recording.assets.push({ ...cursorFixture.assets[0], id: 'hand', hotspotX: 0.75 });
+  const original = structuredClone(cursor.recording);
+  const stabilized = {
+    ...cursor,
+    settings: { mode: 'raw', size: 1, hidden: false, stabilizeShapes: true },
+  } satisfies CursorTrack;
+  for (const mode of ['raw', 'smooth'] as const) {
+    expect(cursorAt(stabilized, 290, mode)?.asset).toMatchObject({ id: 'hand', hotspotX: 0.75 });
+    expect(cursorAt(stabilized, 289, mode)?.asset.id).toBe('arrow');
+    expect(cursorAt(stabilized, 90, mode)).toMatchObject({
+      cx: 0.3,
+      cy: 0.5,
+      asset: { id: 'arrow' },
+    });
+    expect(cursorAt(stabilized, 190, mode)?.asset.id).toBe('arrow');
+    expect(cursorAt(stabilized, 290, mode)?.asset.id).toBe('hand');
+    expect(cursorAt(cursor, 90, mode)?.asset.id).toBe('hand');
+  }
+  expect(cursor.recording).toEqual(original);
+});
+
+it('accepts interaction shapes and resets stabilization across hidden, missing and disconnected tracking', () => {
+  const cursor = track([
+    { timeMs: 0, cx: 0.2, cy: 0.6, assetId: 'arrow' },
+    { timeMs: 40, cx: 0.3, cy: 0.5, assetId: 'hand', interactionType: 'click' },
+    { timeMs: 80, cx: 0.4, cy: 0.4, assetId: 'arrow' },
+    { timeMs: 120, cx: 0.5, cy: 0.3, assetId: 'hand', visible: false },
+    { timeMs: 160, cx: 0.6, cy: 0.2, assetId: 'arrow' },
+    { timeMs: 200, cx: 0.7, cy: 0.1, assetId: null },
+    { timeMs: 240, cx: 0.6, cy: 0.2, assetId: 'hand' },
+    { timeMs: 600, cx: 0.5, cy: 0.3, assetId: 'arrow' },
+    { timeMs: 600, cx: 0.4, cy: 0.4, assetId: 'hand' },
+  ]);
+  cursor.recording.assets.push({ ...cursorFixture.assets[0], id: 'hand' });
+  const stabilized = {
+    ...cursor,
+    settings: { mode: 'smooth', size: 1, hidden: false, stabilizeShapes: true },
+  } satisfies CursorTrack;
+  expect(cursorAt(stabilized, 40)?.asset.id).toBe('hand');
+  expect(cursorAt(stabilized, 80)?.asset.id).toBe('hand');
+  expect(cursorAt(stabilized, 120)).toBeUndefined();
+  expect(cursorAt(stabilized, 160)?.asset.id).toBe('arrow');
+  expect(cursorAt(stabilized, 200)).toBeUndefined();
+  expect(cursorAt(stabilized, 240)?.asset.id).toBe('hand');
+  expect(cursorAt(stabilized, 500)).toBeUndefined();
+  expect(cursorAt(stabilized, 600)?.asset.id).toBe('hand');
+});
+
 it('returns to the trimmed clip start or stops at its ending without depending on seek order', () => {
   const cursor = track(
     Array.from({ length: 51 }, (_, i) => ({
