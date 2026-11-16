@@ -37,7 +37,7 @@ test('keeps project delivery controls readable at desktop and narrow widths', as
   }
 });
 
-test('puts Save project first in the header and saves by pointer and keyboard at 617×1295', async ({
+test('puts Media before Save project and saves by pointer and keyboard at 617×1295', async ({
   page,
 }) => {
   await page.setViewportSize({ width: 617, height: 1295 });
@@ -46,9 +46,17 @@ test('puts Save project first in the header and saves by pointer and keyboard at
   await expect(page.locator('.brand')).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Developer walkthrough' })).toHaveCount(0);
   const save = page.getByRole('button', { name: 'Save project', exact: true });
+  const media = page.getByRole('button', { name: 'Hide media pool pane' });
   const header = (await page.locator('.app-header').boundingBox())!;
+  const mediaBox = (await media.boundingBox())!;
   const box = (await save.boundingBox())!;
-  expect(box.x - header.x).toBeLessThanOrEqual(20);
+  await expect(page.locator('.app-header button').first()).toHaveAttribute(
+    'aria-controls',
+    'media-drawer',
+  );
+  expect(mediaBox.x - header.x).toBeLessThanOrEqual(20);
+  expect(mediaBox.x + mediaBox.width).toBeLessThan(box.x);
+  expect(mediaBox.y).toBe(box.y + (box.height - mediaBox.height) / 2);
   expect(box.y - header.y).toBeLessThanOrEqual(20);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(617);
 

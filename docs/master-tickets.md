@@ -376,9 +376,9 @@ feature's browser tests. No nominal-ordinal or complete WebM/VFR compatibility c
 
 ### Media header and temporary drawer peek
 
-| Ticket ID                      | Scope                                                          | State                                                  | Needs                                                                |
-| ------------------------------ | -------------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------- |
-| <a id="ui-7"></a>[UI-7](#ui-7) | Media before Save, temporary left-edge peek and Space behavior | Existing Sol medium worker released for implementation | Accepted acb62f7; bounded paths below; coordinator retains push slot |
+| Ticket ID                      | Scope                                                          | State                                            | Needs                                                                    |
+| ------------------------------ | -------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------ |
+| <a id="ui-7"></a>[UI-7](#ui-7) | Media before Save, temporary left-edge peek and Space behavior | Local acceptance complete; exact-main CI pending | Reviewed source on 9733390; coordinator retains push slot until green CI |
 
 The owner requested moving Media into the header immediately left of Save project and temporarily
 sliding the media pool in when hovering the left edge. Reuse the owner-authored Yaklabs pattern in
@@ -407,6 +407,16 @@ transferred. Do not duplicate this worker or the ticket. Update UI-3's supersede
 Save-within-20-pixels header assertion. Require real pointer/keyboard verification, inspected
 public/synthetic captures, strict/full gates and exact-main green CI. Existing review gates and the
 coordinator's exclusive push slot remain unchanged.
+
+The coordinator reproduced the transferred candidate and applied one review correction: clicking a
+media row no longer holds temporary peek open after pointer exit. Keyboard focus still holds it;
+mouse-focused rows return focus to Media before closing. Both independent Sol and existing Fable
+return LAND for corrected tree `e5119412a525e69cd99657bf670a0c99f1ff110a`. Fresh strict checks,
+shrink-only Fallow against `9733390`, 132 units, seven helper tests, all 77 browser cases and the
+isolated five-repeat performance gate (20 cases) pass. The click/leave regression failed before the
+correction and passes afterward. Public demo captures and the corrected real-pointer recording were
+inspected. No performance threshold, baseline or private-media processing changed. The coordinator
+retains the sole push slot and shared paths pending exact-main CI; UI-5 remains held.
 
 ### Media-pool views and source scrubbing
 

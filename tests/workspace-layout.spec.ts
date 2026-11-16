@@ -1,5 +1,13 @@
 import { expect, test } from '@playwright/test';
 
+test.use({
+  launchOptions: {
+    args: [
+      '--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4',
+    ],
+  },
+});
+
 test('media pool pane toggles without resetting selection, zoom or playback', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
@@ -14,6 +22,11 @@ test('media pool pane toggles without resetting selection, zoom or playback', as
   await page.getByRole('slider', { name: 'Timeline playhead' }).fill('60');
   await toggle.focus();
   await page.keyboard.press('Space');
+  await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByTestId('transport-state')).toHaveText('Playing · 1×');
+  await page.keyboard.press('Space');
+  await expect(page.getByTestId('transport-state')).toHaveText('Paused');
+  await page.keyboard.press('Enter');
   const show = page.getByRole('button', { name: 'Show media pool pane' });
   await expect(show).toBeFocused();
   await expect(show).toHaveAttribute('aria-expanded', 'false');
@@ -21,9 +34,10 @@ test('media pool pane toggles without resetting selection, zoom or playback', as
   expect((await editingArea.boundingBox())!.width).toBeGreaterThan(original.width);
   await expect(clip).toHaveAttribute('aria-pressed', 'true');
   await expect(scale).toHaveValue(chosen);
-  await expect(page.getByRole('slider', { name: 'Timeline playhead' })).toHaveValue('60');
   await expect(page.getByTestId('transport-state')).toHaveText('Paused');
-  await page.getByRole('button', { name: 'Play composition', exact: true }).click();
+  await page.keyboard.press('Space');
+  await expect(show).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByTestId('transport-state')).toHaveText('Playing · 1×');
   await show.click();
   await expect(toggle).toHaveAttribute('aria-expanded', 'true');
   await expect(page.getByTestId('transport-state')).toHaveText('Playing · 1×');
@@ -31,6 +45,154 @@ test('media pool pane toggles without resetting selection, zoom or playback', as
     .poll(() => page.getByRole('slider', { name: 'Timeline playhead' }).inputValue())
     .not.toBe('60');
   await page.getByRole('button', { name: 'Pause playback', exact: true }).click();
+});
+
+test.describe('media edge preview', () => {
+  test('previews over the workspace, retreats on leave and pins only on activation', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+    expect(
+      await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches),
+    ).toBe(true);
+    const toggle = page.locator('[aria-controls="media-drawer"]');
+    const drawer = page.locator('#media-drawer');
+    await toggle.click();
+    await page.locator('.app-header').click({ position: { x: 4, y: 4 } });
+    await page.waitForTimeout(350);
+    await expect(page.getByText('Project media', { exact: true })).toBeHidden();
+    const edit = (await page.locator('.editing-area').boundingBox())!;
+    const timeline = (await page.getByRole('region', { name: 'Main sequence' }).boundingBox())!;
+    const workspace = (await page.locator('.workspace').boundingBox())!;
+    await page.mouse.move(workspace.x + 2, workspace.y + 40);
+    await expect(page.getByText('Project media', { exact: true })).toBeVisible();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect((await page.locator('.editing-area').boundingBox())!).toEqual(edit);
+    expect((await page.getByRole('region', { name: 'Main sequence' }).boundingBox())!).toEqual(
+      timeline,
+    );
+    const row = page.getByRole('button', { name: 'Select Flower study' });
+    await row.click();
+    await expect(row).toHaveAttribute('aria-pressed', 'true');
+    await page.mouse.move(700, 80);
+    await expect(page.getByText('Project media', { exact: true })).toBeHidden();
+    await expect(toggle).toBeFocused();
+    await toggle.hover();
+    await expect(page.getByText('Project media', { exact: true })).toBeVisible();
+    await row.hover();
+    await page.mouse.move(700, 80);
+    await page.waitForTimeout(100);
+    await drawer.hover();
+    await expect(page.getByText('Project media', { exact: true })).toBeVisible();
+    await page.mouse.move(700, 80);
+    await expect(page.getByText('Project media', { exact: true })).toBeHidden();
+    await toggle.hover();
+    await expect(page.getByText('Project media', { exact: true })).toBeVisible();
+    await toggle.click();
+    await page.mouse.move(700, 80);
+    await page.waitForTimeout(600);
+    await expect(page.getByText('Project media', { exact: true })).toBeVisible();
+    await toggle.click();
+    await page.waitForTimeout(350);
+    await expect(page.getByText('Project media', { exact: true })).toBeHidden();
+  });
+
+  test('holds keyboard focus, returns it on Escape and removes closed rows from Tab order', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+    const toggle = page.locator('[aria-controls="media-drawer"]');
+    await toggle.click();
+    await page.mouse.move(700, 80);
+    await toggle.hover();
+    const row = page.getByRole('button', { name: 'Select Flower study' });
+    await expect(row).toBeVisible();
+    await row.focus();
+    await page.keyboard.press('Tab');
+    await page.keyboard.press('Shift+Tab');
+    await expect(row).toBeFocused();
+    await page.mouse.move(700, 80);
+    await page.waitForTimeout(600);
+    await expect(row).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(toggle).toBeFocused();
+    await expect(row).toBeHidden();
+    for (let tab = 0; tab < 20; tab++) {
+      await page.keyboard.press('Tab');
+      expect(
+        await page.locator('#media-drawer').evaluate((el) => el.contains(document.activeElement)),
+      ).toBe(false);
+    }
+    await toggle.focus();
+    await page.keyboard.press('Enter');
+    await expect(row).toBeVisible();
+    await expect(toggle).toBeFocused();
+    await page.keyboard.press('Escape');
+    await expect(row).toBeVisible();
+  });
+
+  test('keeps narrow previews within the viewport and reduced motion still', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/');
+    await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+    const toggle = page.locator('[aria-controls="media-drawer"]');
+    await toggle.click();
+    for (const width of [960, 617, 390, 320]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.mouse.move(width - 10, 80);
+      await toggle.hover();
+      await expect(page.getByText('Project media', { exact: true })).toBeVisible();
+      const drawer = (await page.locator('#media-drawer').boundingBox())!;
+      expect(drawer.x).toBeGreaterThanOrEqual(0);
+      expect(drawer.x + drawer.width).toBeLessThanOrEqual(width);
+      if (width <= 620) {
+        const title = (await page.locator('#media-drawer .section-title').boundingBox())!;
+        const list = (await page.locator('#media-drawer .asset-list').boundingBox())!;
+        expect(list.y - (title.y + title.height)).toBeLessThan(16);
+        await page.getByRole('button', { name: 'Select Ambient bed' }).scrollIntoViewIfNeeded();
+        await expect(page.getByRole('button', { name: 'Select Ambient bed' })).toBeInViewport();
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        width,
+      );
+      expect(
+        await page
+          .locator('#media-drawer')
+          .evaluate((el) => el.getAnimations({ subtree: true }).length),
+      ).toBe(0);
+      await page.keyboard.press('Escape');
+      await expect(page.getByText('Project media', { exact: true })).toBeHidden();
+    }
+  });
+});
+
+test('touch uses the persistent Media toggle without a hover preview', async ({
+  browser,
+  baseURL,
+}) => {
+  const context = await browser.newContext({
+    baseURL,
+    hasTouch: true,
+    viewport: { width: 390, height: 844 },
+  });
+  try {
+    const page = await context.newPage();
+    await page.goto('/');
+    await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+    expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
+    const toggle = page.locator('[aria-controls="media-drawer"]');
+    await toggle.tap();
+    await page.mouse.move(380, 80);
+    await toggle.hover();
+    await page.waitForTimeout(350);
+    await expect(page.getByText('Project media', { exact: true })).toBeHidden();
+    await toggle.tap();
+    await expect(page.getByText('Project media', { exact: true })).toBeVisible();
+  } finally {
+    await context.close();
+  }
 });
 
 test('long sequences scroll in both axes with every video and audio lane reachable', async ({

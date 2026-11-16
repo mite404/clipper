@@ -59,6 +59,7 @@ import { CursorControls } from './CursorControls';
 import { ZoomMotionControls } from './ZoomMotionControls';
 import { resolveZooms } from './zoom-generation';
 import { maskRect, STAGE, type Layout } from './stage';
+import { useMediaDrawer } from './useMediaDrawer';
 import './styles.css';
 
 export const INITIAL_EDIT: Edit = {
@@ -531,10 +532,16 @@ export function App() {
   const [muted, setMuted] = useState<Track[]>([]);
   const [message, setMessage] = useState('Ready for your next story.');
   const [help, setHelp] = useState(false);
-  const [mediaOpen, setMediaOpen] = useState(true);
   const [markingZoomId, setMarkingZoomId] = useState<string | null>(null);
   const [exportWidth, setExportWidth] = useState<1920 | 3840>(1920);
   const [exportProgress, setExportProgress] = useState<number | null>(null);
+  const {
+    mode: mediaMode,
+    instant: mediaInstant,
+    panel: mediaPanel,
+    toggle: mediaToggle,
+    onToggle: toggleMedia,
+  } = useMediaDrawer(busy || help || exportProgress !== null);
   const [copying, setCopying] = useState(false);
   const exportAbort = useRef<AbortController | null>(null);
   const helpDialog = useRef<HTMLDialogElement>(null);
@@ -1063,6 +1070,20 @@ export function App() {
     <main className="editor">
       <header className="app-header">
         <button
+          ref={mediaToggle}
+          className="text-button media-toggle"
+          aria-label={mediaMode === 'pinned' ? 'Hide media pool pane' : 'Show media pool pane'}
+          aria-expanded={mediaMode !== 'closed'}
+          aria-controls="media-drawer"
+          onClick={toggleMedia}
+          onKeyDown={(event) => {
+            if (event.key === ' ') event.preventDefault();
+          }}
+        >
+          {mediaMode === 'pinned' ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
+          Media
+        </button>
+        <button
           className="save-button"
           onClick={() => void saveProject()}
           disabled={busy || exportProgress !== null}
@@ -1121,19 +1142,6 @@ export function App() {
           <span className="workspace-dot" /> EDIT WORKSPACE
         </span>
         <button
-          className="text-button media-toggle"
-          aria-label={mediaOpen ? 'Hide media pool pane' : 'Show media pool pane'}
-          aria-expanded={mediaOpen}
-          aria-controls="media-drawer"
-          onClick={() => setMediaOpen((open) => !open)}
-          onKeyDown={(event) => {
-            if (event.key === ' ' || event.key === 'Enter') event.stopPropagation();
-          }}
-        >
-          {mediaOpen ? <PanelLeftClose size={15} /> : <PanelLeftOpen size={15} />}
-          Media
-        </button>
-        <button
           className="text-button"
           onClick={() => {
             setSpeed(0);
@@ -1153,10 +1161,19 @@ export function App() {
         </div>
       )}
       <div
-        className={`workspace${mediaOpen ? '' : ' media-hidden'}`}
+        className={`workspace${mediaMode === 'pinned' ? '' : ' media-hidden'}`}
         inert={exportProgress !== null || busy}
       >
-        <div id="media-drawer" className="media-drawer" hidden={!mediaOpen}>
+        <div className="media-hot-zone" aria-hidden="true" />
+        <div
+          ref={mediaPanel}
+          id="media-drawer"
+          className="media-drawer"
+          data-mode={mediaMode}
+          data-instant={mediaInstant || undefined}
+          inert={mediaMode === 'closed'}
+          aria-hidden={mediaMode === 'closed'}
+        >
           {libraryView}
         </div>
         <section className="editing-area">
