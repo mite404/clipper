@@ -37,6 +37,7 @@ function CursorRecord({ preview = false }: { preview?: boolean }) {
         ? '录屏_👩🏽‍💻_Developer_Relations_Platform_Walkthrough_Review_v12_screen_recording_final.mp4'
         : 'Synthetic recording.mp4',
     url: '/media/landscape.mp4',
+    size: 0,
     peaks: [],
     thumbnail: '',
     hasAudio: false,

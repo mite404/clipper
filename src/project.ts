@@ -1,5 +1,5 @@
 import type { Layout } from './stage';
-import type { Asset } from './media';
+import { openMedia, type Asset } from './media';
 import { FPS, ZOOM_LIMITS, zoomsOverlap, type Clip, type Track, type Zoom } from './timeline-model';
 import { parseCursorTrack, type CursorTrack } from './cursor';
 
@@ -215,41 +215,96 @@ export function validateSources(edit: Edit, assets: Asset[]): void {
   }
 }
 
-/** Embed local source bytes, never object URLs or browser-specific decoded metadata. */
-export async function serializeProject(edit: Edit, assets: Asset[], muted: Track[]): Promise<Blob> {
+// Source bytes one project file can embed. V8 refuses strings past 536,870,888 characters, and Save
+// and Open each hold the whole file as one string; 375 MB is 500 million characters of base64.
+// ponytail: the 36 million characters left for the edit and cursor sidecars are not measured.
+// REF-22's container removes the ceiling.
+const MAX_MEDIA_BYTES = 375_000_000;
+const megabytes = (bytes: number) => `${Math.ceil(bytes / 1e6)} MB`;
+const totalSize = (assets: Pick<Asset, 'size'>[]) =>
+  assets.reduce((sum, asset) => sum + asset.size, 0);
+
+/** What to tell the user once library media no longer fits one project file, else null. */
+export function librarySizeWarning(assets: Pick<Asset, 'size'>[]): string | null {
+  const total = totalSize(assets); // → bytes
+  return total > MAX_MEDIA_BYTES
+    ? `Library media totals ${megabytes(total)} and a project file holds ${megabytes(MAX_MEDIA_BYTES)}. ` +
+        'Save leaves out unused media first, and refuses if the timeline needs more.'
+    : null;
+}
+
+// Blob → base64 data URL, built in chunks so no call spreads more than 32768 arguments.
+async function dataUrl(blob: Blob): Promise<string> {
+  const bytes = new Uint8Array(await blob.arrayBuffer());
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 32768)
+    binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
+  const mime = /^(?:video|audio)\/[a-z0-9.+-]+$/.test(blob.type)
+    ? blob.type
+    : 'application/octet-stream';
+  return `data:${mime};base64,${btoa(binary)}`;
+}
+
+// Asset → its bytes as a data URL, or null when media no clip uses cannot be read.
+async function embed(asset: Asset, required: boolean): Promise<string | null> {
+  try {
+    return await dataUrl(await (await openMedia(asset)).blob());
+  } catch (error) {
+    if (required) throw error;
+    return null;
+  }
+}
+
+// Bytes a file has left once the media its clips use is counted. Throws before anything is read.
+function spareBytes(assets: Asset[], usedIds: Set<string>): number {
+  const usedBytes = totalSize(assets.filter((asset) => usedIds.has(asset.id)));
+  if (usedBytes > MAX_MEDIA_BYTES)
+    throw new Error(
+      `Clips on the timeline use ${megabytes(usedBytes)} of media and a project file holds ` +
+        `${megabytes(MAX_MEDIA_BYTES)}. Remove clips of the largest source, or export the video.`,
+    );
+  return MAX_MEDIA_BYTES - usedBytes;
+}
+
+/**
+ * Embed local source bytes, never object URLs or browser-specific decoded metadata.
+ * Media no clip uses is embedded too while it fits and can be read; the rest is named in `omitted`.
+ * @throws When the edit is invalid, when the media its clips use exceeds what one file can hold
+ * (before any media is read), or when such media can no longer be read.
+ */
+export async function serializeProject(
+  edit: Edit,
+  assets: Asset[],
+  muted: Track[],
+): Promise<{ file: Blob; omitted: string[] }> {
   const snapshot = structuredClone(edit);
   const mutedSnapshot = [...muted];
   validateSources(snapshot, assets);
+  const usedIds = new Set(snapshot.clips.map((clip) => clip.assetId));
+  let spare = spareBytes(assets, usedIds); // bytes left for media no clip uses
   const media: ReturnType<typeof parseProject>['media'] = [];
+  const omitted: string[] = [];
   for (const asset of assets) {
     if (!asset.url.startsWith('blob:'))
       throw new Error(`Media ${asset.name} must have a local blob URL.`);
-    let blob: Blob;
-    try {
-      const response = await fetch(asset.url);
-      if (!response.ok) throw new Error('Could not fetch local media');
-      blob = await response.blob();
-    } catch {
-      throw new Error(`Could not read local media ${asset.name}. Import it again before saving.`);
+    const used = usedIds.has(asset.id);
+    const data = used || asset.size <= spare ? await embed(asset, used) : null; // → data URL | null
+    if (data === null) {
+      omitted.push(asset.name);
+      continue;
     }
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    let binary = '';
-    for (let i = 0; i < bytes.length; i += 32768)
-      binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
-    const mime = /^(?:video|audio)\/[a-z0-9.+-]+$/.test(blob.type)
-      ? blob.type
-      : 'application/octet-stream';
+    if (!used) spare -= asset.size;
     media.push({
       id: asset.id,
       name: asset.name,
-      data: `data:${mime};base64,${btoa(binary)}`,
+      data,
       ...(asset.cursor ? { cursor: asset.cursor } : {}),
     });
   }
   const parsed = parseProject(
     JSON.stringify({ version: 2, fps: FPS, ...snapshot, media, muted: mutedSnapshot }),
   );
-  return new Blob(
+  const file = new Blob(
     [
       JSON.stringify({
         version: 2,
@@ -261,4 +316,5 @@ export async function serializeProject(edit: Edit, assets: Asset[], muted: Track
     ],
     { type: 'application/json' },
   );
+  return { file, omitted };
 }

@@ -7,6 +7,8 @@ export type Asset = {
   name: string;
   kind: 'video' | 'audio';
   url: string;
+  // Source bytes, so Save can refuse or leave out media before reading any of it.
+  size: number;
   duration: number;
   width: number;
   height: number;
@@ -71,6 +73,7 @@ export async function readMedia(
       name,
       kind: video ? 'video' : 'audio',
       url: URL.createObjectURL(file),
+      size: file.size,
       duration: Math.max(1, Math.floor(durationSeconds * FPS)),
       width: video ? await video.getDisplayWidth() : 0,
       height: video ? await video.getDisplayHeight() : 0,
@@ -82,6 +85,44 @@ export async function readMedia(
   } finally {
     input.dispose();
   }
+}
+
+/**
+ * Open the bytes behind a local asset.
+ * @throws When the browser can no longer read them: a picked file changed on disk or was removed.
+ * An abort through `signal` rethrows the abort itself.
+ */
+export async function openMedia(
+  asset: Pick<Asset, 'name' | 'url'>,
+  signal?: AbortSignal,
+): Promise<Response> {
+  try {
+    const response = await fetch(asset.url, { signal });
+    if (!response.ok) throw new Error('Could not fetch local media');
+    return response;
+  } catch (error) {
+    if (signal?.aborted) throw error;
+    throw new Error(
+      `Could not read local media ${asset.name}. Import it again: the file changed on disk.`,
+    );
+  }
+}
+
+/** The library asset a newly picked file repairs: same name, and its bytes can no longer be read. */
+export async function unreadableNamesake(
+  assets: Asset[],
+  name: string,
+): Promise<Asset | undefined> {
+  for (const asset of assets) {
+    if (asset.name !== name) continue;
+    // Chromium fails the request itself, so nothing is read from a healthy file.
+    const readable = await openMedia(asset).then(
+      (response) => (void response.body?.cancel(), true),
+      () => false,
+    ); // → boolean
+    if (!readable) return asset;
+  }
+  return undefined;
 }
 
 /** Load the attributed, same-origin demo files through the same processing path as user imports. */

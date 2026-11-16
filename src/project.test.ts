@@ -1,6 +1,12 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Asset } from './media';
-import { parseProject, serializeProject, validateSources, type Edit } from './project';
+import {
+  librarySizeWarning,
+  parseProject,
+  serializeProject,
+  validateSources,
+  type Edit,
+} from './project';
 import { cursorFixture } from './cursor.fixture';
 import type { CursorTrack } from './cursor';
 
@@ -27,7 +33,7 @@ describe('portable project parsing', () => {
       for (const follow of ['focused', 'smooth'] as const) {
         for (const instant of [true, false]) {
           const next: Edit = { ...edit, zooms: [{ ...edit.zooms[0], follow, instant }] };
-          const saved = await serializeProject(next, [{ ...asset, url }], []);
+          const saved = (await serializeProject(next, [{ ...asset, url }], [])).file;
           expect(JSON.parse(await saved.text()).version).toBe(2);
           expect(parseProject(await saved.text()).edit).toEqual(next);
         }
@@ -68,7 +74,7 @@ describe('portable project parsing', () => {
       ],
     };
     try {
-      const saved = await serializeProject(anchored, [{ ...asset, url }], []);
+      const saved = (await serializeProject(anchored, [{ ...asset, url }], [])).file;
       expect(parseProject(await saved.text()).edit).toEqual(anchored);
       for (const source of [
         { ...anchored.zooms[0].source, x: -0.01 },
@@ -99,7 +105,7 @@ describe('portable project parsing', () => {
       settings: { mode: 'raw', size: 2.5, hidden: true },
     };
     try {
-      const saved = await serializeProject(edit, [{ ...asset, url, cursor }], []);
+      const saved = (await serializeProject(edit, [{ ...asset, url, cursor }], [])).file;
       expect(JSON.parse(await saved.text()).media[0].cursor).toEqual(cursor);
       expect(parseProject(await saved.text()).media[0]).toEqual({ ...media[0], cursor });
     } finally {
@@ -322,6 +328,7 @@ const asset: Asset = {
   name: 'recording.mp4',
   kind: 'video',
   url: '',
+  size: 4,
   duration: 45,
   width: 1280,
   height: 720,
@@ -359,7 +366,7 @@ describe('portable project serialization', () => {
     );
     let saved: Blob;
     try {
-      saved = await serializeProject(edit, [{ ...asset, url }], ['music']);
+      saved = (await serializeProject(edit, [{ ...asset, url }], ['music'])).file;
     } finally {
       URL.revokeObjectURL(url);
     }
@@ -378,7 +385,7 @@ describe('portable project serialization', () => {
     const url = URL.createObjectURL(new Blob([bytes]));
     try {
       const empty: Edit = { ...edit, clips: [], zooms: [] };
-      const saved = await serializeProject(empty, [{ ...asset, url }], []);
+      const saved = (await serializeProject(empty, [{ ...asset, url }], [])).file;
       const reopened = parseProject(await saved.text());
       expect(reopened.media).toHaveLength(1);
       const restored = await (await fetch(reopened.media[0].data)).arrayBuffer();
@@ -399,6 +406,65 @@ describe('portable project serialization', () => {
     URL.revokeObjectURL(url);
     await expect(serializeProject(edit, [{ ...asset, url }], [])).rejects.toThrow(
       /recording.mp4|media/i,
+    );
+  });
+
+  it('leaves out unused media it cannot read or fit, names it, and still saves the rest', async () => {
+    const url = URL.createObjectURL(new Blob([new Uint8Array([7, 8, 9])], { type: 'video/mp4' }));
+    const gone = URL.createObjectURL(new Blob(['bytes']));
+    URL.revokeObjectURL(gone);
+    const fetched = vi.spyOn(globalThis, 'fetch');
+    try {
+      const { file, omitted } = await serializeProject(
+        edit,
+        [
+          { ...asset, id: 'unread', name: 'unread.mp4', url: gone },
+          { ...asset, url },
+          // One byte more than is left once the used 4 bytes are counted.
+          { ...asset, id: 'huge', name: 'huge.mp4', url: 'blob:never-read', size: 374_999_997 },
+          { ...asset, id: 'spare', name: 'spare.mp4', url, size: 374_999_996 },
+          // Nothing is left after spare.mp4, not even one byte.
+          { ...asset, id: 'late', name: 'late.mp4', url, size: 1 },
+        ],
+        [],
+      );
+      expect(omitted).toEqual(['unread.mp4', 'huge.mp4', 'late.mp4']);
+      expect(parseProject(await file.text()).media.map((item) => item.id)).toEqual([
+        'video',
+        'spare',
+      ]);
+      expect(fetched.mock.calls.map(([target]) => target)).not.toContain('blob:never-read');
+    } finally {
+      fetched.mockRestore();
+      URL.revokeObjectURL(url);
+    }
+  });
+
+  it('refuses before reading anything when its clips need more than one file can hold', async () => {
+    const fetched = vi.spyOn(globalThis, 'fetch');
+    try {
+      const over = { ...asset, url: 'blob:never-read', size: 375_000_001 };
+      await expect(serializeProject(edit, [over], [])).rejects.toThrow(
+        'Clips on the timeline use 376 MB of media and a project file holds 375 MB.',
+      );
+      expect(fetched).not.toHaveBeenCalled();
+    } finally {
+      fetched.mockRestore();
+    }
+    // Exactly what a file holds is still saved.
+    const url = URL.createObjectURL(new Blob([new Uint8Array([1])], { type: 'video/mp4' }));
+    try {
+      const { omitted } = await serializeProject(edit, [{ ...asset, url, size: 375_000_000 }], []);
+      expect(omitted).toEqual([]);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+
+  it('warns about library size only past what one file can hold', () => {
+    expect(librarySizeWarning([{ size: 300_000_000 }, { size: 75_000_000 }])).toBeNull();
+    expect(librarySizeWarning([{ size: 300_000_000 }, { size: 75_000_001 }])).toContain(
+      'Library media totals 376 MB and a project file holds 375 MB.',
     );
   });
 });

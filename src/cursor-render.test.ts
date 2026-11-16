@@ -9,6 +9,7 @@ const asset: Asset = {
   name: 'Synthetic capture',
   kind: 'video',
   url: 'blob:synthetic',
+  size: 0,
   width: 1600,
   height: 1000,
   duration: 300,

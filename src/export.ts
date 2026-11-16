@@ -14,7 +14,7 @@ import {
   canEncodeVideo,
   type InputAudioTrack,
 } from 'mediabunny';
-import type { Asset } from './media';
+import { openMedia, type Asset } from './media';
 import { cameraTransform, coverRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
 import { FPS, covers, sourceFrame, type Clip, type Track, type Zoom } from './timeline-model';
 import { cursorDrawing, decodeCursorImages } from './cursor-render';
@@ -194,7 +194,7 @@ export async function renderVideo({
       if (!asset) throw new Error(`Missing media for clip ${clip.id}.`);
       if (!asset.url.startsWith('blob:'))
         throw new Error(`Re-import ${asset.name}: export requires local blob media.`);
-      const response = await fetch(asset.url, { signal });
+      const response = await openMedia(asset, signal);
       inputs.set(
         asset.id,
         new Input({ source: new BlobSource(await response.blob()), formats: ALL_FORMATS }),

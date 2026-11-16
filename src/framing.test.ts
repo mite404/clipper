@@ -11,6 +11,7 @@ const asset: Asset = {
   name: 'Synthetic',
   kind: 'video',
   url: '',
+  size: 0,
   width: 880,
   height: 700,
   duration: 300,

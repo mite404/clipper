@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { Composition } from './Composition';
 import { IconButton, MediaLibrary, Waveform, timecode } from './components';
-import { type Asset, loadDemo, readMedia } from './media';
+import { type Asset, loadDemo, readMedia, unreadableNamesake } from './media';
 import { Timeline, TRACKS } from './Timeline';
 import {
   FPS,
@@ -36,7 +36,13 @@ import {
   zoomsOverlap,
 } from './timeline-model';
 import { classifyChange, type Gesture } from './history';
-import { serializeProject, parseProject, validateSources, type Edit } from './project';
+import {
+  librarySizeWarning,
+  serializeProject,
+  parseProject,
+  validateSources,
+  type Edit,
+} from './project';
 import { CursorControls } from './CursorControls';
 import { AutoZoomControls } from './AutoZoomControls';
 import { ZoomMotionControls } from './ZoomMotionControls';
@@ -57,11 +63,38 @@ export const INITIAL_EDIT: Edit = {
 };
 
 // The status line for one import: the count of files read, then every failure by name.
-const importSummary = (count: number, failures: string[]) =>
+// A picked file once read: the asset to add, or to put in place of `replaces`.
+type Imported = { imported: Asset; replaces: Asset | null };
+
+const importSummary = (added: number, relinked: string[], notes: (string | null)[]) =>
   [
-    ...(count ? [`Imported ${count} local file${count === 1 ? '' : 's'}. Nothing uploaded.`] : []),
-    ...failures,
-  ].join(' ');
+    added ? `Imported ${added} local file${added === 1 ? '' : 's'}. Nothing uploaded.` : null,
+    relinked.length ? `Relinked ${relinked.join(', ')}: its clips use the new file.` : null,
+    ...notes,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+// (library, import) → the library with the import added, or swapped in for the asset it replaces
+const placeAsset = (library: Asset[], { imported, replaces }: Imported): Asset[] =>
+  replaces
+    ? library.map((item) => (item.id === replaces.id ? imported : item))
+    : [...library, imported];
+
+// A file named like a source that can no longer be read replaces it and keeps its id, so the clips
+// cut from it work again. It is refused when those clips would not fit the new file.
+async function importOne(file: File, library: Asset[], edit: Edit): Promise<Imported> {
+  const replaces = (await unreadableNamesake(library, file.name)) ?? null;
+  if (!replaces) return { imported: await readMedia(file, file.name), replaces };
+  const imported = await readMedia(file, file.name, replaces.id, replaces.cursor);
+  try {
+    validateSources(edit, placeAsset(library, { imported, replaces }));
+  } catch (error) {
+    URL.revokeObjectURL(imported.url);
+    throw error;
+  }
+  return { imported, replaces };
+}
 
 /** Source preview with explicit in/out points and track-targeted ripple insertion. */
 export function SourceMonitor({
@@ -529,9 +562,13 @@ export function App() {
       assetsRef.current.forEach((a) => URL.revokeObjectURL(a.url));
     };
   }, []);
+  // What an import started now works on, read when it runs: the memoized library holds one
+  // importFiles for many edits.
+  const editRef = useRef(edit);
   useEffect(() => {
     assetsRef.current = assets;
-  }, [assets]);
+    editRef.current = edit;
+  }, [assets, edit]);
 
   // The undo step still open: a drag or a held key folds into it instead of adding steps.
   const gesture = useRef<Gesture | null>(null);
@@ -703,22 +740,31 @@ export function App() {
   };
   const importFiles = async (files: FileList) => {
     setBusy(true);
-    let count = 0;
+    const results: Imported[] = [];
     const failures: string[] = [];
+    let library = assetsRef.current; // the library as it will be once the state updates below land
     for (const file of Array.from(files)) {
       try {
-        const imported = await readMedia(file, file.name);
-        setAssets((previous) => [...previous, imported]);
-        setSourceId(imported.id);
-        count++;
+        const result = await importOne(file, library, editRef.current);
+        library = placeAsset(library, result);
+        setAssets((previous) => placeAsset(previous, result));
+        setSourceId(result.imported.id);
+        results.push(result);
       } catch (error) {
         failures.push(
           `Could not import ${file.name}. ${error instanceof Error ? error.message : 'Unsupported file.'}`,
         );
       }
     }
+    const relinked = results.flatMap(({ replaces }) => (replaces ? [replaces] : [])); // → Asset[]
+    // The old URLs go once React has swapped the new assets in.
+    setTimeout(() => relinked.forEach((old) => URL.revokeObjectURL(old.url)), 0);
     // One message after the loop, so a success cannot overwrite the failures before them.
-    const summary = importSummary(count, failures);
+    const summary = importSummary(
+      results.length - relinked.length,
+      relinked.map((old) => old.name),
+      [...failures, librarySizeWarning(library)],
+    );
     if (summary) setMessage(summary);
     setBusy(false);
   };
@@ -755,14 +801,17 @@ export function App() {
     setBusy(true);
     setSpeed(0);
     try {
-      downloadBlob(
-        await serializeProject(edit, assets, muted),
-        'developer-walkthrough.clipper.json',
-      );
+      const { file, omitted } = await serializeProject(edit, assets, muted);
+      downloadBlob(file, 'developer-walkthrough.clipper.json');
       setSavedEdit(edit);
       // The next change starts a new step, so Undo can return to exactly what was saved.
       gesture.current = null;
-      setMessage('Portable project saved with source media included. No relinking needed.');
+      setMessage(
+        omitted.length
+          ? `Portable project saved. Left out unused media: ${omitted.join(', ')}. ` +
+              'It could not be read or did not fit in the file.'
+          : 'Portable project saved with source media included. No relinking needed.',
+      );
     } catch (error) {
       setMessage(
         `Could not save project. ${error instanceof Error ? error.message : 'Unknown error.'}`,

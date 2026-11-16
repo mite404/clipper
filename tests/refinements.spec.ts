@@ -1,6 +1,8 @@
 import { test, expect } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
+import { copyFile, mkdtemp, readFile, truncate, utimes, writeFile } from 'node:fs/promises';
 import { execFileSync } from 'node:child_process';
+import os from 'node:os';
+import path from 'node:path';
 
 test('keeps project delivery controls readable at desktop and narrow widths', async ({ page }) => {
   await page.goto('/');
@@ -310,3 +312,125 @@ for (const width of [1920, 3840]) {
     expect(writes).toEqual([]);
   });
 }
+
+// The saved project's media names and the media ids its clips use.
+async function savedMedia(file: string) {
+  const project = JSON.parse(await readFile(file, 'utf8')) as {
+    clips: { assetId: string }[];
+    media: { id: string; name: string }[];
+  };
+  const used = new Set(project.clips.map((clip) => clip.assetId));
+  return {
+    names: project.media.map((media) => media.name),
+    used: project.media.filter((media) => used.has(media.id)).map((media) => media.name),
+  };
+}
+
+test('saves around media that changed on disk, and a re-import repairs media in use', async ({
+  page,
+}) => {
+  const status = page.locator('.app-footer [role="status"]');
+  const save = page.getByRole('button', { name: 'Save project', exact: true });
+  const importMedia = page.getByLabel('Import local media');
+  let downloads = 0;
+  page.on('download', () => downloads++);
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'clipper-media-'));
+  const take = path.join(dir, 'take.mp4');
+  const spare = path.join(dir, 'spare.mp4');
+  await copyFile('public/media/landscape.mp4', take);
+  await copyFile('public/media/portrait.mp4', spare);
+  // spare.mp4 first, so a repair that ignored the name would pick it.
+  await importMedia.setInputFiles([spare, take]);
+  await expect(page.getByTestId('media-status')).toHaveText('6 assets ready', { timeout: 30000 });
+  await page.getByRole('button', { name: 'Select take.mp4' }).click();
+  await page.getByRole('button', { name: 'Insert source at playhead' }).click();
+  await expect(page.getByTestId('track-screen').getByRole('button')).toHaveCount(3);
+
+  // Chromium refuses to read a picked file once its modification time differs.
+  const later = new Date(Date.now() + 60_000);
+  await utimes(take, later, later);
+  await utimes(spare, later, later);
+
+  await save.click();
+  await expect(status).toContainText('Could not read local media take.mp4. Import it again');
+  await page.getByRole('button', { name: 'Export video', exact: true }).click();
+  await expect(status).toContainText(
+    'Export failed. Video export failed: Could not read local media take.mp4. Import it again',
+  );
+  expect(downloads).toBe(0);
+
+  // A same-named file that cannot stand in for the old one is refused, not swapped in: this one
+  // has no picture, and the clip cut from take.mp4 sits on the screen track.
+  await copyFile('public/media/voice.wav', take);
+  await importMedia.setInputFiles(take);
+  await expect(status).toContainText('Could not import take.mp4. Clip');
+  await expect(page.getByTestId('media-status')).toHaveText('6 assets ready');
+
+  // The same name repairs the broken source in place: its clip keeps working, nothing is added.
+  await copyFile('public/media/landscape.mp4', take);
+  await importMedia.setInputFiles(take);
+  await expect(status).toContainText('Relinked take.mp4');
+  await expect(page.getByTestId('media-status')).toHaveText('6 assets ready');
+  await expect(page.getByTestId('track-screen').getByRole('button')).toHaveCount(3);
+
+  const downloaded = page.waitForEvent('download');
+  await save.click();
+  const saved = await savedMedia((await (await downloaded).path())!);
+  // spare.mp4 is unreadable too, but no clip uses it, so it is left out and named.
+  await expect(status).toContainText('Left out unused media: spare.mp4');
+  expect(saved.names).toHaveLength(5);
+  expect(saved.names).not.toContain('spare.mp4');
+  expect(saved.used).toContain('take.mp4');
+
+  // take.mp4 reads fine now, so the same name again is an ordinary import, not a repair.
+  await importMedia.setInputFiles(take);
+  await expect(page.getByTestId('media-status')).toHaveText('7 assets ready', { timeout: 30000 });
+  await expect(status).toContainText('Imported 1 local file');
+});
+
+test('never reads media a project file cannot hold', async ({ page }) => {
+  const status = page.locator('.app-footer [role="status"]');
+  const save = page.getByRole('button', { name: 'Save project', exact: true });
+  let downloads = 0;
+  page.on('download', () => downloads++);
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+
+  // A real 14 s video followed by a 400 MB `free` box, which a sparse file stores in no space:
+  // 1,033,661 + 8 + 400,000,000 bytes. With the 4,083,187 bytes of demo media the timeline already
+  // uses, that is 405,116,856 bytes, shown rounded up as 406 MB.
+  const big = path.join(await mkdtemp(path.join(os.tmpdir(), 'clipper-media-')), 'big.mp4');
+  const video = await readFile('public/media/landscape.mp4');
+  const padding = 400_000_000;
+  const box = Buffer.alloc(8);
+  box.writeUInt32BE(padding, 0);
+  box.write('free', 4, 'latin1');
+  await writeFile(big, Buffer.concat([video, box]));
+  await truncate(big, video.length + padding);
+
+  await page.getByLabel('Import local media').setInputFiles(big);
+  await expect(page.getByTestId('media-status')).toHaveText('5 assets ready', { timeout: 30000 });
+  await expect(status).toContainText('Library media totals 406 MB and a project file holds 375 MB');
+
+  // Unused: Save leaves it out and says so.
+  const downloaded = page.waitForEvent('download');
+  await save.click();
+  const saved = await savedMedia((await (await downloaded).path())!);
+  await expect(status).toContainText('Left out unused media: big.mp4');
+  expect(saved.names).toHaveLength(4);
+
+  // On the timeline: Save refuses at once, having read none of the 400 MB.
+  await page.getByRole('button', { name: 'Select big.mp4' }).click();
+  await page.getByRole('button', { name: 'Insert source at playhead' }).click();
+  await expect(page.getByTestId('track-screen').getByRole('button')).toHaveCount(3);
+  await save.click();
+  await expect(status).toContainText(
+    'Could not save project. Clips on the timeline use 406 MB of media',
+    { timeout: 2000 },
+  );
+  await expect(status).toContainText('a project file holds 375 MB');
+  expect(downloads).toBe(1);
+});
