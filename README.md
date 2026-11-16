@@ -41,6 +41,7 @@ npm run format:check
 npm run lint
 npm run lint:typed
 npm run typecheck
+npm run typecheck:tsc
 npm run check:code
 npm test
 npm run build
@@ -48,9 +49,21 @@ npm run build-storybook
 CHROME_PATH=/path/to/chrome npm run test:ui
 ```
 
+`npm run typecheck` uses Oxlint's experimental compiler diagnostics through `oxlint-tsgolint`. CI
+also runs `typecheck:tsc` to retain the standalone TypeScript compiler gate. `npm run format` writes
+Oxfmt formatting across the whole repository by default. `npm run format -- path/to/file` limits
+rewriting to selected files. `npm run format:check` checks every Oxfmt-supported file Git does not
+ignore, subject to Oxfmt's ignore rules, without rewriting files. Passing a path with
+`npm run format:check -- path/to/file` does not scope Oxfmt. Oxfmt ignores the generated Fallow
+health baseline so formatting does not rewrite or reject Fallow's output. Because Oxfmt skips lock
+files, a read-only Node check retains the npm lock's generated two-space JSON layout and final
+newline. That check does not enforce property ordering or dependency validity.
+
 Node and npm versions are pinned in `.node-version` and `package.json`. Lefthook checks staged
 JavaScript/TypeScript without modifying or restaging files, then runs whole-project dead-code and
-TypeScript checks. GitHub CI runs on pushes to `main`, using the locked dependencies and Chromium
+type-aware Oxlint lint plus experimental Oxc compiler diagnostics. The build uses the same Oxc
+checks before Vite; neither it nor the hook runs standalone `tsc`. CI additionally runs
+`typecheck:tsc`. GitHub CI runs on pushes to `main`, using the locked dependencies and Chromium
 installed by Playwright. It builds both previews and runs all browser tests, including real HD/4K
 export inspection with FFmpeg. CI does not need Amp, personal credentials, or global node tools.
 

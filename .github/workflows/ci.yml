@@ -29,6 +29,8 @@ jobs:
       - run: npm run lint
       - run: npm run lint:typed
       - run: npm run typecheck
+      - name: Check standalone TypeScript diagnostics
+        run: npm run typecheck:tsc
       - name: Check ticket identity and review coverage
         run: node scripts/check-tickets.mjs
       # './Timeline' and './timeline' are one file on a case-insensitive disk (macOS, Windows), where
@@ -41,6 +43,7 @@ jobs:
       # would let a hotspot and its re-saved baseline through in any commit but the last. No run
       # is cancelled by a later push either: that push would compare against the unchecked one.
       - name: Check code health against the commit before this push
+        if: ${{ !cancelled() }}
         env:
           BASELINE_BASE: ${{ github.event_name == 'push' && github.event.before || 'HEAD^' }}
         run: npm run check:code -- --fail-on-baseline-growth --baseline-base "$BASELINE_BASE"

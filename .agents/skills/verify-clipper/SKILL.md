@@ -53,8 +53,9 @@ binary; it is not required with Playwright Chromium installed.
 
 Three places run mechanical checks. Verify the actual GitHub run before claiming remote CI passed.
 
-Pre-commit (Lefthook, nothing on push): staged-file `oxlint --deny-warnings`,
-`npm run check:deadcode` and `npm run typecheck`. Nothing formats or tests at commit time.
+Pre-commit (Lefthook, nothing on push): staged-file `oxlint --deny-warnings`, whole-project
+`npm run check:deadcode` and `npm run typecheck`. The latter runs type-aware Oxlint lint and
+experimental Oxc compiler diagnostics. Nothing formats or tests at commit time.
 
 GitHub CI (`.github/workflows/ci.yml`) runs on pushes to `main` and manual dispatch, not on pull
 requests. In order:
@@ -64,6 +65,7 @@ npm run format:check
 npm run lint
 npm run lint:typed
 npm run typecheck
+npm run typecheck:tsc
 node scripts/check-tickets.mjs
 npm run check:code -- --fail-on-baseline-growth --baseline-base "<commit main held before the push>"
 npm test
@@ -85,10 +87,11 @@ node --test .agents/skills/verify-clipper/scripts/verify.test.mjs
 ```
 
 The helper's Node tests guard the CLI and the production/dev project split. They do not run in CI.
-Prettier covers the project skill and feature map; the staged JavaScript lint hook also covers the
+Oxfmt covers the project skill and feature map; the staged JavaScript lint hook also covers the
 helpers. `npm run test:ui` outside CI expects servers already running, so use `verify.mjs`.
 
-`build` runs strict TypeScript then Vite. Unit tests prove frame splits, ripple isolation, and zoom
+`build` runs the same Oxc checks as the hook, then Vite. Neither invokes standalone `tsc`; CI
+additionally runs `typecheck:tsc`. Unit tests prove frame splits, ripple isolation, and zoom
 envelopes. They do not prove codecs, playback, DOM layout, import privacy, or audio synchronization.
 Vite currently reports a large-bundle advisory; that is not a failed build or a performance proof.
 

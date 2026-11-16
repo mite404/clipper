@@ -65,7 +65,15 @@ push authority. No generic component, stylesheet, package, persistence or cursor
 The exception ended with CLIP-25's green delivery at `6fa99af`; its paths are released. Cursor
 speed-style, REF-18, and REF-14 path reservations are also released after their green deliveries.
 UI-1 delivered at `b9596c6` with green exact-SHA CI and released its reservation and push slot.
-REF-20 is assigned to Sol medium in
+UI-1's test-only CI repair is pushed at
+[`3b90f11`](https://github.com/mite404/clipper/commit/3b90f11297fce9c799b02233d457a9f3b2afbe49).
+Both failed `4f2ce3a` CI traces and a controlled font replay show late font loading moves the button
+outside the stationary pointer and cancels hover. The test now waits for font readiness; no
+component, CSS, story, assertion, timeout or retry changed. Coordinator strict gates, 135 units and
+isolated full 55/55 pass. Exact-main
+[CI 43835506294](https://github.com/mite404/clipper/actions/runs/43835506294) passed. The
+coordinator retains the serialized main slot for VERIFY-5 integration. No third old-SHA rerun was
+issued. REF-20 is assigned to Sol medium in
 [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59). It owns App's
 rewind/readout listener and export-progress hunks, focused editor/performance tests, and its brief.
 The CLIP-25 copy action and render seam remain outside REF-20's reservation.
@@ -454,6 +462,15 @@ focused workspace-layout browser spec, existing or disjoint stories, worst-case 
 inspected pointer/keyboard captures. Full strict/browser/performance gates and exact-SHA CI remain
 required.
 
+UI-2's unpushed checkpoint is `5119fbd` on delivered UI-1 base `b9596c6`. It includes the owner's
+clip-region bleed correction and a dev-only Demo/Worst/Empty/One/1,000-clip timeline stress story.
+The coordinator preserved all five changed files through `download_thread_changes` and inspected the
+synthetic before/after captures. The worker reports a red/green gutter hit-test, all 15
+dataset/width combinations, 16 focused browser checks and 135 units passing. These are preliminary
+checks, not final combined acceptance. See the
+[stress evidence](https://ampcode.com/artifacts/timeline-clip-region-stress-fc0f5a96-848e-47ff-9a37-179ab2f8a11d).
+The inspector candidate remains unintegrated; no accepted successor is available to UI-2 yet.
+
 The owner additionally requires both timeline-scale bounds to adapt proportionately to total
 sequence duration and actual available timeline width. Grant Timeline scale state/bounds and
 workspace-layout tests only. Retain a chosen scale while valid, clamp only outside new bounds, and
@@ -475,7 +492,7 @@ queue thread unless stated.
 | ---------------------------------------------- | ----------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | <a id="ref-14"></a>[REF-14](tickets/REF-14.md) | One constant each for music gain and peak rate; blob-URL test asserts no fetch      | Small  | Delivered at [afe4c60](https://github.com/mite404/clipper/commit/afe4c605f551c979083297b0e0d5d24f4a32a484); [green CI](https://github.com/mite404/clipper/actions/runs/43806193468) | #32, #33, #34       |
 | <a id="ref-18"></a>[REF-18](tickets/REF-18.md) | Editor journeys also run against the production bundle                              | Medium | Delivered at [7373115](https://github.com/mite404/clipper/commit/7373115e9a501312bea5a4192a101094dce5d08f); [green CI](https://github.com/mite404/clipper/actions/runs/43803496212) | #18                 |
-| <a id="ref-20"></a>[REF-20](tickets/REF-20.md) | Rewind and export progress re-render at 10 Hz                                       | Medium | Pre-landing review rejects 480bd875/1414179: forward-end listener gap and rewind duration clamp; owner reproducing/fixing with regressions; no push grant                           | #36                 |
+| <a id="ref-20"></a>[REF-20](tickets/REF-20.md) | Rewind and export progress re-render at 10 Hz                                       | Medium | Correction 0def2ba reviewed LAND; local integration parked after forward-ending aggregate timeout (full 60/61); diagnosis active; not delivered                                     | #36                 |
 | <a id="ref-26"></a>[REF-26](tickets/REF-26.md) | Keep footer errors and warnings visible without scrolling                           | Small  | Delivered at [4535665](https://github.com/mite404/clipper/commit/45356659c892b3607230778270c5d4eb16786c3c)                                                                          | found during REF-21 |
 | <a id="ref-22"></a>[REF-22](#ref-22)           | Project container without one giant JSON string (format version 3, reads version 2) | Large  | Proposal                                                                                                                                                                            | #3                  |
 | <a id="ref-23"></a>[REF-23](#ref-23)           | Zooms anchored to source time and source coordinates                                | Large  | Decision D-1                                                                                                                                                                        | #14, #24            |
@@ -696,15 +713,27 @@ checks across five held-frame and five export progress/cancel/retry repetitions.
 performance15 receipts were inspected, but the subsequent pre-landing review reproduced two other
 regressions on real production: the speed-dependent listener resubscription loses final forward
 frame updates, and rewind ignores a shortened timeline's clamp after undo. Both frozen review heads,
-`480bd875` and `1414179`, are rejected. The owner must reproduce and fix both, strengthen the
-first-paused-paint test, and send a newly verified delta to the existing reviewer. Prior passing
-receipts do not waive those findings. No main push grant or delivered REF-20 claim exists.
+`480bd875` and `1414179`, remain rejected. The existing reviewer returned LAND for correction
+`0def2ba` with no P0 to P2 findings after independent production and mutation checks. The
+coordinator integrated its runtime and performance test unchanged onto docs-only main. Permitted
+tests/docs-only follow-up adds per-animation-frame timecode assertions after undo and removes a
+diagnostic log; the immediate-readout mutation failed all three local repetitions at frame 709
+against maximum 359. Negative-elapsed mutation coverage remains nondeterministic. A possible
+duration/end-pause race is unreproduced, not an established bug or covered behavior. Coordinator
+static/shrink-only gates, 135 units and seven helper tests pass. The isolated full run passed 60/61
+but hit the eight-ending test's aggregate 120-second budget during its final iteration. Seven
+endings completed. The completed read-only diagnosis confirms aggregate-budget exhaustion and
+supports capture-related buffering overhead in controlled runs, without proving that cause for the
+original trace. All 104 diagnostic endings settled at frame 359; the original failed combined gate
+still blocks delivery. Confirm the capture contrast on the integrated successor before considering a
+recording-policy-only correction. Exact source/test bytes and traces remain preserved. No App patch,
+timeout or workload change is justified. Inspector/UI-2 have no delivered predecessor yet.
 
 ### VERIFY-5: requested Oxc typecheck and formatter tooling
 
-| Ticket ID                                  | Scope                                                                            | Owner                                                                            | State                                                                           |
-| ------------------------------------------ | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
-| <a id="verify-5"></a>[VERIFY-5](#verify-5) | Use requested oxlint-tsgolint checking and install oxfmt without weakening gates | [Sol medium](https://ampcode.com/threads/T-fb8879aa-fa27-4044-89bf-518b53b04498) | Inspect supported semantics, then bounded tooling implementation; no push grant |
+| Ticket ID                                  | Scope                                                                            | Owner                                                                            | State                                                                                                                                     |
+| ------------------------------------------ | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| <a id="verify-5"></a>[VERIFY-5](#verify-5) | Use requested oxlint-tsgolint checking and install oxfmt without weakening gates | [Sol medium](https://ampcode.com/threads/T-fb8879aa-fa27-4044-89bf-518b53b04498) | Pre-cleared correction 3e4ca75 integrated onto green 3b90f11; local full 55/55 and repeated performance 10/10 pass; exact-main CI pending |
 
 Mite explicitly requests using oxlint-tsgolint for the typecheck script instead of tsc and
 installing oxfmt. Inspect the installed tool's CLI and current upstream documentation before
@@ -748,12 +777,23 @@ is not main delivery or exact-head CI qualification. The newer Prettier-removal 
 new verified candidate and reviewed delta; do not land this old head as the completed request. No
 source/test workload or hook changed in the frozen head.
 
-The worker is preparing a corrected successor on accepted `7878c60`; no successor is accepted.
-Recursive formatter operands expanded Fallow's Vitest entry discovery and failed strict health.
-Separate directory-only and root-glob-only invocations reportedly restore the exact original
-32-entry list and pass health without helper changes. Oxfmt always skips lock files, and its stdin
-formatter changes npm's array layout. A read-only Node JSON parse/stringify comparison preserves the
-npm-generated lock layout without rewriting the lock or adding a dependency.
+Reviewed `bb8488a` resolved the skipped shrink guard and conflicting formatters, but explicit
+formatter operands could silently omit missing paths and root glob shadowing could skip JSONC.
+Pre-cleared successor `3e4ca75` uses bare `oxfmt --check` followed by the unchanged read-only Node
+lock comparison, with only the reviewer's specified README/skill wording corrections. The
+coordinator verified the transferred bundle hashes and exact three-file delta; no lock, config, CI,
+hook, source or test differs from `bb8488a`. The identity receipt went to the existing reviewer. No
+additional review is required for that exact correction. Integration onto green main `3b90f11`
+preserves all seven approved paths byte-for-byte. Coordinator formatting, lint, both compiler gates,
+strict shrink-only Fallow, 135 unit tests, seven helper tests, isolated full 55/55 and standalone
+five-repeat performance 10/10 pass. Replayed formatter negatives reject all categories, eight
+missing-path variants and the old root-JSONC shadow false green. Source, browser tests and baseline
+are unchanged. Exact-main CI remains required before delivered status.
+
+Bare discovery retains Fallow's original 32 entries without recursive formatter operands. Oxfmt
+always skips lock files, and its stdin formatter changes npm's array layout. The read-only Node
+comparison preserves npm-generated lock layout without rewriting the lock or adding a dependency.
+Build and hook retain reviewed Oxc behavior; CI additionally runs standalone `typecheck:tsc`.
 
 The worker reports fourteen comparative category negatives plus docs rejection, rejection of
 malformed formatting in all 76 prior-scope files, and clean generated-lock acceptance. Whitespace,
