@@ -29,6 +29,8 @@ jobs:
       - run: npm run lint
       - run: npm run lint:typed
       - run: npm run typecheck
+      - name: Check ticket identity and review coverage
+        run: node scripts/check-tickets.mjs
       # './Timeline' and './timeline' are one file on a case-insensitive disk (macOS, Windows), where
       # imports then resolve to the wrong module. Linux cannot see that, so refuse such names here.
       - name: Refuse file names that differ only by case
