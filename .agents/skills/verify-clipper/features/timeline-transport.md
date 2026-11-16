@@ -42,14 +42,20 @@ modified-key and delete/undo/clamp journeys, the one-step slider undo and the 50
 `.agents/skills/verify-clipper/scripts/verify.mjs performance` separately for five production
 playback responsiveness checks without trace/video overhead.
 
+REF-20 adds an independent held-rewind check in `editor`. At 1×, 2× and 4× it pauses between readout
+paints, compares the held playhead with camera media time, steps forward once and returns with
+Previous frame. It also rewinds to zero and steps to frame 1. `performance` observes readout
+mutations for about 1.5 seconds at each speed under 4× CPU throttling. It requires backward travel,
+more than five changes, at most one change per 100 ms plus one straddling paint, and camera media
+time matching the held playhead after pause.
+
 ## Gotchas
 
-Rewind and export-progress re-rendering (REF-20) are not delivered. The held-pause journey proves
-stepping is consistent with the displayed timecode after a pause; it never reads the player's own
-frame, media time or pixels, so it is not independent readout parity, and it does not prove the
-readout rate during rewind, and `performance.spec.ts` has no rewind or readout test. Hidden-tab
-rewind jumps, held-Space toggles (REF-31), mute of one track at a time (REF-36) and per-clip
-retiming (CLIP-16) have no coverage.
+The older held-pause journey proves stepping is consistent with the displayed timecode, not
+independent player parity. REF-20 compares camera media time, not decoded pixels or the player's
+internal frame, and bounds DOM changes rather than React commits. Hidden-tab rewind jumps,
+held-Space toggles (REF-31), mute of one track at a time (REF-36) and per-clip retiming (CLIP-16)
+have no coverage.
 
 J is silent frame-by-frame seeking because browsers do not decode reverse audio. Click a source
 preview to play it independently; it is not the composition clock. Filmstrips repeat the decoded

@@ -123,8 +123,11 @@ p95 below 100ms over five seconds, and neither the worst frame nor the worst lon
 ms. The cursor-follow variant also turns on shape stabilization, rotation, the Rapid animation style
 and a focused automatic zoom. `all` includes one uninstrumented run of each variant; it does not
 replace the uninstrumented five-run gate. No command checks physical speaker output, rewind or
-export-progress re-render rate (REF-20, not delivered), scrubbing with very large telemetry
-(REF-37), or any real OpenScreen recording.
+export App commit counts, scrubbing with very large telemetry (REF-37), or any real OpenScreen
+recording. REF-20 checks bound observable rewind readout changes at 1×, 2× and 4× and compare the
+paused readout with camera media time. `editor` also checks held-frame stepping and the zero
+boundary, then real export progress, cancellation and download on retry. These DOM checks do not
+measure React render counts or encoding speed.
 
 ## Evidence
 

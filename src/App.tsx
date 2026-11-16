@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { Player, type PlayerRef } from '@remotion/player';
 import {
   ArrowDownToLine,
@@ -645,6 +653,8 @@ export function App() {
     if (!ref) return;
     let lastPaint = 0;
     const update = ({ detail }: { detail: { frame: number } }) => {
+      // Rewind owns its seek clock; delayed player events must not move it backwards or forwards.
+      if (speed < 0) return;
       frameRef.current = detail.frame;
       const now = performance.now();
       if (!ref.isPlaying() || now - lastPaint >= 100) {
@@ -663,8 +673,9 @@ export function App() {
       ref.removeEventListener('ended', ended);
       ref.removeEventListener('pause', paused);
     };
-  }, [hasAssets]);
-  useEffect(() => {
+  }, [hasAssets, speed]);
+  // Flush the last rewind seek before a paused or changed-speed readout can paint.
+  useLayoutEffect(() => {
     if (speed > 0) {
       player.current?.play();
       return;
@@ -673,6 +684,7 @@ export function App() {
     if (speed === 0) return;
     // Browsers cannot play media backwards. Rewind seeks video silently at 30fps.
     let last = performance.now();
+    let lastPaint = last;
     let remainder = 0;
     let animation: number;
     const tick = (now: number) => {
@@ -684,7 +696,10 @@ export function App() {
         const target = Math.max(0, frameRef.current - steps);
         frameRef.current = target;
         player.current?.seekTo(target);
-        setFrame(target);
+        if (now - lastPaint >= 100) {
+          setFrame(target);
+          lastPaint = now;
+        }
         if (!target) {
           setSpeed(0);
           return;
@@ -693,7 +708,10 @@ export function App() {
       animation = requestAnimationFrame(tick);
     };
     animation = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(animation);
+    return () => {
+      cancelAnimationFrame(animation);
+      setFrame(frameRef.current);
+    };
   }, [speed]);
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -872,6 +890,7 @@ export function App() {
     setExportProgress(0);
     const controller = new AbortController();
     exportAbort.current = controller;
+    let progress = 0;
     try {
       const { renderVideo } = await import('./export');
       const blob = await renderVideo({
@@ -879,7 +898,12 @@ export function App() {
         assets,
         muted,
         width: exportWidth,
-        onProgress: setExportProgress,
+        onProgress: (value) => {
+          const next = Math.round(value * 100) / 100;
+          if (next === progress) return;
+          progress = next;
+          setExportProgress(next);
+        },
         signal: controller.signal,
       });
       downloadBlob(
