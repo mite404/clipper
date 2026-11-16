@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from 'react';
 import { Player, type PlayerRef } from '@remotion/player';
 import {
   ArrowDownToLine,
@@ -531,6 +539,7 @@ export function App() {
   const player = useRef<PlayerRef>(null);
   const assetsRef = useRef<Asset[]>([]);
   const frameRef = useRef(0);
+  const rewinding = useRef(false);
   const duration = Math.max(1, ...edit.clips.map((c) => c.start + c.duration));
   const asset = assets.find((a) => a.id === sourceId);
   const selectedZoom = edit.zooms.find((z) => z.id === selected);
@@ -645,6 +654,8 @@ export function App() {
     if (!ref) return;
     let lastPaint = 0;
     const update = ({ detail }: { detail: { frame: number } }) => {
+      // Rewind owns its seek clock; delayed player events must not move it backwards or forwards.
+      if (rewinding.current) return;
       frameRef.current = detail.frame;
       const now = performance.now();
       if (!ref.isPlaying() || now - lastPaint >= 100) {
@@ -664,19 +675,26 @@ export function App() {
       ref.removeEventListener('pause', paused);
     };
   }, [hasAssets]);
-  useEffect(() => {
+  // Flush the last rewind seek before a paused or changed-speed readout can paint.
+  useLayoutEffect(() => {
+    rewinding.current = speed < 0;
     if (speed > 0) {
       player.current?.play();
       return;
     }
     player.current?.pause();
     if (speed === 0) return;
+    // Undo can shorten the timeline while the player has already clamped its held media.
+    frameRef.current = Math.min(frameRef.current, duration - 1);
+    setFrame(frameRef.current);
     // Browsers cannot play media backwards. Rewind seeks video silently at 30fps.
     let last = performance.now();
+    let lastPaint = last;
     let remainder = 0;
     let animation: number;
     const tick = (now: number) => {
-      remainder += ((now - last) / 1000) * FPS * Math.abs(speed);
+      // A queued rAF timestamp can precede the layout effect that started this clock.
+      remainder += (Math.max(0, now - last) / 1000) * FPS * Math.abs(speed);
       last = now;
       const steps = Math.floor(remainder);
       remainder -= steps;
@@ -684,7 +702,10 @@ export function App() {
         const target = Math.max(0, frameRef.current - steps);
         frameRef.current = target;
         player.current?.seekTo(target);
-        setFrame(target);
+        if (now - lastPaint >= 100) {
+          setFrame(target);
+          lastPaint = now;
+        }
         if (!target) {
           setSpeed(0);
           return;
@@ -693,8 +714,12 @@ export function App() {
       animation = requestAnimationFrame(tick);
     };
     animation = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(animation);
-  }, [speed]);
+    return () => {
+      cancelAnimationFrame(animation);
+      rewinding.current = false;
+      setFrame(frameRef.current);
+    };
+  }, [speed, duration]);
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (help || busy || exportProgress !== null || markingMouse) return;
@@ -872,6 +897,7 @@ export function App() {
     setExportProgress(0);
     const controller = new AbortController();
     exportAbort.current = controller;
+    let progress = 0;
     try {
       const { renderVideo } = await import('./export');
       const blob = await renderVideo({
@@ -879,7 +905,12 @@ export function App() {
         assets,
         muted,
         width: exportWidth,
-        onProgress: setExportProgress,
+        onProgress: (value) => {
+          const next = Math.round(value * 100) / 100;
+          if (next === progress) return;
+          progress = next;
+          setExportProgress(next);
+        },
         signal: controller.signal,
       });
       downloadBlob(

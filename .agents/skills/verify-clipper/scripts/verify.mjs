@@ -9,7 +9,11 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const journeys = {
-  editor: { specs: ['editor.spec.ts', 'refinements.spec.ts'], tools: true, production: true },
+  editor: {
+    specs: ['editor.spec.ts', 'transport-end.spec.ts', 'refinements.spec.ts'],
+    tools: true,
+    production: true,
+  },
   media: { specs: ['editor.spec.ts'], grep: 'imports', production: true },
   composition: {
     specs: ['editor.spec.ts', 'refinements.spec.ts'],

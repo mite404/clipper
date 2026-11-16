@@ -416,3 +416,184 @@ test('shows the frame the preview holds after a pause', async ({ page }) => {
     expect(await shown()).toBe(paused);
   }
 });
+
+test('clamps the rewind clock when undo shortens the timeline', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
+  await page.getByRole('button', { name: 'Insert source at playhead' }).click();
+  await expect(playhead).toHaveAttribute('max', '779');
+  await playhead.fill('719');
+  await page.locator('.project-title').click();
+  await page.keyboard.press('j');
+  await page.waitForTimeout(300);
+  await page.evaluate(() => {
+    const samples: number[] = [];
+    Object.assign(window, { rewindUndoPaints: samples });
+    const sample = () => {
+      const slider = document.querySelector<HTMLInputElement>('[aria-label="Timeline playhead"]')!;
+      if (slider.max === '359') {
+        const [minutes, seconds, frames] = document
+          .querySelector('[data-testid="timecode"]')!
+          .textContent!.split(':')
+          .map(Number);
+        samples.push((minutes * 60 + seconds) * 30 + frames);
+      }
+      if (samples.length < 20) requestAnimationFrame(sample);
+    };
+    requestAnimationFrame(sample);
+  });
+  await page.keyboard.press('Control+z');
+  await expect(playhead).toHaveAttribute('max', '359');
+  await expect
+    .poll(() => page.evaluate(() => Reflect.get(window, 'rewindUndoPaints').length))
+    .toBe(20);
+  const paints: number[] = await page.evaluate(() => Reflect.get(window, 'rewindUndoPaints'));
+  expect(Math.max(...paints)).toBeLessThanOrEqual(359);
+  expect(Math.min(...paints)).toBeGreaterThanOrEqual(0);
+  await expect.poll(async () => Number(await playhead.inputValue())).toBeLessThan(350);
+  await page.keyboard.press('k');
+  await expect(page.getByTestId('transport-state')).toHaveText('Paused');
+  const held = Number(await playhead.inputValue());
+  expect(held).toBeGreaterThan(0);
+  await expect
+    .poll(() =>
+      page
+        .locator('[data-testid="camera-mask"] video:visible')
+        .evaluate((video: HTMLVideoElement) => Math.round(video.currentTime * 30)),
+    )
+    .toBe(held);
+  await page.keyboard.press('ArrowRight');
+  await expect(playhead).toHaveValue(String(held + 1));
+});
+
+test('holds the last rewind seek at every speed and at the start boundary', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
+  const timecode = page.getByTestId('timecode');
+  for (const presses of [1, 2, 3]) {
+    await playhead.fill('150');
+    await page.locator('.project-title').click();
+    for (let press = 0; press < presses; press++) await page.keyboard.press('j');
+    await expect(page.getByTestId('transport-state')).toHaveText(
+      `Rewinding · ${2 ** (presses - 1)}×`,
+    );
+    await expect.poll(async () => Number(await playhead.inputValue())).toBeLessThan(140);
+    // Stop between readout paints, not on the paint the polling assertion just observed.
+    await page.waitForTimeout(65);
+    await page.evaluate(() => {
+      const samples: { shown: number; held: number }[] = [];
+      Object.assign(window, { pausedPaints: samples });
+      const sample = () => {
+        if (document.querySelector('[data-testid="transport-state"]')?.textContent === 'Paused') {
+          const slider = document.querySelector<HTMLInputElement>(
+            '[aria-label="Timeline playhead"]',
+          )!;
+          const camera = document.querySelector<HTMLVideoElement>(
+            '[data-testid="camera-mask"] video',
+          )!;
+          samples.push({ shown: Number(slider.value), held: Math.round(camera.currentTime * 30) });
+        }
+        if (samples.length < 3) requestAnimationFrame(sample);
+      };
+      requestAnimationFrame(sample);
+    });
+    await page.keyboard.press('k');
+    await expect(page.getByTestId('transport-state')).toHaveText('Paused');
+    await expect
+      .poll(() => page.evaluate(() => Reflect.get(window, 'pausedPaints').length))
+      .toBe(3);
+    const paints: { shown: number; held: number }[] = await page.evaluate(() =>
+      Reflect.get(window, 'pausedPaints'),
+    );
+    for (const paint of paints) {
+      expect(paint.held).toBeGreaterThan(0);
+      expect(paint.shown).toBe(paint.held);
+    }
+    const held = Number(await playhead.inputValue());
+    expect(held).toBeGreaterThan(0);
+    // The camera has no splice, so its source time independently identifies the held frame.
+    await expect
+      .poll(() =>
+        page
+          .locator('[data-testid="camera-mask"] video:visible')
+          .evaluate((video: HTMLVideoElement) => Math.round(video.currentTime * 30)),
+      )
+      .toBe(held);
+    await page.keyboard.press('ArrowRight');
+    await expect(playhead).toHaveValue(String(held + 1));
+    await page.getByRole('button', { name: 'Previous frame', exact: true }).click();
+    await expect(playhead).toHaveValue(String(held));
+  }
+  await playhead.fill('5');
+  await page.locator('.project-title').click();
+  await page.keyboard.press('j');
+  await expect(page.getByTestId('transport-state')).toHaveText('Paused');
+  await expect(timecode).toHaveText('00:00:00');
+  await page.keyboard.press('ArrowRight');
+  await expect(timecode).toHaveText('00:00:01');
+});
+
+test('reports export progress, cancels cleanly and downloads on retry', async ({ page }) => {
+  test.setTimeout(180000);
+  const errors: string[] = [];
+  const writes: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('request', (request) => {
+    if (request.method() !== 'GET') writes.push(request.url());
+  });
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const progress = page.getByRole('progressbar', { name: 'Video export progress' });
+  const exportButton = page.getByRole('button', { name: 'Export video', exact: true });
+  const status = page.locator('.app-footer [role="status"]');
+  let downloads = 0;
+  page.on('download', () => downloads++);
+  await exportButton.click();
+  await expect(progress).toBeVisible();
+  await expect.poll(async () => Number(await progress.getAttribute('value'))).toBeGreaterThan(0.1);
+  await expect(exportButton).toBeDisabled();
+  await page.getByRole('button', { name: 'Cancel export', exact: true }).click();
+  await expect(status).toContainText('Export cancelled.');
+  await expect(progress).toHaveCount(0);
+  await expect(exportButton).toBeEnabled();
+  expect(downloads).toBe(0);
+  // Observe the accessible progress values, not React state or the encoder callback.
+  await page.evaluate(() => {
+    const values: number[] = [];
+    Object.assign(window, { exportValues: values });
+    new MutationObserver(() => {
+      const bar = document.querySelector<HTMLProgressElement>(
+        '[aria-label="Video export progress"]',
+      );
+      if (bar && values.at(-1) !== bar.value) values.push(bar.value);
+    }).observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+      attributeFilter: ['value'],
+    });
+  });
+  const downloaded = page.waitForEvent('download', { timeout: 150000 });
+  await exportButton.click();
+  const download = await downloaded;
+  await expect(status).toContainText('Video exported at 1920');
+  await expect(progress).toHaveCount(0);
+  await expect(exportButton).toBeEnabled();
+  const values = await page.evaluate(() => Reflect.get(window, 'exportValues') as number[]);
+  expect(values[0]).toBe(0);
+  expect(values.length).toBeLessThanOrEqual(101);
+  expect(values.some((value) => value > 0.1 && value < 0.95)).toBe(true);
+  expect(
+    values.every(
+      (value, index) => value >= 0 && value <= 1 && (!index || value > values[index - 1]),
+    ),
+  ).toBe(true);
+  expect(downloads).toBe(1);
+  expect(download.suggestedFilename()).toMatch(/1080p\.(mp4|webm)$/);
+  const { stat } = await import('node:fs/promises');
+  expect((await stat((await download.path())!)).size).toBeGreaterThan(100000);
+  expect(errors).toEqual([]);
+  expect(writes).toEqual([]);
+});

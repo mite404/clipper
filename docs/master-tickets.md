@@ -72,7 +72,7 @@ outside the stationary pointer and cancels hover. The test now waits for font re
 component, CSS, story, assertion, timeout or retry changed. Coordinator strict gates, 135 units and
 isolated full 55/55 pass. Exact-main
 [CI 43835506294](https://github.com/mite404/clipper/actions/runs/43835506294) passed. The
-coordinator retains the serialized main slot for VERIFY-5 integration. No third old-SHA rerun was
+coordinator retains the serialized main slot for REF-20 qualification. No third old-SHA rerun was
 issued. REF-20 is assigned to Sol medium in
 [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59). It owns App's
 rewind/readout listener and export-progress hunks, focused editor/performance tests, and its brief.
@@ -492,7 +492,7 @@ queue thread unless stated.
 | ---------------------------------------------- | ----------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | <a id="ref-14"></a>[REF-14](tickets/REF-14.md) | One constant each for music gain and peak rate; blob-URL test asserts no fetch      | Small  | Delivered at [afe4c60](https://github.com/mite404/clipper/commit/afe4c605f551c979083297b0e0d5d24f4a32a484); [green CI](https://github.com/mite404/clipper/actions/runs/43806193468) | #32, #33, #34       |
 | <a id="ref-18"></a>[REF-18](tickets/REF-18.md) | Editor journeys also run against the production bundle                              | Medium | Delivered at [7373115](https://github.com/mite404/clipper/commit/7373115e9a501312bea5a4192a101094dce5d08f); [green CI](https://github.com/mite404/clipper/actions/runs/43803496212) | #18                 |
-| <a id="ref-20"></a>[REF-20](tickets/REF-20.md) | Rewind and export progress re-render at 10 Hz                                       | Medium | Correction 0def2ba reviewed LAND; local integration parked after forward-ending aggregate timeout (full 60/61); diagnosis active; not delivered                                     | #36                 |
+| <a id="ref-20"></a>[REF-20](tickets/REF-20.md) | Rewind and export progress re-render at 10 Hz                                       | Medium | Correction 0def2ba reviewed LAND; forward-ending aggregate timeout still blocks (full 60/61); capture contrast running on accepted VERIFY-5 base; not delivered                     | #36                 |
 | <a id="ref-26"></a>[REF-26](tickets/REF-26.md) | Keep footer errors and warnings visible without scrolling                           | Small  | Delivered at [4535665](https://github.com/mite404/clipper/commit/45356659c892b3607230778270c5d4eb16786c3c)                                                                          | found during REF-21 |
 | <a id="ref-22"></a>[REF-22](#ref-22)           | Project container without one giant JSON string (format version 3, reads version 2) | Large  | Proposal                                                                                                                                                                            | #3                  |
 | <a id="ref-23"></a>[REF-23](#ref-23)           | Zooms anchored to source time and source coordinates                                | Large  | Decision D-1                                                                                                                                                                        | #14, #24            |
@@ -724,16 +724,27 @@ static/shrink-only gates, 135 units and seven helper tests pass. The isolated fu
 but hit the eight-ending test's aggregate 120-second budget during its final iteration. Seven
 endings completed. The completed read-only diagnosis confirms aggregate-budget exhaustion and
 supports capture-related buffering overhead in controlled runs, without proving that cause for the
-original trace. All 104 diagnostic endings settled at frame 359; the original failed combined gate
-still blocks delivery. Confirm the capture contrast on the integrated successor before considering a
-recording-policy-only correction. Exact source/test bytes and traces remain preserved. No App patch,
-timeout or workload change is justified. Inspector/UI-2 have no delivered predecessor yet.
+original trace. All 104 diagnostic endings settled at frame 359. On delivered VERIFY-5 tooling, five
+interleaved runs per recording mode confirmed capture overhead with all 80 endings correct. The
+unchanged ending test now has its own file, retaining DOM/action/network traces and screenshots but
+disabling continuous screencast frames and video. The editor CLI includes it. Restoring the old
+listener fails all three production repetitions under that recording policy; the reviewed listener
+passes all three. The fresh combined full gate passes 61/61 without retries, skips or flakes.
+Reviewed runtime and performance-test bytes remain unchanged. The standalone gate passed 19/20 but
+failed its frame-time check on this orb; an interleaved comparison also failed on published main. A
+fresh orb then passed unchanged published-main 10/10 and the exact transferred candidate 20/20 on
+their first invocations. Receipt hashes and runtime/test identity were checked. This supports host
+sensitivity, not a proven cause or universal performance guarantee. Failed receipts remain
+preserved. The existing reviewer returned LAND for the exact recording-policy/selector delta;
+coordinator comparison confirms its bytes match. Runtime review is unchanged and performance was
+qualified separately. Exact-main CI remains required. Inspector/UI-2 remain held until REF-20 is
+delivered. No timeout or workload changed.
 
 ### VERIFY-5: requested Oxc typecheck and formatter tooling
 
-| Ticket ID                                  | Scope                                                                            | Owner                                                                            | State                                                                                                                                     |
-| ------------------------------------------ | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| <a id="verify-5"></a>[VERIFY-5](#verify-5) | Use requested oxlint-tsgolint checking and install oxfmt without weakening gates | [Sol medium](https://ampcode.com/threads/T-fb8879aa-fa27-4044-89bf-518b53b04498) | Pre-cleared correction 3e4ca75 integrated onto green 3b90f11; local full 55/55 and repeated performance 10/10 pass; exact-main CI pending |
+| Ticket ID                                  | Scope                                                                            | Owner                                                                            | State                                                                                                                                                                                         |
+| ------------------------------------------ | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| <a id="verify-5"></a>[VERIFY-5](#verify-5) | Use requested oxlint-tsgolint checking and install oxfmt without weakening gates | [Sol medium](https://ampcode.com/threads/T-fb8879aa-fa27-4044-89bf-518b53b04498) | Delivered at [7cddaea](https://github.com/mite404/clipper/commit/7cddaea18c8669c40a610e723a58144b437982c0); [green exact-SHA CI](https://github.com/mite404/clipper/actions/runs/43838721676) |
 
 Mite explicitly requests using oxlint-tsgolint for the typecheck script instead of tsc and
 installing oxfmt. Inspect the installed tool's CLI and current upstream documentation before
@@ -788,7 +799,8 @@ preserves all seven approved paths byte-for-byte. Coordinator formatting, lint, 
 strict shrink-only Fallow, 135 unit tests, seven helper tests, isolated full 55/55 and standalone
 five-repeat performance 10/10 pass. Replayed formatter negatives reject all categories, eight
 missing-path variants and the old root-JSONC shadow false green. Source, browser tests and baseline
-are unchanged. Exact-main CI remains required before delivered status.
+are unchanged. Exact-main CI passed at `7cddaea`; its standalone TypeScript and shrink-only health
+steps both ran successfully. The new `!cancelled()` guard is present in that delivered workflow.
 
 Bare discovery retains Fallow's original 32 entries without recursive formatter operands. Oxfmt
 always skips lock files, and its stdin formatter changes npm's array layout. The read-only Node
