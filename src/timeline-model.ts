@@ -20,6 +20,8 @@ export type Zoom = {
   source?: { assetId: string; clipId: string; start: number; x: number; y: number };
 };
 export const FPS = 30;
+/** Music's linear amplitude in playback, export and the level meter. */
+export const MUSIC_GAIN = 0.22;
 /** Limits every zoom obeys, whether drawn in the inspector, opened from a file or generated. */
 export const ZOOM_LIMITS = { minFrames: 6, minScale: 1, maxScale: 3 };
 

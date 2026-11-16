@@ -40,7 +40,7 @@ export async function readMedia(
     if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || (!video && !audio)) {
       throw new Error('This file has no playable media.');
     }
-    const peaks = Array.from({ length: Math.max(1, Math.ceil(durationSeconds * 30)) }, () => 0);
+    const peaks = Array.from({ length: Math.max(1, Math.ceil(durationSeconds * FPS)) }, () => 0);
     if (audio) {
       if (!(await audio.canDecode()))
         throw new Error('The audio codec is not supported in this browser.');
@@ -48,7 +48,7 @@ export async function readMedia(
         for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
           const samples = buffer.getChannelData(channel);
           for (let i = 0; i < samples.length; i += 32) {
-            const bin = Math.floor((timestamp + i / buffer.sampleRate) * 30);
+            const bin = Math.floor((timestamp + i / buffer.sampleRate) * FPS);
             if (bin >= 0 && bin < peaks.length)
               peaks[bin] = Math.max(peaks[bin], Math.abs(samples[i]));
           }

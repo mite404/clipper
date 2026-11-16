@@ -25,6 +25,7 @@ import { type Asset, loadDemo, readMedia, unreadableNamesake } from './media';
 import { Timeline, TRACKS } from './Timeline';
 import {
   FPS,
+  MUSIC_GAIN,
   type Clip,
   type Track,
   type Zoom,
@@ -901,7 +902,7 @@ export function App() {
       .map(
         (c) =>
           (assets.find((a) => a.id === c.assetId)?.peaks[sourceFrame(c, frame)] ?? 0) *
-          (c.track === 'music' ? 0.22 : 1),
+          (c.track === 'music' ? MUSIC_GAIN : 1),
       ),
   );
 

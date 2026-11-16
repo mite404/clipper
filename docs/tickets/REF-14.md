@@ -15,7 +15,7 @@
 Preview, export and the meter must agree. The existing network-refusal assertion can pass on a
 fallback error after making a real request, so it does not establish the privacy boundary.
 
-## Current state
+## Initial state
 
 The delta from `5a9bc1f` retains literal music gain `0.22` and waveform rate `30`. The network-URL
 test in `src/project.test.ts` still matches `/local|blob/i` without asserting zero fetches.
@@ -69,3 +69,21 @@ when its guard is removed, and full gates plus exact-SHA CI pass.
 ## Notes
 
 Use `timeline-model.ts`, not the case-colliding former `timeline.ts` name.
+
+## Implementation and evidence
+
+`MUSIC_GAIN` now supplies the same linear amplitude to preview audio, export mixing and the meter.
+Peak allocation and binning reuse `FPS`; Storybook players also use it. No audible level, timeline
+rate or saved-data shape changed. The network-refusal test requires the specific local-blob error
+and observes zero calls at the fetch boundary. Its fetch stub prevents an actual network request if
+the guard regresses.
+
+The unchanged implementation passes the strengthened privacy check. Temporarily removing the
+serializer's local-blob guard fails it with the fallback unreadable-media error, proving the old
+broad error match could hide a request. Restoring the guard passes all 60 project tests and all 133
+units on `7373115`. The temporary mutation was removed. After integration onto `bd6120f`, format,
+static and typed lint, typecheck, 135 units, strict shrink-only Fallow, both builds, audit and all
+seven helper tests pass. The isolated `all` journey passes all 44 browser cases with no skips or
+flakes, including the existing independently mixed decoded-audio reference at both output widths. No
+physical-speaker claim follows. Logs are retained under `.amp/in/orb-backup/ref14/`; delivery is
+recorded in the master.

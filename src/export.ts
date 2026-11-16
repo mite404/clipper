@@ -16,7 +16,15 @@ import {
 } from 'mediabunny';
 import { openMedia, type Asset } from './media';
 import { cameraTransform, coverRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
-import { FPS, covers, sourceFrame, type Clip, type Track, type Zoom } from './timeline-model';
+import {
+  FPS,
+  MUSIC_GAIN,
+  covers,
+  sourceFrame,
+  type Clip,
+  type Track,
+  type Zoom,
+} from './timeline-model';
 import { cursorDrawing, decodeCursorImages } from './cursor-render';
 import { prepareFraming, framingAt } from './framing';
 
@@ -78,7 +86,7 @@ async function mixAudio(
     const source = mixer.createBufferSource();
     source.buffer = joined;
     const gain = mixer.createGain();
-    gain.gain.value = clip.track === 'music' ? 0.22 : 1;
+    gain.gain.value = clip.track === 'music' ? MUSIC_GAIN : 1;
     source.connect(gain).connect(mixer.destination);
     source.start(clip.start / FPS);
   }

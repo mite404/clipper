@@ -13,7 +13,7 @@ import { AutoZoomControls } from './AutoZoomControls';
 import { ZoomMotionControls } from './ZoomMotionControls';
 import { cursorFixture, motionCursorFixture, behaviorCursorFixture } from './cursor.fixture';
 import type { CursorTrack } from './cursor';
-import type { Clip, Zoom } from './timeline-model';
+import { FPS, type Clip, type Zoom } from './timeline-model';
 
 const CURSOR_STRESS_SETTINGS: Record<string, CursorTrack['settings']> = {
   'Worst case': {
@@ -91,7 +91,7 @@ function CursorRecord({ preview = false }: { preview?: boolean }) {
           compositionWidth={1280}
           compositionHeight={720}
           durationInFrames={360}
-          fps={30}
+          fps={FPS}
           controls
           loop
           style={{ width: '100%' }}
@@ -267,7 +267,7 @@ function LibraryRecord({ view, worst = false }: { view: string; worst?: boolean 
         compositionWidth={1280}
         compositionHeight={720}
         durationInFrames={360}
-        fps={30}
+        fps={FPS}
         controls
         style={{ width: '100%' }}
       />

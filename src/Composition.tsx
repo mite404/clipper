@@ -2,7 +2,7 @@ import { AbsoluteFill, Audio, Img, Sequence, Video, useCurrentFrame } from 'remo
 import { useMemo } from 'react';
 import type { Asset } from './media';
 import { cameraTransform, coverRect, cropPosition, maskRect, type Layout } from './stage';
-import { type Clip, type Track, type Zoom } from './timeline-model';
+import { MUSIC_GAIN, type Clip, type Track, type Zoom } from './timeline-model';
 import { cursorFrame } from './cursor-render';
 import { prepareFraming, framingAt } from './framing';
 
@@ -127,7 +127,7 @@ export function Composition({ clips, assets, zooms, layout, muted }: Composition
                 <Audio
                   src={asset.url}
                   trimBefore={clip.offset}
-                  volume={muted.includes(clip.track) ? 0 : clip.track === 'music' ? 0.22 : 1}
+                  volume={muted.includes(clip.track) ? 0 : clip.track === 'music' ? MUSIC_GAIN : 1}
                 />
               </Sequence>
             )

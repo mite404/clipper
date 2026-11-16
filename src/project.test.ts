@@ -396,9 +396,15 @@ describe('portable project serialization', () => {
   });
 
   it('refuses network URLs rather than downloading or uploading media', async () => {
-    await expect(
-      serializeProject(edit, [{ ...asset, url: 'https://example.com/video.mp4' }], []),
-    ).rejects.toThrow(/local|blob/i);
+    const fetched = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network attempted'));
+    try {
+      await expect(
+        serializeProject(edit, [{ ...asset, url: 'https://example.com/video.mp4' }], []),
+      ).rejects.toThrow('Media recording.mp4 must have a local blob URL.');
+      expect(fetched).not.toHaveBeenCalled();
+    } finally {
+      fetched.mockRestore();
+    }
   });
 
   it('reports unavailable local media rather than saving metadata-only files', async () => {
