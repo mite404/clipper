@@ -19,8 +19,10 @@ keyframes. Real recording compatibility remains a separate D-7 gate.
 
 Commit `7b23be8` delivers recorded, fixed-first and Touch styles, idle hide, shake removal and stop
 or return endings. Its CI passed; 127 units and 39 browser checks passed locally. Endings apply per
-trimmed clip, not once per whole video. Rotation, cursor-type stabilization, cursor speed styles and
-source-time segment hiding remain open. See the
+trimmed clip, not once per whole video. Commit `bea0526` adds source-time segment hiding with
+[green CI](https://github.com/mite404/clipper/actions/runs/43794298710). Its half-open ranges apply
+before ending effects and are independent of telemetry offset. Rotation, cursor-type stabilization
+and cursor speed styles remain open. See the
 [source requirements](../reference-features.md#motion-acceptance).
 
 ## Approach
@@ -30,7 +32,7 @@ event stream, per-source clock and common preview/export projection.
 
 ## Scope
 
-In: the four remaining behavior controls, persistence, shared controls, synthetic stress states.
+In: the three remaining behavior controls, persistence, shared controls, synthetic stress states.
 Out: native capture, new cursor inference from video pixels, and an implicit video-wide ending
 claim. Decide any video-wide ending change explicitly rather than relabeling the current unit.
 
@@ -69,7 +71,7 @@ current main. Account for drift in cursor modules before writing.
 
 ## Done when
 
-All four remaining behaviors have red-to-green tests, portable settings and matching rendered
+All three remaining behaviors have red-to-green tests, portable settings and matching rendered
 preview/export evidence. Full gates and exact-SHA CI pass. The master explicitly retains any
 video-wide ending and real-Mac limits rather than claiming reference parity without evidence.
 

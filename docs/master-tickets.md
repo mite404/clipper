@@ -6,8 +6,8 @@ and nowhere else. Other documents are records, not queues:
 - [docs/refactor/refactor01.md](refactor/refactor01.md) is the one-time review of baseline
   `5a9bc1f`. Its finding numbers (`#1` to `#38`) are cited below.
 - [Reference features and capture evidence](reference-features.md) preserves the current reference
-  artifact's revision 8, including source links and acceptance details. The artifact is retained
-  pending retirement approval, not used for status.
+  artifact's revision 8, including source links and acceptance details. The owner approved deleting
+  only that artifact; its owning thread confirmed deletion on 2026-11-16.
 - The
   [refinement tickets](https://ampcode.com/artifacts/clipper-refinement-tickets-9f40b94d-40bf-4ca2-9641-78208057b5a2)
   and the
@@ -41,12 +41,20 @@ and nowhere else. Other documents are records, not queues:
 
 ## Owners
 
-| Lane                     | Thread                                                                           | Owns                                                      |
-| ------------------------ | -------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| Queue and implementation | [T-6706048a](https://ampcode.com/threads/T-6706048a-c051-4e23-9ec6-68afd669b492) | This file, REF and CLIP tickets, exclusive main push slot |
-| Cursor preservation      | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94) | Frozen original CLIP-11 work, no implementation or push   |
-| Editor and bootstrap     | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da) | `.agents/setup`, `.agents/resume`                         |
-| Verification tools       | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc) | `.agents/skills/verify-clipper/**`                        |
+| Lane                     | Thread                                                                           | Owns                                                             |
+| ------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------------------------- |
+| Queue and implementation | [T-6706048a](https://ampcode.com/threads/T-6706048a-c051-4e23-9ec6-68afd669b492) | This file, REF and CLIP tickets, exclusive main push slot        |
+| Cursor implementation    | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Remaining CLIP-11 behaviors, Sol medium; requests each push slot |
+| Cursor preservation      | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94) | Frozen original CLIP-11 work, no implementation or push          |
+| Editor and bootstrap     | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da) | `.agents/setup`, `.agents/resume`                                |
+| Verification tools       | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc) | `.agents/skills/verify-clipper/**`                               |
+
+The owner approved one Sonnet 5.5 trial for VERIFY-3 in
+[T-24b3f0ad](https://ampcode.com/threads/T-24b3f0ad-9a83-4b3b-b297-6f86319b8e81). It owns only
+feature-map Markdown, a new `tests/controls.spec.ts` and its local ticket brief. Sol reviews the
+diff and acceptance, and retains push authority. The exception ends after that ticket; it does not
+change the default Sol medium implementation rule. No other verification owner edits those paths
+during the trial.
 
 The former queue thread
 [T-2d1e888a](https://ampcode.com/threads/T-2d1e888a-23ff-4bf4-b2d1-551553f2ef0a) has stopped
@@ -54,7 +62,7 @@ implementation and coordination. Its baseline review is complete and is not repe
 received the actual 13 CLIP-11 changed files, including `src/cursor-touch.png`, through
 `download_thread_changes` before editing. Integration uses a three-way merge from `8095a273`, not an
 overlay of stale files. Server-side usage confirms GPT-6.1 Sol routing for the successor, created
-with medium effort. There is one implementation writer and one main push-slot owner.
+with medium effort. Implementation workers have disjoint paths and one main push-slot owner.
 
 Evidence-only threads:
 [reuse research](https://ampcode.com/threads/T-01a1ddd8-535c-7129-a7d7-9a0c28f41449) (what the
@@ -68,22 +76,23 @@ images were hosted, see [Known limits](#known-limits)).
 
 ### Files while CLIP-11 is in flight
 
-| Owner                    | Paths                                                                                                                                                           |
-| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Queue implementation     | `src/cursor*.ts`, `src/cursor-touch.png`, `src/CursorControls.tsx`, cursor stories, cursor CSS and `tests/cursor*.spec.ts`; former cursor owner is frozen       |
-| Queue implementation     | `src/App.tsx` history and undo, `src/history.ts`, `src/project.ts` serialization; the footer and its styles (REF-26); stage, export, media and timeline modules |
-| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                |
+| Owner                    | Paths                                                                                                                                                                                   |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cursor implementation    | `src/cursor*.ts`, `src/cursor-touch.png`, `src/CursorControls.tsx`, `src/Editor.stories.tsx`, `tests/cursor*.spec.ts`, project serialization and required App/Composition cursor wiring |
+| Queue implementation     | `src/styles.css`, `tests/refinements.spec.ts` for REF-26; queue/docs and other unassigned modules. Cursor CSS requires coordination before editing                                      |
+| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                                        |
 
 ### Preservation branches
 
 Made on 2026-11-15 before the Amp project's switch to GitHub. They are not for merging and are
 deleted only on the owner's word.
 
-| Branch                          | Holds                                                                    |
-| ------------------------------- | ------------------------------------------------------------------------ |
-| `wip/clip-10-smooth-follow`     | CLIP-10 before it landed; redundant now                                  |
-| `wip/queue-thread-resume-files` | The queue thread's helper scripts and raw review output, ignored on main |
-| `wip/queue-handoff-master-list` | Preserved queue draft at `31e5e725`, integrated by the successor         |
+| Branch                          | Holds                                                                                                 |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `wip/clip-10-smooth-follow`     | CLIP-10 before it landed; redundant now                                                               |
+| `wip/queue-thread-resume-files` | The queue thread's helper scripts and raw review output, ignored on main                              |
+| `wip/queue-handoff-master-list` | Preserved queue draft at `31e5e725`, integrated by the successor                                      |
+| `wip/clip-11-original-handoff`  | Exact 13-file cursor capture at `6939b52`, parent `8095a273`; integrated core is on main at `7b23be8` |
 
 The checkpoint found nothing only on the Amp-hosted repository: its one ref, `main` at `0b11477`,
 was two empty commits that GitHub `main` contains. The owner confirmed the switch on 2026-11-16 and
@@ -146,23 +155,28 @@ Whether it runs for new orbs now that they clone GitHub has not been checked.
 ## Queue
 
 Top to bottom is the order of work. Correctness and unblocking work precede dependent features. One
-implementation writer owns both lanes; pushes are serialized and await exact-SHA green CI.
+queue owner coordinates disjoint implementation lanes; pushes are serialized and await exact-SHA CI.
 
 ### Mouse tracking and automatic zoom
 
-| Ticket ID                                         | Title                                                                        | Risk   | Status   | Owner                | Needs   |
-| ------------------------------------------------- | ---------------------------------------------------------------------------- | ------ | -------- | -------------------- | ------- |
-| <a id="clip-11"></a>[CLIP-11](tickets/CLIP-11.md) | Cursor appearance and behavior: style, idle hide, loop return, shake removal | Medium | Partial  | Queue implementation | nothing |
-| <a id="clip-7b"></a>[CLIP-7b](#clip-7b)           | Screen Studio `mousemoves`/`mouseclicks` metadata import                     | Medium | Decision | Queue implementation | D-4     |
+| Ticket ID                                         | Title                                                                        | Risk   | Status   | Owner                 | Needs   |
+| ------------------------------------------------- | ---------------------------------------------------------------------------- | ------ | -------- | --------------------- | ------- |
+| <a id="clip-11"></a>[CLIP-11](tickets/CLIP-11.md) | Cursor appearance and behavior: style, idle hide, loop return, shake removal | Medium | Partial  | Cursor implementation | nothing |
+| <a id="clip-7b"></a>[CLIP-7b](#clip-7b)           | Screen Studio `mousemoves`/`mouseclicks` metadata import                     | Medium | Decision | Queue implementation  | D-4     |
 
 CLIP-11's preserved first unit covers recorded, fixed and Touch styles, idle hiding, shake removal,
 and stop or return endings. Its three-way integration onto `9b64f563` passes 127 unit and all 39
 browser checks, including decoded cursor exports and local save/reopen. Six new behavior assertions
 failed on the unchanged implementation first. This core unit is delivered at
 [`7b23be8`](https://github.com/mite404/clipper/commit/7b23be80ff417e061d5c74ac127759b20a5b80ef),
-with [green CI](https://github.com/mite404/clipper/actions/runs/43786045477). Rotation, cursor-type
-stabilization, speed styles and segment hiding remain open. Endings apply per trimmed clip, not per
-whole video. The 1 s idle delay, 0.5% shake radius and 0.5 s ending duration are engineering
+with [green CI](https://github.com/mite404/clipper/actions/runs/43786045477). Source-time segment
+hiding is delivered at
+[`bea0526`](https://github.com/mite404/clipper/commit/bea052601a0181080956f6ad08b93bf1df419311),
+with [green CI](https://github.com/mite404/clipper/actions/runs/43794298710). Its half-open ranges
+apply to every use of a source, independently of telemetry offset. The worker verified 129 units, 39
+browser checks and 10 isolated performance checks. Rotation, cursor-type stabilization and speed
+styles remain open; the cursor worker is implementing stabilization. Endings apply per trimmed clip,
+not per whole video. The 1 s idle delay, 0.5% shake radius and 0.5 s ending duration are engineering
 defaults.
 
 ### Acceptance added by the real capture
@@ -219,7 +233,7 @@ queue thread unless stated.
 | <a id="ref-14"></a>[REF-14](tickets/REF-14.md) | One constant each for music gain and peak rate; blob-URL test asserts no fetch      | Small  | Ready                                    | #32, #33, #34       |
 | <a id="ref-18"></a>[REF-18](tickets/REF-18.md) | Editor journeys also run against the production bundle                              | Medium | Ready                                    | #18                 |
 | <a id="ref-20"></a>[REF-20](tickets/REF-20.md) | Rewind and export progress re-render at 10 Hz                                       | Medium | Ready                                    | #36                 |
-| <a id="ref-26"></a>[REF-26](tickets/REF-26.md) | Keep footer errors and warnings visible without scrolling                           | Small  | Local only; full gate failed             | found during REF-21 |
+| <a id="ref-26"></a>[REF-26](tickets/REF-26.md) | Keep footer errors and warnings visible without scrolling                           | Small  | Locally verified; delivery CI pending    | found during REF-21 |
 | <a id="ref-22"></a>[REF-22](#ref-22)           | Project container without one giant JSON string (format version 3, reads version 2) | Large  | Proposal                                 | #3                  |
 | <a id="ref-23"></a>[REF-23](#ref-23)           | Zooms anchored to source time and source coordinates                                | Large  | Decision D-1                             | #14, #24            |
 | <a id="ref-24"></a>[REF-24](#ref-24)           | Edit operations in a tested reducer outside `App.tsx`                               | Large  | Proposal; only if REF-19 proves too thin | #20                 |
@@ -232,22 +246,22 @@ These rows make the review's informational recommendations explicit. They are pr
 confirmed defects. Optional cleanup does not delay features. The coverage table below identifies the
 original note for every row.
 
-| Ticket ID                                  | Title                                                            | Risk   | Status            | Needs                                                                                                   |
-| ------------------------------------------ | ---------------------------------------------------------------- | ------ | ----------------- | ------------------------------------------------------------------------------------------------------- |
-| <a id="doc-2"></a>[DOC-2](#doc-2)          | Audit ticket coverage, IDs and delivery evidence                 | Small  | In progress       | nothing                                                                                                 |
-| <a id="ref-27"></a>[REF-27](#ref-27)       | Qualify MP4 AVC and AAC export                                   | Medium | Blocked           | an encoding-capable browser or runner                                                                   |
-| <a id="ref-28"></a>[REF-28](#ref-28)       | Define missing decoded-frame behavior                            | Medium | Proposal          | reproduce null and early-end decoder cases                                                              |
-| <a id="ref-29"></a>[REF-29](#ref-29)       | Assess complexity-score baseline blind spots                     | Small  | Deferred proposal | only if count-only baseline permits real growth                                                         |
-| <a id="ref-30"></a>[REF-30](#ref-30)       | Progress and cancellation for import, Open and Save              | Large  | Proposal          | define bounded-memory and cancellation behavior with REF-22                                             |
-| <a id="ref-31"></a>[REF-31](#ref-31)       | Prevent hidden-tab rewind jumps and held-Space toggles           | Small  | Ready             | reproduce through actual transport                                                                      |
-| <a id="ref-32"></a>[REF-32](#ref-32)       | Correct source-preview playback error and busy lifecycle         | Medium | Ready             | reproduce pause, switch and export races                                                                |
-| <a id="ref-33"></a>[REF-33](#ref-33)       | Qualify download URL lifetime outside Chromium                   | Medium | Blocked           | another supported WebCodecs browser                                                                     |
-| <a id="ref-34"></a>[REF-34](#ref-34)       | Remove Player listener lifetime assumptions                      | Small  | Deferred proposal | reproduce a listener lifecycle defect first                                                             |
-| <a id="ref-35"></a>[REF-35](#ref-35)       | Close edit and project-boundary test gaps                        | Medium | Ready             | asymmetric ripple, fractional trim, parser bounds, source-track rules, save snapshot and chunking cases |
-| <a id="ref-36"></a>[REF-36](#ref-36)       | Prove delivery recovery and individual audio mute                | Medium | Ready             | UI cancel and retry; failed export and partial-open recovery; one muted track at a time                 |
-| <a id="ref-37"></a>[REF-37](#ref-37)       | Measure video cadence, rewind and scrub with large telemetry     | Medium | Ready             | extend the existing performance gate, not its thresholds                                                |
-| <a id="verify-3"></a>[VERIFY-3](#verify-3) | Bring the feature map in line with delivered motion and controls | Small  | Ready             | frame-step and zoom-field journeys; current cursor and follow coverage                                  |
-| <a id="clip-9b"></a>[CLIP-9b](#clip-9b)    | Resize zoom intervals with timeline edge handles                 | Small  | Proposal          | CLIP-9 core; preserve inspector controls and source anchors                                             |
+| Ticket ID                                  | Title                                                            | Risk   | Status                                                                                                                                                                              | Needs                                                                                                   |
+| ------------------------------------------ | ---------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| <a id="doc-2"></a>[DOC-2](#doc-2)          | Audit ticket coverage, IDs and delivery evidence                 | Small  | Delivered at [a8078ff](https://github.com/mite404/clipper/commit/a8078ffb4d737bf028bd0b864f31125dbd510263), [green CI](https://github.com/mite404/clipper/actions/runs/43789649834) | nothing                                                                                                 |
+| <a id="ref-27"></a>[REF-27](#ref-27)       | Qualify MP4 AVC and AAC export                                   | Medium | Blocked                                                                                                                                                                             | an encoding-capable browser or runner                                                                   |
+| <a id="ref-28"></a>[REF-28](#ref-28)       | Define missing decoded-frame behavior                            | Medium | Proposal                                                                                                                                                                            | reproduce null and early-end decoder cases                                                              |
+| <a id="ref-29"></a>[REF-29](#ref-29)       | Assess complexity-score baseline blind spots                     | Small  | Deferred proposal                                                                                                                                                                   | only if count-only baseline permits real growth                                                         |
+| <a id="ref-30"></a>[REF-30](#ref-30)       | Progress and cancellation for import, Open and Save              | Large  | Proposal                                                                                                                                                                            | define bounded-memory and cancellation behavior with REF-22                                             |
+| <a id="ref-31"></a>[REF-31](#ref-31)       | Prevent hidden-tab rewind jumps and held-Space toggles           | Small  | Ready                                                                                                                                                                               | reproduce through actual transport                                                                      |
+| <a id="ref-32"></a>[REF-32](#ref-32)       | Correct source-preview playback error and busy lifecycle         | Medium | Ready                                                                                                                                                                               | reproduce pause, switch and export races                                                                |
+| <a id="ref-33"></a>[REF-33](#ref-33)       | Qualify download URL lifetime outside Chromium                   | Medium | Blocked                                                                                                                                                                             | another supported WebCodecs browser                                                                     |
+| <a id="ref-34"></a>[REF-34](#ref-34)       | Remove Player listener lifetime assumptions                      | Small  | Deferred proposal                                                                                                                                                                   | reproduce a listener lifecycle defect first                                                             |
+| <a id="ref-35"></a>[REF-35](#ref-35)       | Close edit and project-boundary test gaps                        | Medium | Ready                                                                                                                                                                               | asymmetric ripple, fractional trim, parser bounds, source-track rules, save snapshot and chunking cases |
+| <a id="ref-36"></a>[REF-36](#ref-36)       | Prove delivery recovery and individual audio mute                | Medium | Ready                                                                                                                                                                               | UI cancel and retry; failed export and partial-open recovery; one muted track at a time                 |
+| <a id="ref-37"></a>[REF-37](#ref-37)       | Measure video cadence, rewind and scrub with large telemetry     | Medium | Ready                                                                                                                                                                               | extend the existing performance gate, not its thresholds                                                |
+| <a id="verify-3"></a>[VERIFY-3](#verify-3) | Bring the feature map in line with delivered motion and controls | Small  | In progress; one-ticket Sonnet 5.5 trial                                                                                                                                            | frame-step and zoom-field journeys; current cursor and follow coverage                                  |
+| <a id="clip-9b"></a>[CLIP-9b](#clip-9b)    | Resize zoom intervals with timeline edge handles                 | Small  | Proposal                                                                                                                                                                            | CLIP-9 core; preserve inspector controls and source anchors                                             |
 
 CLIP-9b retains the reference inventory's remaining zoom-edge interaction. `Timeline.tsx` renders
 zoom intervals as selection buttons only; inspector start/duration fields do not supply timeline
@@ -273,13 +287,16 @@ in original order, not ticket IDs or new queues.
 The audit confirms 19 delivered REF tickets, with REF-14, REF-18 and REF-20 still open. REF-22
 remains a container proposal, REF-23 a decision, and REF-24 conditional cleanup. REF-19 already
 provides public behavior coverage, so REF-24 is not a feature prerequisite. CLIP-11's core is on
-main, but rotation, cursor-type stabilization, speed styles and segment hiding are not. CLIP-38 is
+main, as is segment hiding; rotation, cursor-type stabilization and speed styles are not. CLIP-38 is
 also partial: REF-12 supplies only its unsaved-close warning, not recent projects or Save-as.
 
-REF-26 is not delivered. Its three-line CSS fix and two extended journeys are preserved locally in
-the stash named `ref26 local footer fix pending performance investigation`. All 127 unit tests and
-38 of 39 browser checks passed locally; cursor-follow rAF p95 was exactly 100 ms against the strict
-below-100-ms gate. This run does not replace the earlier green CI or establish a cause.
+REF-26's three-line sticky-footer fix passes 129 units and all 39 browser checks in
+`verification/all-2DvU6O`. Unchanged main and the fixed build each passed ten isolated performance
+checks, including five cursor-follow repetitions, with the strict below-100-ms gate unchanged. The
+earlier single p95 failure at exactly 100 ms remains unexplained; these controlled runs show no
+reproduced regression, not a claimed performance fix. Default, error, narrow and scrolled states
+were inspected, including real-pointer access to the bottom track controls. Delivery awaits its
+exact-SHA CI.
 
 ### Informational recommendation coverage
 
@@ -346,9 +363,9 @@ The reference artifact had useful material absent from the title-only master row
 now preserved in [reference-features.md](reference-features.md): detailed motion acceptance, hotkey
 and layout subcontrols, multicam/caption/program subfeatures, project/export/recording details,
 native exclusions, original source links, capture alternatives and contract caveats. No unique
-operational state remains there. It can be retired after this migration passes CI; deletion still
-needs explicit approval and has not happened. The two original steel-thread acceptance/evidence
-artifacts are separate and are not included in that recommendation.
+operational state remained there. After migration CI passed, the owner approved deletion and the
+owning thread confirmed `deleted: true` for only the reference artifact on 2026-11-16. The separate
+steel-thread acceptance and verification artifacts remain intact.
 
 Run `node scripts/check-tickets.mjs` to check unique definitions, leftmost IDs, local detail links,
 orphan references and all 34 finding plus 33 informational mappings. The check validates document

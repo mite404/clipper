@@ -1237,6 +1237,9 @@ p {
   font-size: 8px;
 }
 .app-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
   min-height: 35px;
   display: flex;
   align-items: center;

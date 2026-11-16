@@ -25,6 +25,15 @@ test('keeps project delivery controls readable at desktop and narrow widths', as
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       width,
     );
+    await expect(page.locator('.app-footer [role="status"]')).toBeInViewport({ ratio: 1 });
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    const musicMute = page.getByRole('button', { name: 'Mute Music', exact: true });
+    const muteBox = (await musicMute.boundingBox())!;
+    const footerBox = (await page.locator('.app-footer').boundingBox())!;
+    expect(muteBox.y + muteBox.height).toBeLessThanOrEqual(footerBox.y);
+    await musicMute.click();
+    await page.getByRole('button', { name: 'Unmute Music', exact: true }).click();
+    await page.evaluate(() => window.scrollTo(0, 0));
   }
 });
 
@@ -244,6 +253,16 @@ test('rejects a malformed project without replacing the current edit', async ({ 
     buffer: Buffer.from('{"version":999}'),
   });
   await expect(page.locator('.app-footer [role="status"]')).toContainText('Could not open project');
+  for (const [width, height] of [
+    [1440, 1000],
+    [1440, 700],
+    [960, 1000],
+    [320, 700],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await expect(page.locator('.app-footer [role="status"]')).toBeInViewport({ ratio: 1 });
+  }
   await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', '33px');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready');
   await page.getByRole('button', { name: 'Play composition', exact: true }).click();

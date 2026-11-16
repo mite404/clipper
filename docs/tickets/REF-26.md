@@ -6,7 +6,7 @@
 - Goal: keep errors and warnings visible without scrolling to the footer.
 - Priority: correctness feedback before new features.
 - Effort: small. Risk: narrow-width wrapping or overlaying useful controls.
-- Dependencies: resolve the observed full-run cursor-follow performance failure before delivery.
+- Dependencies: preserve strict playback gates and investigate the observed one-off failure.
 - Planned at: `7b23be80ff417e061d5c74ac127759b20a5b80ef`, 2026-11-16.
 - Local path: `docs/tickets/REF-26.md`.
 
@@ -18,11 +18,16 @@ and the footer begins at 1062.5 px, so users cannot see whether an operation fai
 ## Current state
 
 Two extended Playwright journeys failed viewport assertions before the fix. A local three-line
-sticky-footer CSS change passes those checks at desktop, short and narrow widths. It is in the stash
-named `ref26 local footer fix pending performance investigation`, not GitHub main. 127 units and
-static/Fallow gates passed; the full browser run passed 38 of 39 checks. The remaining cursor-follow
-performance check measured p95 exactly 100 ms against a strict below-100-ms bound. That failure has
-no established cause yet. It must not be hidden by a retry-only success claim.
+sticky-footer CSS change passes those checks at desktop, short and narrow widths. Final validation
+on `bea0526` plus the fix passed 129 units, static/Fallow gates and all 39 browser checks. Scrolling
+exposes the bottom track controls above the footer; a real-pointer recording exercises mute and
+unmute. These local checks are not a remote delivery claim; consult the master for CI status.
+
+The earlier run failed at rAF p95 exactly 100 ms. Unchanged-main and fixed-build production
+comparisons each passed ten isolated checks, including five cursor-follow repetitions. Unchanged
+follow p95 ranged from 33.4 to 66.6 ms; fixed follow p95 was 33.4 ms across its five runs. No other
+browser/build jobs ran alongside these measurements. This is no reproduced regression, not evidence
+of a speedup or an established cause for the earlier failure. The below-100-ms gate is unchanged.
 
 ## Approach
 
@@ -72,5 +77,8 @@ local gate plus exact-SHA CI pass. A local fix or green focused test alone is no
 
 ## Notes
 
-Failure evidence is in the queue owner's `ref26-browser.log` and `verification/all-D1VCS3`.
+Failure evidence is in the queue owner's `ref26-browser.log` and `verification/all-D1VCS3`. Final
+evidence is `verification/all-2DvU6O`, with isolated unchanged/fixed comparisons in
+`verification/performance-tZ8buA` and `verification/performance-jBZu2s`. Inspected screenshots cover
+default, error, 320px width and scrolled controls; `ref26-scroll.mp4` shows pointer interaction.
 Before-state screenshot shows the footer absent. No private capture material was used.

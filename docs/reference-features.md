@@ -5,6 +5,8 @@ in [master-tickets.md](master-tickets.md). Preserved from the
 [reference artifact](https://ampcode.com/artifacts/clipper-reference-backlog-e067faa7-a848-4b3f-864b-01c8ea952ac0),
 revision 8, read 2026-11-16. Its historical delivery paragraphs are superseded by the master.
 Sources describe desired behavior, not proof Clipper implements it. No external tickets were filed.
+The owner approved deleting only the reference artifact after preservation; its owning thread
+confirmed deletion on 2026-11-16. The link above records provenance, not a live operational queue.
 
 The artifact's
 [CLIP-10 verification and limits](https://ampcode.com/artifacts/clip-10-verification-acbfed26-8443-4d2e-98f4-c31a34450fd7)
@@ -20,7 +22,7 @@ The existing
 and
 [steel-thread verification](https://ampcode.com/artifacts/clipper-steel-thread-verification-72434030-61d6-453a-a53c-982d2ce52e29)
 remain the original CLIP-1 through CLIP-6 evidence. They are distinct from the reference artifact
-considered for retirement here. CLIP-3 is manual fixed-point zoom, not recorded tracking.
+deleted after preservation here. CLIP-3 is manual fixed-point zoom, not recorded tracking.
 
 ## Motion acceptance
 
@@ -272,5 +274,6 @@ inspected screenshots and interaction recordings, zero uploads and isolated perf
 master owns exact-SHA delivery receipts. This document does not repeat stale artifact statuses.
 
 Revision 8's feature details, source links, capture alternatives, observations, limits and owner/
-engineering distinction are preserved here or in linked master scope. The artifact can be retired
-after this migration's commit and CI are confirmed. It has not been deleted or edited by this audit.
+engineering distinction are preserved here or in linked master scope. Migration commit `a8078ff`
+passed CI before the owner approved retirement. The owning thread confirmed deletion of only the
+reference artifact; the separate acceptance and verification artifacts were retained.
