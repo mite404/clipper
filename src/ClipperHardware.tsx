@@ -1,5 +1,10 @@
 import type { ReactNode } from 'react';
 import { Hardware } from '@/components/ui/hardware';
+import { setSoundEnabled } from '@/lib/sound';
+
+// Skin sounds stay off: a video editor has typing, scrubbing and shortcuts that must stay silent.
+// Muting runs at import, before the first gesture can start audio. Haptics are left as installed.
+setSoundEnabled(false);
 
 // The skin's root rule sets inherited text paint (font, colour, engraved text shadow, thin
 // scrollbars) meant for a light panel. Clipper keeps its own; controls set their own panel.
