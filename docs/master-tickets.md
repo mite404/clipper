@@ -37,16 +37,24 @@ and nowhere else. Other documents are records, not queues:
   on capture material. Fixtures are synthetic. See [Known limits](#known-limits) for what is already
   hosted.
 - New implementation workers load `poteto-mode` and `emil-design-eng`, and run on GPT-6.1 Sol medium
-  or lower unless the owner authorizes otherwise.
+  unless the owner authorizes otherwise. Opus and Fable are reserved for sparing research or review.
 
 ## Owners
 
-| Lane                     | Thread                                                                           | Owns                                                 |
-| ------------------------ | -------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| Queue, review, refactors | [T-2d1e888a](https://ampcode.com/threads/T-2d1e888a-23ff-4bf4-b2d1-551553f2ef0a) | This file, `docs/refactor/`, REF tickets, push slots |
-| Reference features       | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94) | CLIP-7 onwards                                       |
-| Editor and bootstrap     | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da) | `.agents/setup`, `.agents/resume`                    |
-| Verification tools       | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc) | `.agents/skills/verify-clipper/**`                   |
+| Lane                     | Thread                                                                           | Owns                                                      |
+| ------------------------ | -------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Queue and implementation | [T-6706048a](https://ampcode.com/threads/T-6706048a-c051-4e23-9ec6-68afd669b492) | This file, REF and CLIP tickets, exclusive main push slot |
+| Cursor preservation      | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94) | Frozen original CLIP-11 work, no implementation or push   |
+| Editor and bootstrap     | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da) | `.agents/setup`, `.agents/resume`                         |
+| Verification tools       | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc) | `.agents/skills/verify-clipper/**`                        |
+
+The former queue thread
+[T-2d1e888a](https://ampcode.com/threads/T-2d1e888a-23ff-4bf4-b2d1-551553f2ef0a) has stopped
+implementation and coordination. Its baseline review is complete and is not repeated. The successor
+received the actual 13 CLIP-11 changed files, including `src/cursor-touch.png`, through
+`download_thread_changes` before editing. Integration uses a three-way merge from `8095a273`, not an
+overlay of stale files. Server-side usage confirms GPT-6.1 Sol routing for the successor, created
+with medium effort. There is one implementation writer and one main push-slot owner.
 
 Evidence-only threads:
 [reuse research](https://ampcode.com/threads/T-01a1ddd8-535c-7129-a7d7-9a0c28f41449) (what the
@@ -60,11 +68,11 @@ images were hosted, see [Known limits](#known-limits)).
 
 ### Files while CLIP-11 is in flight
 
-| Owner                    | Paths                                                                                                                                                        |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Reference features       | `src/cursor*.ts`, `src/CursorControls.tsx`, `tests/cursor*.spec.ts`, their stories and styles; additions to `parseProject` for new cursor settings           |
-| Queue thread             | the footer and its styles (REF-26); `src/stage.ts`, `src/export.ts`, `src/media.ts`, `src/Timeline.tsx`, `tests/export.spec.ts`, `tests/performance.spec.ts` |
-| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                             |
+| Owner                    | Paths                                                                                                                                                           |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Queue implementation     | `src/cursor*.ts`, `src/cursor-touch.png`, `src/CursorControls.tsx`, cursor stories, cursor CSS and `tests/cursor*.spec.ts`; former cursor owner is frozen       |
+| Queue implementation     | `src/App.tsx` history and undo, `src/history.ts`, `src/project.ts` serialization; the footer and its styles (REF-26); stage, export, media and timeline modules |
+| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                |
 
 ### Preservation branches
 
@@ -75,6 +83,7 @@ deleted only on the owner's word.
 | ------------------------------- | ------------------------------------------------------------------------ |
 | `wip/clip-10-smooth-follow`     | CLIP-10 before it landed; redundant now                                  |
 | `wip/queue-thread-resume-files` | The queue thread's helper scripts and raw review output, ignored on main |
+| `wip/queue-handoff-master-list` | Preserved queue draft at `31e5e725`, integrated by the successor         |
 
 The checkpoint found nothing only on the Amp-hosted repository: its one ref, `main` at `0b11477`,
 was two empty commits that GitHub `main` contains. The owner confirmed the switch on 2026-11-16 and
@@ -134,14 +143,20 @@ Whether it runs for new orbs now that they clone GitHub has not been checked.
 
 ## Queue
 
-Top to bottom is the order of work. The two lanes run in parallel; pushes are serialized.
+Top to bottom is the order of work. Correctness and unblocking work precede dependent features. One
+implementation writer owns both lanes; pushes are serialized and await exact-SHA green CI.
 
 ### Mouse tracking and automatic zoom
 
-| Order | Ticket  | What                                                                         | Risk   | Status      | Owner              | Needs   |
-| ----- | ------- | ---------------------------------------------------------------------------- | ------ | ----------- | ------------------ | ------- |
-| 1     | CLIP-11 | Cursor appearance and behavior: style, idle hide, loop return, shake removal | Medium | In progress | Reference features | nothing |
-| -     | CLIP-7b | Screen Studio `mousemoves`/`mouseclicks` metadata import                     | Medium | Decision    | Reference features | D-4     |
+| Order | Ticket  | What                                                                         | Risk   | Status      | Owner                | Needs   |
+| ----- | ------- | ---------------------------------------------------------------------------- | ------ | ----------- | -------------------- | ------- |
+| 1     | CLIP-11 | Cursor appearance and behavior: style, idle hide, loop return, shake removal | Medium | In progress | Queue implementation | nothing |
+| -     | CLIP-7b | Screen Studio `mousemoves`/`mouseclicks` metadata import                     | Medium | Decision    | Queue implementation | D-4     |
+
+CLIP-11's preserved first unit covers recorded, fixed and Touch styles, idle hiding, shake removal,
+and stop or return endings. It passed 117 unit and 35 browser checks on its old base, not on current
+main. Integration and current-main verification are pending. Rotation, cursor-type stabilization,
+speed styles and segment hiding remain open. Endings apply per trimmed clip, not per whole video.
 
 ### Acceptance added by the real capture
 
