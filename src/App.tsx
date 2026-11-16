@@ -22,6 +22,9 @@ import {
   Maximize2,
   PanelLeftClose,
   PanelLeftOpen,
+  PanelBottomClose,
+  PanelBottomOpen,
+  Rows2,
   Pause,
   Play,
   Plus,
@@ -60,6 +63,7 @@ import { ZoomMotionControls } from './ZoomMotionControls';
 import { resolveZooms } from './zoom-generation';
 import { maskRect, STAGE, type Layout } from './stage';
 import { useMediaDrawer } from './useMediaDrawer';
+import { PanelResizeHandle, usePanelLayout } from './PanelResizeHandle';
 import './styles.css';
 
 export const INITIAL_EDIT: Edit = {
@@ -295,7 +299,7 @@ export function Inspector({
   children?: ReactNode;
 }) {
   return (
-    <aside className="inspector">
+    <aside id="inspector-pane" className="inspector">
       <div className="section-title">
         <span>Inspector</span>
         <Crop size={15} />
@@ -542,6 +546,16 @@ export function App() {
     toggle: mediaToggle,
     onToggle: toggleMedia,
   } = useMediaDrawer(busy || help || exportProgress !== null);
+  const {
+    workspace: workspacePanel,
+    open: timelineOpen,
+    compact: compactPanels,
+    handle: resizeHandle,
+    toggleOpen: toggleTimeline,
+    custom: customHeight,
+    hasCustom: hasCustomHeight,
+    toggleHeight: toggleTimelineHeight,
+  } = usePanelLayout(mediaMode === 'pinned', busy || help || exportProgress !== null);
   const [copying, setCopying] = useState(false);
   const exportAbort = useRef<AbortController | null>(null);
   const helpDialog = useRef<HTMLDialogElement>(null);
@@ -1161,7 +1175,10 @@ export function App() {
         </div>
       )}
       <div
+        ref={workspacePanel}
         className={`workspace${mediaMode === 'pinned' ? '' : ' media-hidden'}`}
+        data-timeline-hidden={!timelineOpen || undefined}
+        data-compact={compactPanels || undefined}
         inert={exportProgress !== null || busy}
       >
         <div className="media-hot-zone" aria-hidden="true" />
@@ -1278,9 +1295,37 @@ export function App() {
             </section>
           </div>
         </section>
-        <section className="sequence-area" aria-label="Main sequence">
+        <PanelResizeHandle {...resizeHandle('left')} />
+        <PanelResizeHandle {...resizeHandle('right')} />
+        <PanelResizeHandle {...resizeHandle('timeline')} />
+        <section
+          id="sequence-pane"
+          className="sequence-area"
+          aria-label="Main sequence"
+          aria-hidden={!timelineOpen || undefined}
+          inert={!timelineOpen}
+        >
           <div className="transport">
             <div className="transport-readout">
+              <IconButton
+                label="Hide timeline"
+                aria-controls="sequence-pane"
+                aria-expanded={true}
+                onClick={toggleTimeline}
+              >
+                <PanelBottomClose size={16} />
+              </IconButton>
+              <IconButton
+                label={
+                  customHeight ? 'Use default timeline height' : 'Restore custom timeline height'
+                }
+                aria-controls="sequence-pane"
+                aria-pressed={customHeight}
+                disabled={!hasCustomHeight}
+                onClick={toggleTimelineHeight}
+              >
+                <Rows2 size={16} />
+              </IconButton>
               <span data-testid="timecode">{timecode(frame)}</span>
               <span>/ {timecode(duration)}</span>
             </div>
@@ -1450,6 +1495,16 @@ export function App() {
         </Inspector>
       </div>
       <footer className="app-footer">
+        {!timelineOpen && (
+          <IconButton
+            label="Show timeline"
+            aria-controls="sequence-pane"
+            aria-expanded={false}
+            onClick={toggleTimeline}
+          >
+            <PanelBottomOpen size={16} />
+          </IconButton>
+        )}
         <span role="status">
           <span className="status-dot" /> {message}
         </span>

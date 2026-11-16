@@ -5,6 +5,66 @@ async function openEditor(page: Page) {
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
 }
 
+test('visible native playhead aligns with ruler and tracks through seeking, scale and scroll', async ({
+  page,
+}) => {
+  await openEditor(page);
+  const input = page.getByRole('slider', { name: 'Timeline playhead' });
+  await expect(input).toHaveCSS('opacity', '1');
+  const ruler = page.locator('.ruler');
+  const marker = page.locator('.ruler-playhead');
+  const body = page.locator('.playhead');
+  const scale = page.getByRole('slider', { name: 'Timeline scale' });
+  for (const factor of [1, 3]) {
+    await scale.fill(String(Number(await scale.getAttribute('min')) * factor));
+    for (const frame of [0, 83, 359]) {
+      await input.fill(String(frame));
+      const r = (await ruler.boundingBox())!;
+      const m = (await marker.boundingBox())!;
+      const b = (await body.boundingBox())!;
+      expect(m.x).toBeCloseTo(r.x + (r.width * frame) / 360, 0);
+      expect(m.y).toBeCloseTo(r.y, 0);
+      expect(m.height).toBeCloseTo(r.height, 0);
+      expect(b.x).toBeCloseTo(m.x, 0);
+    }
+    await input.focus();
+    await input.press('Home');
+    await input.press('ArrowRight');
+    await expect(input).toHaveValue('1');
+    await input.press('End');
+    await expect(input).toHaveValue('359');
+    await page.getByTestId('timeline-scroll').evaluate((element) => {
+      element.scrollLeft = 140;
+      element.scrollTop = 60;
+    });
+    expect((await marker.boundingBox())!.x).toBeCloseTo((await body.boundingBox())!.x, 0);
+    expect((await marker.boundingBox())!.y).toBeCloseTo((await ruler.boundingBox())!.y, 0);
+  }
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await scale.fill((await scale.getAttribute('min')) ?? '40');
+  const r = (await ruler.boundingBox())!;
+  await input.fill('0');
+  await page.mouse.move(r.x, r.y + 7);
+  await page.mouse.down();
+  await page.mouse.move(r.x + r.width * 0.6, r.y + 7, { steps: 12 });
+  await page.mouse.up();
+  expect(Number(await input.inputValue())).toBeCloseTo(216, 0);
+  await page.mouse.move(r.x + (r.width * 359) / 360, r.y + 7);
+  await page.mouse.down();
+  await page.mouse.up();
+  await expect(input).toHaveValue('359');
+  expect((await marker.boundingBox())!.x).toBeCloseTo((await body.boundingBox())!.x, 0);
+  await expect(page.getByTestId('track-screen').getByRole('button').first()).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+  await page.getByTestId('track-camera').getByRole('button').first().click();
+  await expect(page.getByTestId('track-camera').getByRole('button').first()).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+});
+
 test('the frame buttons step exactly one frame, across a second and at both ends', async ({
   page,
 }) => {

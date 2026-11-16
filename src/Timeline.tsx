@@ -151,12 +151,19 @@ export function Timeline({
                 {timecode(Math.round((i / (ticks - 1)) * duration)).slice(0, 5)}
               </span>
             ))}
+            <div
+              className="ruler-playhead"
+              aria-hidden="true"
+              style={{ left: `${(frame / duration) * 100}%` }}
+            />
             <input
               aria-label="Timeline playhead"
               type="range"
               min="0"
               max={duration - 1}
               value={frame}
+              // The native thumb's center travels from frame zero to the last frame, not duration.
+              style={{ width: `calc(${((duration - 1) / duration) * 100}% + 12px)` }}
               onChange={(event) => onSeek(Number(event.target.value))}
             />
           </div>
@@ -328,9 +335,7 @@ export function Timeline({
             </div>
           ))}
           <div className="playhead-area">
-            <div className="playhead" style={{ left: `${(frame / duration) * 100}%` }}>
-              <span />
-            </div>
+            <div className="playhead" style={{ left: `${(frame / duration) * 100}%` }} />
           </div>
           <div className="timeline-end">
             {seconds.toFixed(1)} seconds · Stereo · Local workspace

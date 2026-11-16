@@ -56,7 +56,7 @@ test.describe('media edge preview', () => {
     expect(
       await page.evaluate(() => matchMedia('(hover: hover) and (pointer: fine)').matches),
     ).toBe(true);
-    const toggle = page.locator('[aria-controls="media-drawer"]');
+    const toggle = page.locator('button[aria-controls="media-drawer"]');
     const drawer = page.locator('#media-drawer');
     await toggle.click();
     await page.locator('.app-header').click({ position: { x: 4, y: 4 } });
@@ -103,7 +103,7 @@ test.describe('media edge preview', () => {
   }) => {
     await page.goto('/');
     await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
-    const toggle = page.locator('[aria-controls="media-drawer"]');
+    const toggle = page.locator('button[aria-controls="media-drawer"]');
     await toggle.click();
     await page.mouse.move(700, 80);
     await toggle.hover();
@@ -137,7 +137,7 @@ test.describe('media edge preview', () => {
     await page.emulateMedia({ reducedMotion: 'reduce' });
     await page.goto('/');
     await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
-    const toggle = page.locator('[aria-controls="media-drawer"]');
+    const toggle = page.locator('button[aria-controls="media-drawer"]');
     await toggle.click();
     for (const width of [960, 617, 390, 320]) {
       await page.setViewportSize({ width, height: 1000 });
@@ -182,7 +182,7 @@ test('touch uses the persistent Media toggle without a hover preview', async ({
     await page.goto('/');
     await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
     expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
-    const toggle = page.locator('[aria-controls="media-drawer"]');
+    const toggle = page.locator('button[aria-controls="media-drawer"]');
     await toggle.tap();
     await page.mouse.move(380, 80);
     await toggle.hover();
@@ -306,14 +306,22 @@ test('fit scale follows the viewport and stays finite for empty and one-frame se
   const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
   for (const width of [1440, 960, 390, 1280]) {
     await page.setViewportSize({ width, height: 800 });
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
     await expect
       .poll(async () => {
         await scale.fill((await scale.getAttribute('min'))!);
         return scroll.evaluate((el) => el.scrollWidth - el.clientWidth);
       })
       .toBeLessThanOrEqual(1);
-    const min = Number(await scale.getAttribute('min'));
-    const max = Number(await scale.getAttribute('max'));
+    const { min, max } = await scale.evaluate((element) => ({
+      min: Number(element.getAttribute('min')),
+      max: Number(element.getAttribute('max')),
+    }));
     expect(max / min).toBeCloseTo(32);
     const lane = (await page.getByTestId('track-screen').boundingBox())!;
     expect(lane.width / 12).toBeCloseTo(min, 1);
@@ -384,4 +392,285 @@ test('fit scale follows the viewport and stays finite for empty and one-frame se
   await expect
     .poll(() => scroll.evaluate((el) => el.scrollWidth / el.clientWidth))
     .toBeGreaterThan(20);
+});
+
+test('timeline resizing remembers custom height across default, hide and viewport clamps', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const sequence = page.getByRole('region', { name: 'Main sequence' });
+  const handle = page.getByRole('separator', { name: 'Resize timeline' });
+  const height = async () => (await sequence.boundingBox())!.height;
+  const original = await height();
+  await handle.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect.poll(height).toBeCloseTo(original - 16, 0);
+  const custom = await height();
+  await page.getByRole('button', { name: 'Use default timeline height' }).click();
+  await expect.poll(height).toBeCloseTo(original, 0);
+  await page.getByRole('button', { name: 'Restore custom timeline height' }).click();
+  await expect.poll(height).toBeCloseTo(custom, 0);
+  const scale = page.getByRole('slider', { name: 'Timeline scale' });
+  const maxScale = (await scale.getAttribute('max'))!;
+  await scale.fill(maxScale);
+  const chosenScale = await scale.inputValue();
+  const scroll = page.getByTestId('timeline-scroll');
+  await scroll.evaluate((element) => {
+    element.scrollLeft = 500;
+    element.scrollTop = 80;
+  });
+  const offset = await scroll.evaluate((element) => ({
+    x: element.scrollLeft,
+    y: element.scrollTop,
+  }));
+  const camera = page.locator('[data-testid="camera-mask"] video:visible');
+  await page.getByRole('button', { name: 'Play composition', exact: true }).click();
+  await page.getByRole('button', { name: 'Hide timeline', exact: true }).click();
+  await expect(sequence).toBeHidden();
+  const restore = page.getByRole('button', { name: 'Show timeline', exact: true });
+  await expect(restore).toBeFocused();
+  await expect(
+    page.locator('.app-footer').getByRole('button', { name: 'Show timeline' }),
+  ).toBeVisible();
+  const before = await camera.evaluate((video: HTMLVideoElement) => video.currentTime);
+  await expect
+    .poll(() => camera.evaluate((video: HTMLVideoElement) => video.currentTime))
+    .toBeGreaterThan(before);
+  await restore.press('Enter');
+  await expect(page.getByRole('button', { name: 'Hide timeline', exact: true })).toBeFocused();
+  await expect(page.getByTestId('transport-state')).toHaveText('Playing · 1×');
+  await page.keyboard.press('Space');
+  await expect(page.getByTestId('transport-state')).toHaveText('Paused');
+  await expect.poll(height).toBeCloseTo(custom, 0);
+  await expect(scale).toHaveValue(chosenScale);
+  expect(
+    await scroll.evaluate((element) => ({ x: element.scrollLeft, y: element.scrollTop })),
+  ).toEqual(offset);
+  await page.setViewportSize({ width: 1440, height: 720 });
+  await expect.poll(height).toBeLessThan(custom);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await expect.poll(height).toBeCloseTo(custom, 0);
+  await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeDisabled();
+});
+
+test('pane drags follow captured pointers during playback and cancel without keeping a size', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
+  await playhead.fill('30');
+  await page.getByRole('button', { name: 'Play composition', exact: true }).click();
+  for (const [name, selector, vertical, direction] of [
+    ['Resize media pool', '#media-drawer', false, 1],
+    ['Resize inspector', '.inspector', false, -1],
+    ['Resize timeline', '.sequence-area', true, -1],
+  ] as const) {
+    const separator = page.getByRole('separator', { name, exact: true });
+    const panel = page.locator(selector);
+    const size = async () => {
+      const box = (await panel.boundingBox())!;
+      return vertical ? box.height : box.width;
+    };
+    const original = await size();
+    const start = (await separator.boundingBox())!;
+    const x = start.x + start.width / 2;
+    const y = start.y + start.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(
+      x + (vertical ? 0 : direction * 64),
+      y + (vertical ? direction * 64 : 0),
+      { steps: 8 },
+    );
+    await expect.poll(size).toBeCloseTo(original + 64, 0);
+    const at = await playhead.inputValue();
+    await expect.poll(() => playhead.inputValue()).not.toBe(at);
+    await expect.poll(size).toBeCloseTo(original + 64, 0);
+    await page.keyboard.press('Escape');
+    await page.mouse.up();
+    await expect.poll(size).toBeCloseTo(original, 0);
+    await expect(page.locator('html')).not.toHaveAttribute('data-panel-drag');
+    await separator.focus();
+    await separator.press(vertical ? 'ArrowUp' : direction > 0 ? 'ArrowRight' : 'ArrowLeft');
+    await expect.poll(size).toBeCloseTo(original + 16, 0);
+    const next = (await separator.boundingBox())!;
+    const nx = next.x + next.width / 2;
+    const ny = next.y + next.height / 2;
+    await page.mouse.move(nx, ny);
+    await page.mouse.down();
+    await page.mouse.move(
+      nx + (vertical ? 0 : direction * 32),
+      ny + (vertical ? direction * 32 : 0),
+      { steps: 4 },
+    );
+    await page.mouse.up();
+    await expect.poll(size).toBeCloseTo(original + 48, 0);
+  }
+  await page.getByRole('button', { name: 'Pause playback', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeDisabled();
+});
+
+test('all pane bounds fit jointly and preserve desired widths through responsive clamping', async ({
+  page,
+}) => {
+  const resize = async (width: number, height: number) => {
+    await page.setViewportSize({ width, height });
+    // Viewport emulation returns before resize/ResizeObserver updates the accessible bounds.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+  };
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  for (const [width, height] of [
+    [1920, 1080],
+    [1280, 720],
+    [961, 800],
+    [1440, 500],
+    [960, 900],
+    [390, 844],
+  ]) {
+    await resize(width, height);
+    const timeline = page.getByRole('separator', { name: 'Resize timeline' });
+    if (width > 960) {
+      for (const label of [
+        'Resize media pool',
+        'Resize inspector',
+        ...(height > 600 ? ['Resize timeline'] : []),
+      ]) {
+        const handle = page.getByRole('separator', { name: label, exact: true });
+        await handle.press('End');
+        await expect(handle).toHaveAttribute(
+          'aria-valuenow',
+          (await handle.getAttribute('aria-valuemax'))!,
+        );
+      }
+      const preview = (await page.locator('.editing-area').boundingBox())!;
+      expect(preview.width).toBeGreaterThanOrEqual(479);
+      expect(preview.height).toBeGreaterThanOrEqual(239);
+      const inspector = (await page.locator('.inspector').boundingBox())!;
+      const sequence = (await page.locator('.sequence-area').boundingBox())!;
+      expect(inspector.y + inspector.height).toBeLessThanOrEqual(sequence.y + 1);
+      expect(
+        (await page.getByTestId('timeline-scroll').boundingBox())!.height,
+      ).toBeGreaterThanOrEqual(160);
+      if (height < 600) {
+        await expect(timeline).toBeHidden();
+        expect((await page.locator('.app-footer').boundingBox())!.y).toBeGreaterThanOrEqual(
+          sequence.y + sequence.height,
+        );
+      }
+    } else await expect(page.getByRole('separator')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      width,
+    );
+  }
+  await resize(1440, 1000);
+  const left = page.getByRole('separator', { name: 'Resize media pool' });
+  await left.press('End');
+  const desired = await left.getAttribute('aria-valuenow');
+  await resize(961, 800);
+  await expect
+    .poll(async () => Number(await left.getAttribute('aria-valuenow')))
+    .toBeLessThan(Number(desired));
+  await resize(1440, 1000);
+  await expect(left).toHaveAttribute('aria-valuenow', desired!);
+  await left.dblclick();
+  await expect(left).toHaveAttribute('aria-valuenow', '220');
+  for (const [label, key] of [
+    ['Resize media pool', 'ArrowRight'],
+    ['Resize inspector', 'ArrowLeft'],
+    ['Resize timeline', 'ArrowUp'],
+  ]) {
+    const handle = page.getByRole('separator', { name: label, exact: true });
+    await handle.press('Home');
+    await expect(handle).toHaveAttribute(
+      'aria-valuenow',
+      (await handle.getAttribute('aria-valuemin'))!,
+    );
+    await handle.press(`Shift+${key}`);
+    await expect(handle).toHaveAttribute(
+      'aria-valuenow',
+      String(Number(await handle.getAttribute('aria-valuemin')) + 64),
+    );
+  }
+});
+
+test('cancel, lost capture and blur roll back a default-height drag without inventing custom height', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const handle = page.getByRole('separator', { name: 'Resize timeline' });
+  const toggle = page.getByRole('button', { name: 'Restore custom timeline height' });
+  const original = await handle.getAttribute('aria-valuenow');
+  for (const cancel of ['pointercancel', 'lostcapture', 'blur']) {
+    const box = (await handle.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2, box.y - 60, { steps: 5 });
+    await expect(handle).not.toHaveAttribute('aria-valuenow', original!);
+    if (cancel === 'pointercancel') await handle.dispatchEvent('pointercancel', { pointerId: 1 });
+    if (cancel === 'lostcapture')
+      await handle.evaluate((element) => element.releasePointerCapture(1));
+    if (cancel === 'blur') await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+    await page.mouse.up();
+    await expect(handle).toHaveAttribute('aria-valuenow', original!);
+    await expect(toggle).toBeDisabled();
+    await expect(page.locator('html')).not.toHaveAttribute('data-panel-drag');
+  }
+  await handle.dispatchEvent('pointerdown', { pointerId: 4, isPrimary: false, button: 0 });
+  await expect(page.locator('html')).not.toHaveAttribute('data-panel-drag');
+  await handle.dblclick();
+  await expect(toggle).toBeDisabled();
+});
+
+test('sideways timeline drag leaves responsive default height selected', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const handle = page.getByRole('separator', { name: 'Resize timeline' });
+  const toggle = page.getByRole('button', { name: 'Restore custom timeline height' });
+  await expect(toggle).toBeDisabled();
+  const box = (await handle.boundingBox())!;
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + 80, y, { steps: 8 });
+  await page.mouse.up();
+  await expect(toggle).toBeDisabled();
+  const original = (await page.locator('#sequence-pane').boundingBox())!.height;
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  await expect
+    .poll(async () => (await page.locator('#sequence-pane').boundingBox())!.height)
+    .toBeCloseTo(original + 60, 0);
+  await expect(toggle).toBeDisabled();
+});
+
+test('export cancellation restores short-window timeline resizing without viewport changes', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 730 });
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const workspace = page.locator('.workspace');
+  const handle = page.getByRole('separator', { name: 'Resize timeline' });
+  await expect(workspace).not.toHaveAttribute('data-compact');
+  await expect(handle).toBeVisible();
+  await page.getByRole('button', { name: 'Export video', exact: true }).click();
+  await expect(page.getByRole('progressbar', { name: 'Video export progress' })).toBeVisible();
+  await expect(workspace).toHaveAttribute('data-compact', 'true');
+  await page.getByRole('button', { name: 'Cancel export', exact: true }).click();
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Export cancelled.');
+  await expect(workspace).not.toHaveAttribute('data-compact');
+  await expect(handle).toBeVisible();
 });

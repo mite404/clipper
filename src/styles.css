@@ -756,27 +756,73 @@ p {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 8px;
   color: #818996;
-  top: 3px;
+  top: 16px;
   white-space: nowrap;
 }
 .ruler > span:first-child {
   transform: none;
+  padding-left: 8px;
 }
 .ruler > span:last-of-type {
   transform: translateX(-100%);
+  padding-right: 8px;
 }
 .ruler input {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: -6px;
   margin: 0;
-  width: 100%;
   height: 100%;
-  opacity: 0;
-  z-index: 5;
+  padding: 0;
+  appearance: none;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  z-index: 7;
   cursor: ew-resize;
+}
+.ruler input::-webkit-slider-runnable-track {
+  height: 100%;
+  background: transparent;
+}
+.ruler input::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 14px;
+  background: var(--green);
+  clip-path: polygon(0 0, 100% 0, 100% 65%, 50% 100%, 0 65%);
+}
+.ruler input::-moz-range-track {
+  background: transparent;
+}
+.ruler input::-moz-range-thumb {
+  width: 12px;
+  height: 14px;
+  border: 0;
+  border-radius: 0;
+  background: var(--green);
+  clip-path: polygon(0 0, 100% 0, 100% 65%, 50% 100%, 0 65%);
+}
+.ruler input:active::-webkit-slider-thumb {
+  background: #fff;
+}
+.ruler input:active::-moz-range-thumb {
+  background: #fff;
+}
+.ruler-playhead {
+  position: absolute;
+  top: 0;
+  bottom: -1px;
+  width: 1px;
+  background: var(--green);
+  pointer-events: none;
+  z-index: 6;
 }
 .ruler:focus-within {
   outline: 1px solid var(--violet);
+}
+.ruler input:focus-visible {
+  outline: none;
 }
 .track-row {
   display: contents;
@@ -956,7 +1002,7 @@ p {
 .playhead-area {
   position: absolute;
   pointer-events: none;
-  top: 23px;
+  top: 0;
   bottom: 25px;
   left: 152px;
   right: 0;
@@ -969,15 +1015,6 @@ p {
   width: 1px;
   background: var(--green);
   box-shadow: 0 0 3px #12121288;
-}
-.playhead > span {
-  position: absolute;
-  left: -4px;
-  top: 0;
-  width: 9px;
-  height: 11px;
-  background: var(--green);
-  clip-path: polygon(0 0, 100% 0, 100% 65%, 50% 100%, 0 65%);
 }
 .timeline-end {
   grid-column: 2;
@@ -2328,5 +2365,127 @@ p {
   }
   .sequence-area {
     grid-row: auto;
+  }
+}
+
+/* Visit-only geometry; the mounted drawer keeps its existing narrow/peek behavior. */
+.workspace[data-timeline-hidden] > .sequence-area {
+  visibility: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--hidden-timeline-height);
+  pointer-events: none;
+}
+.panel-resize {
+  position: absolute;
+  z-index: 8;
+  margin: 0;
+  border: 0;
+  touch-action: none;
+  user-select: none;
+  outline: none;
+}
+.panel-resize[aria-disabled='true'] {
+  display: none;
+}
+.panel-resize::after {
+  content: '';
+  position: absolute;
+  inset: 0 4px;
+  background: transparent;
+}
+.panel-resize:focus-visible::after,
+.panel-resize[data-dragging]::after {
+  background: var(--green);
+}
+.panel-resize-left,
+.panel-resize-right {
+  top: 0;
+  bottom: var(--timeline-height);
+  width: 10px;
+  cursor: col-resize;
+}
+.panel-resize-left {
+  left: calc(var(--media-width) - 5px);
+}
+.panel-resize-right {
+  right: calc(var(--inspector-width) - 5px);
+}
+.panel-resize-timeline {
+  left: 0;
+  right: 0;
+  bottom: calc(var(--timeline-height) - 5px);
+  height: 10px;
+  cursor: row-resize;
+}
+.panel-resize-timeline::after {
+  inset: 4px 0;
+}
+@media (hover: hover) and (pointer: fine) {
+  .panel-resize:hover::after {
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      var(--green) var(--hint-position, 50%),
+      transparent
+    );
+  }
+  .panel-resize-timeline:hover::after {
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--green) var(--hint-position, 50%),
+      transparent
+    );
+  }
+}
+html[data-panel-drag='column'],
+html[data-panel-drag='column'] * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+html[data-panel-drag='row'],
+html[data-panel-drag='row'] * {
+  cursor: row-resize !important;
+  user-select: none !important;
+}
+.transport-readout > .icon-button {
+  flex-shrink: 0;
+}
+.app-footer > .tooltip-trigger {
+  flex-shrink: 0;
+}
+@media (min-width: 961px) {
+  .workspace {
+    grid-template-columns: var(--media-width) minmax(0, 1fr) var(--inspector-width, 236px);
+    grid-template-rows: minmax(240px, 1fr) var(--timeline-height, 60%);
+  }
+  .workspace.media-hidden {
+    grid-template-columns: minmax(0, 1fr) var(--inspector-width, 236px);
+  }
+  .workspace[data-timeline-hidden] {
+    grid-template-rows: minmax(240px, 1fr);
+  }
+  .workspace[data-timeline-hidden] > .panel-resize {
+    bottom: 0;
+  }
+  .editor:has(.workspace[data-compact]) {
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+  .editor:has(.workspace[data-compact]) > .app-footer {
+    position: static;
+  }
+  .workspace[data-compact] {
+    min-height: 560px;
+    grid-template-rows: 240px 320px;
+    flex: none;
+  }
+  .workspace[data-compact][data-timeline-hidden] {
+    min-height: 240px;
+    grid-template-rows: 240px;
   }
 }
