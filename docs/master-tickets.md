@@ -41,13 +41,16 @@ primary repository since 2026-11-16; the Amp-hosted scaffold is gone. See
 This order supersedes older numeric/default ordering and historical reservation language below.
 Delivered means accepted main with exact-SHA green CI. Research, a preserved branch and source LAND
 alone are not delivery. The audit compared the master with active repository/project threads and
-their linked research. Current accepted main is `d8776cde2f1fc381da7bd4a5b069501c5ded73c5`.
+their linked research. The audit baseline was accepted main
+`d8776cde2f1fc381da7bd4a5b069501c5ded73c5`; this is not a moving latest-main pointer.
 
 1. Finish the already reviewed CLIP-9b creation/panel-removal slice, then its owner-requested **Add
    zoom** label and stale verification-map follow-up under the same ID. Full ramps stay open.
 2. Deliver UI-7 on that accepted successor, then UI-5 side-pane and timeline resizing. Both extend
    UI-2 rather than replacing its mounted drawer or scrolling rules. Reproduce REF-32 before UI-8
-   changes source preview lifecycle; repair a demonstrated defect in its own tested ticket.
+   changes source preview lifecycle; repair a demonstrated defect in its own tested ticket. CLIP-2e
+   may then deliver selected-target/all-unlocked splits on the no-link project model before CLIP-2b
+   introduces associations, using stable current track IDs and saved locks/track selection.
 3. Integrate REF-27 real export formats/resolution before CLIP-20b's image export changes, then
    deliver CLIP-20b media-kind support and CLIP-2c stable tracks/insertion/Background role. These
    are feature foundations, not a generic model rewrite. Preserve CLIP-2c's pointer-release lane
@@ -55,8 +58,8 @@ their linked research. Current accepted main is `d8776cde2f1fc381da7bd4a5b069501
 4. Settle explicit source-audio membership/component mapping in CLIP-2b with UI-9, then implement
    association creation/persistence and linked movement before UI-9 consumes them. Do not duplicate
    the primary audio mix across selected lanes. UI-9 validates header-targeted insertion atomically.
-   CLIP-2e follows the agreed track selection/lock and split-membership contracts; its read-only
-   reproduction may proceed without waiting for those source releases.
+   CLIP-2b must qualify partial-cut membership on CLIP-2e's accepted successor before linked
+   movement delivery. No fragment lifecycle/schema is approved by the split research.
 5. Deliver UI-8 media rows/scrubbing on UI-7 and media metadata. Its old target selector stays until
    UI-9 works; remove it with the coordinated range-only insertion callback transition. Its
    independent view/scrubbing portion may move earlier with a disjoint exact-path grant.
@@ -1348,12 +1351,12 @@ Use the owner's terms "media pool pane" or "source media panel" in future UI/doc
 The later completed drag-insertion requirement is CLIP-2c below; it is distinct from same-track
 movement.
 
-| Ticket ID                                  | Scope                                                                  | Owner                                                                                 | State and dependency                                                                             |
-| ------------------------------------------ | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
-| <a id="clip-2b"></a>[CLIP-2b](#clip-2b)    | Reposition clips with associated-audio link toggle                     | [Sol medium](https://ampcode.com/threads/T-e625cc4d-8431-4df9-b146-0869cf28ac8b)      | Research/path-held; explicit association contract and CLIP-9b successor before grant             |
-| <a id="clip-20b"></a>[CLIP-20b](#clip-20b) | Import still timeline media and qualify MOV/MP4 paths                  | [Sol medium](https://ampcode.com/threads/T-01a1e2f2-99be-775a-be34-43cbce070c38)      | Reproduce/scope only; coordinate model/parser/render paths after preceding shared work           |
-| <a id="clip-2c"></a>[CLIP-2c](#clip-2c)    | Media-pool drag insertion and dynamic track creation                   | [Sol medium](https://ampcode.com/threads/T-7a47f0bf-09c2-4891-92ec-aaf7ec41bd52)      | Research only; model/render/persistence design after existing shared/media predecessors          |
-| <a id="clip-2e"></a>[CLIP-2e](#clip-2e)    | Selected-target Split button and all-unlocked-track platform shortcuts | [Opus 5.5 medium](https://ampcode.com/threads/T-b99a528d-0528-4004-be79-2b65721b96ca) | Research-only; UI-9 target/lock and CLIP-2b split-membership contracts before exact source grant |
+| Ticket ID                                  | Scope                                                                     | Owner                                                                                 | State and dependency                                                                    |
+| ------------------------------------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| <a id="clip-2b"></a>[CLIP-2b](#clip-2b)    | Reposition clips with associated-audio link toggle                        | [Sol medium](https://ampcode.com/threads/T-e625cc4d-8431-4df9-b146-0869cf28ac8b)      | Research/path-held; explicit association contract and CLIP-9b successor before grant    |
+| <a id="clip-20b"></a>[CLIP-20b](#clip-20b) | Import still timeline media and qualify MOV/MP4 paths                     | [Sol medium](https://ampcode.com/threads/T-01a1e2f2-99be-775a-be34-43cbce070c38)      | Reproduce/scope only; coordinate model/parser/render paths after preceding shared work  |
+| <a id="clip-2c"></a>[CLIP-2c](#clip-2c)    | Media-pool drag insertion and dynamic track creation                      | [Sol medium](https://ampcode.com/threads/T-7a47f0bf-09c2-4891-92ec-aaf7ec41bd52)      | Research only; model/render/persistence design after existing shared/media predecessors |
+| <a id="clip-2e"></a>[CLIP-2e](#clip-2e)    | Selection/Razor tools, selected-target Split and unlocked-track shortcuts | [Opus 5.5 medium](https://ampcode.com/threads/T-b99a528d-0528-4004-be79-2b65721b96ca) | Saved-state/no-link contract scoped; source held after accepted timeline predecessors   |
 
 CLIP-2b reproduced unchanged video and audio positions after real body drags into trimmed empty
 space. Accept same-track, frame-rounded nonnegative moves preserving duration and source fields.
@@ -1428,47 +1431,73 @@ CLIP-2c's
 [current contract](https://ampcode.com/artifacts/clip-2c-insertion-contract-6e8501c5-a3fb-40e0-b359-dfd8b483b92b)
 coordinates still-media lifetime/schema with CLIP-20b and geometry with PiP. No source grant yet.
 
-### CLIP-2e: selected-target split and all-unlocked-track shortcuts
+### CLIP-2e: Selection/Razor tools and distinct split targets
 
-User story: As an editor, I want the Split button to cut the clip selected through its region or a
-selected track toggle, while a platform shortcut cuts every unlocked track at the playhead.
+User story: As an editor, I want Selection and Razor tools for selecting or cutting clips, a Split
+button for my selected clip/track targets, and a platform shortcut for every unlocked track at the
+playhead, with saved locks and track selection restored when I reopen my project.
 
-The owner's request relayed to the existing split worker deliberately distinguishes scopes. The
-button acts on selected clip/track intent; Cmd+K on macOS and Alt+K in a Windows browser act on all
-unlocked tracks, regardless of button selection. Never route both actions through the same selection
-filter. This is not a repeat of delivered REF-5's unique split IDs or REF-7's modified-key safety,
-nor dependent on CLIP-18's configurable command menu. Make only the intended chord exception to
-REF-7; keep text-entry/native shortcuts and unrelated modifiers safe.
+The coordinated no-link contract retains distinct scopes. The Split button cuts the union of the
+selected clip and crossing clips on selected tracks, excluding locked tracks, without following the
+movement-link toggle. Multiple tracks may be selected; selecting a clip does not clear those track
+selections. Keep selection on the left fragment ID. No crossing clip means no history entry. Cmd+K
+on Mac and Alt+K on Windows/Linux cut all unlocked crossing clips independently of selection. Match
+physical KeyK with only the intended modifier, leave Ctrl+K native, ignore repeat, and retain
+text/modal/busy guards. REF-5's unique IDs and REF-7's other modifier guards remain required;
+CLIP-18's configurable command menu is not a dependency or duplicate scope.
 
-Research on accepted `0b5584ef9d5dd8a8005bbaeedf0bc91993524936` is authorized; a newer fetched main
-is not automatically an accepted implementation base. No source paths or push slot are released.
-Coordinate UI-9's header targets, editing selection and lock semantics without assuming they are one
-state, CLIP-2c's track identities, and CLIP-2b's association lifecycle across splits. Resolve
-simultaneous clip/track selection, no selection, whether locks veto button splits, lock
-persistence/history, plain-S compatibility, platform/repeat handling and linked-member split
-behavior before exact source grant. These are scoped design questions, not permission to invent
-saved fields or automatic A/V membership.
+The owner's direct answers `M-034yipk2DjRnY7tzikraGX` require locks and selected-track toggles to be
+saved in the project and approve Linux Alt+K, superseding the unpublished session-only default.
+Optional `locked` and `selectedTracks` arrays, validated like mute and defaulting to empty for old
+projects, are the worker's schema proposal, not the owner's exact field/version choice. Qualify
+legacy/default/round-trip/rejection behavior before retaining or changing the project version. Keep
+persisted-toggle dirty/save state honest. Use separate labeled header controls keyed by stable track
+IDs, not positions, insertion targets or eye/mute. Current fixed IDs may seed the contract before
+CLIP-2c; its dynamic registry must preserve it. UI-9 owns atomic refusal naming an actually mutated
+locked destination, including ripple/link effects, with no partial insert, fallback or auto-unlock.
+Ignored audio targets on silent video/stills do not veto insertion.
 
-The split owner reproduced the missing shortcuts in Chromium using MacIntel/Win32 platform emulation
-at frame 45: Meta+K, Alt+K and Ctrl+K leave counts unchanged and are not prevented. This is
-browser-emulated modifier evidence, not real macOS/Windows qualification. REF-7's modifier guard is
-the verified path. Current source has one selected clip/zoom ID, no track-selection toggles and no
-track-lock state/control/history/schema. UI-9 confirms insertion targets and eye/mute are separate
-from editing selection and locks. Do not silently treat all tracks as unlocked and call the complete
-feature delivered. A shortcut-only slice, if later scoped and released, must retain the unfinished
-lock/button acceptance under this same ID. Membership preservation after creating new fragments
-still requires CLIP-2b's agreed contract; no split-dissolves-pair policy is accepted.
+The owner's `M-034yitFsNj94lMW2Ayk6S2` supersedes direct-C splitting: C selects Razor and V selects
+Selection. Razor shows a blade cursor; clicking a clip cuts that clip at the clicked frame rather
+than selecting it. Trim grips are inert; locked lanes show not-allowed and reject cuts. Boundary/gap
+clicks do nothing. Chorded C/V remain native copy/paste. The Split button stays a direct
+selected-target action without a shortcut, beside the tool toggles; remove the old S binding and
+update hints/help. Keep keyboard access through the button. The owner's `M-034yiuZuJCSBrXlnIX9UvX`
+confirms retaining that button and states toggles have no undo steps while value changes do. Tool,
+lock and track-selection toggles stay outside history; cuts, trims, deletion, insertion and existing
+value edits remain undoable.
 
-Preserve source offsets, unique clip IDs and lineage; boundary/gap cuts must not create empty clips
-or change unaffected tracks. An all-track cut is one atomic undoable edit, not one undo per lane.
-Acceptance must distinguish button versus shortcut on asymmetric selected/unselected and
-locked/unlocked tracks, cover edge/gap/no-op cuts and text input, and verify undo/redo, zoom/source
-anchors and save/reopen under the agreed lock/link contract. Exercise platform-specific modifier
-events in browser checks with synthetic/public media, distinguish emulation from actual OS
-qualification, inspect affected controls, and retain all strict/full gates and required
-exact-candidate review. Proposed App command/history, Timeline header, model/parser and existing
-editor/unit tests require individually enumerated ownership on the accepted UI-9/association
-successor, not a blanket grant to all those paths.
+The owner's subsequent answers approve Razor snapping and Escape doing nothing: Razor remains active
+until V. The worker proposes an 8-screen-pixel threshold to the playhead or any track's clip edge;
+that radius and target priority are implementation defaults to qualify, not owner-specified numbers.
+Snapping exactly to the clicked clip's own edge remains a no-op. Do not add an unrequested snap
+toggle or Shift-click split-all gesture. The owner's undo clarification concerns toggles only; his
+final answer explicitly requires undoing a split whether tracks are locked or not. Undo ignores
+locks and restores the previous edit without a refusal message; lock toggles themselves remain
+outside history. Locks guard new split/Razor/delete/trim/insert mutations, not history replay.
+Open/demo replaces the document and loads its own lock/selection state.
+
+The owner approved this final contract in the split thread: "Looks right, build it when the grant
+lands." That approval does not release overlapping paths before their predecessors are accepted.
+
+The split owner reproduced missing shortcuts on accepted `0b5584e` runtime in Chromium at frame 45
+with MacIntel/Win32 emulation: modifier chords leave counts unchanged and unprevented through
+REF-7's guard. This is not native OS qualification. Current source lacks track edit selection and
+locks. Do not call shortcut-only work the whole feature. CLIP-2e may land on no-link projects first;
+CLIP-2b owns partial-cut membership qualification before linked movement. No link-present
+integration or split-dissolves-pair policy is accepted. Cuts retain App.change/resolveZooms; do not
+intentionally edit manual zooms or bypass anchored re-resolution to promise identical arrays.
+
+Acceptance covers asymmetric selected/unselected and locked/unlocked tracks, button versus all-track
+shortcut, pointer Razor cuts, C/V typing/chord guards, boundary/gap no-ops, unique IDs, source
+offsets/lineage, one atomic multi-track undo even after locking a changed track, refusal of new
+locked-track mutations and saved-toggle round trips without toggle undo steps. Inspect controls and
+retain strict/full gates and exact-candidate review. Research base remains accepted
+`0b5584ef9d5dd8a8005bbaeedf0bc91993524936`; no source or push slot is released. Planned paths are
+timeline-model and its existing unit test, project.ts/ project.test.ts parsing, App
+split/keydown/tool/lock/selection/save/open/history hunks, Timeline header/clip Razor controls,
+snapping geometry, styles, Timeline stories and editor browser checks. Enumerate exact hunks on the
+accepted timeline successor before release, not blanket file ownership.
 
 ### CLIP-22: PiP composition subset
 
@@ -1568,7 +1597,7 @@ support them but do not replace them. No GitHub or Linear issue creation is impl
 | PiP beside Side by side, direct live-preview four-corner placement, padding/radius                                                        | [CLIP-22 PiP subset](#clip-22-pip-composition-subset)                        |
 | Full-composite still/video V1 underlay below both roles; dynamic compatible visual/audio tracks                                           | [CLIP-2c](#clip-2c)                                                          |
 | Move video/audio clips with an associated-audio link toggle; drag media-pool inserts into compatible/new tracks                           | [CLIP-2b](#clip-2b), [CLIP-2c](#clip-2c)                                     |
-| Split button acts on selected clip/track; Cmd+K macOS or Alt+K Windows cuts all unlocked tracks                                           | [CLIP-2e](#clip-2e)                                                          |
+| V Selection/C Razor, selected-target Split button, Cmd+K Mac or Alt+K Windows/Linux all-unlocked cuts and saved locks/track selection     | [CLIP-2e](#clip-2e)                                                          |
 | MOV/MP4 import qualification and PNG/JPG timeline still imports                                                                           | [CLIP-20b](#clip-20b)                                                        |
 | Functional 24/29.97/60/100/120/Auto FPS beside resolution, no fake 30 label                                                               | [CLIP-21b](#clip-21b)                                                        |
 | Auto-fit new visual media to selected composition and per-clip scale slider/numeric input                                                 | [CLIP-19b](tickets/CLIP-19b.md)                                              |
