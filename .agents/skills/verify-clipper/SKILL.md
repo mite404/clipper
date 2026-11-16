@@ -2,14 +2,16 @@
 name: verify-clipper
 description: >-
   Drives Clipper's browser editor and Storybook. Use after timeline, media, playback, crop, zoom,
-  project save/reopen, video export, or editor UI changes.
+  cursor, frame copy, tooltip, project save/reopen, video export, or editor UI changes.
 ---
 
 # Verify Clipper
 
-Use the feature map in [features/README.md](features/README.md) as the coverage set. The app has no
-backend, account, or database. Reload discards unsaved edits. Save project embeds all source bytes;
-Open project restores them without relinking. Export video renders locally, not on a server.
+Use the feature map in [features/README.md](features/README.md) as the coverage set. It separates
+what is delivered on `main` from what is pending; never report a pending feature as verified. The
+app has no backend, account, or database. Reload discards unsaved edits. Save project embeds all
+source bytes; Open project restores them without relinking. Export video renders locally, not on a
+server.
 
 ## Launch
 
@@ -49,27 +51,42 @@ binary; it is not required with Playwright Chromium installed.
 
 ## Gate
 
-Lefthook runs staged-file lint, dead-code analysis, and whole-project TypeScript checks. GitHub CI
-runs the stricter checks below and all browser journeys. Verify the actual GitHub run before
-claiming remote CI passed. The approved health baseline retains existing complexity debt and may
-shrink, not grow.
+Three places run mechanical checks. Verify the actual GitHub run before claiming remote CI passed.
+
+Pre-commit (Lefthook, nothing on push): staged-file `oxlint --deny-warnings`,
+`npm run check:deadcode` and `npm run typecheck`. Nothing formats or tests at commit time.
+
+GitHub CI (`.github/workflows/ci.yml`) runs on pushes to `main` and manual dispatch, not on pull
+requests. In order:
 
 ```bash
 npm run format:check
 npm run lint
 npm run lint:typed
 npm run typecheck
-npm run check:code
+node scripts/check-tickets.mjs
+npm run check:code -- --fail-on-baseline-growth --baseline-base "<commit main held before the push>"
 npm test
 npm run build
 npm run build-storybook
+npm run test:ui -- --workers=1
+```
+
+CI also refuses file names that differ only by case, using the `git ls-files` check in its YAML. The
+Fallow health baseline retains existing complexity debt and may shrink, not grow. Local
+`npm run check:code` without the two flags does not prove that; give the base ref a commit such as
+`HEAD^`, or the pre-push `origin/main`, when you run it.
+
+Local only, not in CI or a hook:
+
+```bash
 npm audit
 node --test .agents/skills/verify-clipper/scripts/verify.test.mjs
 ```
 
-The helper's Node tests are a local tooling gate, not currently wired into CI. Existing `npm test`,
-Playwright, Storybook, lint, typecheck, Fallow, and hook commands remain unchanged. Prettier covers
-the project skill; the staged JavaScript lint hook also covers its helpers.
+The helper's Node tests guard the CLI and the production/dev project split. They do not run in CI.
+Prettier covers the project skill and feature map; the staged JavaScript lint hook also covers the
+helpers. `npm run test:ui` outside CI expects servers already running, so use `verify.mjs`.
 
 `build` runs strict TypeScript then Vite. Unit tests prove frame splits, ripple isolation, and zoom
 envelopes. They do not prove codecs, playback, DOM layout, import privacy, or audio synchronization.
@@ -92,21 +109,32 @@ playback, and Mediabunny decoding. No media APIs are mocked.
 
 `editor` runs editor and refinement specs. The other names select the existing feature specs or
 titles in `scripts/verify.mjs`. `all` discovers every spec, preserving the root configuration's
-separate editor/4K projects. All runs use one worker, no retries, and fail on skipped, flaky, or
-zero tests. New journeys belong in the same table, not a second browser implementation.
+separate editor/4K projects. These specs run only under `all`: `controls`, `cursor`,
+`cursor-render`, `cursor-rotation`, `cursor-shapes`, `cursor-speeds`, `auto-zoom`, `framing`,
+`frame-image` and `icon-button`. There are no narrower journeys for them on purpose;
+features/README.md lists what each named journey selects. All runs use one worker, no retries, and
+fail on skipped, flaky, or zero tests. New journeys belong in the same table, not a second browser
+implementation.
 
 `performance` runs five repetitions against a fresh production build with tracing and video disabled
 and the original 1x device scale. Do not run other browser/build jobs alongside that measurement.
 Its existing 4× CPU-throttled assertions require actual video advancement within one second and rAF
-p95 below 100ms over five seconds. `all` includes one uninstrumented performance smoke test; it does
-not replace the uninstrumented five-run gate. No command checks physical speaker output or claims
-that not-yet-implemented cursor sidecar/follow features work.
+p95 below 100ms over five seconds, and neither the worst frame nor the worst long task may reach 500
+ms. The cursor-follow variant also turns on shape stabilization, rotation, the Rapid animation style
+and a focused automatic zoom. `all` includes one uninstrumented run of each variant; it does not
+replace the uninstrumented five-run gate. No command checks physical speaker output, rewind or
+export-progress re-render rate (REF-20, not delivered), scrubbing with very large telemetry
+(REF-37), or any real OpenScreen recording.
 
 ## Evidence
 
 Capture actions and outcomes through UI controls, not React state setters. Assert media currentTime
 after scrubs on both sides of the screen splice, and verify actual Audio elements advance during
 playback. Remotion recycles audio tags, so DOM order is not track identity.
+
+Copy frame checks read `image/png` back from the real clipboard and decode its pixels; a status
+message or a DOM screenshot does not count. Tooltip checks move a real pointer and wait out the 400
+ms delay.
 
 Import checks observe non-GET requests and require zero uploads. Save checks read the actual JSON
 download and reopen it after reload. Export checks use ffprobe and FFmpeg to inspect the actual

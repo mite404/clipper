@@ -16,9 +16,27 @@ and Export video and inspect the downloaded file, not just progress text. Use
 `.agents/skills/verify-clipper/scripts/verify.mjs editor` for those UI export journeys too. Each
 command starts and cleans up its own Vite development server.
 
+## Guards and recovery
+
+`editor` runs the delivery guards in `refinements.spec.ts`; `delivery` does not. A logo click no
+longer reloads, and the `beforeunload` handler asks before a reload or tab close with unsaved edits
+or a running export. Open project asks before replacing unsaved edits. A source that a clip uses and
+that can no longer be read (for example its file changed on disk) makes Save and Export fail with a
+message naming the file, and no download starts. Importing a compatible file with the same name
+repairs that source in place; an incompatible same-name file is refused. Media no clip uses is
+embedded while it fits and can be read; otherwise Save omits it and names it. Save refuses at once,
+reading none of the media, when clips on the timeline use more than 375 MB. The spec uses a sparse
+400 MB file. Headless Chromium shows no native `beforeunload` prompt, so the handler is tested
+through the event, not the browser's dialog.
+
 ## Limits
 
 MP4 AVC/AAC is preferred; unsupported MP4 encoders fall back to WebM VP9/Opus. Report the actual
-negotiated container. Project JSON uses in-memory base64, and export buffers the audio mix and final
-container. Long recordings can exhaust memory. Cancellation waits for the current native operation.
-No server rendering, automatic persistence or external-media relinking exists.
+negotiated container. Only WebM is proven: REF-27 (AVC and AAC qualification) is blocked on an
+encoding-capable browser, so no run here shows a playable MP4. There is no format choice and no MOV
+export; the download is named `developer-walkthrough-1080p` or `-4k` with the negotiated extension.
+The `export` journey also runs the exact-source-frame check for every frame of both video tracks and
+the long compressed-audio mix timing check (REF-17, REF-15). Project JSON uses in-memory base64, and
+export buffers the audio mix and final container. Long recordings can exhaust memory. Cancellation
+waits for the current native operation. No server rendering, automatic persistence or external-media
+relinking exists.

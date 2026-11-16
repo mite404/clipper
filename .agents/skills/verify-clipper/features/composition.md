@@ -41,4 +41,7 @@ The composition uses cover crops, so wide screen imports can lose edge content a
 ratio. Crop controls choose the visible portion. Zooms cannot overlap. Ordinary media has no cursor
 metadata, so its zoom focus is one authored point; recorded clicks and follow are in
 [cursor.md](cursor.md). Exact centering near an edge can reveal background. Reload discards unsaved
-edits.
+edits. The zoom ramp is fixed at 24 frames or half the zoom, whichever is shorter, with smoothstep
+easing. There is no ramp control, no B shortcut and no timeline edge handle on a zoom (CLIP-9b is a
+proposal); those are pending, so do not report them as verified. Padding, backgrounds, aspect ratios
+and camera layout options (CLIP-19 to CLIP-23) are not delivered.

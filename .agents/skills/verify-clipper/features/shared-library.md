@@ -9,6 +9,8 @@ icon buttons, and whole editor used by the application.
 - Demo data, Worst case, Empty, One, and 1,000-item toggles in media/timeline stories.
 - Long filenames, multilingual and one-character names, missing thumbnail, and empty waveform.
 - Narrow 320px layout and enlarged text without page overflow.
+- `ui-iconbutton` Normal and Stress records for the shared IconButton tooltip; see
+  [tooltips.md](tooltips.md).
 
 ## How to get to it (user POV)
 
@@ -27,6 +29,8 @@ trims in local story state. The portable-project/export story exposes the real a
 
 ## Gotchas
 
-The sidebar is 240px wide even in a wide viewport. Missing thumbnails must show a placeholder, not
-an empty image URL. A thousand fixture cards tests layout, not a thousand full video decodes. RTL is
-not a supported editor layout. Chromium narrow screenshots are not physical-device proof.
+`verify.mjs storybook` runs only `storybook.spec.ts`; the IconButton records are exercised by `all`
+through `icon-button.spec.ts`. The sidebar is 240px wide even in a wide viewport. Missing thumbnails
+must show a placeholder, not an empty image URL. A thousand fixture cards tests layout, not a
+thousand full video decodes. RTL is not a supported editor layout. Chromium narrow screenshots are
+not physical-device proof.

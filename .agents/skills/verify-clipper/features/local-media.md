@@ -8,7 +8,9 @@ the selected track without uploading source files.
 - Import H.264 video and WAV audio; decode metadata, thumbnail, and waveform.
 - Preview source; set Source in seconds and Source out seconds.
 - Target V1, V2, A1, or A2 and insert at the current playhead.
-- Reject a corrupt file while keeping existing edits usable.
+- Reject a corrupt file while keeping existing edits usable. A multi-file import names every file it
+  could not read.
+- The demo download gives up after 15 s and frees what it loaded.
 
 ## How to get to it (user POV)
 
@@ -20,10 +22,15 @@ Insert onto track selector, and plus button named Insert source at playhead.
 Run `.agents/skills/verify-clipper/scripts/verify.mjs media`. It starts a fresh editor, waits for
 four loaded demo assets, and runs both import journeys. It sets the file chooser using
 `getByLabel('Import local media')`, inserts video and audio, and requires zero non-GET requests. It
-also checks corrupt files and long filenames. Require six assets after the two valid imports, three
-screen clips, and two music clips.
+also checks corrupt files and long filenames. It does not select the mixed-import naming or
+stalled-download checks; `editor` or `all` runs them. Require the status to name every unreadable
+file, and a stalled demo download to give up and free its blobs. Require six assets after the two
+valid imports, three screen clips, and two music clips.
 
 ## Gotchas
+
+The file input accepts `video/*,audio/*` only. Still-image import, including a still image
+background (CLIP-20) or a still as a timeline clip, is not delivered, so nothing here verifies it.
 
 Media never leaves this browser. Unsupported codecs report an import error. Large recordings are
 decoded in full for waveform generation and may consume substantial time/memory. Imports retain
