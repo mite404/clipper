@@ -47,6 +47,7 @@ and nowhere else. Other documents are records, not queues:
 | Cursor implementation    | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant  |
 | Cursor inspector         | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) | Inspector delivered; no active implementation grant         |
 | Workspace layout         | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | UI-2 delivered; no active implementation grant              |
+| Transport lifecycle      | [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59) | REF-31 hidden-tab rewind and held-Space, Sol medium         |
 | Zoom regions             | [T-46d4a5ee](https://ampcode.com/threads/T-46d4a5ee-39f1-46ae-bde0-eced0da19a5a) | CLIP-9b research only until shared-path release, Sol medium |
 | Cursor preservation      | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94) | Frozen original CLIP-11 work, no implementation or push     |
 | Editor and bootstrap     | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da) | `.agents/setup`, `.agents/resume`                           |
@@ -86,13 +87,15 @@ required reviews for source tickets and exact-main green CI before the next assi
 
 [REF-31](tickets/REF-31.md) includes approved pause-on-tab-hide rewind semantics. It starts only
 after REF-20's green delivery and reservation release. The scope is rewind visibility lifecycle,
-repeated-Space handling, a focused transport test and its brief. No Sonnet worker has started yet.
+repeated-Space handling, a focused transport test and its brief. The existing Sol medium transport
+worker now owns this unit on accepted UI-3. No zoom, layout or general shortcut expansion is
+granted.
 
 ### Next bounded Sonnet candidate
 
-| Ticket ID                      | Scope                                                                        | State                                                              | Needs                                                                    |
-| ------------------------------ | ---------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| <a id="ui-3"></a>[UI-3](#ui-3) | Remove header branding/title and move existing Save project into their place | Local qualification passed on accepted UI-2; exact-main CI pending | Sol PASS and Fable LAND; serialized main delivery and green exact-SHA CI |
+| Ticket ID                      | Scope                                                                        | State                                                                                                                                                                               | Needs                                                          |
+| ------------------------------ | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| <a id="ui-3"></a>[UI-3](#ui-3) | Remove header branding/title and move existing Save project into their place | Delivered at [ed37b20](https://github.com/mite404/clipper/commit/ed37b201e1b62a24581766ec6dbf92540e5cd7a6), [green CI](https://github.com/mite404/clipper/actions/runs/43881190925) | Header reservation released; Sol PASS and Fable LAND preserved |
 
 Mite requested this cleanup from the stable preview at 617 × 1295. Remove the header `clipper` brand
 and `Developer walkthrough` title. Move the existing Save project control into their place,
@@ -123,9 +126,11 @@ gates, 135 units, seven helpers and the full 67/67 integration journey passed. T
 reviewer returned LAND for the exact source/navigation delta. Its obsolete logo-click test step and
 documentation reference were removed without runtime changes; both affected Save/unsaved-edit checks
 passed again. Production pointer/Tab/Enter saving and a downloaded 5,445,100-byte version-2 project
-with five clips and four embedded media assets were verified. UI-3 awaits exact-main green CI before
-delivery is claimed. The pre-existing focused-Save Space interception is a separate review advisory
-for the REF-31 shortcut audit, not a UI-3 fix or a proven performance cause.
+with five clips and four embedded media assets were verified. UI-3 is accepted at
+[`ed37b20`](https://github.com/mite404/clipper/commit/ed37b201e1b62a24581766ec6dbf92540e5cd7a6) with
+green [exact-main CI](https://github.com/mite404/clipper/actions/runs/43881190925). Its header
+reservation is released. The pre-existing focused-Save Space interception remains a separate review
+advisory, not a UI-3 fix, part of REF-31's approved two fixes or a proven performance cause.
 
 ### Numeric property label scrubbing
 
@@ -230,16 +235,17 @@ images were hosted, see [Known limits](#known-limits)).
 
 ### Current path reservations
 
-| Owner                    | Paths                                                                                                                                      |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------ |
-| Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                             |
-| Cursor inspector         | No active implementation reservation after green inspector delivery                                                                        |
-| Workspace layout         | No active implementation reservation after green UI-2 delivery                                                                             |
-| Header cleanup           | UI-3 App header, scoped header CSS and title-dependent editor/refinement test locators; no workspace/inspector/playback changes            |
-| Zoom regions             | Research only; future App/Timeline/inspector/styles/model/parser edits wait for inspector and UI-2 release; no REF-20/31 transport overlap |
-| Oxc tooling              | VERIFY-5 package/lock, Oxc/formatter config, necessary CI/hook/README command changes only; no source migration or bulk reformat           |
-| Queue implementation     | Queue/docs and acceptance only; UI-3 header reservation remains exclusive; UI-2, inspector and REF-20 are delivered and released           |
-| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                           |
+| Owner                    | Paths                                                                                                                                            |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                   |
+| Cursor inspector         | No active implementation reservation after green inspector delivery                                                                              |
+| Workspace layout         | No active implementation reservation after green UI-2 delivery                                                                                   |
+| Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                   |
+| Transport lifecycle      | REF-31 App rewind visibility and repeated-Space hunks, tests/transport-lifecycle.spec.ts and ticket brief; no zoom/layout/general shortcut edits |
+| Zoom regions             | Research only; future App/Timeline/inspector/styles/model/parser edits wait for inspector and UI-2 release; no REF-20/31 transport overlap       |
+| Oxc tooling              | VERIFY-5 package/lock, Oxc/formatter config, necessary CI/hook/README command changes only; no source migration or bulk reformat                 |
+| Queue implementation     | Queue/docs and acceptance; sole main push slot; REF-31 transport reservation remains exclusive                                                   |
+| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                 |
 
 ### Preservation branches
 
@@ -571,7 +577,7 @@ original note for every row.
 | <a id="ref-28"></a>[REF-28](#ref-28)                 | Define missing decoded-frame behavior                                        | Medium | Proposal                                                                                                                                                                            | reproduce null and early-end decoder cases                                                              |
 | <a id="ref-29"></a>[REF-29](#ref-29)                 | Assess complexity-score baseline blind spots                                 | Small  | Deferred proposal                                                                                                                                                                   | only if count-only baseline permits real growth                                                         |
 | <a id="ref-30"></a>[REF-30](#ref-30)                 | Progress and cancellation for import, Open and Save                          | Large  | Proposal                                                                                                                                                                            | define bounded-memory and cancellation behavior with REF-22                                             |
-| <a id="ref-31"></a>[REF-31](tickets/REF-31.md)       | Prevent hidden-tab rewind jumps and held-Space toggles                       | Small  | Approved Sonnet medium lane; not started                                                                                                                                            | REF-20 green delivery and reservation release; real transport reproduction                              |
+| <a id="ref-31"></a>[REF-31](tickets/REF-31.md)       | Prevent hidden-tab rewind jumps and held-Space toggles                       | Small  | Active Sol medium implementation in [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59) on accepted UI-3                                               | Actual red/green transport reproduction, full gates and exact-main green CI                             |
 | <a id="ref-32"></a>[REF-32](#ref-32)                 | Correct source-preview playback error and busy lifecycle                     | Medium | Ready                                                                                                                                                                               | reproduce pause, switch and export races                                                                |
 | <a id="ref-33"></a>[REF-33](#ref-33)                 | Qualify download URL lifetime outside Chromium                               | Medium | Blocked                                                                                                                                                                             | another supported WebCodecs browser                                                                     |
 | <a id="ref-34"></a>[REF-34](#ref-34)                 | Remove Player listener lifetime assumptions                                  | Small  | Deferred proposal                                                                                                                                                                   | reproduce a listener lifecycle defect first                                                             |
