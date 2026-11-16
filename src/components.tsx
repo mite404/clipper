@@ -1,12 +1,5 @@
-import { useId, useMemo, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { useMemo, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { ChevronDown, Film, Music2, Plus, Upload } from 'lucide-react';
-import {
-  NumberInput,
-  NumberInputControl,
-  NumberInputDecrement,
-  NumberInputGroup,
-  NumberInputIncrement,
-} from '@ui-sdk/react/number-input';
 import {
   Select,
   SelectContent,
@@ -103,54 +96,6 @@ export function SelectField<T extends string>({
           ))}
         </SelectContent>
       </Select>
-    </div>
-  );
-}
-
-/** Labelled number field with its unit inside the value and step buttons beside it. */
-export function NumberField({
-  label,
-  name,
-  unit,
-  value,
-  onValueChange,
-  ...limits
-}: {
-  label: string;
-  name: string;
-  unit: 'second' | 'millisecond' | 'percent';
-  value: number;
-  onValueChange: (value: number) => void;
-  min?: number;
-  max?: number;
-  step?: number;
-  largeStep?: number;
-}) {
-  const id = useId();
-  return (
-    <div className="number-field">
-      <label htmlFor={id}>{label}</label>
-      <NumberInput
-        {...limits}
-        value={value}
-        format={{ style: 'unit', unit, unitDisplay: 'narrow' }}
-        onValueChange={(next) => {
-          if (next !== null) onValueChange(next);
-        }}
-      >
-        <NumberInputGroup>
-          <NumberInputDecrement aria-label={`Decrease ${label}`}>−</NumberInputDecrement>
-          <NumberInputControl
-            id={id}
-            role="spinbutton"
-            aria-label={name}
-            aria-valuenow={value}
-            aria-valuemin={limits.min}
-            aria-valuemax={limits.max}
-          />
-          <NumberInputIncrement aria-label={`Increase ${label}`}>+</NumberInputIncrement>
-        </NumberInputGroup>
-      </NumberInput>
     </div>
   );
 }

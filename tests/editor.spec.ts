@@ -160,7 +160,7 @@ test('imports local video and audio without uploading them', async ({ page }) =>
   await page.getByLabel('Source out seconds').fill('2');
   await page.getByRole('button', { name: 'Insert source at playhead' }).click();
   await expect(page.getByTestId('track-music').getByRole('button')).toHaveCount(2);
-  await expect(page.locator('[role="status"]')).toContainText('Inserted');
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Inserted');
   expect(uploads).toEqual([]);
 });
 
@@ -174,7 +174,7 @@ test('keeps all tracks on screen and survives realistic difficult imports', asyn
     mimeType: 'video/mp4',
     buffer: Buffer.from('not a video'),
   });
-  await expect(page.locator('[role="status"]')).toContainText('Could not import');
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Could not import');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready');
   const name =
     '2026-11-15_DevRel_Quarterly_Platform_Walkthrough_Review_v12_screen_recording_' +
@@ -348,7 +348,8 @@ test('undoes a slider drag in one step and ignores edits that change nothing', a
   await expect(clips).toHaveCount(3);
 
   // A real drag: the slider reports every value it passes, 22 up to about 50.
-  const box = (await radius.boundingBox())!;
+  // The slider's focusable input sits inside its thumb, so drag along the track that holds it.
+  const box = (await radius.locator('xpath=ancestor::*[@data-kit="slider-track"]').boundingBox())!;
   const y = box.y + box.height / 2;
   await page.mouse.move(box.x + (box.width * 22) / 60, y);
   await page.mouse.down();

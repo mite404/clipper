@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
-import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from '@ui-sdk/react/collapsible';
-import { Activity, ChevronRight, MousePointer2, Shapes, Spline } from 'lucide-react';
+import { Activity, MousePointer2, Shapes, Spline } from 'lucide-react';
 import touchImage from './cursor-touch.png?inline';
-import { NumberField, SelectField, type SelectOption } from './components';
+import { Collapsible } from '@/components/ui/collapsible';
+import { Stepper } from '@/components/ui/stepper';
+import { SelectField, type SelectOption } from './components';
 import type { Asset } from './media';
 import {
   DEFAULT_CURSOR_SETTINGS,
@@ -135,66 +136,60 @@ function CursorBehavior({
   onChange: (settings: CursorSettings) => void;
 }) {
   return (
-    <Collapsible className="cursor-behavior">
-      <CollapsibleTrigger className="cursor-behavior-trigger">
-        <ChevronRight size={13} aria-hidden="true" />
-        Advanced cursor
-      </CollapsibleTrigger>
-      <CollapsiblePanel keepMounted className="cursor-behavior-panel">
-        <div className="cursor-appearance">
-          {BEHAVIOR_FLAGS.map(([key, label]) => (
-            <label key={key}>
-              <input
-                type="checkbox"
-                checked={Boolean(settings[key])}
-                onChange={(event) => onChange({ ...settings, [key]: event.currentTarget.checked })}
-              />
-              {label}
-            </label>
-          ))}
-          <label>
-            Animation
-            <select
-              aria-label="Cursor animation style"
-              value={settings.animationStyle ?? 'smooth'}
-              disabled={settings.mode === 'raw'}
-              title="Raw motion bypasses animation styles."
-              onChange={(event) => {
-                const animationStyle = ANIMATION_STYLES.find(
-                  (style) => style === event.currentTarget.value,
-                );
-                if (animationStyle) onChange({ ...settings, animationStyle });
-              }}
-            >
-              {ANIMATION_STYLES.map((style) => (
-                <option key={style} value={style}>
-                  {style[0].toUpperCase() + style.slice(1)}
-                </option>
-              ))}
-            </select>
+    <Collapsible title="Advanced cursor" keepMounted>
+      <div className="cursor-appearance">
+        {BEHAVIOR_FLAGS.map(([key, label]) => (
+          <label key={key}>
+            <input
+              type="checkbox"
+              checked={Boolean(settings[key])}
+              onChange={(event) => onChange({ ...settings, [key]: event.currentTarget.checked })}
+            />
+            {label}
           </label>
-          <SelectField
-            caption="Ending"
-            label="Cursor ending"
-            value={settings.ending ?? 'none'}
-            options={ENDING_OPTIONS}
-            onValueChange={(ending) =>
-              onChange({ ...settings, ending: ending === 'none' ? undefined : ending })
-            }
-          />
-        </div>
-        <p className="cursor-note">
-          Ending effects use the last 0.5 s of each trimmed clip, or half of shorter clips.
-          Small-shake removal holds movements within 0.5% of the source. Clicks stay exact.
-          Stabilization holds the previous shape until a new shape is confirmed by samples at least
-          100 ms apart. Interaction shapes appear immediately; tracking gaps reset it. Rotation
-          leans up to 12° with horizontal movement over the previous 100 ms, around the recorded
-          hotspot. Each trimmed clip starts upright. Medium and Rapid animate over the final 75% and
-          50% of each sample interval; None steps at recorded sample times. Raw motion bypasses
-          animation styles.
-        </p>
-        <CursorHiddenRanges settings={settings} onChange={onChange} />
-      </CollapsiblePanel>
+        ))}
+        <label>
+          Animation
+          <select
+            aria-label="Cursor animation style"
+            value={settings.animationStyle ?? 'smooth'}
+            disabled={settings.mode === 'raw'}
+            title="Raw motion bypasses animation styles."
+            onChange={(event) => {
+              const animationStyle = ANIMATION_STYLES.find(
+                (style) => style === event.currentTarget.value,
+              );
+              if (animationStyle) onChange({ ...settings, animationStyle });
+            }}
+          >
+            {ANIMATION_STYLES.map((style) => (
+              <option key={style} value={style}>
+                {style[0].toUpperCase() + style.slice(1)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <SelectField
+          caption="Ending"
+          label="Cursor ending"
+          value={settings.ending ?? 'none'}
+          options={ENDING_OPTIONS}
+          onValueChange={(ending) =>
+            onChange({ ...settings, ending: ending === 'none' ? undefined : ending })
+          }
+        />
+      </div>
+      <p className="cursor-note">
+        Ending effects use the last 0.5 s of each trimmed clip, or half of shorter clips.
+        Small-shake removal holds movements within 0.5% of the source. Clicks stay exact.
+        Stabilization holds the previous shape until a new shape is confirmed by samples at least
+        100 ms apart. Interaction shapes appear immediately; tracking gaps reset it. Rotation leans
+        up to 12° with horizontal movement over the previous 100 ms, around the recorded hotspot.
+        Each trimmed clip starts upright. Medium and Rapid animate over the final 75% and 50% of
+        each sample interval; None steps at recorded sample times. Raw motion bypasses animation
+        styles.
+      </p>
+      <CursorHiddenRanges settings={settings} onChange={onChange} />
     </Collapsible>
   );
 }
@@ -280,7 +275,7 @@ function CursorDetails({
             className="cursor-offset"
             title="Positive delays the cursor. Negative advances it. Source time stays unchanged."
           >
-            <NumberField
+            <Stepper
               label="Offset"
               name="Cursor time offset (ms)"
               unit="millisecond"

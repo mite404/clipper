@@ -22,14 +22,9 @@ import {
 } from 'lucide-react';
 import { Composition } from './Composition';
 import { Toggle } from '@ui-sdk/react/toggle';
-import {
-  IconButton,
-  MediaLibrary,
-  NumberField,
-  SelectField,
-  Waveform,
-  timecode,
-} from './components';
+import { IconButton, MediaLibrary, SelectField, Waveform, timecode } from './components';
+import { Slider } from '@/components/ui/slider';
+import { Stepper } from '@/components/ui/stepper';
 import { type Asset, loadDemo, readMedia, unreadableNamesake } from './media';
 import { Timeline, TRACKS } from './Timeline';
 import {
@@ -331,17 +326,14 @@ export function Inspector({
           <span />
           <span />
         </Toggle>
-        <label className="slider-label">
-          Corner radius <output>{layout.radius}px</output>
-          <input
-            aria-label="Corner radius"
-            type="range"
-            min="0"
-            max="60"
-            value={layout.radius}
-            onChange={(e) => onLayout({ ...layout, radius: Number(e.target.value) })}
-          />
-        </label>
+        <Slider
+          label="Corner radius"
+          min={0}
+          max={60}
+          value={layout.radius}
+          display={`${layout.radius}px`}
+          onValueChange={(radius) => onLayout({ ...layout, radius })}
+        />
         <h3>Crop & framing</h3>
         {(['screen', 'camera'] as const).map((track) => (
           <div key={track} className="crop-controls">
@@ -402,20 +394,17 @@ export function Inspector({
               Mark focus in the unzoomed frame. Editing a generated shot makes it manual.
             </p>
             <ZoomMotionControls zoom={zoom} onChange={onZoom} />
-            <label className="slider-label">
-              Zoom level <output>{zoom.scale.toFixed(1)}×</output>
-              <input
-                aria-label="Zoom level"
-                type="range"
-                min={ZOOM_LIMITS.minScale}
-                max={ZOOM_LIMITS.maxScale}
-                step="0.1"
-                value={zoom.scale}
-                onChange={(e) => onZoom({ ...zoom, scale: Number(e.target.value) })}
-              />
-            </label>
+            <Slider
+              label="Zoom level"
+              min={ZOOM_LIMITS.minScale}
+              max={ZOOM_LIMITS.maxScale}
+              step={0.1}
+              value={zoom.scale}
+              display={`${zoom.scale.toFixed(1)}×`}
+              onValueChange={(scale) => onZoom({ ...zoom, scale })}
+            />
             <div className="numeric-pair">
-              <NumberField
+              <Stepper
                 label="Start"
                 name="Zoom start seconds"
                 unit="second"
@@ -433,7 +422,7 @@ export function Inspector({
                   })
                 }
               />
-              <NumberField
+              <Stepper
                 label="Length"
                 name="Zoom duration seconds"
                 unit="second"
@@ -453,7 +442,7 @@ export function Inspector({
               />
             </div>
             <div className="numeric-pair">
-              <NumberField
+              <Stepper
                 label="Focus X"
                 name="Zoom focus X"
                 unit="percent"
@@ -462,7 +451,7 @@ export function Inspector({
                 value={zoom.x}
                 onValueChange={(x) => onZoom({ ...zoom, x: Math.max(0, Math.min(100, x)) })}
               />
-              <NumberField
+              <Stepper
                 label="Focus Y"
                 name="Zoom focus Y"
                 unit="percent"
