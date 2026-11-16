@@ -91,6 +91,23 @@ repeated-Space handling, a focused transport test and its brief. The existing So
 worker now owns this unit on accepted UI-3. No zoom, layout or general shortcut expansion is
 granted.
 
+Frozen REF-31 candidate `e40ba83` is transferred by verified bundle on accepted `57f5864`, with only
+App transport, `tests/transport-lifecycle.spec.ts` and its brief changed. The worker's product reds,
+three-repeat greens and each-fix mutation failures are preserved. It reports strict gates, 135
+units, seven helpers, full 70/70 and isolated performance 20/20 passing. The coordinator has
+verified transfer hashes, inspected the source delta and first-failure receipts, and passed fresh
+static/unit/helper gates. Its first independent full invocation passed 69 and failed only native
+Chromium's five-second DevTools port startup wait, before product assertions. The existing Fable
+reviewer reproduced that startup failure and cleared the runtime with one test-only fix: allow
+thirty seconds for the port inside the existing sixty-second native test. That exact pre-cleared
+delta is applied with source bytes unchanged; its identity patch is transferred to the reviewer. The
+startup cause is not established. The corrected coordinator invocation passed full 70/70, then
+isolated performance 20/20, both with zero skips or flakes. Fable's source LAND condition is
+satisfied; exact-main CI is still required before REF-31 delivery or reservation release. Separate
+verification follow-ups are the new spec's missing named `editor`/feature-map coverage and its
+direct Chromium launch ignoring `CHROME_PATH`; neither is silently represented as verified by this
+candidate.
+
 ### Next bounded Sonnet candidate
 
 | Ticket ID                      | Scope                                                                        | State                                                                                                                                                                               | Needs                                                          |
@@ -129,8 +146,16 @@ passed again. Production pointer/Tab/Enter saving and a downloaded 5,445,100-byt
 with five clips and four embedded media assets were verified. UI-3 is accepted at
 [`ed37b20`](https://github.com/mite404/clipper/commit/ed37b201e1b62a24581766ec6dbf92540e5cd7a6) with
 green [exact-main CI](https://github.com/mite404/clipper/actions/runs/43881190925). Its header
-reservation is released. The pre-existing focused-Save Space interception remains a separate review
-advisory, not a UI-3 fix, part of REF-31's approved two fixes or a proven performance cause.
+reservation is released.
+
+The owner
+[closed the UI-3 heading and Save advisories](https://ampcode.com/threads/T-2d1e888a-23ff-4bf4-b2d1-551553f2ef0a#message-1742).
+P3 item 2 needs no hidden `h1` and no ticket. P3 item 3 is intended behavior: Space is play/pause
+only, not a second activation behavior for Save; Enter-only keyboard coverage is correct. No ticket
+is created for either item, and the LAND verdict is unchanged. P3 item 1 is already resolved by the
+test/docs cleanup in accepted `ed37b20`, with both affected checks passing afterward. The reviewer's
+source-read media-toggle Space exception awaits an owner answer; it has not been runtime-qualified
+or queued. Existing input/select guards remain unchanged; do not infer a new exception policy.
 
 ### Numeric property label scrubbing
 
@@ -388,6 +413,30 @@ geometry/hit-target seams. Research actual existing state/history before changin
 not infer new metadata format support or attach by filename guess. Publish this new mapping at the
 next appropriate doc delivery; a local entry is not remote implementation.
 
+The [UI SDK design parent](https://ampcode.com/threads/T-85e2e0a7-9485-4657-9f22-48ae0622da7b)
+reports the owner's preferred local candidate is `exp/ui-sdk-marginal-controls`, being rebased onto
+accepted `57f5864` in
+[T-5842510f](https://ampcode.com/threads/T-5842510f-6f83-40ad-bcda-37d1b704f756). Confirmed design
+puts animation style, cursor style and size first; makes idle hide, shake removal, shape
+stabilization and rotation inspector options; removes hidden ranges; and requests right-click
+Hide/Show on every timeline clip type. The owner subsequently confirmed whole-clip hiding: retain
+the clip dimmed on the timeline and exclude it from preview and export. These decisions overlap
+CLIP-11, CLIP-11b and CLIP-7, but do not grant main paths, a push slot or experiment acceptance.
+
+Sidecar auto-pairing by basename, old-project hidden-range handling, menu keyboard details, Instant
+zoom and numeric Enter/blur commits are not confirmed design choices. Resolve those semantics and
+ticket boundaries before integration; do not silently replace the approved attachment contract.
+Basic keyboard accessibility and preservation of existing projects still apply. SPEC-01's
+`exp/spec01-hardware` in
+[T-9594a0bf](https://ampcode.com/threads/T-9594a0bf-cee4-449d-8bc1-7e5f808fc0a3) stays parked. Both
+branches remain unpushed. Their actual transferred bundles and SHA256 hashes verify in the queue
+workspace under `.amp/in/orb-backup/`: SPEC-01 tip `796e09f`, plus UI SDK rebased tip `e93f8f6` and
+preserved pre-rebase tip `6c52832`. The UI SDK backup also retains its uncommitted inspector-test
+diff separately. That bundle requires both `7878c60` and `57f5864`; the older base label in its
+state note is not authoritative. None of this experiment code has been imported into the working
+tree. No remote WIP push, dependency/configuration migration or experiment landing is authorized
+here.
+
 ### Acceptance added by the real capture
 
 One OpenScreen 2.2.2 recording was checked on the owner's Mac. These points are binding on CLIP-7
@@ -577,7 +626,7 @@ original note for every row.
 | <a id="ref-28"></a>[REF-28](#ref-28)                 | Define missing decoded-frame behavior                                        | Medium | Proposal                                                                                                                                                                            | reproduce null and early-end decoder cases                                                              |
 | <a id="ref-29"></a>[REF-29](#ref-29)                 | Assess complexity-score baseline blind spots                                 | Small  | Deferred proposal                                                                                                                                                                   | only if count-only baseline permits real growth                                                         |
 | <a id="ref-30"></a>[REF-30](#ref-30)                 | Progress and cancellation for import, Open and Save                          | Large  | Proposal                                                                                                                                                                            | define bounded-memory and cancellation behavior with REF-22                                             |
-| <a id="ref-31"></a>[REF-31](tickets/REF-31.md)       | Prevent hidden-tab rewind jumps and held-Space toggles                       | Small  | Active Sol medium implementation in [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59) on accepted UI-3                                               | Actual red/green transport reproduction, full gates and exact-main green CI                             |
+| <a id="ref-31"></a>[REF-31](tickets/REF-31.md)       | Prevent hidden-tab rewind jumps and held-Space toggles                       | Small  | Local qualification passed; source LAND condition applied; exact-main CI pending                                                                                                    | Serialized main delivery and green exact-SHA CI before reservation release                              |
 | <a id="ref-32"></a>[REF-32](#ref-32)                 | Correct source-preview playback error and busy lifecycle                     | Medium | Ready                                                                                                                                                                               | reproduce pause, switch and export races                                                                |
 | <a id="ref-33"></a>[REF-33](#ref-33)                 | Qualify download URL lifetime outside Chromium                               | Medium | Blocked                                                                                                                                                                             | another supported WebCodecs browser                                                                     |
 | <a id="ref-34"></a>[REF-34](#ref-34)                 | Remove Player listener lifetime assumptions                                  | Small  | Deferred proposal                                                                                                                                                                   | reproduce a listener lifecycle defect first                                                             |
@@ -585,11 +634,16 @@ original note for every row.
 | <a id="ref-36"></a>[REF-36](#ref-36)                 | Prove delivery recovery and individual audio mute                            | Medium | Ready                                                                                                                                                                               | UI cancel and retry; failed export and partial-open recovery; one muted track at a time                 |
 | <a id="ref-37"></a>[REF-37](#ref-37)                 | Interaction stalls plus video cadence, rewind and scrub with large telemetry | Medium | Sole read-only live-preview investigation by inspector owner                                                                                                                        | Proven stall path before fix grant; preserve existing performance thresholds                            |
 | <a id="verify-3"></a>[VERIFY-3](tickets/VERIFY-3.md) | Bring the feature map in line with delivered motion and controls             | Small  | Delivered at [f76a702](https://github.com/mite404/clipper/commit/f76a702f85a0bcdf64f7c8bc2b0726823c447003); [green CI](https://github.com/mite404/clipper/actions/runs/43798560663) | frame-step and zoom-field journeys; current cursor and follow coverage                                  |
-| <a id="clip-9b"></a>[CLIP-9b](#clip-9b)              | Visible zoom regions, editable ramps and numeric equivalents                 | Medium | Narrow4s/playhead creation slice active in T-46d4a5ee; full ramps held                                                                                                              | Inspector/UI-2 release for full unit; preserve CLIP-9/10 and REF-31                                     |
+| <a id="clip-9b"></a>[CLIP-9b](#clip-9b)              | Visible zoom regions, editable ramps and numeric equivalents                 | Medium | Narrow creation draft frozen in T-46d4a5ee; backup verified; full ramps held                                                                                                        | Accepted REF-31 exact-main CI before integration/performance-setup grant; preserve CLIP-9/10            |
 
 CLIP-9b retains the reference inventory's remaining zoom-edge interaction. `Timeline.tsx` renders
 zoom intervals as selection buttons only; inspector start/duration fields do not supply timeline
 edge dragging. CLIP-9's delivered row describes generation, not completion of this reference extra.
+
+The coordinator verified the transferred complete-history bundle, nine-path dirty/untracked draft
+and receipt archive against `clip-9b-SHA256SUMS.txt`. The frozen base and HEAD are both `b9596c6`;
+there are no implementation commits above it. Backups remain under `.amp/in/orb-backup/`, without
+source import, rebase, rerun or push. Integration and performance-setup holds remain unchanged.
 
 The owner expanded this existing ticket with visible zoom FX regions, a stepped multiplier, gradient
 in/out ramps, vertical ramp-duration handles and exact numeric inspector equivalents. The approved B
@@ -1058,9 +1112,9 @@ scrubbing; do not invent separate numeric gesture handling.
 
 ### CLIP-21b: functional output FPS selection
 
-| Ticket ID                                  | Scope                                 | Owner                                                                              | State                                                   |
-| ------------------------------------------ | ------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| <a id="clip-21b"></a>[CLIP-21b](#clip-21b) | Output FPS selector beside resolution | [Sol research](https://ampcode.com/threads/T-6d58e1c6-33c5-473e-9b9a-4ae908c3b309) | Research only; timing/Auto contract before source grant |
+| Ticket ID                                  | Scope                                 | Owner                                                                              | State                                                                                      |
+| ------------------------------------------ | ------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| <a id="clip-21b"></a>[CLIP-21b](#clip-21b) | Output FPS selector beside resolution | [Sol research](https://ampcode.com/threads/T-6d58e1c6-33c5-473e-9b9a-4ae908c3b309) | Timing research complete; actual-resolution/parser successors and exact source grants held |
 
 Exact choices are 24, 29.97, 60, 100, 120 and Auto. Do not add a 30 option or fake selection with
 text-only relabeling. Remove static ruler 30 FPS when actual timing semantics are integrated.
@@ -1085,11 +1139,17 @@ probes do not qualify audio synchronization, HD/4K throughput or the successor c
 remain runtime acceptance. No silent truncation, audio stretching or unsupported-rate fallback is
 approved. Source paths remain held.
 
+The status check against accepted main `57f5864` confirms no product FPS selector or variable-rate
+exporter is implemented. Synthetic probes are not an integrated prototype. Release requires the
+accepted REF-27 actual-resolution successor, designated layout/still rendering and parser/model
+coordination, then exact timing/exporter/tests/App UI ownership grants from the queue. Auto and
+endpoint semantics above are settled; this is not waiting on another owner preference decision.
+
 ### CLIP-19b: per-clip automatic fit and scale
 
-| Ticket ID                                            | Scope                                                                       | Owner                                                                              | State                                                         |
-| ---------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| <a id="clip-19b"></a>[CLIP-19b](tickets/CLIP-19b.md) | Auto-fit inserted/dragged media and per-clip Inspector slider/numeric scale | [Sol research](https://ampcode.com/threads/T-45868c85-1af4-45b7-ac3a-2e317bb8f64d) | Read-only; shared geometry and legacy contract before release |
+| Ticket ID                                            | Scope                                                                       | Owner                                                                              | State                                                                            |
+| ---------------------------------------------------- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| <a id="clip-19b"></a>[CLIP-19b](tickets/CLIP-19b.md) | Auto-fit inserted/dragged media and per-clip Inspector slider/numeric scale | [Sol research](https://ampcode.com/threads/T-45868c85-1af4-45b7-ac3a-2e317bb8f64d) | Research only; REF-27, PiP and still/parser successors before exact source grant |
 
 Preserve aspect ratio, avoid implicit stretch/crop, and keep scale instance-local rather than
 source-wide. Preview/copy/export, undo and save/reopen must agree at actual selected composer
@@ -1097,6 +1157,13 @@ dimensions. The [brief](tickets/CLIP-19b.md) records exact fit-target, legacy, i
 acceptance questions. REF-27 dimension/scaling, CLIP-22 role geometry and CLIP-20b image/parser
 contracts precede implementation; coordinate with CLIP-2c registry/Background and UI-4 shared
 numeric scrubbing. No model/stage/Composition/parser/App/control/style grant exists yet.
+
+The research worker confirms no implementation candidate or product code on accepted main `57f5864`.
+Existing cover-fit and zoom scale do not implement per-instance Fit/scale. New contain/1 and legacy
+cover/1 defaults are settled. Release follows accepted REF-27, PiP and CLIP-20b successor SHAs plus
+the queue's exact shared-path grant; CLIP-2c is later integration, not an extra prerequisite to
+finish first. UI-4 still has no delivered scrub API. No priority or dependency bypass follows from
+this status clarification.
 
 ## Recent owner-feedback coverage audit, 2026-11-16
 

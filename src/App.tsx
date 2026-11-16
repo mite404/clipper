@@ -723,8 +723,13 @@ export function App() {
       }
       animation = requestAnimationFrame(tick);
     };
+    const visibilitychange = () => {
+      if (document.hidden) setSpeed(0);
+    };
+    document.addEventListener('visibilitychange', visibilitychange);
     animation = requestAnimationFrame(tick);
     return () => {
+      document.removeEventListener('visibilitychange', visibilitychange);
       cancelAnimationFrame(animation);
       rewinding.current = false;
       setFrame(frameRef.current);
@@ -756,7 +761,7 @@ export function App() {
         if (frameRef.current >= duration - 1) seek(0);
         setSpeed((s) => (s > 0 ? Math.min(4, s * 2) : 1));
       }
-      if (key === ' ') setSpeed((s) => (s ? 0 : 1));
+      if (key === ' ' && !event.repeat) setSpeed((s) => (s ? 0 : 1));
       if (key === 'arrowleft') seek(frameRef.current - 1);
       if (key === 'arrowright') seek(frameRef.current + 1);
       if (key === 's') split();
