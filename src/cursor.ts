@@ -26,7 +26,15 @@ export type CursorRecording = Record<string, unknown> & {
   assets: CursorAsset[];
 };
 
-export type CursorSettings = { mode: 'raw' | 'smooth'; size: number; hidden: boolean };
+export type CursorSettings = {
+  mode: 'raw' | 'smooth';
+  size: number;
+  hidden: boolean;
+  hideIdle?: boolean;
+  removeShakes?: boolean;
+  style?: 'recorded' | 'default' | 'touch';
+  ending?: 'stop' | 'loop';
+};
 
 export const DEFAULT_CURSOR_SETTINGS: CursorSettings = { mode: 'smooth', size: 1, hidden: false };
 
@@ -143,12 +151,37 @@ export function parseCursor(value: unknown): CursorRecording {
   return { ...root, version: 2, provider: 'native', samples, assets };
 }
 
+function parseFlags(settings: Record<string, unknown>) {
+  const flags: Pick<CursorSettings, 'hideIdle' | 'removeShakes'> = {};
+  for (const key of ['hideIdle', 'removeShakes'] as const) {
+    const value = settings[key];
+    if (value === undefined) continue;
+    if (typeof value !== 'boolean') throw new Error(`Cursor ${key} must be boolean.`);
+    flags[key] = value;
+  }
+  return flags;
+}
+
+function optionalChoice<T extends string>(value: unknown, options: T[]): T | undefined {
+  if (value === undefined) return undefined;
+  const choice = options.find((option) => option === value);
+  if (choice === undefined) throw new Error('Invalid cursor setting.');
+  return choice;
+}
+
 function parseSettings(value: unknown): CursorSettings {
   const settings = object(value);
   if (settings.mode !== 'raw' && settings.mode !== 'smooth')
     throw new Error('Cursor motion must be raw or smooth.');
   if (typeof settings.hidden !== 'boolean') throw new Error('Cursor visibility must be boolean.');
-  return { mode: settings.mode, size: finite(settings.size, 0.25, 4), hidden: settings.hidden };
+  return {
+    mode: settings.mode,
+    size: finite(settings.size, 0.25, 4),
+    hidden: settings.hidden,
+    style: optionalChoice(settings.style, ['recorded', 'default', 'touch']),
+    ending: optionalChoice(settings.ending, ['stop', 'loop']),
+    ...parseFlags(settings),
+  };
 }
 
 /** Validates persisted source telemetry and its clock adjustment.

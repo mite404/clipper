@@ -61,3 +61,26 @@ export const motionCursorFixture: CursorRecording = {
     },
   ],
 };
+
+export const behaviorCursorFixture: CursorRecording = {
+  ...motionCursorFixture,
+  samples: Array.from({ length: 280 }, (_, i) => {
+    const timeMs = i * 43;
+    const cx =
+      timeMs < 2000
+        ? 0.35 + 0.3 * (timeMs / 2000)
+        : timeMs < 5000
+          ? 0.65 + Math.sin(i) * 0.002
+          : timeMs < 7000
+            ? 0.65 - 0.25 * ((timeMs - 5000) / 2000)
+            : 0.4;
+    return {
+      timeMs,
+      cx,
+      cy: 0.55,
+      assetId: 'arrow',
+      visible: true,
+      interactionType: i === 90 ? 'click' : i === 91 ? 'mouseup' : 'move',
+    };
+  }),
+};

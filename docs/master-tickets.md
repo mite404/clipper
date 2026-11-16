@@ -154,9 +154,12 @@ implementation writer owns both lanes; pushes are serialized and await exact-SHA
 | -     | CLIP-7b | Screen Studio `mousemoves`/`mouseclicks` metadata import                     | Medium | Decision    | Queue implementation | D-4     |
 
 CLIP-11's preserved first unit covers recorded, fixed and Touch styles, idle hiding, shake removal,
-and stop or return endings. It passed 117 unit and 35 browser checks on its old base, not on current
-main. Integration and current-main verification are pending. Rotation, cursor-type stabilization,
-speed styles and segment hiding remain open. Endings apply per trimmed clip, not per whole video.
+and stop or return endings. Its three-way integration onto `9b64f563` passes 127 unit and all 39
+browser checks, including decoded cursor exports and local save/reopen. Six new behavior assertions
+failed on the unchanged implementation first. Delivery awaits exact-SHA CI. Rotation, cursor-type
+stabilization, speed styles and segment hiding remain open. Endings apply per trimmed clip, not per
+whole video. The 1 s idle delay, 0.5% shake radius and 0.5 s ending duration are engineering
+defaults.
 
 ### Acceptance added by the real capture
 

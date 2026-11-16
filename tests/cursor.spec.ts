@@ -29,6 +29,11 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   await page.getByLabel('Cursor size', { exact: true }).pressSequentially('2.5');
   await expect(page.getByLabel('Cursor size', { exact: true })).toHaveValue('2.5');
   await page.getByLabel('Hide cursor', { exact: true }).check();
+  await page.getByLabel('Cursor style', { exact: true }).selectOption('touch');
+  await page.getByText('Advanced cursor', { exact: true }).click();
+  await page.getByLabel('Hide when idle (1 s)', { exact: true }).check();
+  await page.getByLabel('Remove small shakes', { exact: true }).check();
+  await page.getByLabel('Cursor ending', { exact: true }).selectOption('loop');
   await attach.setInputFiles({
     name: 'bad.json',
     mimeType: 'application/json',
@@ -77,7 +82,15 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   expect(saved.media.find((asset: { id: string }) => asset.id === 'landscape').cursor).toEqual({
     recording: cursorFixture,
     offsetMs: -78,
-    settings: { mode: 'raw', size: 2.5, hidden: true },
+    settings: {
+      mode: 'raw',
+      size: 2.5,
+      hidden: true,
+      style: 'touch',
+      hideIdle: true,
+      removeShakes: true,
+      ending: 'loop',
+    },
   });
   expect(
     saved.media.find((asset: { id: string }) => asset.id === 'portrait').cursor,
@@ -93,6 +106,11 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   await expect(page.getByLabel('Cursor motion', { exact: true })).toHaveValue('raw');
   await expect(page.getByLabel('Cursor size', { exact: true })).toHaveValue('2.5');
   await expect(page.getByLabel('Hide cursor', { exact: true })).toBeChecked();
+  await expect(page.getByLabel('Cursor style', { exact: true })).toHaveValue('touch');
+  await page.getByText('Advanced cursor', { exact: true }).click();
+  await expect(page.getByLabel('Hide when idle (1 s)', { exact: true })).toBeChecked();
+  await expect(page.getByLabel('Remove small shakes', { exact: true })).toBeChecked();
+  await expect(page.getByLabel('Cursor ending', { exact: true })).toHaveValue('loop');
   await page.getByRole('button', { name: 'Remove cursor sidecar' }).click();
   await expect(page.getByTestId('cursor-status')).toHaveText('No cursor sidecar');
   expect(uploads).toEqual([]);
@@ -105,13 +123,21 @@ test('cursor controls retain actions with long filenames, empty telemetry and la
   await page.goto(
     `${storybook}/iframe.html?id=clipper-shared-library--cursor-sidecar&viewMode=story`,
   );
-  for (const width of [1440, 320]) {
+  for (const [width, zoom] of [
+    [1440, 1],
+    [320, 1],
+    [640, 2],
+  ]) {
     await page.setViewportSize({ width, height: 900 });
+    await page.evaluate((value) => {
+      document.documentElement.style.zoom = String(value);
+    }, zoom);
     for (const [mode, status] of [
       ['Demo data', '5 samples · 1 cursor asset'],
       ['Worst case', '8,001 samples · 1 cursor asset'],
       ['Empty', '0 samples · 1 cursor asset'],
       ['One', '1 sample · 1 cursor asset'],
+      ['Idle and shakes', '280 samples · 1 cursor asset'],
     ]) {
       await page.getByRole('button', { name: mode, exact: true }).click();
       await expect(page.getByTestId('cursor-status')).toHaveText(status);
@@ -119,6 +145,12 @@ test('cursor controls retain actions with long filenames, empty telemetry and la
         page.getByRole('button', { name: 'Attach sidecar', exact: true }),
       ).toBeInViewport();
       await expect(page.getByRole('button', { name: 'Remove cursor sidecar' })).toBeInViewport();
+      await page.getByText('Advanced cursor', { exact: true }).click();
+      await page.getByLabel('Cursor style', { exact: true }).selectOption('touch');
+      await page.getByLabel('Cursor ending', { exact: true }).selectOption('stop');
+      await expect(page.getByLabel('Hide when idle (1 s)', { exact: true })).toBeInViewport();
+      await expect(page.getByLabel('Remove small shakes', { exact: true })).toBeInViewport();
+      await expect(page.getByLabel('Cursor ending', { exact: true })).toBeInViewport();
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
         width,
       );

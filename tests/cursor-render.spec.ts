@@ -119,6 +119,68 @@ test('draws source-offset cursors through a cut, crop, side swap and zoom in pre
       input.dispose();
       URL.revokeObjectURL(asset.url);
     }
+    const stationary = {
+      ...cursor,
+      offsetMs: -1200,
+      recording: {
+        ...cursor.recording,
+        samples: Array.from({ length: 24 }, (_, i) => ({
+          timeMs: i * 100,
+          cx: 0.6 + (i % 2) * 0.002,
+          cy: 0.1,
+          assetId: 'synthetic',
+        })),
+      },
+    };
+    for (const variant of [
+      {
+        cursor: { ...cursor, settings: { ...cursor.settings, style: 'touch', ending: 'loop' } },
+        probes: [
+          [0, 1178, 150],
+          [2, 1178, 150],
+        ],
+      },
+      {
+        cursor: {
+          ...stationary,
+          settings: { ...cursor.settings, hideIdle: true, removeShakes: true },
+        },
+        probes: [[0, 1010, 80]],
+      },
+      {
+        cursor: {
+          ...stationary,
+          settings: { ...cursor.settings, hideIdle: true, removeShakes: false },
+        },
+        probes: [[0, 1010, 80]],
+      },
+    ]) {
+      const url = URL.createObjectURL(source);
+      try {
+        const rendered = await renderVideo({
+          assets: [{ ...asset, url, cursor: variant.cursor }],
+          clips,
+          layout,
+          zooms: [],
+          muted: [],
+          width: 1920,
+          onProgress: () => {},
+        });
+        const decoded = new Input({ source: new BlobSource(rendered), formats: ALL_FORMATS });
+        try {
+          const track = await decoded.getPrimaryVideoTrack();
+          const sink = new CanvasSink(track, { width: 1280 });
+          for (const [frame, x, y] of variant.probes) {
+            const picture = await sink.getCanvas((frame + 0.01) / 30);
+            pixels.push(Array.from(picture.canvas.getContext('2d').getImageData(x, y, 1, 1).data));
+          }
+        } finally {
+          decoded.dispose();
+        }
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
     const data = await new Promise<string>((resolve) => {
       const reader = new FileReader();
       reader.onload = () => {
@@ -139,11 +201,17 @@ test('draws source-offset cursors through a cut, crop, side swap and zoom in pre
       }),
     };
   });
-  for (const [red, green, blue] of result.pixels) {
+  for (const [red, green, blue] of [...result.pixels.slice(0, 3), result.pixels[6]]) {
     expect(red).toBeGreaterThan(220);
     expect(green).toBeLessThan(40);
     expect(blue).toBeGreaterThan(220);
   }
+  for (const pixel of result.pixels.slice(3, 5))
+    for (const channel of pixel.slice(0, 3)) {
+      expect(channel).toBeGreaterThan(160);
+      expect(channel).toBeLessThan(210);
+    }
+  for (const channel of result.pixels[5].slice(0, 3)) expect(channel).toBeLessThan(40);
   await page.getByLabel('Open local project').setInputFiles({
     name: 'synthetic-cursor.clipper.json',
     mimeType: 'application/json',
@@ -164,6 +232,25 @@ test('draws source-offset cursors through a cut, crop, side swap and zoom in pre
   ).toBeCloseTo(493.7);
   expect(await cursor.evaluate((element) => parseFloat(getComputedStyle(element).top))).toBeCloseTo(
     346.5,
+  );
+  await page.getByLabel('Cursor style', { exact: true }).selectOption('touch');
+  await page.getByText('Advanced cursor', { exact: true }).click();
+  await page.getByLabel('Cursor ending', { exact: true }).selectOption('loop');
+  for (let frame = 0; frame < 3; frame++)
+    await page.getByRole('button', { name: 'Previous frame', exact: true }).click();
+  expect(
+    await cursor.evaluate((element) => parseFloat(getComputedStyle(element).left)),
+  ).toBeCloseTo(757.6);
+  expect(await cursor.evaluate((element) => parseFloat(getComputedStyle(element).top))).toBeCloseTo(
+    117.6,
+  );
+  for (let frame = 0; frame < 2; frame++)
+    await page.getByRole('button', { name: 'Next frame', exact: true }).click();
+  expect(
+    await cursor.evaluate((element) => parseFloat(getComputedStyle(element).left)),
+  ).toBeCloseTo(757.6);
+  expect(await cursor.evaluate((element) => parseFloat(getComputedStyle(element).top))).toBeCloseTo(
+    117.6,
   );
   await page.getByLabel('Hide cursor', { exact: true }).check();
   await expect(cursor).toHaveCount(0);

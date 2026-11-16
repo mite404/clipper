@@ -53,7 +53,15 @@ it('preserves rendering settings and rejects invalid saved cursor controls', () 
   const cursor = {
     recording: cursorFixture,
     offsetMs: 78,
-    settings: { mode: 'raw', size: 2.5, hidden: true },
+    settings: {
+      mode: 'raw',
+      size: 2.5,
+      hidden: true,
+      style: 'touch',
+      hideIdle: false,
+      removeShakes: true,
+      ending: 'loop',
+    },
   };
   expect(parseCursorTrack(cursor)).toEqual(cursor);
   for (const settings of [
@@ -61,6 +69,10 @@ it('preserves rendering settings and rejects invalid saved cursor controls', () 
     { ...cursor.settings, size: 0 },
     { ...cursor.settings, size: Infinity },
     { ...cursor.settings, hidden: 'false' },
+    { ...cursor.settings, hideIdle: 'false' },
+    { ...cursor.settings, removeShakes: 1 },
+    { ...cursor.settings, style: 'native' },
+    { ...cursor.settings, ending: 'warp' },
   ]) {
     expect(() => parseCursorTrack({ ...cursor, settings })).toThrow(/cursor/i);
   }

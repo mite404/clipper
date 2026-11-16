@@ -4,7 +4,7 @@ import type { Clip } from './timeline-model';
 import { cursorFixture } from './cursor.fixture';
 import { cursorFrame } from './cursor-render';
 
-const asset: Asset = {
+const asset = {
   id: 'capture',
   name: 'Synthetic capture',
   kind: 'video',
@@ -28,7 +28,7 @@ const asset: Asset = {
     offsetMs: 50,
     settings: { mode: 'raw', size: 2, hidden: false },
   },
-};
+} satisfies Asset;
 const clips: Clip[] = [
   { id: 'a', assetId: 'capture', track: 'screen', start: 30, duration: 3, offset: 3 },
   { id: 'b', assetId: 'capture', track: 'screen', start: 33, duration: 3, offset: 6 },
@@ -49,4 +49,16 @@ it('projects source-time cursor positions through cover crop and fractional scal
   expect(cursorFrame(clips, [asset], 30, { ...layout, swapped: true })).toEqual(first);
   expect(cursorFrame(clips, [asset], 29, layout)).toBeUndefined();
   expect(cursorFrame(clips, [asset], 36, layout)).toBeUndefined();
+});
+
+it('returns to each trimmed clip start on its last rendered frame, including after a source cut', () => {
+  const loop: Asset = {
+    ...asset,
+    cursor: { ...asset.cursor, settings: { mode: 'raw', size: 2, hidden: false, ending: 'loop' } },
+  };
+  expect(cursorFrame(clips, [loop], 32, layout)).toEqual(cursorFrame(clips, [loop], 30, layout));
+  expect(cursorFrame(clips, [loop], 35, layout)).toEqual(cursorFrame(clips, [loop], 33, layout));
+  expect(cursorFrame(clips, [loop], 35, layout)).not.toEqual(
+    cursorFrame(clips, [loop], 30, layout),
+  );
 });

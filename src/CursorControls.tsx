@@ -4,13 +4,67 @@ import {
   DEFAULT_CURSOR_SETTINGS,
   parseCursor,
   validateCursorImages,
+  type CursorSettings,
   type CursorTrack,
 } from './cursor';
 
 type ImportState = { kind: 'idle' } | { kind: 'reading' } | { kind: 'error'; message: string };
 
+const BEHAVIOR_FLAGS = [
+  ['hideIdle', 'Hide when idle (1 s)'],
+  ['removeShakes', 'Remove small shakes'],
+] as const;
+
 function countLabel(count: number, singular: string): string {
   return `${count.toLocaleString()} ${singular}${count === 1 ? '' : 's'}`;
+}
+
+function CursorBehavior({
+  settings,
+  onChange,
+}: {
+  settings: CursorSettings;
+  onChange: (settings: CursorSettings) => void;
+}) {
+  return (
+    <details className="cursor-behavior">
+      <summary>Advanced cursor</summary>
+      <div className="cursor-appearance">
+        {BEHAVIOR_FLAGS.map(([key, label]) => (
+          <label key={key}>
+            <input
+              type="checkbox"
+              checked={Boolean(settings[key])}
+              onChange={(event) => onChange({ ...settings, [key]: event.currentTarget.checked })}
+            />
+            {label}
+          </label>
+        ))}
+        <label>
+          Ending
+          <select
+            aria-label="Cursor ending"
+            value={settings.ending ?? 'none'}
+            onChange={(event) => {
+              const value = event.currentTarget.value;
+              onChange({
+                ...settings,
+                ending: value === 'stop' || value === 'loop' ? value : undefined,
+              });
+            }}
+          >
+            <option value="none">Recorded ending</option>
+            <option value="stop">Stop early</option>
+            <option value="loop">Return to start</option>
+          </select>
+        </label>
+      </div>
+      <p className="cursor-note">
+        Ending effects use the last 0.5 s of each trimmed clip, or half of shorter clips.
+        Small-shake removal holds movements within 0.5% of the source. Clicks stay exact.
+      </p>
+    </details>
+  );
 }
 
 function CursorAppearance({
@@ -43,6 +97,22 @@ function CursorAppearance({
         </select>
       </label>
       <label>
+        Style
+        <select
+          aria-label="Cursor style"
+          value={settings.style ?? 'recorded'}
+          onChange={(event) => {
+            const style = event.currentTarget.value;
+            if (style === 'recorded' || style === 'default' || style === 'touch')
+              onChange({ ...cursor, settings: { ...settings, style } });
+          }}
+        >
+          <option value="recorded">Recorded shapes</option>
+          <option value="default">First embedded shape</option>
+          <option value="touch">Touch</option>
+        </select>
+      </label>
+      <label>
         Size
         <input
           type="number"
@@ -71,6 +141,10 @@ function CursorAppearance({
         />
         Hide cursor
       </label>
+      <CursorBehavior
+        settings={settings}
+        onChange={(next) => onChange({ ...cursor, settings: next })}
+      />
     </div>
   );
 }
