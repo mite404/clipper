@@ -1,12 +1,159 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
-import { mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
 
 const cli = fileURLToPath(new URL('./verify.mjs', import.meta.url));
+const root = fileURLToPath(new URL('../../../../', import.meta.url));
+
+test('CI and isolated projects send UI journeys to production and source fixtures to dev', () => {
+  for (const config of [
+    'playwright.config.ts',
+    '.agents/skills/verify-clipper/scripts/playwright.config.mjs',
+  ]) {
+    const env = {
+      ...process.env,
+      CI: '1',
+      BASE_URL: 'http://127.0.0.1:4317',
+      PERF_URL: 'http://127.0.0.1:4318',
+      STORYBOOK_URL: 'http://127.0.0.1:4319',
+      VERIFY_JOURNEY: 'all',
+      VERIFY_BUILD_DIR: '/tmp/clipper-target-test',
+      VERIFY_PRODUCTION: '1',
+    };
+    const loaded = spawnSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `const {default: config} = await import(${JSON.stringify(path.join(root, config))}); console.log(JSON.stringify(config.projects.map(project => ({...project, use: {...config.use, ...project.use}}))));`,
+      ],
+      { encoding: 'utf8', env },
+    );
+    assert.equal(loaded.status, 0, loaded.stderr);
+    const projects = JSON.parse(loaded.stdout);
+    const listed = spawnSync(
+      process.execPath,
+      [
+        'node_modules/@playwright/test/cli.js',
+        'test',
+        '--config',
+        config,
+        '--list',
+        '--reporter=json',
+      ],
+      { cwd: root, encoding: 'utf8', env },
+    );
+    assert.equal(listed.status, 0, listed.stderr);
+    const report = JSON.parse(listed.stdout);
+    const fixtures = [
+      'export',
+      'framing',
+      'auto-zoom',
+      'cursor-render',
+      'cursor-shapes',
+      'cursor-rotation',
+      'frame-image',
+    ];
+    const visit = (suite) => {
+      for (const spec of suite.specs || []) {
+        assert.equal(spec.tests.length, 1, `${config}: duplicated ${spec.title}`);
+        const project = projects.find((entry) => entry.name === spec.tests[0].projectName);
+        const name = spec.file.replace('.spec.ts', '');
+        const expected = fixtures.includes(name)
+          ? env.BASE_URL
+          : name === 'storybook'
+            ? env.STORYBOOK_URL
+            : env.PERF_URL;
+        assert.equal(project.use?.baseURL, expected, `${config}: ${spec.file}: ${spec.title}`);
+      }
+      for (const child of suite.suites || []) visit(child);
+    };
+    for (const suite of report.suites) visit(suite);
+    assert.ok(report.suites.some((suite) => suite.file === 'cursor.spec.ts'));
+  }
+});
+
+test('CI refuses missing or stale production output when the fresh build fails', async () => {
+  const workspace = await mkdtemp(path.join(tmpdir(), 'clipper-ci-build-test-'));
+  try {
+    const loaded = spawnSync(
+      process.execPath,
+      [
+        '--input-type=module',
+        '-e',
+        `const {default: config} = await import(${JSON.stringify(path.join(root, 'playwright.config.ts'))}); console.log(JSON.stringify(config.webServer.find(server => server.url === 'http://127.0.0.1:4318')));`,
+      ],
+      { encoding: 'utf8', env: { ...process.env, CI: '1', PERF_URL: 'http://127.0.0.1:4318' } },
+    );
+    assert.equal(loaded.status, 0, loaded.stderr);
+    const server = JSON.parse(loaded.stdout);
+    await writeFile(
+      path.join(workspace, 'package.json'),
+      JSON.stringify({ scripts: { build: 'node -e "process.exit(23)"' } }),
+    );
+    for (const stale of [false, true]) {
+      if (stale) {
+        await mkdir(path.join(workspace, 'dist'));
+        await writeFile(path.join(workspace, 'dist/index.html'), '<h1>Stale production</h1>');
+      }
+      const result = spawnSync(server.command, {
+        cwd: workspace,
+        shell: true,
+        encoding: 'utf8',
+        timeout: 10000,
+      });
+      assert.equal(result.status, 23, result.stdout + result.stderr);
+    }
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test('isolated editor refuses a failed fresh build even with a stale production bundle', async () => {
+  const workspace = await mkdtemp(path.join(tmpdir(), 'clipper-stale-test-'));
+  try {
+    const scripts = path.join(workspace, '.agents/skills/verify-clipper/scripts');
+    await mkdir(scripts, { recursive: true });
+    await cp(cli, path.join(scripts, 'verify.mjs'));
+    await symlink(path.join(root, 'node_modules'), path.join(workspace, 'node_modules'));
+    await symlink(path.join(root, 'public'), path.join(workspace, 'public'));
+    await mkdir(path.join(workspace, 'dist'));
+    await writeFile(path.join(workspace, 'dist/index.html'), '<h1>Stale production</h1>');
+    await writeFile(
+      path.join(workspace, 'vite.config.mjs'),
+      'throw new Error("REF18 fresh build refused");',
+    );
+    await writeFile(
+      path.join(scripts, 'playwright.config.mjs'),
+      `export default { testDir: ${JSON.stringify(workspace)} };`,
+    );
+    await writeFile(
+      path.join(workspace, 'editor.spec.ts'),
+      'import { test } from "@playwright/test"; test("stale bundle must not reach tests", () => {});',
+    );
+    const result = spawnSync(process.execPath, [path.join(scripts, 'verify.mjs'), 'editor'], {
+      encoding: 'utf8',
+      env: { ...process.env, VERIFY_EVIDENCE: path.join(workspace, 'evidence') },
+      timeout: 30000,
+    });
+    assert.equal(result.status, 1, result.stdout + result.stderr);
+    assert.match(result.stderr, /REF18 fresh build refused/);
+    assert.match(result.stderr, /Production build failed/);
+    assert.doesNotMatch(result.stdout, /Running \d+ tests/);
+    const [run] = await readdir(path.join(workspace, 'evidence'));
+    const summary = JSON.parse(
+      await readFile(path.join(workspace, 'evidence', run, 'summary.json')),
+    );
+    assert.equal(summary.status, 'failed');
+    assert.equal(summary.stats, undefined);
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
 
 test('lists runnable journeys without launching services', () => {
   const result = spawnSync(process.execPath, [cli, '--help'], { encoding: 'utf8' });
@@ -63,6 +210,8 @@ test('interruption retains a failed verdict and releases test server ports', asy
     const summary = JSON.parse(await readFile(path.join(evidence, directory, 'summary.json')));
     assert.equal(summary.status, 'failed');
     assert.ok(summary.error);
+    assert.equal(summary.ports.length, 3);
+    assert.equal(new Set(summary.ports).size, 3);
     assert.ok((await readFile(path.join(evidence, directory, 'run.log'))).length);
     for (const port of summary.ports) {
       await assert.rejects(

@@ -61,10 +61,33 @@ run; a later push does not cancel it. Reduce the baseline when fixing its findin
 regenerate it to accept new debt. Defaults for other Fallow rules and complexity thresholds remain
 unchanged.
 
-The Playwright suite expects both editor and Storybook running. `BASE_URL` and `STORYBOOK_URL`
-override their default ports. Export fixtures require a Vite development server; point `BASE_URL`
-there and `PERF_URL` at the production editor when running the full suite. The project skill
-documents an isolated launch, doctor, feature map, evidence, and cleanup. Use
+Playwright separates production UI journeys from browser source-import fixtures. The `editor` and
+`4k` projects exercise import, editing, transport, save/reopen, failure recovery, and video
+downloads against production. The `fixtures` and `fixtures-4k` projects retain development-module
+codec, decoded-pixel, audio, framing, auto-zoom, and cursor checks. Node-side fixture imports do not
+require a development browser target. New specs default to production unless explicitly classified
+as source-import fixtures. Storybook and uninstrumented performance have separate projects.
+
+Outside CI, `npm run test:ui` expects servers already running. `BASE_URL` selects development Vite
+(default `http://localhost:5173`), `PERF_URL` selects the production editor (default
+`http://127.0.0.1:4173`), and `STORYBOOK_URL` selects Storybook (default `http://127.0.0.1:6006`).
+CI starts all three servers and requires a successful fresh production build before preview starts,
+even if `dist` already exists. A failed build cannot fall back to an old bundle.
+
+For fresh test-owned builds and servers, run the isolated CLI:
+
+```bash
+node --test .agents/skills/verify-clipper/scripts/verify.test.mjs
+node .agents/skills/verify-clipper/scripts/verify.mjs all
+```
+
+The `editor`, `media`, `composition`, and `delivery` CLI journeys now build and serve production, as
+do `performance` and `all`. `export` retains its dev fixtures. `all` includes both target classes
+and Storybook. Each invocation replaces caller URLs with unique loopback ports, refuses server
+reuse, and builds into a fresh temporary directory. Missing or stale shared builds cannot satisfy
+this gate. Failed builds, zero tests, skipped tests, flakes, and interruption remain failures.
+Performance runs use one worker without trace/video overhead or concurrent browser workloads. The
+project skill documents doctor, feature coverage, evidence, and cleanup. Use
 `/maintain-verification-skill` to keep it aligned with future features.
 
 The public editor service builds and serves production code. Development React is deliberately not

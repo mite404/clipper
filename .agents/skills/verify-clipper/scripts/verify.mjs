@@ -9,13 +9,14 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../../../../', import.meta.url));
 const journeys = {
-  editor: { specs: ['editor.spec.ts', 'refinements.spec.ts'], tools: true },
-  media: { specs: ['editor.spec.ts'], grep: 'imports' },
+  editor: { specs: ['editor.spec.ts', 'refinements.spec.ts'], tools: true, production: true },
+  media: { specs: ['editor.spec.ts'], grep: 'imports', production: true },
   composition: {
     specs: ['editor.spec.ts', 'refinements.spec.ts'],
     grep: 'splice, scrub|swaps frames|marks a mouse',
+    production: true,
   },
-  delivery: { specs: ['refinements.spec.ts'], grep: 'reopens|malformed' },
+  delivery: { specs: ['refinements.spec.ts'], grep: 'reopens|malformed', production: true },
   export: { specs: ['export.spec.ts'], tools: true },
   storybook: { specs: ['storybook.spec.ts'], storybook: true },
   performance: { specs: ['performance.spec.ts'], production: true, repeat: 5 },
@@ -84,7 +85,12 @@ async function run(journey, name) {
   const evidence = await mkdtemp(path.join(parent, `${name}-`));
   const scratch = await mkdtemp(path.join(tmpdir(), 'clipper-build-'));
   const log = createWriteStream(path.join(evidence, 'run.log'));
-  const env = { ...process.env, VERIFY_JOURNEY: name, VERIFY_BUILD_DIR: scratch };
+  const env = {
+    ...process.env,
+    VERIFY_JOURNEY: name,
+    VERIFY_BUILD_DIR: scratch,
+    VERIFY_PRODUCTION: journey.production ? '1' : '0',
+  };
   const ports = new Set();
   for (const key of ['BASE_URL', 'PERF_URL', 'STORYBOOK_URL']) {
     let port;
