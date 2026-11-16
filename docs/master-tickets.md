@@ -152,8 +152,9 @@ P3 item 2 needs no hidden `h1` and no ticket. P3 item 3 is intended behavior: Sp
 only, not a second activation behavior for Save; Enter-only keyboard coverage is correct. No ticket
 is created for either item, and the LAND verdict is unchanged. P3 item 1 is already resolved by the
 test/docs cleanup in accepted `ed37b20`, with both affected checks passing afterward. The reviewer's
-source-read media-toggle Space exception awaits an owner answer; it has not been runtime-qualified
-or queued. Existing input/select guards remain unchanged; do not infer a new exception policy.
+source-read media-toggle Space exception is now a confirmed deviation. The owner requires Space on
+focused Media to play/pause the timeline without toggling the pool. Correct it in [UI-7](#ui-7), not
+a separate transport ticket. Existing input/select guards remain unchanged.
 
 ### Numeric property label scrubbing
 
@@ -238,6 +239,34 @@ no preview/copy mismatch for those holds, so the investigation no longer blocks 
 stored-time sampling unchanged and add an asserted affected-boundary preview/PNG regression to the
 feature's browser tests. No nominal-ordinal or complete WebM/VFR compatibility claim follows.
 
+### Media header and temporary drawer peek
+
+| Ticket ID                      | Scope                                                          | State                    | Needs                                                  |
+| ------------------------------ | -------------------------------------------------------------- | ------------------------ | ------------------------------------------------------ |
+| <a id="ui-7"></a>[UI-7](#ui-7) | Media before Save, temporary left-edge peek and Space behavior | Sol medium research only | Accepted CLIP-9b successor and exact shared-path grant |
+
+The owner requested moving Media into the header immediately left of Save project and temporarily
+sliding the media pool in when hovering the left edge. Reuse the owner-authored Yaklabs pattern in
+`apps/web/src/shell/sidebar-peek.tsx` at `1ccdae55a5f26e96c042a322f980db9e226b3c41`, not an
+unrelated sidebar implementation. Space on focused Media must only play/pause the timeline, never
+show or hide the pool. Click and Enter retain the persistent toggle. Hiding the pool preserves
+selection and playback. Keep transient peek distinct from persistent open state and qualify focus,
+pointer exit, narrow layouts, touch fallback and reduced-motion behavior.
+
+Extend UI-2's delivered mounted accessible drawer at `ceb40bb`, already in accepted main; do not
+build a second hide/show implementation. UI-7 has completed read-only reference research and
+reproduced the focused-Media Space deviation in the production UI, but has no implementation yet.
+
+The existing [Sol medium worker](https://ampcode.com/threads/T-93cc1d51-b15d-443e-afc8-5267ef98ab33)
+may research the reference and current behavior on accepted `19c571e`, but has no source reservation
+or push grant. Its exact implementation base and App/header/drawer/style/test paths follow the
+accepted CLIP-9b successor and coordinator grant. Do not duplicate this worker or the ticket. Update
+UI-3's superseded Save-within-20-pixels header assertion. Replace header `(4, 4)` focus parking in
+affected transport/performance tests if it intersects the peek zone, preserving their transport
+assertions and performance workload, thresholds, repeats and sampling. Require real pointer/keyboard
+verification, inspected public/synthetic captures, strict/full gates and exact-main green CI.
+Existing review gates and the coordinator's exclusive push slot remain unchanged.
+
 The former queue thread
 [T-2d1e888a](https://ampcode.com/threads/T-2d1e888a-23ff-4bf4-b2d1-551553f2ef0a) has stopped
 implementation and coordination. Its baseline review is complete and is not repeated. The successor
@@ -264,6 +293,7 @@ images were hosted, see [Known limits](#known-limits)).
 | Cursor inspector         | No active implementation reservation after green inspector delivery                                                                                         |
 | Workspace layout         | No active implementation reservation after green UI-2 delivery                                                                                              |
 | Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                              |
+| Media drawer follow-up   | UI-7 reference/design research only; no source reservation until accepted CLIP-9b successor and exact-path grant                                            |
 | Transport lifecycle      | No active reservation after green REF-31 delivery; preserve accepted REF-20/31 transport behavior                                                           |
 | Zoom regions             | CLIP-9b narrow App creation/B/hints, AutoZoomControls deletion, zoom-generation removal and listed test/story consumers; no Timeline/model/ramp/style edits |
 | Oxc tooling              | VERIFY-5 package/lock, Oxc/formatter config, necessary CI/hook/README command changes only; no source migration or bulk reformat                            |
@@ -1042,19 +1072,39 @@ movement.
 
 | Ticket ID                                  | Scope                                                 | Owner                                                                            | State and dependency                                                                    |
 | ------------------------------------------ | ----------------------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| <a id="clip-2b"></a>[CLIP-2b](#clip-2b)    | Reposition video and audio timeline clips             | [Sol medium](https://ampcode.com/threads/T-e625cc4d-8431-4df9-b146-0869cf28ac8b) | Reproduce/scope only; inspector/UI-2 release, then CLIP-9b gesture coordination         |
+| <a id="clip-2b"></a>[CLIP-2b](#clip-2b)    | Reposition clips with associated-audio link toggle    | [Sol medium](https://ampcode.com/threads/T-e625cc4d-8431-4df9-b146-0869cf28ac8b) | Research/path-held; explicit association contract and CLIP-9b successor before grant    |
 | <a id="clip-20b"></a>[CLIP-20b](#clip-20b) | Import still timeline media and qualify MOV/MP4 paths | [Sol medium](https://ampcode.com/threads/T-01a1e2f2-99be-775a-be34-43cbce070c38) | Reproduce/scope only; coordinate model/parser/render paths after preceding shared work  |
 | <a id="clip-2c"></a>[CLIP-2c](#clip-2c)    | Media-pool drag insertion and dynamic track creation  | [Sol medium](https://ampcode.com/threads/T-7a47f0bf-09c2-4891-92ec-aaf7ec41bd52) | Research only; model/render/persistence design after existing shared/media predecessors |
 
 CLIP-2b reproduced unchanged video and audio positions after real body drags into trimmed empty
 space. Accept same-track, frame-rounded nonnegative moves preserving duration and source fields.
 Reject overlap with visible feedback, allow adjacency/end extension within existing project bounds,
-and leave other clips fixed. No ripple, automatic linking or cross-track reassignment. One drag is
-one undo; cancelled/no-op gestures add no history. Focused clip arrows move one frame, Shift arrows
-ten, without changing global playhead keys. Preserve source offsets, generated zoom anchors, audio
-synchronization and selection. Verify real pointer movement on video and audio lanes, scrolling
-coordinates, bounds/collisions, preview/export and save/reopen behavior. Do not change layout or
-native scrolling under UI-2 ownership.
+and leave unrelated clips fixed. No ripple or cross-track reassignment. The owner's later direct
+request supersedes the previous no-linking restriction: add a link/unlink toggle above the Tracks
+column so associated audio moves with its video. The supplied icon reference and exact request are
+in the
+[existing movement thread](https://ampcode.com/threads/T-e625cc4d-8431-4df9-b146-0869cf28ac8b).
+Current insertion creates independent clips; no A/V association identity exists yet. Do not infer
+association from neighboring tracks, equal starts or the same asset alone. The existing owner must
+scope explicit association creation, split/trim lifecycle and legacy persistence, plus toggle
+default/scope, reciprocal movement and linked-group bounds/collision behavior before source grant.
+These details are open design work, not confirmed owner decisions. Linking adds no implicit
+selection/deletion/trim/ripple expansion. One move is one undo; cancelled/no-op gestures add no
+history. Focused clip arrows move one frame, Shift arrows ten, without changing global playhead
+keys. Preserve source offsets, generated zoom anchors, audio synchronization and selection. Verify
+real pointer movement on video and audio lanes, scrolling coordinates, bounds/collisions,
+preview/export and save/reopen behavior. Do not change layout or native scrolling. The same existing
+Sol owner remains research-only/path-held; no expanded implementation or push grant follows from the
+revised product scope.
+
+The movement worker returned a read-only design, not an implementation. Its `linkId`, session-wide
+default-on toggle, reciprocal movement, split-dissolves-pair policy and version-3 project writes are
+recommendations only. Product confirmation is needed for association creation, whether moving audio
+also moves video, and split behavior. The proposed explicit audio chooser would pair existing clips
+without creating media or changing timing. Current version-2 parsing reconstructs known clip fields,
+so persistence requires a deliberate parser/compatibility contract; an in-memory link alone is not
+enough. `originId` remains split lineage, not a substitute for association. No parser/schema grant
+follows from this research, and unrelated feature work need not wait for these choices.
 
 CLIP-20b is still images as timeline media, not the separately scoped composition background. Use
 explicit editable still duration, correct aspect and alpha handling, matching preview/export and
@@ -1179,13 +1229,14 @@ support them but do not replace them. No GitHub or Linear issue creation is impl
 | Remove branding/title and move Save without changing save behavior                                                                        | [UI-3](#ui-3)                                                                |
 | Horizontal label scrubbing across numeric properties, not booleans/enums                                                                  | [UI-4](#ui-4)                                                                |
 | Drag media-pool/inspector widths using owner-authored Yaklabs pattern                                                                     | [UI-5](#ui-5)                                                                |
+| Media before Save, temporary left-edge media-pool peek and Space-only timeline control                                                    | [UI-7](#ui-7)                                                                |
 | Cursor metadata import from source panel or targeted composition/timeline sidecar drop                                                    | [CLIP-11b](tickets/CLIP-11b.md)                                              |
 | Remove ORIGINAL, obsolete above-timeline cursor panel, L/R meter, Paused and selected slogans/tags                                        | [UI-6](#ui-6), with cursor access preserved by [CLIP-11](tickets/CLIP-11.md) |
 | One resolution selector, true selected-size composer plus copy/export, real MP4/MOV/WebM                                                  | [REF-27](#ref-27)                                                            |
 | Zoom creation at playhead for four seconds, B shortcut, old batch removal, editable ramps and referenced Bklit/D3/Motion curve technology | [CLIP-9b](#clip-9b)                                                          |
 | PiP beside Side by side, direct live-preview four-corner placement, padding/radius                                                        | [CLIP-22 PiP subset](#clip-22-pip-composition-subset)                        |
 | Full-composite still/video V1 underlay below both roles; dynamic compatible visual/audio tracks                                           | [CLIP-2c](#clip-2c)                                                          |
-| Move existing video/audio clips and drag media-pool inserts into compatible/new tracks                                                    | [CLIP-2b](#clip-2b), [CLIP-2c](#clip-2c)                                     |
+| Move video/audio clips with an associated-audio link toggle; drag media-pool inserts into compatible/new tracks                           | [CLIP-2b](#clip-2b), [CLIP-2c](#clip-2c)                                     |
 | MOV/MP4 import qualification and PNG/JPG timeline still imports                                                                           | [CLIP-20b](#clip-20b)                                                        |
 | Functional 24/29.97/60/100/120/Auto FPS beside resolution, no fake 30 label                                                               | [CLIP-21b](#clip-21b)                                                        |
 | Auto-fit new visual media to selected composition and per-clip scale slider/numeric input                                                 | [CLIP-19b](tickets/CLIP-19b.md)                                              |
