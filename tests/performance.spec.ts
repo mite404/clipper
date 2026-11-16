@@ -30,6 +30,7 @@ for (const follow of [false, true]) {
         buffer: Buffer.from(JSON.stringify(motionCursorFixture)),
       });
       await page.getByText('Advanced cursor', { exact: true }).click();
+      await page.getByText('Cleanup', { exact: true }).click();
       const stabilize = page.getByLabel('Stabilize recorded shapes', { exact: true });
       await stabilize.check();
       await expect(stabilize).toBeChecked();

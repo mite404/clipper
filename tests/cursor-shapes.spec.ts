@@ -175,7 +175,7 @@ test('stabilizes recorded shapes identically in preview and encoded frames throu
   const cursor = page.getByTestId('cursor-preview');
   const stabilize = page.getByLabel('Stabilize recorded shapes', { exact: true });
   await expect(cursor).toHaveAttribute('src', result.urls[0]);
-  await page.getByText('Advanced cursor', { exact: true }).click();
+  await page.getByText('Cleanup', { exact: true }).click();
   await expect(stabilize).toBeChecked();
   await stabilize.uncheck();
   await expect(cursor).toHaveAttribute('src', result.urls[1]);

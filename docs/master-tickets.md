@@ -72,11 +72,12 @@ outside the stationary pointer and cancels hover. The test now waits for font re
 component, CSS, story, assertion, timeout or retry changed. Coordinator strict gates, 135 units and
 isolated full 55/55 pass. Exact-main
 [CI 43835506294](https://github.com/mite404/clipper/actions/runs/43835506294) passed. The
-coordinator retains the serialized main slot for REF-20 qualification. No third old-SHA rerun was
-issued. REF-20 is assigned to Sol medium in
+coordinator delivered REF-20 at `612486f` with green exact-main CI. No third old-SHA rerun was
+issued. REF-20 was assigned to Sol medium in
 [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59). It owns App's
 rewind/readout listener and export-progress hunks, focused editor/performance tests, and its brief.
-The CLIP-25 copy action and render seam remain outside REF-20's reservation.
+REF-20's reservation is released. The inspector owner now rebases its preserved candidate onto
+`612486f` for combined acceptance; UI-2 follows that accepted successor.
 
 The owner's 2026-11-16 standing authorization supersedes the earlier one-ticket Sonnet limits. Run
 the lane under [root ticket-delivery guidance](../AGENTS.md#ticket-delivery), including both
@@ -221,7 +222,7 @@ images were hosted, see [Known limits](#known-limits)).
 | Workspace layout         | UI-2 App drawer/workspace shell, Timeline scroll markup and scoped media/workspace/timeline CSS; no playback/cursor internals                                                    |
 | Zoom regions             | Research only; future App/Timeline/inspector/styles/model/parser edits wait for inspector and UI-2 release; no REF-20/31 transport overlap                                       |
 | Oxc tooling              | VERIFY-5 package/lock, Oxc/formatter config, necessary CI/hook/README command changes only; no source migration or bulk reformat                                                 |
-| Queue implementation     | Queue/docs and acceptance only; cursor-inspector, UI-2 and REF-20 reservations remain exclusive                                                                                  |
+| Queue implementation     | Queue/docs and acceptance only; cursor-inspector and UI-2 reservations remain exclusive; REF-20 is delivered and released                                                        |
 | Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                                 |
 
 ### Preservation branches
@@ -469,7 +470,8 @@ synthetic before/after captures. The worker reports a red/green gutter hit-test,
 dataset/width combinations, 16 focused browser checks and 135 units passing. These are preliminary
 checks, not final combined acceptance. See the
 [stress evidence](https://ampcode.com/artifacts/timeline-clip-region-stress-fc0f5a96-848e-47ff-9a37-179ab2f8a11d).
-The inspector candidate remains unintegrated; no accepted successor is available to UI-2 yet.
+The inspector candidate is integrated locally for final combined gates; no delivered successor is
+available to UI-2 yet.
 
 The owner additionally requires both timeline-scale bounds to adapt proportionately to total
 sequence duration and actual available timeline width. Grant Timeline scale state/bounds and
@@ -483,6 +485,27 @@ unit's tests or relax performance assertions to accommodate disclosure changes. 
 owner has a narrow exception for one Cleanup disclosure click in the existing performance setup and
 minimal disclosure selectors in cursor, cursor-speed and cursor-shape tests.
 
+Inspector successor `ba0fd4f` is transferred and frozen on delivered `612486f`. Bundle and archive
+identity are verified. Static/build gates, 135 units, seven helper tests and full browser 62/62
+passed. Performance is unresolved: candidate batches passed 18/20 and 19/20, while the intervening
+same-orb delivered-base control passed 20/20. Three candidate cursor-follow samples failed the
+unchanged strict rAF p95 bound. This is not yet a source-cause attribution. The existing inspector
+owner completed five alternating pairs: base 5/5, candidate 2/5. Verified DOM snapshots establish a
+confound: base preview wholly offscreen, candidate preview onscreen, with matching dimensions. Both
+advance media without captured page/media errors. A second finite read-only grant normalizes preview
+visibility for five alternating pairs; it uses the same DOM Play click on both sides to avoid
+automation scrolling the baseline transport back down. Both sides passed 0/5 with overlapping
+results, but repeated layout-reading guards add unquantified overhead. The final low-intrusion
+five-pair diagnostic removed those in-window guards; both sides still passed 0/5. No source cause or
+equivalence is established; diagnostics are concluded. The existing independent qualifier's single
+untouched candidate performance journey and subsequent base control each passed 20/20. Actual
+receipts are transferred and hash-verified. These are strict local gate passes, not matched-workload
+nonregression or a universal guarantee. The coordinator integrated the exact frozen source for final
+combined acceptance; fresh static/shrink-only gates, 135 units and seven helper tests passed. Full
+browser gates passed 62/62 in the single final integrated invocation, with no skips, flakes or
+retries. Inspector delivery is prepared; exact-main CI remains required before acceptance and UI-2
+release. No deployment is authorized or claimed.
+
 ### Not blocking mouse work
 
 Take these when a push slot is free and the files do not overlap an in-flight ticket. Owner is the
@@ -492,7 +515,7 @@ queue thread unless stated.
 | ---------------------------------------------- | ----------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | <a id="ref-14"></a>[REF-14](tickets/REF-14.md) | One constant each for music gain and peak rate; blob-URL test asserts no fetch      | Small  | Delivered at [afe4c60](https://github.com/mite404/clipper/commit/afe4c605f551c979083297b0e0d5d24f4a32a484); [green CI](https://github.com/mite404/clipper/actions/runs/43806193468) | #32, #33, #34       |
 | <a id="ref-18"></a>[REF-18](tickets/REF-18.md) | Editor journeys also run against the production bundle                              | Medium | Delivered at [7373115](https://github.com/mite404/clipper/commit/7373115e9a501312bea5a4192a101094dce5d08f); [green CI](https://github.com/mite404/clipper/actions/runs/43803496212) | #18                 |
-| <a id="ref-20"></a>[REF-20](tickets/REF-20.md) | Rewind and export progress re-render at 10 Hz                                       | Medium | Correction 0def2ba reviewed LAND; forward-ending aggregate timeout still blocks (full 60/61); capture contrast running on accepted VERIFY-5 base; not delivered                     | #36                 |
+| <a id="ref-20"></a>[REF-20](tickets/REF-20.md) | Rewind and export progress re-render at 10 Hz                                       | Medium | Delivered 612486f; exact-main CI 43850098949 green; full 61/61 and fresh-orb performance 20/20; host-sensitive failures preserved                                                   | #36                 |
 | <a id="ref-26"></a>[REF-26](tickets/REF-26.md) | Keep footer errors and warnings visible without scrolling                           | Small  | Delivered at [4535665](https://github.com/mite404/clipper/commit/45356659c892b3607230778270c5d4eb16786c3c)                                                                          | found during REF-21 |
 | <a id="ref-22"></a>[REF-22](#ref-22)           | Project container without one giant JSON string (format version 3, reads version 2) | Large  | Proposal                                                                                                                                                                            | #3                  |
 | <a id="ref-23"></a>[REF-23](#ref-23)           | Zooms anchored to source time and source coordinates                                | Large  | Decision D-1                                                                                                                                                                        | #14, #24            |
@@ -737,8 +760,11 @@ their first invocations. Receipt hashes and runtime/test identity were checked. 
 sensitivity, not a proven cause or universal performance guarantee. Failed receipts remain
 preserved. The existing reviewer returned LAND for the exact recording-policy/selector delta;
 coordinator comparison confirms its bytes match. Runtime review is unchanged and performance was
-qualified separately. Exact-main CI remains required. Inspector/UI-2 remain held until REF-20 is
-delivered. No timeout or workload changed.
+qualified separately. Delivered at
+[`612486f`](https://github.com/mite404/clipper/commit/612486fd83428d6a9fd4d5e2ee93f01f056a821d),
+with green [exact-main CI 43850098949](https://github.com/mite404/clipper/actions/runs/43850098949).
+The rewind reservation is released. Inspector integration resumes on that successor; UI-2 follows
+the accepted inspector. No timeout or workload changed.
 
 ### VERIFY-5: requested Oxc typecheck and formatter tooling
 

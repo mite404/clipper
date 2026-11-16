@@ -2118,9 +2118,92 @@ p {
 .inspector .cursor-controls {
   padding: 12px 0;
 }
+.cursor-controls[aria-label='Source cursor data'] {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+.cursor-scope {
+  margin-top: 6px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: #b6c7ad;
+}
+.cursor-group {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 0 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+.cursor-group legend {
+  padding: 0 8px 0 0;
+  color: #dedfe2;
+  font-weight: 500;
+}
+.cursor-group label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cursor-group label:has(input[type='checkbox']) {
+  justify-content: flex-start;
+}
+.cursor-group select,
+.cursor-group input[type='number'] {
+  min-width: 0;
+  max-width: 65%;
+  min-height: 32px;
+  padding: 5px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: #dedfe2;
+  background: #171819;
+  font: inherit;
+}
+.cursor-group input[type='number'] {
+  width: 8ch;
+}
+.cursor-group select:disabled {
+  opacity: 0.5;
+}
+.cursor-group label:has(select),
+.cursor-controls[aria-label='Source cursor data'] .cursor-appearance label:has(select) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 6px;
+}
+.cursor-group select,
+.cursor-controls[aria-label='Source cursor data'] .cursor-appearance select {
+  width: 100%;
+  max-width: 100%;
+}
+.cursor-controls[aria-label='Source cursor data'] .cursor-behavior {
+  border-top: 1px solid var(--line);
+}
+.cursor-controls[aria-label='Source cursor data'] .cursor-appearance,
+.cursor-controls[aria-label='Source cursor data'] .cursor-offset {
+  display: grid;
+  gap: 10px;
+  margin-block: 8px;
+}
+.cursor-controls[aria-label='Source cursor data'] .cursor-offset input {
+  width: 100%;
+  min-width: 0;
+}
+.cursor-controls [data-testid='cursor-status'] {
+  display: block;
+  margin-block: 8px;
+}
 @media (min-width: 961px) {
   .inspector {
-    max-height: calc(100dvh - 150px);
+    height: calc(100dvh - 150px);
+    min-height: 0;
     overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-gutter: stable;
   }
 }

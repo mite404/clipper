@@ -173,7 +173,6 @@ test('renders distinct cursor speed styles with default pixel parity through off
     mimeType: 'application/json',
     buffer: Buffer.from(result.project),
   });
-  await page.getByText('Advanced cursor', { exact: true }).click();
   const animation = page.getByLabel('Cursor animation style', { exact: true });
   const cursor = page.getByTestId('cursor-preview');
   for (let frame = 0; frame < 3; frame++)

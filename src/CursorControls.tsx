@@ -13,10 +13,8 @@ type ImportState = { kind: 'idle' } | { kind: 'reading' } | { kind: 'error'; mes
 const ANIMATION_STYLES = ['smooth', 'medium', 'rapid', 'none'] as const;
 
 const BEHAVIOR_FLAGS = [
-  ['hideIdle', 'Hide when idle (1 s)'],
   ['removeShakes', 'Remove small shakes'],
   ['stabilizeShapes', 'Stabilize recorded shapes'],
-  ['rotate', 'Rotate with movement'],
 ] as const;
 
 function countLabel(count: number, singular: string): string {
@@ -114,26 +112,31 @@ function CursorBehavior({
   onChange: (settings: CursorSettings) => void;
 }) {
   return (
-    <details className="cursor-behavior">
-      <summary>Advanced cursor</summary>
-      <div className="cursor-appearance">
-        {BEHAVIOR_FLAGS.map(([key, label]) => (
-          <label key={key}>
-            <input
-              type="checkbox"
-              checked={Boolean(settings[key])}
-              onChange={(event) => onChange({ ...settings, [key]: event.currentTarget.checked })}
-            />
-            {label}
-          </label>
-        ))}
+    <>
+      <fieldset className="cursor-group">
+        <legend>Motion</legend>
+        <label>
+          Movement
+          <select
+            aria-label="Cursor motion"
+            value={settings.mode}
+            onChange={(event) =>
+              onChange({
+                ...settings,
+                mode: event.currentTarget.value === 'raw' ? 'raw' : 'smooth',
+              })
+            }
+          >
+            <option value="smooth">Smooth</option>
+            <option value="raw">Raw</option>
+          </select>
+        </label>
         <label>
           Animation
           <select
             aria-label="Cursor animation style"
             value={settings.animationStyle ?? 'smooth'}
             disabled={settings.mode === 'raw'}
-            title="Raw motion bypasses animation styles."
             onChange={(event) => {
               const animationStyle = ANIMATION_STYLES.find(
                 (style) => style === event.currentTarget.value,
@@ -148,37 +151,66 @@ function CursorBehavior({
             ))}
           </select>
         </label>
-        <label>
-          Ending
-          <select
-            aria-label="Cursor ending"
-            value={settings.ending ?? 'none'}
-            onChange={(event) => {
-              const value = event.currentTarget.value;
-              onChange({
-                ...settings,
-                ending: value === 'stop' || value === 'loop' ? value : undefined,
-              });
-            }}
-          >
-            <option value="none">Recorded ending</option>
-            <option value="stop">Stop early</option>
-            <option value="loop">Return to start</option>
-          </select>
-        </label>
-      </div>
-      <p className="cursor-note">
-        Ending effects use the last 0.5 s of each trimmed clip, or half of shorter clips.
-        Small-shake removal holds movements within 0.5% of the source. Clicks stay exact.
-        Stabilization holds the previous shape until a new shape is confirmed by samples at least
-        100 ms apart. Interaction shapes appear immediately; tracking gaps reset it. Rotation leans
-        up to 12° with horizontal movement over the previous 100 ms, around the recorded hotspot.
-        Each trimmed clip starts upright. Medium and Rapid animate over the final 75% and 50% of
-        each sample interval; None steps at recorded sample times. Raw motion bypasses animation
-        styles.
-      </p>
-      <CursorHiddenRanges settings={settings} onChange={onChange} />
-    </details>
+        <p className="cursor-note">
+          {settings.mode === 'raw'
+            ? 'Raw interpolates recorded positions and bypasses animation styles.'
+            : 'None steps at recorded sample times. Raw motion still interpolates between them.'}
+        </p>
+      </fieldset>
+      <details className="cursor-behavior">
+        <summary>Cleanup</summary>
+        <div className="cursor-appearance">
+          {BEHAVIOR_FLAGS.map(([key, label]) => (
+            <label key={key}>
+              <input
+                type="checkbox"
+                checked={Boolean(settings[key])}
+                onChange={(event) => onChange({ ...settings, [key]: event.currentTarget.checked })}
+              />
+              {label}
+            </label>
+          ))}
+        </div>
+        <p className="cursor-note">
+          Reduce small movements and brief shape changes. Clicks stay exact.
+        </p>
+      </details>
+      <details className="cursor-behavior">
+        <summary>Advanced cursor</summary>
+        <div className="cursor-appearance">
+          <label>
+            <input
+              type="checkbox"
+              checked={Boolean(settings.rotate)}
+              onChange={(event) => onChange({ ...settings, rotate: event.currentTarget.checked })}
+            />
+            Rotate with movement
+          </label>
+          <label>
+            Per-clip ending
+            <select
+              aria-label="Cursor ending"
+              value={settings.ending ?? 'none'}
+              onChange={(event) => {
+                const value = event.currentTarget.value;
+                onChange({
+                  ...settings,
+                  ending: value === 'stop' || value === 'loop' ? value : undefined,
+                });
+              }}
+            >
+              <option value="none">Recorded ending</option>
+              <option value="stop">Stop early</option>
+              <option value="loop">Return to start</option>
+            </select>
+          </label>
+        </div>
+        <p className="cursor-note">
+          Ending effects use the last 0.5 s of each trimmed clip, or half of shorter clips.
+        </p>
+        <CursorHiddenRanges settings={settings} onChange={onChange} />
+      </details>
+    </>
   );
 }
 
@@ -186,81 +218,87 @@ function CursorAppearance({
   cursor,
   onChange,
 }: {
-  cursor: CursorTrack;
+  cursor?: CursorTrack;
   onChange: (cursor: CursorTrack) => void;
 }) {
+  if (!cursor)
+    return (
+      <p className="cursor-note">
+        Attach cursor data to edit this recording's cursor. Video pixels are unchanged.
+      </p>
+    );
   const settings = cursor.settings ?? DEFAULT_CURSOR_SETTINGS;
   return (
-    <div className="cursor-appearance">
-      <label>
-        Motion
-        <select
-          aria-label="Cursor motion"
-          value={settings.mode}
-          onChange={(event) =>
-            onChange({
-              ...cursor,
-              settings: {
-                ...settings,
-                mode: event.currentTarget.value === 'raw' ? 'raw' : 'smooth',
-              },
-            })
-          }
-        >
-          <option value="smooth">Smooth</option>
-          <option value="raw">Raw</option>
-        </select>
-      </label>
-      <label>
-        Style
-        <select
-          aria-label="Cursor style"
-          value={settings.style ?? 'recorded'}
-          onChange={(event) => {
-            const style = event.currentTarget.value;
-            if (style === 'recorded' || style === 'default' || style === 'touch')
-              onChange({ ...cursor, settings: { ...settings, style } });
-          }}
-        >
-          <option value="recorded">Recorded shapes</option>
-          <option value="default">First embedded shape</option>
-          <option value="touch">Touch</option>
-        </select>
-      </label>
-      <label>
-        Size
-        <input
-          type="number"
-          aria-label="Cursor size"
-          min="0.25"
-          max="4"
-          step="0.25"
-          defaultValue={settings.size}
-          onChange={(event) => {
-            const size = event.currentTarget.valueAsNumber;
-            if (Number.isFinite(size) && size >= 0.25 && size <= 4)
-              onChange({ ...cursor, settings: { ...settings, size } });
-          }}
-          onBlur={(event) => {
-            event.currentTarget.value = String(settings.size);
-          }}
-        />
-      </label>
-      <label>
-        <input
-          type="checkbox"
-          checked={settings.hidden}
-          onChange={(event) =>
-            onChange({ ...cursor, settings: { ...settings, hidden: event.currentTarget.checked } })
-          }
-        />
-        Hide cursor
-      </label>
+    <>
+      <fieldset className="cursor-group">
+        <legend>Appearance &amp; visibility</legend>
+        <label>
+          Style
+          <select
+            aria-label="Cursor style"
+            value={settings.style ?? 'recorded'}
+            onChange={(event) => {
+              const style = event.currentTarget.value;
+              if (style === 'recorded' || style === 'default' || style === 'touch')
+                onChange({ ...cursor, settings: { ...settings, style } });
+            }}
+          >
+            <option value="recorded">Recorded shapes</option>
+            <option value="default">First embedded shape</option>
+            <option value="touch">Touch</option>
+          </select>
+        </label>
+        <label>
+          Size
+          <input
+            type="number"
+            aria-label="Cursor size"
+            min="0.25"
+            max="4"
+            step="0.25"
+            defaultValue={settings.size}
+            onChange={(event) => {
+              const size = event.currentTarget.valueAsNumber;
+              if (Number.isFinite(size) && size >= 0.25 && size <= 4)
+                onChange({ ...cursor, settings: { ...settings, size } });
+            }}
+            onBlur={(event) => {
+              event.currentTarget.value = String(settings.size);
+            }}
+          />
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={settings.hidden}
+            onChange={(event) =>
+              onChange({
+                ...cursor,
+                settings: { ...settings, hidden: event.currentTarget.checked },
+              })
+            }
+          />
+          Hide cursor
+        </label>
+        <label>
+          <input
+            type="checkbox"
+            checked={Boolean(settings.hideIdle)}
+            onChange={(event) =>
+              onChange({
+                ...cursor,
+                settings: { ...settings, hideIdle: event.currentTarget.checked },
+              })
+            }
+          />
+          Hide when idle (1 s)
+        </label>
+      </fieldset>
       <CursorBehavior
         settings={settings}
         onChange={(next) => onChange({ ...cursor, settings: next })}
       />
-    </div>
+    </>
   );
 }
 
@@ -300,14 +338,13 @@ function CursorDetails({
           <button className="text-button" onClick={() => onChange(undefined)}>
             Remove cursor sidecar
           </button>
-          <CursorAppearance cursor={cursor} onChange={onChange} />
         </>
       )}
     </>
   );
 }
 
-/** Local sidecar attachment for the selected video source, shared with Storybook. */
+/** Recording-wide cursor settings for the inspected video source, shared with Storybook. */
 export function CursorControls({
   asset,
   onChange,
@@ -338,30 +375,35 @@ export function CursorControls({
     <section className="cursor-controls" aria-label="Source cursor data">
       <div className="cursor-summary">
         <strong title={asset.name}>Cursor · {asset.name}</strong>
+        <p className="cursor-scope">Recording settings · affects all uses</p>
       </div>
-      <CursorDetails key={state.kind} cursor={cursor} onChange={onChange} />
-      <button
-        className="text-button"
-        disabled={state.kind === 'reading'}
-        aria-busy={state.kind === 'reading'}
-        onClick={() => input.current?.click()}
-      >
-        Attach sidecar
-      </button>
-      <input
-        ref={input}
-        type="file"
-        hidden
-        accept=".json,application/json"
-        aria-label="Attach cursor sidecar"
-        disabled={state.kind === 'reading'}
-        onChange={(event) => {
-          const file = event.currentTarget.files?.[0];
-          event.currentTarget.value = '';
-          if (file) void attach(file);
-        }}
-      />
-      <p className="cursor-note">OpenScreen v2 · Full-display capture · Local only.</p>
+      <CursorAppearance cursor={cursor} onChange={onChange} />
+      <details className="cursor-behavior" open={!cursor}>
+        <summary>Source data</summary>
+        <CursorDetails key={state.kind} cursor={cursor} onChange={onChange} />
+        <button
+          className="text-button"
+          disabled={state.kind === 'reading'}
+          aria-busy={state.kind === 'reading'}
+          onClick={() => input.current?.click()}
+        >
+          Attach sidecar
+        </button>
+        <input
+          ref={input}
+          type="file"
+          hidden
+          accept=".json,application/json"
+          aria-label="Attach cursor sidecar"
+          disabled={state.kind === 'reading'}
+          onChange={(event) => {
+            const file = event.currentTarget.files?.[0];
+            event.currentTarget.value = '';
+            if (file) void attach(file);
+          }}
+        />
+        <p className="cursor-note">OpenScreen v2 · Full-display capture · Local only.</p>
+      </details>
       {state.kind === 'error' && (
         <p role="alert" className="cursor-error">
           Could not attach cursor. {state.message}

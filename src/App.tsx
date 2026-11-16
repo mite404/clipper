@@ -547,6 +547,13 @@ export function App() {
   const markingMouse = markingZoomId !== null && selectedZoom?.id === markingZoomId;
   const screenMask = maskRect('screen', edit.layout); // → stage rect the mouse target covers
   const selectedClip = edit.clips.find((c) => c.id === selected);
+  const cursorAsset = selectedClip
+    ? selectedClip.track === 'screen'
+      ? assets.find((source) => source.id === selectedClip.assetId)
+      : undefined
+    : selectedZoom
+      ? undefined
+      : asset;
   const compositionProps = useMemo(
     () => ({ ...edit, zooms: markingMouse ? [] : edit.zooms, assets, muted }),
     [edit, assets, muted, markingMouse],
@@ -979,7 +986,11 @@ export function App() {
       <MediaLibrary
         assets={assets}
         selected={sourceId}
-        onSelect={setSourceId}
+        onSelect={(id) => {
+          setSourceId(id);
+          setSelected('');
+          setMarkingZoomId(null);
+        }}
         onImport={importFiles}
         busy={busy}
       />
@@ -1205,17 +1216,6 @@ export function App() {
               </div>
             </section>
           </div>
-          <CursorControls
-            key={asset?.id}
-            asset={asset}
-            onChange={(cursor) =>
-              setAssets((previous) =>
-                previous.map((source) =>
-                  source.id === asset?.id ? { ...source, cursor } : source,
-                ),
-              )
-            }
-          />
           <div className="transport">
             <div className="transport-readout">
               <span data-testid="timecode">{timecode(frame)}</span>
@@ -1359,6 +1359,17 @@ export function App() {
             });
           }}
         >
+          <CursorControls
+            key={cursorAsset?.id}
+            asset={cursorAsset}
+            onChange={(cursor) =>
+              setAssets((previous) =>
+                previous.map((source) =>
+                  source.id === cursorAsset?.id ? { ...source, cursor } : source,
+                ),
+              )
+            }
+          />
           <AutoZoomControls
             edit={edit}
             assets={assets}
