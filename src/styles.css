@@ -1257,6 +1257,9 @@ p {
   background: var(--paper);
   text-shadow: 0 1px 0 rgb(255 255 255 / 0.85);
 }
+[data-kit='slider'] {
+  margin-bottom: 12px;
+}
 .ease-curve {
   height: 65px;
   background: #b9a1de08;
