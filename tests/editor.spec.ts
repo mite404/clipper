@@ -333,6 +333,66 @@ test('deletes and restores from the keyboard, refuses overlapping zooms and clam
   await expect(page.getByRole('button', { name: 'Play composition', exact: true })).toBeVisible();
 });
 
+test('undoes a slider drag in one step and ignores edits that change nothing', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const clips = page.getByTestId('track-screen').getByRole('button');
+  const undo = page.getByRole('button', { name: 'Undo' });
+  const radius = page.getByRole('slider', { name: 'Corner radius' });
+  const mask = page.getByTestId('screen-mask');
+
+  await page.getByRole('slider', { name: 'Timeline playhead' }).fill('45');
+  await clips.first().click();
+  await page.getByRole('button', { name: 'Split selected clip' }).click();
+  await expect(clips).toHaveCount(3);
+
+  // A real drag: the slider reports every value it passes, 22 up to about 50.
+  const box = (await radius.boundingBox())!;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(box.x + (box.width * 22) / 60, y);
+  await page.mouse.down();
+  for (let step = 1; step <= 20; step++)
+    await page.mouse.move(box.x + (box.width * (22 + step * 1.4)) / 60, y);
+  await page.mouse.up();
+  const dragged = Number(await radius.inputValue());
+  expect(dragged).toBeGreaterThan(40);
+
+  await undo.click();
+  await expect(mask).toHaveCSS('border-radius', '22px');
+  await expect(clips).toHaveCount(3);
+  await undo.click();
+  await expect(clips).toHaveCount(2);
+  await expect(undo).toBeDisabled();
+
+  // 150 is clamped to the 100 the field already holds, so it is not an edit.
+  const crop = page.getByLabel('screen horizontal crop');
+  await crop.fill('100');
+  await page.waitForTimeout(1000);
+  await crop.fill('150');
+  await expect(crop).toHaveValue('100');
+  await undo.click();
+  await expect(crop).toHaveValue('50');
+  await expect(undo).toBeDisabled();
+});
+
+test('keeps the last 50 edits in undo', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const undo = page.getByRole('button', { name: 'Undo' });
+  const across = page.getByLabel('screen horizontal crop');
+  const down = page.getByLabel('screen vertical crop');
+
+  // Alternating fields keeps the 51 edits from folding into one step.
+  for (let edit = 1; edit <= 51; edit++) await (edit % 2 ? across : down).fill(String(edit));
+  for (let step = 1; step <= 49; step++) await undo.click();
+  await expect(undo).toBeEnabled();
+  await undo.click();
+  // The oldest step is gone: the first edit stays and Undo has nothing left.
+  await expect(undo).toBeDisabled();
+  await expect(across).toHaveValue('1');
+  await expect(down).toHaveValue('50');
+});
+
 test('shows the frame the preview holds after a pause', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });

@@ -35,6 +35,7 @@ import {
   ZOOM_LIMITS,
   zoomsOverlap,
 } from './timeline-model';
+import { classifyChange, type Gesture } from './history';
 import { serializeProject, parseProject, validateSources, type Edit } from './project';
 import { CursorControls } from './CursorControls';
 import { AutoZoomControls } from './AutoZoomControls';
@@ -532,10 +533,19 @@ export function App() {
     assetsRef.current = assets;
   }, [assets]);
 
+  // The undo step still open: a drag or a held key folds into it instead of adding steps.
+  const gesture = useRef<Gesture | null>(null);
   const change = useCallback(
-    (next: Edit) => {
-      setHistory((previous) => [...previous.slice(-49), edit]);
-      setEdit({ ...next, zooms: resolveZooms(next.zooms, next.clips, assets, next.layout) });
+    (proposed: Edit) => {
+      const next = {
+        ...proposed,
+        zooms: resolveZooms(proposed.zooms, proposed.clips, assets, proposed.layout),
+      }; // → Edit
+      const step = classifyChange(edit, next, gesture.current, performance.now()); // → HistoryStep
+      if (step.kind === 'none') return;
+      gesture.current = step.gesture;
+      if (step.kind === 'push') setHistory((previous) => [...previous.slice(-49), edit]);
+      setEdit(next);
     },
     [edit, assets],
   );
@@ -750,6 +760,8 @@ export function App() {
         'developer-walkthrough.clipper.json',
       );
       setSavedEdit(edit);
+      // The next change starts a new step, so Undo can return to exactly what was saved.
+      gesture.current = null;
       setMessage('Portable project saved with source media included. No relinking needed.');
     } catch (error) {
       setMessage(
