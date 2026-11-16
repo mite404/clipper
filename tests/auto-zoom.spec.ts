@@ -1,38 +1,52 @@
 import { expect, test } from '@playwright/test';
 
-test('generates editable click shots deliberately, undoes regeneration and keeps source anchors on reopen', async ({
+test('opens legacy click shots, undoes manual edits and keeps source anchors on save and reopen', async ({
   page,
 }) => {
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
-  const generate = page.getByRole('button', { name: 'Generate zooms', exact: true });
-  await generate.click();
-  await expect(page.getByLabel('Automatic zoom result')).toContainText('No usable clicks');
-  const fixture = await page.evaluate(async () => {
-    const module = '/src/cursor.fixture.ts';
-    const { motionCursorFixture } = await import(module);
-    return {
-      ...motionCursorFixture,
-      samples: [
-        { timeMs: 1000, cx: 0.6, cy: 0.3, interactionType: 'click', assetId: 'arrow' },
-        { timeMs: 1100, cx: 0.6, cy: 0.3, interactionType: 'mouseup', assetId: 'arrow' },
-        { timeMs: 1500, cx: 0.65, cy: 0.4, interactionType: 'click', assetId: 'arrow' },
-        { timeMs: 1600, cx: 0.65, cy: 0.4, interactionType: 'mouseup', assetId: 'arrow' },
-        { timeMs: 8000, cx: 0.3, cy: 0.7, interactionType: 'click', assetId: 'arrow' },
-        { timeMs: 8100, cx: 0.3, cy: 0.7, interactionType: 'mouseup', assetId: 'arrow' },
-      ],
-    };
-  });
-  await page.getByLabel('Attach cursor sidecar').setInputFiles({
-    name: 'synthetic-clicks.json',
+  const fixtureDownloadEvent = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const fixtureStream = await (await fixtureDownloadEvent).createReadStream();
+  const fixtureChunks = [];
+  for await (const chunk of fixtureStream) fixtureChunks.push(chunk);
+  const fixture = JSON.parse(Buffer.concat(fixtureChunks).toString());
+  fixture.zooms = [
+    {
+      id: 'legacy-first',
+      start: 18,
+      duration: 117,
+      scale: 1.8,
+      x: 60,
+      y: 30,
+      follow: 'focused',
+      source: { assetId: 'landscape', clipId: 's1', start: 18, x: 0.6, y: 0.3 },
+    },
+    {
+      id: 'legacy-second',
+      start: 198,
+      duration: 102,
+      scale: 1.8,
+      x: 30,
+      y: 70,
+      follow: 'focused',
+      source: { assetId: 'landscape', clipId: 's2', start: 228, x: 0.3, y: 0.7 },
+    },
+  ];
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'legacy-clicks.clipper.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify(fixture)),
   });
-  await generate.click();
-  await expect(page.getByLabel('Automatic zoom result')).toContainText('2 automatic');
-  await expect(page.getByRole('button', { name: 'Select zoom', exact: true })).toHaveCount(2);
-  await page.getByLabel('Automatic zoom amount').fill('2.5');
-  await page.getByRole('button', { name: 'Regenerate zooms', exact: true }).click();
+  const regions = page.getByRole('button', { name: 'Select zoom', exact: true });
+  await expect(regions).toHaveCount(2);
+  await regions.first().click();
+  await expect(page.getByLabel('Zoom start seconds', { exact: true })).toHaveValue('0.6');
+  await expect(page.getByLabel('Zoom duration seconds', { exact: true })).toHaveValue('3.9');
+  await page.getByLabel('Zoom level', { exact: true }).press('ArrowRight');
+  await expect(page.getByLabel('Zoom level', { exact: true })).toHaveValue('1.9');
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(page.getByLabel('Zoom level', { exact: true })).toHaveValue('1.8');
   const downloadEvent = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Save project', exact: true }).click();
   const download = await downloadEvent;
@@ -44,27 +58,36 @@ test('generates editable click shots deliberately, undoes regeneration and keeps
   expect(project.zooms[0].source).toMatchObject({
     assetId: 'landscape',
     clipId: 's1',
+    start: 18,
     x: 0.6,
     y: 0.3,
   });
-  expect(project.zooms[0].scale).toBe(2.5);
-  await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await page.getByRole('button', { name: 'Select zoom', exact: true }).first().click();
-  await expect(page.getByLabel('Zoom level', { exact: true })).toHaveValue('1.8');
-  // The undo left the edit different from the saved one, so Open project asks first.
-  page.once('dialog', (dialog) => void dialog.accept());
+  expect(project.zooms[0].scale).toBe(1.8);
+  expect(project.zooms[1].source).toMatchObject({ clipId: 's2', start: 228, x: 0.3, y: 0.7 });
+  await page.reload();
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready');
   await page.getByLabel('Open local project').setInputFiles({
     name: 'clicks.clipper.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify(project)),
   });
-  await expect(page.getByRole('button', { name: 'Regenerate zooms', exact: true })).toBeVisible();
-  await page.getByRole('button', { name: 'Select zoom', exact: true }).first().click();
+  await expect(regions).toHaveCount(2);
+  await regions.first().click();
   await page.getByLabel('Zoom level', { exact: true }).press('ArrowLeft');
-  await expect(page.getByLabel('Zoom level', { exact: true })).toHaveValue('2.4');
-  await page.getByRole('button', { name: 'Remove automatic zooms', exact: true }).click();
-  await expect(page.getByRole('button', { name: 'Select zoom', exact: true })).toHaveCount(1);
-  await expect(page.getByLabel('Zoom level', { exact: true })).toHaveValue('2.4');
+  await expect(page.getByLabel('Zoom level', { exact: true })).toHaveValue('1.7');
+  const editedDownloadEvent = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const editedStream = await (await editedDownloadEvent).createReadStream();
+  const editedChunks = [];
+  for await (const chunk of editedStream) editedChunks.push(chunk);
+  const edited = JSON.parse(Buffer.concat(editedChunks).toString());
+  expect(edited.zooms[0].source).toBeUndefined();
+  expect(edited.zooms[0].scale).toBe(1.7);
+  expect(edited.zooms[1]).toEqual(project.zooms[1]);
+  await page.getByRole('button', { name: 'Remove zoom', exact: true }).click();
+  await expect(regions).toHaveCount(1);
+  await regions.click();
+  await expect(page.getByLabel('Zoom start seconds', { exact: true })).toHaveValue('6.6');
 });
 
 test('centers a source-offset click identically in preview and decoded export', async ({
@@ -80,7 +103,7 @@ test('centers a source-offset click identically in preview and decoded export', 
     const bunnyModule = '/node_modules/mediabunny/dist/bundles/mediabunny.mjs';
     const { loadDemo } = await import(mediaModule);
     const { renderVideo } = await import(exportModule);
-    const { generateZooms } = await import(zoomModule);
+    const { resolveZooms } = await import(zoomModule);
     const { Input, BlobSource, ALL_FORMATS, CanvasSink } = await import(bunnyModule);
     const assets = await loadDemo();
     const asset = assets[0];
@@ -121,7 +144,23 @@ test('centers a source-offset click identically in preview and decoded export', 
       { id: 'take', assetId: asset.id, track: 'screen', start: 0, offset: 30, duration: 30 },
     ];
     const layout = { radius: 22, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 };
-    const zooms = generateZooms(clips, assets, layout, [], 2, 30);
+    const zooms = resolveZooms(
+      [
+        {
+          id: 'legacy-offset',
+          start: 0,
+          duration: 30,
+          scale: 2,
+          x: 50,
+          y: 50,
+          follow: 'focused',
+          source: { assetId: asset.id, clipId: 'take', start: 30, x: 0.6, y: 0.3 },
+        },
+      ],
+      clips,
+      assets,
+      layout,
+    );
     const encoded = await renderVideo({
       assets,
       clips,
@@ -171,7 +210,7 @@ test('centers a source-offset click identically in preview and decoded export', 
     mimeType: 'application/json',
     buffer: Buffer.from(result.project),
   });
-  await expect(page.getByRole('button', { name: 'Regenerate zooms', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Select zoom', exact: true })).toHaveCount(1);
   await page.getByLabel('Timeline playhead', { exact: true }).fill('15');
   const mask = await page.getByTestId('screen-mask').boundingBox();
   const cursor = await page.getByTestId('cursor-preview').boundingBox();

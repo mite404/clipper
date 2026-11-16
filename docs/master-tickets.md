@@ -925,7 +925,7 @@ original note for every row.
 | <a id="ref-36"></a>[REF-36](#ref-36)                 | Prove delivery recovery and individual audio mute                | Medium | Ready                                                                                                                                                                               | UI cancel and retry; failed export and partial-open recovery; one muted track at a time                 |
 | <a id="ref-37"></a>[REF-37](#ref-37)                 | Qualify video cadence, rewind, scrub and large telemetry         | Medium | Verification remains open; broad stall investigation stopped unless standalone recurrence or new Amp-view request                                                                   | Preserve existing performance thresholds; inspector ownership retained pending explicit closure         |
 | <a id="verify-3"></a>[VERIFY-3](tickets/VERIFY-3.md) | Bring the feature map in line with delivered motion and controls | Small  | Delivered at [f76a702](https://github.com/mite404/clipper/commit/f76a702f85a0bcdf64f7c8bc2b0726823c447003); [green CI](https://github.com/mite404/clipper/actions/runs/43798560663) | frame-step and zoom-field journeys; current cursor and follow coverage                                  |
-| <a id="clip-9b"></a>[CLIP-9b](#clip-9b)              | Visible zoom regions, editable ramps and numeric equivalents     | Medium | Corrected creation slice local, source LAND and full 73/73; not pushed; Add zoom follow-up and full ramps open                                                                      | Serialized acceptance/CI before delivery; preserve CLIP-9/10                                            |
+| <a id="clip-9b"></a>[CLIP-9b](#clip-9b)              | Visible zoom regions, editable ramps and numeric equivalents     | Medium | Reviewed creation slice in main delivery; fresh full 73/73 and isolated performance 20/20; exact-main CI pending; Add zoom follow-up and full ramps open                            | Exact-SHA green CI before acceptance; preserve CLIP-9/10                                                |
 
 | Ticket ID                                  | Feature                                                                                                      | State and dependency                                                     |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
@@ -943,11 +943,14 @@ Latest narrow-slice state: transferred candidate `b2d0353` is corrected locally 
 tree `6a08f46c359bcd5c32fa50e1d5329de30afb8518`. The existing Fable reviewer confirms LAND for that
 exact tree, with no new review. The correction removes the App import from auto-zoom fixture setup
 and restores the baseline byte-identical to `19c571e`; runtime and performance bytes are unchanged.
-Coordinator corrected-tree full verification passes 73/73. This is not pushed/main acceptance. Keep
-the owner's subsequent **Add zoom** panel label and stale cursor feature-map update as the next
-follow-up under CLIP-9b, after the reviewed slice, not a duplicate ticket. Choose the panel
-accessible name explicitly because toolbar/inspector already have Add zoom actions; update
-exact-name story/spec consumers together. Full ramp scope remains open.
+Source blobs match that reviewed tree on accepted `6365288`; the Fallow baseline is unchanged. Fresh
+coordinator gates pass 132 unit tests, seven CLI-helper tests, full 73/73 and isolated performance
+20/20, with zero skipped or flaky browser cases. The rebuilt AutomaticZooms story also creates one
+four-second zoom. The slice is in serialized main delivery, awaiting exact-main CI; this is not
+acceptance of the whole ticket. Keep the owner's subsequent **Add zoom** panel label and stale
+cursor feature-map update as the next follow-up under CLIP-9b, after the reviewed slice, not a
+duplicate ticket. Choose the panel accessible name explicitly because toolbar/inspector already have
+Add zoom actions; update exact-name story/spec consumers together. Full ramp scope remains open.
 
 The coordinator verified the transferred complete-history bundle, nine-path dirty/untracked draft
 and receipt archive against `clip-9b-SHA256SUMS.txt`. The frozen base and HEAD are both `b9596c6`;

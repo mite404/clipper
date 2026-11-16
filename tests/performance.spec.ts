@@ -40,9 +40,47 @@ for (const follow of [false, true]) {
       const animation = page.getByLabel('Cursor animation style', { exact: true });
       await animation.selectOption('rapid');
       await expect(animation).toHaveValue('rapid');
-      await page.getByLabel('Automatic zoom hold seconds').fill('10');
-      await page.getByRole('button', { name: 'Generate zooms', exact: true }).click();
-      await expect(page.getByLabel('Automatic zoom result')).toContainText('2 automatic');
+      // Frozen legacy ten-second-hold workload, including its two original source anchors.
+      const zooms = [
+        {
+          id: 'auto-s1-0',
+          start: 0,
+          duration: 180,
+          scale: 1.8,
+          x: 50,
+          y: 50,
+          follow: 'focused',
+          source: { assetId: 'landscape', clipId: 's1', start: 0, x: 0.5, y: 0.5 },
+        },
+        {
+          id: 'auto-s2-246',
+          start: 216,
+          duration: 144,
+          scale: 1.8,
+          x: 61.64026050666017,
+          y: 30.71365766142443,
+          follow: 'focused',
+          source: {
+            assetId: 'landscape',
+            clipId: 's2',
+            start: 246,
+            x: 0.5823132707256684,
+            y: 0.3071365766142443,
+          },
+        },
+      ];
+      const downloadEvent = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Save project', exact: true }).click();
+      const stream = await (await downloadEvent).createReadStream();
+      const chunks = [];
+      for await (const chunk of stream) chunks.push(chunk);
+      const project = JSON.parse(Buffer.concat(chunks).toString());
+      await page.getByLabel('Open local project').setInputFiles({
+        name: 'frozen-legacy-performance.clipper.json',
+        mimeType: 'application/json',
+        buffer: Buffer.from(JSON.stringify({ ...project, zooms })),
+      });
+      await expect(page.getByRole('button', { name: 'Select zoom', exact: true })).toHaveCount(2);
       await page.getByRole('button', { name: 'Select zoom', exact: true }).first().click();
       await expect(page.getByLabel('Camera follow')).toHaveValue('focused');
     }

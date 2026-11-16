@@ -56,7 +56,6 @@ import {
   type Edit,
 } from './project';
 import { CursorControls } from './CursorControls';
-import { AutoZoomControls } from './AutoZoomControls';
 import { ZoomMotionControls } from './ZoomMotionControls';
 import { resolveZooms } from './zoom-generation';
 import { maskRect, STAGE, type Layout } from './stage';
@@ -735,6 +734,36 @@ export function App() {
       setFrame(frameRef.current);
     };
   }, [speed, duration]);
+
+  const addZoom = useCallback(() => {
+    const start = frameRef.current;
+    const length = Math.min(4 * FPS, duration - start);
+    if (length < ZOOM_LIMITS.minFrames) {
+      setMessage('Move the playhead earlier to leave at least 0.2 seconds for a zoom.');
+      return;
+    }
+    const zoom: Zoom = {
+      id: crypto.randomUUID(),
+      start,
+      duration: length,
+      scale: 1.8,
+      x: 50,
+      y: 50,
+      follow: 'focused',
+    };
+    if (zoomsOverlap(edit.zooms, zoom)) {
+      setMessage('Zooms cannot overlap. Choose another time or edit the existing zoom.');
+      return;
+    }
+    change({ ...edit, zooms: [...edit.zooms, zoom] });
+    setSelected(zoom.id);
+    setMessage(
+      length < 4 * FPS
+        ? `Zoom shortened to ${Number((length / FPS).toFixed(2))} seconds at the sequence end. Adjust it in the inspector.`
+        : '4-second zoom added at the playhead. Adjust its timing and focus in the inspector.',
+    );
+  }, [duration, edit, change]);
+
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (help || busy || exportProgress !== null || markingMouse) return;
@@ -753,6 +782,12 @@ export function App() {
         }
         return;
       }
+      if (key === 'b') {
+        if (event.repeat || event.shiftKey) return;
+        event.preventDefault();
+        addZoom();
+        return;
+      }
       if (['j', 'k', 'l', ' ', 'arrowleft', 'arrowright', 's', 'delete', 'backspace'].includes(key))
         event.preventDefault();
       if (key === 'j') setSpeed((s) => (s < 0 ? Math.max(-4, s * 2) : -1));
@@ -769,24 +804,18 @@ export function App() {
     };
     window.addEventListener('keydown', keydown);
     return () => window.removeEventListener('keydown', keydown);
-  }, [duration, seek, split, removeSelected, undo, help, busy, exportProgress, markingMouse]);
-
-  const addZoom = () => {
-    if (duration < ZOOM_LIMITS.minFrames) {
-      setMessage('Add at least six frames before creating a zoom.');
-      return;
-    }
-    const start = Math.min(frameRef.current, duration - ZOOM_LIMITS.minFrames);
-    const length = Math.min(120, duration - start);
-    const zoom = { id: crypto.randomUUID(), start, duration: length, scale: 1.8, x: 50, y: 50 };
-    if (zoomsOverlap(edit.zooms, zoom)) {
-      setMessage('Zooms cannot overlap. Choose another time or edit the existing zoom.');
-      return;
-    }
-    change({ ...edit, zooms: [...edit.zooms, zoom] });
-    setSelected(zoom.id);
-    setMessage('Zoom added. Adjust its timing and focus in the inspector.');
-  };
+  }, [
+    duration,
+    seek,
+    split,
+    removeSelected,
+    undo,
+    help,
+    busy,
+    exportProgress,
+    markingMouse,
+    addZoom,
+  ]);
   const importFiles = async (files: FileList) => {
     setBusy(true);
     const results: Imported[] = [];
@@ -1310,9 +1339,10 @@ export function App() {
               <button
                 className="text-button zoom-action"
                 aria-label="Add zoom at playhead"
+                title="Create a 4-second cursor zoom at the playhead (B)"
                 onClick={addZoom}
               >
-                <ZoomIn size={15} /> Add zoom
+                <ZoomIn size={15} /> Add zoom <kbd>B</kbd>
               </button>
             </div>
             <span className="timeline-toolbar-hint">Double-click a track to seek</span>
@@ -1387,11 +1417,19 @@ export function App() {
               )
             }
           />
-          <AutoZoomControls
-            edit={edit}
-            assets={assets}
-            onChange={(zooms) => change({ ...edit, zooms })}
-          />
+          <section className="cursor-controls" aria-label="Zoom creation">
+            <button
+              className="secondary-button"
+              aria-label="Generate zooms"
+              title="Create a 4-second cursor zoom at the playhead (B)"
+              onClick={addZoom}
+            >
+              Generate zooms <kbd>B</kbd>
+            </button>
+            <p className="cursor-note">
+              Create one 4-second zoom at the playhead. No tracking required.
+            </p>
+          </section>
         </Inspector>
       </div>
       <footer className="app-footer">
@@ -1417,6 +1455,7 @@ export function App() {
           ['Space', 'Play / pause'],
           ['← / →', 'Step one frame'],
           ['S', 'Split selected clip at playhead'],
+          ['B', 'Create zoom at playhead (4 seconds)'],
           ['Delete', 'Remove selected clip or zoom'],
           ['⌘ / Ctrl Z', 'Undo last edit'],
         ].map(([key, text]) => (
