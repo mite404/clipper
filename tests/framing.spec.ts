@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { choose } from './choose';
 
 for (const target of [
   { cx: 0.65, frame: 16, left: 543.333 },
@@ -137,10 +138,10 @@ for (const target of [
       'matrix(1, 0, 0, 1, 0, 0)',
     );
     await page.getByRole('button', { name: 'Select zoom', exact: true }).click();
-    await expect(page.getByLabel('Camera follow')).toHaveValue('focused');
-    await page.getByLabel('Camera follow').selectOption('smooth');
+    await expect(page.getByRole('combobox', { name: 'Camera follow' })).toHaveText(/Focused/);
+    await choose(page, 'Camera follow', 'Smooth · fluid follow');
     await expect(content).not.toHaveCSS('transform', transform);
-    await page.getByLabel('Camera follow').selectOption('fixed');
+    await choose(page, 'Camera follow', 'Fixed focus');
     await page.getByLabel('Instant zoom').uncheck();
     await scrub.fill('0');
     await expect(content).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');

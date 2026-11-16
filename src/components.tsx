@@ -1,5 +1,22 @@
-import { useMemo, type ButtonHTMLAttributes, type ReactNode } from 'react';
-import { Film, Music2, Plus, Upload } from 'lucide-react';
+import { useId, useMemo, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { ChevronDown, Film, Music2, Plus, Upload } from 'lucide-react';
+import {
+  NumberInput,
+  NumberInputControl,
+  NumberInputDecrement,
+  NumberInputGroup,
+  NumberInputIncrement,
+} from '@ui-sdk/react/number-input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectItemIcon,
+  SelectItemIndicator,
+  SelectTrigger,
+  SelectValue,
+  SelectValueIcon,
+} from '@ui-sdk/react/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui-sdk/react/tooltip';
 import type { Asset } from './media';
 import { FPS } from './timeline-model';
@@ -35,6 +52,106 @@ export function IconButton({
         {label}
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+/** One choice in a SelectField; the icon previews it beside its name without joining the name. */
+export type SelectOption<T extends string> = { value: T; label: string; icon?: ReactNode };
+
+/**
+ * ui-sdk Select named by `label`, for a short fixed list of choices. Its popup renders in place,
+ * so never wrap it in a `<label>`: a click on an option would bubble up and reopen the trigger.
+ * `caption` is visible text only: the trigger keeps `label` as its name, which ui-sdk's
+ * SelectLabel would replace through aria-labelledby.
+ */
+export function SelectField<T extends string>({
+  label,
+  value,
+  options,
+  onValueChange,
+  caption,
+}: {
+  label: string;
+  caption?: string;
+  value: T;
+  options: readonly SelectOption<T>[];
+  onValueChange: (value: T) => void;
+}) {
+  return (
+    <div className="select-field">
+      <Select
+        value={value}
+        items={options.map(({ value, label }) => ({ value, label }))}
+        onValueChange={(next) => {
+          const chosen = options.find((option) => option.value === next);
+          if (chosen) onValueChange(chosen.value);
+        }}
+      >
+        {caption && <span aria-hidden="true">{caption}</span>}
+        <SelectTrigger className="select-trigger" aria-label={label}>
+          <SelectValueIcon />
+          <SelectValue />
+          <ChevronDown size={13} aria-hidden="true" />
+        </SelectTrigger>
+        <SelectContent className="select-popup" sideOffset={4} collisionPadding={8}>
+          {options.map((option) => (
+            <SelectItem key={option.value} value={option.value} className="select-item">
+              {option.icon && <SelectItemIcon>{option.icon}</SelectItemIcon>}
+              {option.label}
+              <SelectItemIndicator className="select-item-check">✓</SelectItemIndicator>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+/** Labelled number field with its unit inside the value and step buttons beside it. */
+export function NumberField({
+  label,
+  name,
+  unit,
+  value,
+  onValueChange,
+  ...limits
+}: {
+  label: string;
+  name: string;
+  unit: 'second' | 'millisecond' | 'percent';
+  value: number;
+  onValueChange: (value: number) => void;
+  min?: number;
+  max?: number;
+  step?: number;
+  largeStep?: number;
+}) {
+  const id = useId();
+  return (
+    <div className="number-field">
+      <label htmlFor={id}>{label}</label>
+      <NumberInput
+        {...limits}
+        value={value}
+        format={{ style: 'unit', unit, unitDisplay: 'narrow' }}
+        onValueChange={(next) => {
+          if (next !== null) onValueChange(next);
+        }}
+      >
+        <NumberInputGroup>
+          <NumberInputDecrement aria-label={`Decrease ${label}`}>−</NumberInputDecrement>
+          <NumberInputControl
+            id={id}
+            role="spinbutton"
+            aria-label={name}
+            aria-valuenow={value}
+            aria-valuemin={limits.min}
+            aria-valuemax={limits.max}
+          />
+          <NumberInputIncrement aria-label={`Increase ${label}`}>+</NumberInputIncrement>
+        </NumberInputGroup>
+      </NumberInput>
+    </div>
   );
 }
 

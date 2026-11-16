@@ -43,7 +43,7 @@ for (const follow of [false, true]) {
       await page.getByRole('button', { name: 'Generate zooms', exact: true }).click();
       await expect(page.getByLabel('Automatic zoom result')).toContainText('2 automatic');
       await page.getByRole('button', { name: 'Select zoom', exact: true }).first().click();
-      await expect(page.getByLabel('Camera follow')).toHaveValue('focused');
+      await expect(page.getByRole('combobox', { name: 'Camera follow' })).toHaveText(/Focused/);
     }
     // Sampling is armed before the click, so a stall inside the click itself is measured too.
     await page.evaluate(() => {

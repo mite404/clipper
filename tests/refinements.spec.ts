@@ -88,8 +88,8 @@ test('marks a mouse position, centers it during zoom and reopens embedded media 
   const box = await target.boundingBox();
   await page.mouse.click(box!.x + box!.width * 0.25, box!.y + box!.height * 0.65);
   await expect(page.getByRole('button', { name: 'Mark mouse position' })).toBeVisible();
-  await expect(page.getByLabel('Zoom focus X', { exact: true })).toHaveValue('25');
-  await expect(page.getByLabel('Zoom focus Y', { exact: true })).toHaveValue('65');
+  await expect(page.getByLabel('Zoom focus X', { exact: true })).toHaveValue('25%');
+  await expect(page.getByLabel('Zoom focus Y', { exact: true })).toHaveValue('65%');
   await page.getByRole('slider', { name: 'Zoom level' }).fill('2');
   await page.getByRole('slider', { name: 'Timeline playhead' }).fill('60');
   await expect(page.getByTestId('screen-content')).toHaveCSS('transform', /matrix\(2, 0, 0, 2,/);
@@ -127,7 +127,7 @@ test('marks a mouse position, centers it during zoom and reopens embedded media 
     timeout: 30000,
   });
   await page.getByRole('button', { name: 'Select zoom' }).click();
-  await expect(page.getByLabel('Zoom focus X', { exact: true })).toHaveValue('25');
+  await expect(page.getByLabel('Zoom focus X', { exact: true })).toHaveValue('25%');
   await expect(page.getByRole('button', { name: 'Unmute Voiceover', exact: true })).toBeVisible();
   expect((await page.getByTestId('camera-mask').boundingBox())!.x).toBeLessThan(
     (await page.getByTestId('screen-mask').boundingBox())!.x,

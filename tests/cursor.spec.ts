@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { cursorFixture } from '../src/cursor.fixture';
+import { choose } from './choose';
 
 test('attaches source-local cursor telemetry, rejects bad replacements and restores it after reload', async ({
   page,
@@ -22,27 +23,27 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   await expect(page.getByTestId('cursor-status')).toHaveText('5 samples · 1 cursor asset');
   await expect(page.getByLabel('Source in seconds')).toHaveValue('2');
   await expect(page.getByLabel('Source out seconds')).toHaveValue('12');
-  await expect(page.getByLabel('Cursor time offset (ms)')).toHaveValue('0');
+  await expect(page.getByLabel('Cursor time offset (ms)')).toHaveValue('0ms');
   await page.getByLabel('Cursor time offset (ms)').fill('-78');
-  await page.getByLabel('Cursor motion', { exact: true }).selectOption('raw');
+  await choose(page, 'Cursor motion', 'Raw');
   await page.getByLabel('Cursor size', { exact: true }).fill('');
   await page.getByLabel('Cursor size', { exact: true }).pressSequentially('2.5');
   await expect(page.getByLabel('Cursor size', { exact: true })).toHaveValue('2.5');
   await page.getByLabel('Hide cursor', { exact: true }).check();
-  await page.getByLabel('Cursor style', { exact: true }).selectOption('touch');
+  await choose(page, 'Cursor style', 'Touch');
   await page.getByText('Advanced cursor', { exact: true }).click();
   const animation = page.getByLabel('Cursor animation style', { exact: true });
   await expect(animation).toHaveValue('smooth');
   await expect(animation).toBeDisabled();
-  await page.getByLabel('Cursor motion', { exact: true }).selectOption('smooth');
+  await choose(page, 'Cursor motion', 'Smooth');
   await animation.selectOption('rapid');
-  await page.getByLabel('Cursor motion', { exact: true }).selectOption('raw');
+  await choose(page, 'Cursor motion', 'Raw');
   await page.getByLabel('Hide when idle (1 s)', { exact: true }).check();
   await page.getByLabel('Remove small shakes', { exact: true }).check();
   await page.getByLabel('Stabilize recorded shapes', { exact: true }).check();
   await expect(page.getByLabel('Rotate with movement', { exact: true })).not.toBeChecked();
   await page.getByLabel('Rotate with movement', { exact: true }).check();
-  await page.getByLabel('Cursor ending', { exact: true }).selectOption('loop');
+  await choose(page, 'Cursor ending', 'Return to start');
   await page.getByLabel('Hide cursor from (source seconds)').fill('0.15');
   await page.getByLabel('Hide cursor until (source seconds)').fill('0.1');
   await page.getByRole('button', { name: 'Add hidden range', exact: true }).click();
@@ -64,7 +65,7 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   });
   await expect(page.getByRole('alert')).toContainText('Could not attach cursor');
   await expect(page.getByTestId('cursor-status')).toHaveText('5 samples · 1 cursor asset');
-  await expect(page.getByLabel('Cursor time offset (ms)')).toHaveValue('-78');
+  await expect(page.getByLabel('Cursor time offset (ms)')).toHaveValue('-78ms');
   const corrupt = { ...cursorFixture, assets: [{ ...cursorFixture.assets[0], width: 2 }] };
   await attach.setInputFiles({
     name: 'corrupt.json',
@@ -93,11 +94,11 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
     ),
   });
   await expect(page.getByRole('alert')).toContainText('Could not attach cursor');
-  await expect(page.getByLabel('Cursor time offset (ms)')).toHaveValue('-78');
+  await expect(page.getByLabel('Cursor time offset (ms)')).toHaveValue('-78ms');
   await page.getByRole('button', { name: 'Select A conversation' }).click();
   await expect(page.getByTestId('cursor-status')).toHaveText('No cursor sidecar');
   await page.getByRole('button', { name: 'Select Flower study' }).click();
-  await expect(page.getByLabel('Cursor time offset (ms)')).toHaveValue('-78');
+  await expect(page.getByLabel('Cursor time offset (ms)')).toHaveValue('-78ms');
   const downloaded = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Save project', exact: true }).click();
   const path = (await (await downloaded).path())!;
@@ -129,11 +130,15 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
     timeout: 30000,
   });
   await expect(page.getByTestId('cursor-status')).toHaveText('5 samples · 1 cursor asset');
-  await expect(page.getByLabel('Cursor time offset (ms)')).toHaveValue('-78');
-  await expect(page.getByLabel('Cursor motion', { exact: true })).toHaveValue('raw');
+  await expect(page.getByLabel('Cursor time offset (ms)')).toHaveValue('-78ms');
+  await expect(page.getByRole('combobox', { name: 'Cursor motion', exact: true })).toHaveText(
+    /Raw/,
+  );
   await expect(page.getByLabel('Cursor size', { exact: true })).toHaveValue('2.5');
   await expect(page.getByLabel('Hide cursor', { exact: true })).toBeChecked();
-  await expect(page.getByLabel('Cursor style', { exact: true })).toHaveValue('touch');
+  await expect(page.getByRole('combobox', { name: 'Cursor style', exact: true })).toHaveText(
+    /Touch/,
+  );
   await page.getByText('Advanced cursor', { exact: true }).click();
   await expect(page.getByLabel('Hide when idle (1 s)', { exact: true })).toBeChecked();
   await expect(page.getByLabel('Remove small shakes', { exact: true })).toBeChecked();
@@ -141,7 +146,9 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   await expect(page.getByLabel('Rotate with movement', { exact: true })).toBeChecked();
   await expect(animation).toHaveValue('rapid');
   await expect(animation).toBeDisabled();
-  await expect(page.getByLabel('Cursor ending', { exact: true })).toHaveValue('loop');
+  await expect(page.getByRole('combobox', { name: 'Cursor ending', exact: true })).toHaveText(
+    /Return to start/,
+  );
   await expect(page.getByText('0.15 to 0.3 s', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Remove hidden range 1', exact: true }).click();
   await expect(page.getByText('No hidden ranges.', { exact: true })).toBeVisible();
@@ -180,8 +187,8 @@ test('cursor controls retain actions with long filenames, empty telemetry and la
       ).toBeInViewport();
       await expect(page.getByRole('button', { name: 'Remove cursor sidecar' })).toBeInViewport();
       await page.getByText('Advanced cursor', { exact: true }).click();
-      await page.getByLabel('Cursor style', { exact: true }).selectOption('touch');
-      await page.getByLabel('Cursor ending', { exact: true }).selectOption('stop');
+      await choose(page, 'Cursor style', 'Touch');
+      await choose(page, 'Cursor ending', 'Stop early');
       await expect(page.getByLabel('Hide when idle (1 s)', { exact: true })).toBeInViewport();
       await expect(page.getByLabel('Remove small shakes', { exact: true })).toBeInViewport();
       const stabilize = page.getByLabel('Stabilize recorded shapes', { exact: true });
@@ -198,7 +205,9 @@ test('cursor controls retain actions with long filenames, empty telemetry and la
         await animation.selectOption(style);
         await expect(animation).toHaveValue(style);
       }
-      await expect(page.getByLabel('Cursor ending', { exact: true })).toBeInViewport();
+      await expect(
+        page.getByRole('combobox', { name: 'Cursor ending', exact: true }),
+      ).toBeInViewport();
       const addRange = page.getByRole('button', { name: 'Add hidden range', exact: true });
       await addRange.scrollIntoViewIfNeeded();
       await expect(addRange).toBeInViewport();

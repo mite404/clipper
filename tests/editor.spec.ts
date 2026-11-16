@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
+import { choose } from './choose';
 
 test('splice, scrub, play, rewind and animate a real media composition', async ({ page }) => {
   const errors: string[] = [];
@@ -154,7 +155,7 @@ test('imports local video and audio without uploading them', async ({ page }) =>
   await page.getByRole('button', { name: 'Insert source at playhead' }).click();
   await expect(page.getByTestId('track-screen').getByRole('button')).toHaveCount(3);
   await page.getByRole('button', { name: 'Select music.wav' }).click();
-  await page.getByLabel('Insert onto track').selectOption('music');
+  await choose(page, 'Insert onto track', 'A2 · Music');
   await page.getByLabel('Source in seconds').fill('0.5');
   await page.getByLabel('Source out seconds').fill('2');
   await page.getByRole('button', { name: 'Insert source at playhead' }).click();

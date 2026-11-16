@@ -1,4 +1,11 @@
+import { SelectField, type SelectOption } from './components';
 import type { Zoom } from './timeline-model';
+
+const FOLLOW_OPTIONS: SelectOption<'fixed' | 'focused' | 'smooth'>[] = [
+  { value: 'fixed', label: 'Fixed focus' },
+  { value: 'focused', label: 'Focused · quick reading holds' },
+  { value: 'smooth', label: 'Smooth · fluid follow' },
+];
 
 /** Per-shot camera motion, shared by the editor inspector and its Storybook preview. */
 export function ZoomMotionControls({
@@ -10,24 +17,17 @@ export function ZoomMotionControls({
 }) {
   return (
     <>
-      <label className="slider-label">
-        Camera follow
-        <select
-          aria-label="Camera follow"
+      <div className="slider-label">
+        <SelectField
+          caption="Camera follow"
+          label="Camera follow"
           value={zoom.follow ?? 'fixed'}
-          onChange={(event) => {
-            const value = event.currentTarget.value;
-            onChange({
-              ...zoom,
-              follow: value === 'focused' || value === 'smooth' ? value : undefined,
-            });
-          }}
-        >
-          <option value="fixed">Fixed focus</option>
-          <option value="focused">Focused · quick reading holds</option>
-          <option value="smooth">Smooth · fluid follow</option>
-        </select>
-      </label>
+          options={FOLLOW_OPTIONS}
+          onValueChange={(value) =>
+            onChange({ ...zoom, follow: value === 'fixed' ? undefined : value })
+          }
+        />
+      </div>
       <label className="slider-label">
         <span>
           <input

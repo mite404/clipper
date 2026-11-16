@@ -1,4 +1,8 @@
 import { useRef, useState } from 'react';
+import { Collapsible, CollapsiblePanel, CollapsibleTrigger } from '@ui-sdk/react/collapsible';
+import { Activity, ChevronRight, MousePointer2, Shapes, Spline } from 'lucide-react';
+import touchImage from './cursor-touch.png?inline';
+import { NumberField, SelectField, type SelectOption } from './components';
 import type { Asset } from './media';
 import {
   DEFAULT_CURSOR_SETTINGS,
@@ -11,6 +15,23 @@ import {
 type ImportState = { kind: 'idle' } | { kind: 'reading' } | { kind: 'error'; message: string };
 
 const ANIMATION_STYLES = ['smooth', 'medium', 'rapid', 'none'] as const;
+
+const MOTION_OPTIONS: SelectOption<'smooth' | 'raw'>[] = [
+  { value: 'smooth', label: 'Smooth', icon: <Spline size={13} /> },
+  { value: 'raw', label: 'Raw', icon: <Activity size={13} /> },
+];
+
+const STYLE_OPTIONS: SelectOption<'recorded' | 'default' | 'touch'>[] = [
+  { value: 'recorded', label: 'Recorded shapes', icon: <Shapes size={13} /> },
+  { value: 'default', label: 'First embedded shape', icon: <MousePointer2 size={13} /> },
+  { value: 'touch', label: 'Touch', icon: <img src={touchImage} alt="" width={13} height={13} /> },
+];
+
+const ENDING_OPTIONS: SelectOption<'none' | 'stop' | 'loop'>[] = [
+  { value: 'none', label: 'Recorded ending' },
+  { value: 'stop', label: 'Stop early' },
+  { value: 'loop', label: 'Return to start' },
+];
 
 const BEHAVIOR_FLAGS = [
   ['hideIdle', 'Hide when idle (1 s)'],
@@ -114,71 +135,67 @@ function CursorBehavior({
   onChange: (settings: CursorSettings) => void;
 }) {
   return (
-    <details className="cursor-behavior">
-      <summary>Advanced cursor</summary>
-      <div className="cursor-appearance">
-        {BEHAVIOR_FLAGS.map(([key, label]) => (
-          <label key={key}>
-            <input
-              type="checkbox"
-              checked={Boolean(settings[key])}
-              onChange={(event) => onChange({ ...settings, [key]: event.currentTarget.checked })}
-            />
-            {label}
+    <Collapsible className="cursor-behavior">
+      <CollapsibleTrigger className="cursor-behavior-trigger">
+        <ChevronRight size={13} aria-hidden="true" />
+        Advanced cursor
+      </CollapsibleTrigger>
+      <CollapsiblePanel keepMounted className="cursor-behavior-panel">
+        <div className="cursor-appearance">
+          {BEHAVIOR_FLAGS.map(([key, label]) => (
+            <label key={key}>
+              <input
+                type="checkbox"
+                checked={Boolean(settings[key])}
+                onChange={(event) => onChange({ ...settings, [key]: event.currentTarget.checked })}
+              />
+              {label}
+            </label>
+          ))}
+          <label>
+            Animation
+            <select
+              aria-label="Cursor animation style"
+              value={settings.animationStyle ?? 'smooth'}
+              disabled={settings.mode === 'raw'}
+              title="Raw motion bypasses animation styles."
+              onChange={(event) => {
+                const animationStyle = ANIMATION_STYLES.find(
+                  (style) => style === event.currentTarget.value,
+                );
+                if (animationStyle) onChange({ ...settings, animationStyle });
+              }}
+            >
+              {ANIMATION_STYLES.map((style) => (
+                <option key={style} value={style}>
+                  {style[0].toUpperCase() + style.slice(1)}
+                </option>
+              ))}
+            </select>
           </label>
-        ))}
-        <label>
-          Animation
-          <select
-            aria-label="Cursor animation style"
-            value={settings.animationStyle ?? 'smooth'}
-            disabled={settings.mode === 'raw'}
-            title="Raw motion bypasses animation styles."
-            onChange={(event) => {
-              const animationStyle = ANIMATION_STYLES.find(
-                (style) => style === event.currentTarget.value,
-              );
-              if (animationStyle) onChange({ ...settings, animationStyle });
-            }}
-          >
-            {ANIMATION_STYLES.map((style) => (
-              <option key={style} value={style}>
-                {style[0].toUpperCase() + style.slice(1)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Ending
-          <select
-            aria-label="Cursor ending"
+          <SelectField
+            caption="Ending"
+            label="Cursor ending"
             value={settings.ending ?? 'none'}
-            onChange={(event) => {
-              const value = event.currentTarget.value;
-              onChange({
-                ...settings,
-                ending: value === 'stop' || value === 'loop' ? value : undefined,
-              });
-            }}
-          >
-            <option value="none">Recorded ending</option>
-            <option value="stop">Stop early</option>
-            <option value="loop">Return to start</option>
-          </select>
-        </label>
-      </div>
-      <p className="cursor-note">
-        Ending effects use the last 0.5 s of each trimmed clip, or half of shorter clips.
-        Small-shake removal holds movements within 0.5% of the source. Clicks stay exact.
-        Stabilization holds the previous shape until a new shape is confirmed by samples at least
-        100 ms apart. Interaction shapes appear immediately; tracking gaps reset it. Rotation leans
-        up to 12° with horizontal movement over the previous 100 ms, around the recorded hotspot.
-        Each trimmed clip starts upright. Medium and Rapid animate over the final 75% and 50% of
-        each sample interval; None steps at recorded sample times. Raw motion bypasses animation
-        styles.
-      </p>
-      <CursorHiddenRanges settings={settings} onChange={onChange} />
-    </details>
+            options={ENDING_OPTIONS}
+            onValueChange={(ending) =>
+              onChange({ ...settings, ending: ending === 'none' ? undefined : ending })
+            }
+          />
+        </div>
+        <p className="cursor-note">
+          Ending effects use the last 0.5 s of each trimmed clip, or half of shorter clips.
+          Small-shake removal holds movements within 0.5% of the source. Clicks stay exact.
+          Stabilization holds the previous shape until a new shape is confirmed by samples at least
+          100 ms apart. Interaction shapes appear immediately; tracking gaps reset it. Rotation
+          leans up to 12° with horizontal movement over the previous 100 ms, around the recorded
+          hotspot. Each trimmed clip starts upright. Medium and Rapid animate over the final 75% and
+          50% of each sample interval; None steps at recorded sample times. Raw motion bypasses
+          animation styles.
+        </p>
+        <CursorHiddenRanges settings={settings} onChange={onChange} />
+      </CollapsiblePanel>
+    </Collapsible>
   );
 }
 
@@ -192,41 +209,20 @@ function CursorAppearance({
   const settings = cursor.settings ?? DEFAULT_CURSOR_SETTINGS;
   return (
     <div className="cursor-appearance">
-      <label>
-        Motion
-        <select
-          aria-label="Cursor motion"
-          value={settings.mode}
-          onChange={(event) =>
-            onChange({
-              ...cursor,
-              settings: {
-                ...settings,
-                mode: event.currentTarget.value === 'raw' ? 'raw' : 'smooth',
-              },
-            })
-          }
-        >
-          <option value="smooth">Smooth</option>
-          <option value="raw">Raw</option>
-        </select>
-      </label>
-      <label>
-        Style
-        <select
-          aria-label="Cursor style"
-          value={settings.style ?? 'recorded'}
-          onChange={(event) => {
-            const style = event.currentTarget.value;
-            if (style === 'recorded' || style === 'default' || style === 'touch')
-              onChange({ ...cursor, settings: { ...settings, style } });
-          }}
-        >
-          <option value="recorded">Recorded shapes</option>
-          <option value="default">First embedded shape</option>
-          <option value="touch">Touch</option>
-        </select>
-      </label>
+      <SelectField
+        caption="Motion"
+        label="Cursor motion"
+        value={settings.mode}
+        options={MOTION_OPTIONS}
+        onValueChange={(mode) => onChange({ ...cursor, settings: { ...settings, mode } })}
+      />
+      <SelectField
+        caption="Style"
+        label="Cursor style"
+        value={settings.style ?? 'recorded'}
+        options={STYLE_OPTIONS}
+        onValueChange={(style) => onChange({ ...cursor, settings: { ...settings, style } })}
+      />
       <label>
         Size
         <input
@@ -280,23 +276,23 @@ function CursorDetails({
       </span>
       {cursor && (
         <>
-          <label className="cursor-offset">
-            Offset (ms)
-            <input
-              type="number"
-              aria-label="Cursor time offset (ms)"
-              defaultValue={cursor.offsetMs}
-              title="Positive delays the cursor. Negative advances it. Source time stays unchanged."
-              onChange={(event) => {
-                const offsetMs = event.currentTarget.valueAsNumber;
-                if (Number.isFinite(offsetMs) && Math.abs(offsetMs) <= Number.MAX_SAFE_INTEGER)
+          <div
+            className="cursor-offset"
+            title="Positive delays the cursor. Negative advances it. Source time stays unchanged."
+          >
+            <NumberField
+              label="Offset"
+              name="Cursor time offset (ms)"
+              unit="millisecond"
+              step={1}
+              largeStep={10}
+              value={cursor.offsetMs}
+              onValueChange={(offsetMs) => {
+                if (Math.abs(offsetMs) <= Number.MAX_SAFE_INTEGER)
                   onChange({ ...cursor, offsetMs });
               }}
-              onBlur={(event) => {
-                event.currentTarget.value = String(cursor.offsetMs);
-              }}
             />
-          </label>
+          </div>
           <button className="text-button" onClick={() => onChange(undefined)}>
             Remove cursor sidecar
           </button>

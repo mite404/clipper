@@ -21,7 +21,15 @@ import {
   ZoomIn,
 } from 'lucide-react';
 import { Composition } from './Composition';
-import { IconButton, MediaLibrary, Waveform, timecode } from './components';
+import { Toggle } from '@ui-sdk/react/toggle';
+import {
+  IconButton,
+  MediaLibrary,
+  NumberField,
+  SelectField,
+  Waveform,
+  timecode,
+} from './components';
 import { type Asset, loadDemo, readMedia, unreadableNamesake } from './media';
 import { Timeline, TRACKS } from './Timeline';
 import {
@@ -63,6 +71,17 @@ export const INITIAL_EDIT: Edit = {
   zooms: [],
   layout: { radius: 22, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
 };
+
+// Elements whose own keys (arrows, typing, Enter, Home/End) the page shortcuts must not take.
+const OWN_KEYS =
+  'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="listbox"], [role="option"], [role="combobox"]';
+
+// (event target, key) → whether the focused control uses that key itself, so no shortcut may.
+// Any button keeps Space to press.
+function controlOwnsKey(target: EventTarget | null, key: string): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  return target.closest(OWN_KEYS) !== null || (key === ' ' && target.closest('button') !== null);
+}
 
 // The status line for one import: the count of files read, then every failure by name.
 // A picked file once read: the asset to add, or to put in place of `replaces`.
@@ -232,22 +251,18 @@ export function SourceMonitor({
         </label>
       </div>
       <div className="source-insert">
-        <select
-          aria-label="Insert onto track"
+        <SelectField
+          label="Insert onto track"
           value={track}
-          onChange={(e) => {
-            const value = TRACKS.find((t) => t.id === e.target.value);
-            if (value) setTrack(value.id);
-          }}
-        >
-          {TRACKS.filter(
+          options={TRACKS.filter(
             (t) => asset?.kind !== 'audio' || t.id === 'voice' || t.id === 'music',
-          ).map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.detail} · {t.label}
-            </option>
-          ))}
-        </select>
+          ).map(({ id, detail, label, Icon }) => ({
+            value: id,
+            label: `${detail} · ${label}`,
+            icon: <Icon size={13} />,
+          }))}
+          onValueChange={setTrack}
+        />
         <IconButton
           label="Insert source at playhead"
           disabled={!asset || range.end <= range.start}
@@ -305,17 +320,17 @@ export function Inspector({
         <h3>
           Composition <span>16:9</span>
         </h3>
-        <button
-          type="button"
+        <Toggle
           className="layout-swatch"
           aria-label="Composition: swap sides"
           title="Swap screen and portrait sides"
-          onClick={() => onLayout({ ...layout, swapped: !layout.swapped })}
+          pressed={Boolean(layout.swapped)}
+          onPressedChange={(swapped) => onLayout({ ...layout, swapped })}
           style={{ flexDirection: layout.swapped ? 'row-reverse' : 'row' }}
         >
           <span />
           <span />
-        </button>
+        </Toggle>
         <label className="slider-label">
           Corner radius <output>{layout.radius}px</output>
           <input
@@ -375,14 +390,14 @@ export function Inspector({
         </h3>
         {zoom ? (
           <>
-            <button
+            <Toggle
               className="secondary-button"
-              onClick={onMarkMouse}
+              pressed={markingMouse}
+              onPressedChange={() => onMarkMouse?.()}
               disabled={!onMarkMouse}
-              aria-pressed={markingMouse}
             >
-              {markingMouse ? 'Cancel mouse marking' : 'Mark mouse position'}
-            </button>
+              Mark mouse position
+            </Toggle>
             <p className="inspector-copy">
               Mark focus in the unzoomed frame. Editing a generated shot makes it manual.
             </p>
@@ -400,77 +415,62 @@ export function Inspector({
               />
             </label>
             <div className="numeric-pair">
-              <label>
-                Start (s)
-                <input
-                  aria-label="Zoom start seconds"
-                  type="number"
-                  min="0"
-                  max={(duration - zoom.duration) / FPS}
-                  step="0.1"
-                  value={Number((zoom.start / FPS).toFixed(2))}
-                  onChange={(e) =>
-                    onZoom({
-                      ...zoom,
-                      start: Math.max(
-                        0,
-                        Math.min(
-                          duration - zoom.duration,
-                          Math.round(Number(e.target.value) * FPS),
-                        ),
-                      ),
-                    })
-                  }
-                />
-              </label>
-              <label>
-                Length (s)
-                <input
-                  aria-label="Zoom duration seconds"
-                  type="number"
-                  min={ZOOM_LIMITS.minFrames / FPS}
-                  max={(duration - zoom.start) / FPS}
-                  step="0.1"
-                  value={Number((zoom.duration / FPS).toFixed(2))}
-                  onChange={(e) =>
-                    onZoom({
-                      ...zoom,
-                      duration: Math.max(
-                        ZOOM_LIMITS.minFrames,
-                        Math.min(duration - zoom.start, Math.round(Number(e.target.value) * FPS)),
-                      ),
-                    })
-                  }
-                />
-              </label>
+              <NumberField
+                label="Start"
+                name="Zoom start seconds"
+                unit="second"
+                min={0}
+                max={(duration - zoom.duration) / FPS}
+                step={0.1}
+                value={Number((zoom.start / FPS).toFixed(2))}
+                onValueChange={(seconds) =>
+                  onZoom({
+                    ...zoom,
+                    start: Math.max(
+                      0,
+                      Math.min(duration - zoom.duration, Math.round(seconds * FPS)),
+                    ),
+                  })
+                }
+              />
+              <NumberField
+                label="Length"
+                name="Zoom duration seconds"
+                unit="second"
+                min={ZOOM_LIMITS.minFrames / FPS}
+                max={(duration - zoom.start) / FPS}
+                step={0.1}
+                value={Number((zoom.duration / FPS).toFixed(2))}
+                onValueChange={(seconds) =>
+                  onZoom({
+                    ...zoom,
+                    duration: Math.max(
+                      ZOOM_LIMITS.minFrames,
+                      Math.min(duration - zoom.start, Math.round(seconds * FPS)),
+                    ),
+                  })
+                }
+              />
             </div>
             <div className="numeric-pair">
-              <label>
-                Focus X (%)
-                <input
-                  aria-label="Zoom focus X"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={zoom.x}
-                  onChange={(e) =>
-                    onZoom({ ...zoom, x: Math.max(0, Math.min(100, Number(e.target.value))) })
-                  }
-                />
-              </label>
-              <label>
-                Focus Y (%)
-                <input
-                  aria-label="Zoom focus Y"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={zoom.y}
-                  onChange={(e) =>
-                    onZoom({ ...zoom, y: Math.max(0, Math.min(100, Number(e.target.value))) })
-                  }
-                />
-              </label>
+              <NumberField
+                label="Focus X"
+                name="Zoom focus X"
+                unit="percent"
+                min={0}
+                max={100}
+                value={zoom.x}
+                onValueChange={(x) => onZoom({ ...zoom, x: Math.max(0, Math.min(100, x)) })}
+              />
+              <NumberField
+                label="Focus Y"
+                name="Zoom focus Y"
+                unit="percent"
+                min={0}
+                max={100}
+                value={zoom.y}
+                onValueChange={(y) => onZoom({ ...zoom, y: Math.max(0, Math.min(100, y)) })}
+              />
             </div>
             <div className="ease-curve">
               <svg viewBox="0 0 160 34">
@@ -698,13 +698,8 @@ export function App() {
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (help || busy || exportProgress !== null || markingMouse) return;
-      if (
-        event.target instanceof HTMLElement &&
-        (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName) ||
-          event.target.isContentEditable)
-      )
-        return;
       const key = event.key.toLowerCase();
+      if (controlOwnsKey(event.target, key)) return;
       if (event.metaKey || event.ctrlKey || event.altKey) {
         // Chords belong to the browser. Undo is the only one the editor takes; there is no redo.
         if (key === 'z' && !event.altKey && !event.shiftKey) {

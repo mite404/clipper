@@ -72,8 +72,8 @@ test('zoom start, length and focus fields place the zoom in time and pan the scr
   await at(60);
   await page.getByRole('button', { name: 'Add zoom at playhead' }).first().click();
   await page.getByRole('slider', { name: 'Zoom level' }).fill('2');
-  await expect(start).toHaveValue('2');
-  await expect(length).toHaveValue('4');
+  await expect(start).toHaveValue('2s');
+  await expect(length).toHaveValue('4s');
   // 4 s in is frame 120. 2.5 s long is 75 frames, so the zoom spans frames 120 to 194.
   await start.fill('4');
   await length.fill('2.5');
@@ -97,17 +97,20 @@ test('zoom start, length and focus fields place the zoom in time and pan the scr
 
   // The fields stop at what the timeline can hold: 360 frames, and a zoom of at least 6 frames.
   await start.fill('99');
-  await expect(start).toHaveValue('9.5');
+  await start.press('Enter');
+  await expect(start).toHaveValue('9.5s');
   await at(284);
   await expect(content).toHaveCSS('transform', still);
   await at(320);
   await expect(content).toHaveCSS('transform', zoomed);
   await length.fill('0.1');
-  await expect(length).toHaveValue('0.2');
+  await length.press('Enter');
+  await expect(length).toHaveValue('0.2s');
   await at(288);
   await expect(content).toHaveCSS('transform', zoomed);
   await at(291);
   await expect(content).toHaveCSS('transform', still);
   await length.fill('5');
-  await expect(length).toHaveValue('2.5');
+  await length.press('Enter');
+  await expect(length).toHaveValue('2.5s');
 });
