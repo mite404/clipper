@@ -140,6 +140,95 @@ function drawFrame(
   }
 }
 
+// Open every clip's local media once, keyed by asset, so decoding never touches a stale URL.
+async function openInputs(
+  inputs: Map<string, Input>,
+  clips: Clip[],
+  assets: Asset[],
+  check: () => void,
+  signal?: AbortSignal,
+): Promise<void> {
+  for (const clip of clips) {
+    if (inputs.has(clip.assetId)) continue;
+    const asset = assets.find((item) => item.id === clip.assetId);
+    if (!asset) throw new Error(`Missing media for clip ${clip.id}.`);
+    if (!asset.url.startsWith('blob:'))
+      throw new Error(`Re-import ${asset.name}: export requires local blob media.`);
+    const response = await openMedia(asset, signal);
+    inputs.set(
+      asset.id,
+      new Input({ source: new BlobSource(await response.blob()), formats: ALL_FORMATS }),
+    );
+    check();
+  }
+}
+
+export type RenderFrameImageOptions = Pick<
+  RenderVideoOptions,
+  'clips' | 'assets' | 'zooms' | 'layout' | 'width' | 'signal'
+> & { frame: number };
+
+/**
+ * Render one composition frame as a PNG through the same drawFrame, framing and cursor path as
+ * the video export. No encoder runs. Throws when the frame is outside the timeline.
+ */
+export async function renderFrameImage({
+  clips,
+  assets,
+  zooms,
+  layout,
+  frame,
+  width,
+  signal,
+}: RenderFrameImageOptions): Promise<Blob> {
+  const check = () => signal?.throwIfAborted();
+  check();
+  if (width !== 1920 && width !== 3840) throw new Error('Image width must be 1920 or 3840.');
+  const frames = Math.max(0, ...clips.map((clip) => clip.start + clip.duration));
+  if (frames <= 0) throw new Error('Add clips before copying a frame.');
+  if (!Number.isInteger(frame) || frame < 0 || frame >= frames)
+    throw new Error('That frame is outside the timeline.');
+  const height = (width * 9) / 16;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext('2d');
+  if (!context) throw new Error('Canvas rendering is unavailable in this browser.');
+  const inputs = new Map<string, Input>();
+  try {
+    const visible = clips.filter(
+      (clip) => (clip.track === 'screen' || clip.track === 'camera') && covers(clip, frame),
+    );
+    const cursorImages = await decodeCursorImages(assets);
+    await openInputs(inputs, visible, assets, check, signal);
+    const layers: Layer[] = [];
+    for (const clip of visible) {
+      const track = await inputs.get(clip.assetId)!.getPrimaryVideoTrack();
+      if (!track || !(await track.canDecode()))
+        throw new Error(`Cannot decode video in clip ${clip.id}.`);
+      const sample = await new CanvasSink(track).getCanvas(sourceFrame(clip, frame) / FPS);
+      check();
+      if (sample) layers.push({ track: clip.track, image: sample.canvas });
+    }
+    context.setTransform(width / STAGE.width, 0, 0, height / STAGE.height, 0, 0);
+    const paths = prepareFraming(zooms, clips, assets, layout);
+    drawFrame(
+      context,
+      layout,
+      framingAt(zooms, paths, frame),
+      layers,
+      cursorDrawing(clips, assets, frame, layout, cursorImages),
+    );
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('The browser could not encode the frame as PNG.');
+    return blob;
+  } finally {
+    for (const input of inputs.values()) input.dispose();
+    canvas.width = 0;
+    canvas.height = 0;
+  }
+}
+
 /** Render and encode locally at 30fps. The Blob MIME identifies the negotiated container. */
 export async function renderVideo({
   clips,
@@ -207,19 +296,7 @@ export async function renderVideo({
     [];
   try {
     const cursorImages = await decodeCursorImages(assets);
-    for (const clip of clips) {
-      if (inputs.has(clip.assetId)) continue;
-      const asset = assets.find((item) => item.id === clip.assetId);
-      if (!asset) throw new Error(`Missing media for clip ${clip.id}.`);
-      if (!asset.url.startsWith('blob:'))
-        throw new Error(`Re-import ${asset.name}: export requires local blob media.`);
-      const response = await openMedia(asset, signal);
-      inputs.set(
-        asset.id,
-        new Input({ source: new BlobSource(await response.blob()), formats: ALL_FORMATS }),
-      );
-      check();
-    }
+    await openInputs(inputs, clips, assets, check, signal);
     const mixed = audio && (await mixAudio(inputs, audioClips, frames, check));
     check();
     const visuals = [];

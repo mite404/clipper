@@ -9,6 +9,7 @@ import {
   CircleHelp,
   Clapperboard,
   CornerUpLeft,
+  Copy,
   Crop,
   Maximize2,
   Pause,
@@ -500,6 +501,12 @@ export function Inspector({
   );
 }
 
+/** @throws when this browser cannot write an image to the clipboard. */
+function assertImageClipboard(): void {
+  if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined')
+    throw new Error('This browser cannot copy images to the clipboard.');
+}
+
 /** Local-first video editing workspace. The Remotion player is the single forward playback clock. */
 export function App() {
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -518,6 +525,7 @@ export function App() {
   const [markingZoomId, setMarkingZoomId] = useState<string | null>(null);
   const [exportWidth, setExportWidth] = useState<1920 | 3840>(1920);
   const [exportProgress, setExportProgress] = useState<number | null>(null);
+  const [copying, setCopying] = useState(false);
   const exportAbort = useRef<AbortController | null>(null);
   const helpDialog = useRef<HTMLDialogElement>(null);
   const player = useRef<PlayerRef>(null);
@@ -890,6 +898,35 @@ export function App() {
       exportAbort.current = null;
     }
   };
+  const copyFrame = async () => {
+    // Not disabled while copying: a disabled button drops keyboard focus.
+    if (copying) return;
+    setSpeed(0);
+    player.current?.pause();
+    // Everything the image needs is captured now, so a later seek or edit cannot change it.
+    const snapshot = {
+      ...edit,
+      assets,
+      width: exportWidth,
+      frame: Math.min(Math.max(0, frameRef.current), duration - 1),
+    };
+    setCopying(true);
+    try {
+      assertImageClipboard();
+      // The promise goes straight into the item so the write starts inside the click.
+      const png = import('./export').then(({ renderFrameImage }) => renderFrameImage(snapshot));
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+      setMessage(
+        `Frame ${snapshot.frame} copied as ${snapshot.width} × ${(snapshot.width * 9) / 16} PNG. Rendered locally.`,
+      );
+    } catch (error) {
+      setMessage(
+        `Could not copy frame. ${error instanceof Error ? error.message : 'Unknown error.'}`,
+      );
+    } finally {
+      setCopying(false);
+    }
+  };
   const volume = Math.max(
     0,
     ...edit.clips
@@ -991,6 +1028,15 @@ export function App() {
               <option value="1920">1920 × 1080</option>
               <option value="3840">3840 × 2160</option>
             </select>
+            <button
+              className="secondary-button"
+              disabled={busy || !edit.clips.length || exportProgress !== null}
+              aria-busy={copying}
+              style={{ whiteSpace: 'nowrap' }}
+              onClick={() => void copyFrame()}
+            >
+              <Copy size={14} /> Copy frame
+            </button>
             <button
               className="secondary-button"
               disabled={busy || !edit.clips.length || exportProgress !== null}
