@@ -1,7 +1,7 @@
 import type { Asset } from './media';
 import { covers, sourceFrame, FPS, type Clip } from './timeline-model';
 import { coverRect, cropPosition, maskRect, type Layout, type Rect } from './stage';
-import { cursorAt } from './cursor-motion';
+import { cursorAt, TOUCH_CURSOR_ASSET } from './cursor-motion';
 
 export type CursorFrame = Rect & { imageDataUrl: string };
 
@@ -15,7 +15,10 @@ export function cursorFrame(
   const clip = clips.find((item) => item.track === 'screen' && covers(item, frame));
   const source = assets.find((asset) => asset.id === clip?.assetId);
   if (!clip || !source?.cursor) return undefined;
-  const pose = cursorAt(source.cursor, (sourceFrame(clip, frame) / FPS) * 1000);
+  const pose = cursorAt(source.cursor, (sourceFrame(clip, frame) / FPS) * 1000, undefined, {
+    startMs: (clip.offset / FPS) * 1000,
+    endMs: ((clip.offset + clip.duration - 1) / FPS) * 1000,
+  });
   if (!pose) return undefined;
   const mask = maskRect('screen', layout);
   const cover = coverRect(mask, source, cropPosition('screen', layout));
@@ -38,6 +41,8 @@ export async function decodeCursorImages(assets: Asset[]): Promise<Map<string, H
       (asset) => asset.cursor?.recording.assets.map((cursor) => cursor.imageDataUrl) ?? [],
     ),
   );
+  if (assets.some((asset) => asset.cursor?.settings?.style === 'touch'))
+    urls.add(TOUCH_CURSOR_ASSET.imageDataUrl);
   const images = new Map<string, HTMLImageElement>();
   for (const url of urls) {
     const image = new Image();

@@ -84,3 +84,96 @@ it('uses source rendering settings and suppresses a globally hidden cursor', () 
     cursorAt({ ...raw, settings: { mode: 'raw', size: 2, hidden: true } }, 175),
   ).toBeUndefined();
 });
+
+it('hides a stationary cursor after idle time but shows clicks and resumed motion on arbitrary seeks', () => {
+  const cursor = track(
+    Array.from({ length: 27 }, (_, i) => ({
+      timeMs: i * 100,
+      cx: i < 19 ? 0.2 : 0.7,
+      cy: 0.6,
+      assetId: 'arrow',
+      interactionType: i === 5 ? 'click' : 'move',
+    })),
+    50,
+  );
+  const idle = {
+    ...cursor,
+    settings: { mode: 'smooth', size: 1, hidden: false, hideIdle: true },
+  } satisfies CursorTrack;
+  expect(cursorAt(idle, 1750)).toBeUndefined();
+  expect(cursorAt(idle, 1950)).toMatchObject({ cx: 0.7, cy: 0.6 });
+  expect(cursorAt(idle, 1350)).toMatchObject({ cx: 0.2, cy: 0.6 });
+  expect(cursorAt(cursor, 1750)).toMatchObject({ cx: 0.2, cy: 0.6 });
+  expect(cursor.recording.samples[5].interactionType).toBe('click');
+});
+
+it('removes small shakes without moving clicks, deliberate travel, or the original recording', () => {
+  const cursor = track([
+    { timeMs: 0, cx: 0.2, cy: 0.6, assetId: 'arrow' },
+    { timeMs: 100, cx: 0.202, cy: 0.597, assetId: 'arrow', interactionType: 'move' },
+    { timeMs: 200, cx: 0.199, cy: 0.602, assetId: 'arrow' },
+    { timeMs: 300, cx: 0.203, cy: 0.6, assetId: 'arrow', interactionType: 'click' },
+    { timeMs: 400, cx: 0.201, cy: 0.599, assetId: 'arrow' },
+    { timeMs: 500, cx: 0.7, cy: 0.3, assetId: 'arrow' },
+  ]);
+  const original = structuredClone(cursor.recording);
+  const steady = {
+    ...cursor,
+    settings: { mode: 'raw', size: 1, hidden: false, removeShakes: true },
+  } satisfies CursorTrack;
+  expect(cursorAt(steady, 200)).toMatchObject({ cx: 0.2, cy: 0.6 });
+  expect(cursorAt(steady, 300)).toMatchObject({ cx: 0.203, cy: 0.6 });
+  expect(cursorAt(steady, 500)).toMatchObject({ cx: 0.7, cy: 0.3 });
+  expect(cursorAt(steady, 400)).toMatchObject({ cx: 0.203, cy: 0.6 });
+  expect(cursorAt(cursor, 200)).toMatchObject({ cx: 0.199, cy: 0.602 });
+  expect(cursor.recording).toEqual(original);
+});
+
+it('can retain recorded PNG changes, fix the first captured shape, or use a centered touch indicator', () => {
+  const cursor = track([
+    { timeMs: 0, cx: 0.2, cy: 0.6, assetId: 'arrow' },
+    { timeMs: 100, cx: 0.7, cy: 0.3, assetId: 'hand' },
+  ]);
+  cursor.recording.assets.push({ ...cursorFixture.assets[0], id: 'hand', hotspotX: 0.75 });
+  const fixed = {
+    ...cursor,
+    settings: { mode: 'raw', size: 1, hidden: false, style: 'default' },
+  } satisfies CursorTrack;
+  expect(cursorAt(fixed, 100)?.asset.id).toBe('arrow');
+  expect(cursorAt(cursor, 100)?.asset.id).toBe('hand');
+  const touch = {
+    ...cursor,
+    settings: { mode: 'raw', size: 1, hidden: false, style: 'touch' },
+  } satisfies CursorTrack;
+  expect(cursorAt(touch, 100)).toMatchObject({
+    cx: 0.7,
+    cy: 0.3,
+    asset: { width: 32, height: 32, hotspotX: 16, hotspotY: 16 },
+  });
+  expect(cursorAt(touch, 100)?.asset.imageDataUrl).not.toBe(cursorFixture.assets[0].imageDataUrl);
+});
+
+it('returns to the trimmed clip start or stops at its ending without depending on seek order', () => {
+  const cursor = track(
+    Array.from({ length: 51 }, (_, i) => ({
+      timeMs: i * 100,
+      cx: 0.1 + i * 0.01,
+      cy: 0.7,
+      assetId: 'arrow',
+    })),
+  );
+  const loop = {
+    ...cursor,
+    settings: { mode: 'raw', size: 1, hidden: false, ending: 'loop' },
+  } satisfies CursorTrack;
+  const range = { startMs: 1000, endMs: 4000 };
+  expect(cursorAt(loop, 4000, 'raw', range)?.cx).toBeCloseTo(0.2);
+  expect(cursorAt(loop, 3750, 'raw', range)?.cx).toBeCloseTo(0.325);
+  expect(cursorAt(loop, 1000, 'raw', range)?.cx).toBeCloseTo(0.2);
+  expect(cursorAt(loop, 3500, 'raw', range)?.cx).toBeCloseTo(0.45);
+  const stop = { ...loop, settings: { ...loop.settings, ending: 'stop' } } satisfies CursorTrack;
+  expect(cursorAt(stop, 4000, 'raw', range)?.cx).toBeCloseTo(0.45);
+  expect(cursorAt(stop, 3750, 'raw', range)?.cx).toBeCloseTo(0.45);
+  expect(cursorAt(stop, 3000, 'raw', range)?.cx).toBeCloseTo(0.4);
+  expect(cursorAt(loop, 4000, 'raw')?.cx).toBeCloseTo(0.5);
+});

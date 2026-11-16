@@ -1,9 +1,24 @@
 import type { CursorAsset, CursorSample, CursorTrack } from './cursor';
+import touchImage from './cursor-touch.png?inline';
 
 export type CursorPose = Pick<CursorSample, 'cx' | 'cy'> & { asset: CursorAsset };
 
+// Original touch artwork, not a native cursor replacement or imported recording asset.
+export const TOUCH_CURSOR_ASSET: CursorAsset = {
+  id: 'clipper-touch',
+  platform: 'clipper',
+  imageDataUrl: touchImage,
+  width: 32,
+  height: 32,
+  hotspotX: 16,
+  hotspotY: 16,
+};
+
 // Native captures can leave a 152 ms gap. Longer gaps are disconnected tracking, not motion.
 const MAX_GAP_MS = 250;
+
+type MotionSample = CursorSample & { activeMs: number };
+const paths = new WeakMap<CursorTrack, MotionSample[]>();
 
 function lastAt(samples: CursorSample[], timeMs: number): number {
   let low = 0;
@@ -25,6 +40,48 @@ function connected(left: CursorSample, right: CursorSample): boolean {
     right.visible !== false &&
     Boolean(left.assetId && right.assetId)
   );
+}
+
+function isInteraction(sample: CursorSample): boolean {
+  return Boolean(sample.interactionType && sample.interactionType !== 'move');
+}
+
+function steadyPosition(sample: CursorSample, previous?: CursorSample) {
+  if (
+    previous &&
+    connected(previous, sample) &&
+    !isInteraction(sample) &&
+    Math.hypot(sample.cx - previous.cx, sample.cy - previous.cy) <= 0.005
+  )
+    return { cx: previous.cx, cy: previous.cy };
+  return { cx: sample.cx, cy: sample.cy };
+}
+
+function isActivity(sample: CursorSample, previous?: CursorSample): boolean {
+  return (
+    !previous ||
+    !connected(previous, sample) ||
+    sample.cx !== previous.cx ||
+    sample.cy !== previous.cy ||
+    isInteraction(sample)
+  );
+}
+
+function preparedSamples(track: CursorTrack): MotionSample[] {
+  const cached = paths.get(track);
+  if (cached) return cached;
+  let activeMs = 0;
+  const samples: MotionSample[] = [];
+  for (const original of track.recording.samples) {
+    const previous = samples[samples.length - 1];
+    const sample = track.settings?.removeShakes
+      ? { ...original, ...steadyPosition(original, previous) }
+      : original;
+    if (isActivity(sample, previous)) activeMs = sample.timeMs;
+    samples.push({ ...sample, activeMs });
+  }
+  paths.set(track, samples);
+  return samples;
 }
 
 function tangent(
@@ -63,28 +120,14 @@ function interpolate(
   );
 }
 
-/** Sample source-time motion with bounded cubic smoothing or raw linear interpolation.
- * Repeated timestamps use the last sample. Hidden or disconnected tracking returns no cursor.
- * Positive track offsets delay the cursor. Results never depend on playback or seek history.
- */
-export function cursorAt(
-  track: CursorTrack,
-  sourceMs: number,
-  mode: 'raw' | 'smooth' = track.settings?.mode ?? 'smooth',
+function interpolatedPose(
+  samples: CursorSample[],
+  left: number,
+  timeMs: number,
+  mode: 'raw' | 'smooth',
+  asset: CursorAsset,
 ): CursorPose | undefined {
-  const timeMs = sourceMs - track.offsetMs;
-  const { samples, assets } = track.recording;
-  const left = lastAt(samples, timeMs);
   const sample = samples[left];
-  if (
-    track.settings?.hidden ||
-    !sample ||
-    sample.visible === false ||
-    timeMs - sample.timeMs > MAX_GAP_MS
-  )
-    return undefined;
-  const asset = assets.find((image) => image.id === sample.assetId);
-  if (!asset) return undefined;
   const next = samples[left + 1];
   if (!next || timeMs === sample.timeMs) return { cx: sample.cx, cy: sample.cy, asset };
   const right = lastAt(samples, next.timeMs);
@@ -94,5 +137,71 @@ export function cursorAt(
     cx: interpolate(samples, left, right, timeMs, 'cx', mode),
     cy: interpolate(samples, left, right, timeMs, 'cy', mode),
     asset,
+  };
+}
+
+function visible(sample: MotionSample, timeMs: number, hideIdle: boolean): boolean {
+  return (
+    sample.visible !== false &&
+    timeMs - sample.timeMs <= MAX_GAP_MS &&
+    (!hideIdle || timeMs - sample.activeMs < 1000)
+  );
+}
+
+function styledAsset(track: CursorTrack, assetId?: string | null): CursorAsset | undefined {
+  const { assets } = track.recording;
+  const recorded = assets.find((image) => image.id === assetId);
+  if (!recorded) return undefined;
+  if (track.settings?.style === 'touch') return TOUCH_CURSOR_ASSET;
+  return track.settings?.style === 'default' ? assets[0] : recorded;
+}
+
+function motionAt(
+  track: CursorTrack,
+  sourceMs: number,
+  mode: 'raw' | 'smooth',
+  ignoreIdle = false,
+): CursorPose | undefined {
+  const timeMs = sourceMs - track.offsetMs;
+  const samples = preparedSamples(track);
+  const left = lastAt(samples, timeMs);
+  const sample = samples[left];
+  if (
+    track.settings?.hidden ||
+    !sample ||
+    !visible(sample, timeMs, Boolean(track.settings?.hideIdle && !ignoreIdle))
+  )
+    return undefined;
+  const asset = styledAsset(track, sample.assetId);
+  if (!asset) return undefined;
+  return interpolatedPose(samples, left, timeMs, mode, asset);
+}
+
+/** Evaluate source-time cursor motion independently of seek/playback history.
+ * Native gaps/visibility and positive-delay offsets always apply. Optional ending effects use
+ * the trimmed clip's inclusive source range, not the whole untrimmed recording.
+ */
+export function cursorAt(
+  track: CursorTrack,
+  sourceMs: number,
+  mode: 'raw' | 'smooth' = track.settings?.mode ?? 'smooth',
+  range?: { startMs: number; endMs: number },
+): CursorPose | undefined {
+  const ending = track.settings?.ending;
+  if (!ending || !range || range.endMs <= range.startMs) return motionAt(track, sourceMs, mode);
+  const fromMs = range.endMs - Math.min(500, (range.endMs - range.startMs) / 2);
+  if (sourceMs < fromMs) return motionAt(track, sourceMs, mode);
+  if (!motionAt(track, sourceMs, mode, true)) return undefined;
+  const from = motionAt(track, fromMs, mode, true);
+  if (!from) return undefined;
+  if (ending === 'stop') return from;
+  const to = motionAt(track, range.startMs, mode, true);
+  if (!to) return from;
+  const t = Math.max(0, Math.min(1, (sourceMs - fromMs) / (range.endMs - fromMs)));
+  const ease = t * t * (3 - 2 * t);
+  return {
+    cx: from.cx + (to.cx - from.cx) * ease,
+    cy: from.cy + (to.cy - from.cy) * ease,
+    asset: t === 1 ? to.asset : from.asset,
   };
 }

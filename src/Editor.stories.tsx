@@ -11,7 +11,7 @@ import { loadDemo, type Asset } from './media';
 import { CursorControls } from './CursorControls';
 import { AutoZoomControls } from './AutoZoomControls';
 import { ZoomMotionControls } from './ZoomMotionControls';
-import { cursorFixture, motionCursorFixture } from './cursor.fixture';
+import { cursorFixture, motionCursorFixture, behaviorCursorFixture } from './cursor.fixture';
 import type { CursorTrack } from './cursor';
 import type { Clip, Zoom } from './timeline-model';
 
@@ -51,12 +51,13 @@ function CursorRecord({ preview = false }: { preview?: boolean }) {
       Empty: 0,
       One: 1,
     };
-    const samples = Array.from({ length: counts[next] }, (_, i) => ({
-      ...fixture.samples[i % fixture.samples.length],
+    const selected = next === 'Idle and shakes' ? behaviorCursorFixture : fixture;
+    const samples = Array.from({ length: counts[next] ?? selected.samples.length }, (_, i) => ({
+      ...selected.samples[i % selected.samples.length],
       timeMs: i * 43,
     }));
     setCursor({
-      recording: { ...fixture, samples },
+      recording: { ...selected, samples },
       offsetMs: next === 'Worst case' ? -9007199254740991 : 0,
     });
   };
@@ -99,7 +100,7 @@ function CursorRecord({ preview = false }: { preview?: boolean }) {
         aria-label="Cursor stress dataset"
         style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: 22 }}
       >
-        {['Demo data', 'Worst case', 'Empty', 'One'].map((value) => (
+        {['Demo data', 'Worst case', 'Empty', 'One', 'Idle and shakes'].map((value) => (
           <button
             className="text-button"
             key={value}
