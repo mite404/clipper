@@ -61,6 +61,9 @@ test('IconButton long label fits a narrow viewport with reduced-motion fade only
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.goto(`${storybookURL}/iframe.html?id=ui-iconbutton--stress&viewMode=story`);
   const trigger = page.getByRole('button').first();
+  await expect(trigger).toBeVisible();
+  // Font swapping rewraps the instructions and can move the button out from under the pointer.
+  await page.evaluate(() => document.fonts.ready);
   await trigger.hover();
   const tooltip = page.getByRole('tooltip');
   await expect(tooltip).toBeVisible();

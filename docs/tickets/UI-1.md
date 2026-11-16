@@ -73,3 +73,39 @@ This pilot uses Chromium accessibility-name and description checks, not a physic
 a physical touch device. No claim about Safari or Firefox is made. Exact-SHA CI and serialized
 queue-owner delivery remain required. The Fallow baseline and all existing quality gates remain
 unchanged.
+
+## Cold Storybook CI follow-up
+
+Investigation base: `4f2ce3aad9159ba605cddf756b43f22233aa72b3`. Both attempts of
+[CI 43828160929](https://github.com/mite404/clipper/actions/runs/43828160929) passed 54/55 browser
+cases and failed the narrow reduced-motion story's tooltip-visibility assertion. No source, test or
+tooling change separated that base from the preceding green docs commit.
+
+The traces show a font-loading layout race, not a missing hover handler. In both attempts,
+Playwright hovered at x=38.5, y=254.5 inside a button at x=24, y=240, size 29 by 29. DM Sans loaded
+just after the hover completed. The instructions changed from two lines to three, moving the button
+to y=263 and leaving the stationary pointer above it. UI SDK correctly cancels pending hover opening
+on `pointerleave`, before the 400 ms opening delay elapses.
+
+Replaying the captured stylesheet/font on a fresh static Storybook page reproduces the same
+240-to-263 shift and a real `pointerenter` followed by `pointerleave`. The orb initially lacked CI's
+Liberation Sans fallback: installing that local system font was necessary to reproduce CI's two-line
+fallback layout. Without it, the smaller layout shift left the pointer inside the button and
+concealed the race. No repository setup or tooling files were changed.
+
+The original browser spec also fails at the original visibility assertion when the captured font
+response is delayed by 200 ms. After waiting for the visible story's `document.fonts.ready` before
+hover, the same original assertions pass ten consecutive runs under that controlled delay. This wait
+is a layout precondition, not a timeout increase, retry, repeated hover or weakened assertion. The
+component, story and CSS are unchanged; production payload is unchanged by this test-only fix.
+
+Red/green logs, the controlled-font probe and original CI traces are retained under
+`.amp/in/orb-backup/ui-1-repair/`. A settled-font narrow screenshot and real-pointer neighbor sweep
+are inspected. The disabled button intentionally has no tooltip, and reduced-motion scale stays
+`none`. No third rerun of the failed CI workflow was requested.
+
+The corrected spec passes both fresh full-suite runs: isolated `all` passes 55/55 in
+`.amp/in/artifacts/verification/all-Qf9bJs/`, and local CI mode passes 55/55 with fresh production
+and static Storybook servers, one worker and no retries. All strict formatting, lint, typed lint,
+TypeScript, dead-code and shrink-only Fallow gates pass, as do 135 units, seven helper tests and the
+120-ID ticket audit. Candidate remote CI and delivery still require the queue owner's grant.
