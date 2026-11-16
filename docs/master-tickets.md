@@ -245,9 +245,9 @@ User story: As an editor, I want to resize the side panes and timeline, hide/res
 switch between default and remembered custom height, and clearly see and scrub the current time
 without sacrificing preview room or accidentally selecting/trimming a clip.
 
-| Ticket ID                      | Scope                                                                          | Owner                                                                                    | State                                                                                   |
-| ------------------------------ | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| <a id="ui-5"></a>[UI-5](#ui-5) | Panel resizing, timeline layout controls and visible playhead/scrub affordance | [Existing Sol owner](https://ampcode.com/threads/T-e1ee6ff4-16fb-49e6-b05b-45a0b6fcecff) | Research-only; implementation follows accepted CLIP-9b and UI-7 with exact-path release |
+| Ticket ID                      | Scope                                                                          | Owner                                                                                    | State                                                                                |
+| ------------------------------ | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| <a id="ui-5"></a>[UI-5](#ui-5) | Panel resizing, timeline layout controls and visible playhead/scrub affordance | [Existing Sol owner](https://ampcode.com/threads/T-e1ee6ff4-16fb-49e6-b05b-45a0b6fcecff) | Released on accepted b9c2e83 under the bounded grant below; no worker push authority |
 
 Use the requested Yaklabs implementation as the source reference, not a new splitter dependency.
 Research located `apps/web/src/shell/sidebar-resize.tsx` and `sidebar-width.ts` in mite404/yaklabs:
@@ -256,7 +256,7 @@ Shift, Home/End and double-click reset provide alternatives. No repository licen
 owner's explicit reuse request authorizes adapting owner-authored code, not inventing an open-source
 license or copying third-party code without its terms. Confirm file provenance first. Coordinate
 both pane bounds, narrow layouts, collapse/persistence policy and resize observer effects with
-delivered UI-2. Source integration is held; no App/styles/layout hunk grant yet.
+delivered UI-2. The implementation release below supersedes the research hold.
 
 Research now pins Yaklabs source to `1ccdae55a5f26e96c042a322f980db9e226b3c41`, with owner-authored
 provenance and no third-party wrapper. The
@@ -312,20 +312,26 @@ thumb/focus/pressed affordance with aligned ruler/body marker, retaining native 
 keyboard behavior. Qualify it on the accepted implementation successor before acceptance; do not
 overlay clip hit targets or silently change gestures.
 
-Current accepted research baseline is `0b5584ef9d5dd8a8005bbaeedf0bc91993524936`, which already
-contains UI-2, cursor-inspector and UI-3 deliveries; the worker's `6abc9df` checkout is stale.
-Implementation remains after accepted CLIP-9b and UI-7. At that release the coordinator supplies
-their exact accepted successor SHA and grants `src/PanelResizeHandle.tsx`, `src/App.tsx` workspace/
-sequence state, divider, timecode-adjacent buttons and status-bar restore hunks, `src/styles.css`
-workspace columns/rows/handles/control placement, and `tests/workspace-layout.spec.ts`. The App
-boundary explicitly includes `.app-footer` for the relocated restore control. This is the planned
-path boundary, not a source release now. No header, inspector-control, cursor, model/parser, or
-exporter edits are granted. The playhead/scrub follow-ups may require a separately enumerated
-`src/Timeline.tsx` ruler/playhead hunk and matching browser checks after reproduction and a scoped
-interaction proposal; those paths remain held, not implicitly released with panel resizing. The
-proposed narrow addition is ruler input/marker presentation and local geometry props only, matching
-styles and `tests/controls.spec.ts` seeking/endpoints/keyboard coverage plus workspace alignment
-checks. No scale-hook/model or clip-selection/trim-handler changes are implied.
+The research baseline `0b5584e` is historical. Implementation is released to the existing Sol owner
+on accepted `b9c2e835e8e4f96f3d521b2e9f6d0fdd5c6f4acd`, including CLIP-9b and UI-7, with green
+exact-main [CI43953490741](https://github.com/mite404/clipper/actions/runs/43953490741). Fetch that
+successor before editing; preserve the older checkout and any local work.
+
+The grant covers new `src/PanelResizeHandle.tsx` and its shared-component Storybook file; App
+workspace/sequence layout state, dividers, timecode-adjacent buttons and `.app-footer` restore
+hunks; scoped workspace column/row/handle/control CSS; `tests/workspace-layout.spec.ts`; and
+`docs/tickets/UI-5.md` for acceptance evidence. Preserve UI-7's mounted drawer, peek and focus
+behavior, including its responsive widths. Finalize the provisional joint bounds through rendered
+extreme-width/height checks, not by silently reducing preview or track usability.
+
+The separate ruler grant covers `src/Timeline.tsx` ruler input/marker presentation and local
+geometry props only, corresponding CSS, `tests/controls.spec.ts` seeking/endpoints/keyboard cases,
+and workspace alignment checks. Retain native ruler click/drag and keyboard seeking while making the
+thumb/focus/pressed affordance visible and aligning marker endpoints. Reproduce the defect on the
+accepted successor before correction. Do not change clip selection, move/trim handlers, scale hooks
+or project/model data. No header, inspector-control, cursor, parser, exporter, baseline, tooling or
+dependency edits are granted. This is one bounded UI-5 assignment, not a second worker. The
+coordinator retains main delivery and reviews the frozen candidate before exact-main CI.
 
 Acceptance covers all three combined extremes, short/tall and narrow windows, pointer release and
 rollback, keyboard isolation, dynamic ARIA bounds, reset, playback continuity, scrollable tracks/
@@ -376,9 +382,9 @@ feature's browser tests. No nominal-ordinal or complete WebM/VFR compatibility c
 
 ### Media header and temporary drawer peek
 
-| Ticket ID                      | Scope                                                          | State                                            | Needs                                                                    |
-| ------------------------------ | -------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------ |
-| <a id="ui-7"></a>[UI-7](#ui-7) | Media before Save, temporary left-edge peek and Space behavior | Local acceptance complete; exact-main CI pending | Reviewed source on 9733390; coordinator retains push slot until green CI |
+| Ticket ID                      | Scope                                                          | State                                                    | Needs                                                                        |
+| ------------------------------ | -------------------------------------------------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| <a id="ui-7"></a>[UI-7](#ui-7) | Media before Save, temporary left-edge peek and Space behavior | Delivered at b9c2e83 with green exact-main CI43953490741 | Shared paths released to bounded UI-5 successor; preview promotion requested |
 
 The owner requested moving Media into the header immediately left of Save project and temporarily
 sliding the media pool in when hovering the left edge. Reuse the owner-authored Yaklabs pattern in
@@ -415,8 +421,13 @@ return LAND for corrected tree `e5119412a525e69cd99657bf670a0c99f1ff110a`. Fresh
 shrink-only Fallow against `9733390`, 132 units, seven helper tests, all 77 browser cases and the
 isolated five-repeat performance gate (20 cases) pass. The click/leave regression failed before the
 correction and passes afterward. Public demo captures and the corrected real-pointer recording were
-inspected. No performance threshold, baseline or private-media processing changed. The coordinator
-retains the sole push slot and shared paths pending exact-main CI; UI-5 remains held.
+inspected. No performance threshold, baseline or private-media processing changed. Delivery is
+accepted at
+[`b9c2e83`](https://github.com/mite404/clipper/commit/b9c2e835e8e4f96f3d521b2e9f6d0fdd5c6f4acd) with
+green [exact-main CI43953490741](https://github.com/mite404/clipper/actions/runs/43953490741).
+UI-7's reservation is released to UI-5. The coordinator retains the sole push slot. Canonical
+preview promotion was requested directly; no updated-preview claim precedes its verification
+receipt. Real-device, Firefox/Safari and private-recording qualification remain unclaimed.
 
 ### Media-pool views and source scrubbing
 
@@ -506,9 +517,9 @@ images were hosted, see [Known limits](#known-limits)).
 | ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                              |
 | Cursor inspector         | No active implementation reservation after green inspector delivery                                                                                         |
-| Workspace layout         | No active implementation reservation after green UI-2 delivery                                                                                              |
+| Workspace layout         | UI-5 bounded resize/layout/ruler grant above; existing Sol owner, accepted b9c2e83; coordinator retains main delivery                                       |
 | Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                              |
-| Media drawer follow-up   | UI-7 reference/design research only; no source reservation until accepted CLIP-9b successor and exact-path grant                                            |
+| Media drawer follow-up   | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                                 |
 | Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5, accepted UI-7 successor and exact-path grant before edits                                        |
 | Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                        |
 | Transport lifecycle      | No active reservation after green REF-31 delivery; preserve accepted REF-20/31 transport behavior                                                           |
