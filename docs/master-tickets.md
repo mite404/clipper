@@ -214,6 +214,7 @@ images were hosted, see [Known limits](#known-limits)).
 | Cursor inspector         | App cursor placement/selection, CursorControls organization, non-tooltip inspector CSS, focused inspector tests; minimal cursor.spec.ts/cursor-speeds.spec.ts disclosure updates |
 | Workspace layout         | UI-2 App drawer/workspace shell, Timeline scroll markup and scoped media/workspace/timeline CSS; no playback/cursor internals                                                    |
 | Zoom regions             | Research only; future App/Timeline/inspector/styles/model/parser edits wait for inspector and UI-2 release; no REF-20/31 transport overlap                                       |
+| Oxc tooling              | VERIFY-5 package/lock, Oxc/formatter config, necessary CI/hook/README command changes only; no source migration or bulk reformat                                                 |
 | Queue implementation     | Queue/docs and acceptance only; cursor-inspector, UI-2 and REF-20 reservations remain exclusive                                                                                  |
 | Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                                 |
 
@@ -345,6 +346,19 @@ tooltip CSS, packages and story/spec remain reserved, as do REF-20's
 playback/readout/export-progress hunks and editor/performance tests. The inspector owner must
 integrate UI-1's delivered base before final gates and request a serialized push slot.
 
+### CLIP-11b: targeted cursor metadata attachment
+
+| Ticket ID                                            | Scope                                                                                        | Owner                                                                             | State                                                                           |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| <a id="clip-11b"></a>[CLIP-11b](tickets/CLIP-11b.md) | Import from source media panel or drop sidecar onto screen recording in composition/timeline | [Sol scoping](https://ampcode.com/threads/T-fb08e0ff-0f5d-4dab-9d9e-470de7fd0490) | Read-only; separate from frozen inspector; shared successor/hunk grant required |
+
+The [repo brief](tickets/CLIP-11b.md) covers explicit source-wide targeting, supported
+parser/errors, failure/cancel preservation, undo/dirty state and save/reopen. CLIP-2b/2c media
+movement/insertion drops are different gestures and retain their owners; REF-27 retains composer
+geometry/hit-target seams. Research actual existing state/history before changing shared paths. Do
+not infer new metadata format support or attach by filename guess. Publish this new mapping at the
+next appropriate doc delivery; a local entry is not remote implementation.
+
 ### Acceptance added by the real capture
 
 One OpenScreen 2.2.2 recording was checked on the owner's Mac. These points are binding on CLIP-7
@@ -463,7 +477,7 @@ queue thread unless stated.
 | ---------------------------------------------- | ----------------------------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
 | <a id="ref-14"></a>[REF-14](tickets/REF-14.md) | One constant each for music gain and peak rate; blob-URL test asserts no fetch      | Small  | Delivered at [afe4c60](https://github.com/mite404/clipper/commit/afe4c605f551c979083297b0e0d5d24f4a32a484); [green CI](https://github.com/mite404/clipper/actions/runs/43806193468) | #32, #33, #34       |
 | <a id="ref-18"></a>[REF-18](tickets/REF-18.md) | Editor journeys also run against the production bundle                              | Medium | Delivered at [7373115](https://github.com/mite404/clipper/commit/7373115e9a501312bea5a4192a101094dce5d08f); [green CI](https://github.com/mite404/clipper/actions/runs/43803496212) | #18                 |
-| <a id="ref-20"></a>[REF-20](tickets/REF-20.md) | Rewind and export progress re-render at 10 Hz                                       | Medium | Corrected bd222030 passed independent production acceptance 10/10; original 5c82e70 rejected; rebase/gates after VERIFY-4; no push grant                                            | #36                 |
+| <a id="ref-20"></a>[REF-20](tickets/REF-20.md) | Rewind and export progress re-render at 10 Hz                                       | Medium | Pre-landing review rejects 480bd875/1414179: forward-end listener gap and rewind duration clamp; owner reproducing/fixing with regressions; no push grant                           | #36                 |
 | <a id="ref-26"></a>[REF-26](tickets/REF-26.md) | Keep footer errors and warnings visible without scrolling                           | Small  | Delivered at [4535665](https://github.com/mite404/clipper/commit/45356659c892b3607230778270c5d4eb16786c3c)                                                                          | found during REF-21 |
 | <a id="ref-22"></a>[REF-22](#ref-22)           | Project container without one giant JSON string (format version 3, reads version 2) | Large  | Proposal                                                                                                                                                                            | #3                  |
 | <a id="ref-23"></a>[REF-23](#ref-23)           | Zooms anchored to source time and source coordinates                                | Large  | Decision D-1                                                                                                                                                                        | #14, #24            |
@@ -681,8 +695,55 @@ push slot is released. UI-3 has started on this accepted successor.
 REF-20's original `5c82e70` remains rejected. Corrected `bd222030` uses layout cleanup to flush the
 held rewind frame before pause paints. Independent coordinator production acceptance passed all ten
 checks across five held-frame and five export progress/cancel/retry repetitions. Its full58 and
-performance15 receipts were inspected. REF-20 stays unpushed behind VERIFY-4, then rebases and
-reruns combined gates on the exact delivered successor. No readout threshold or assertion changed.
+performance15 receipts were inspected, but the subsequent pre-landing review reproduced two other
+regressions on real production: the speed-dependent listener resubscription loses final forward
+frame updates, and rewind ignores a shortened timeline's clamp after undo. Both frozen review heads,
+`480bd875` and `1414179`, are rejected. The owner must reproduce and fix both, strengthen the
+first-paused-paint test, and send a newly verified delta to the existing reviewer. Prior passing
+receipts do not waive those findings. No main push grant or delivered REF-20 claim exists.
+
+### VERIFY-5: requested Oxc typecheck and formatter tooling
+
+| Ticket ID                                  | Scope                                                                            | Owner                                                                            | State                                                                           |
+| ------------------------------------------ | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| <a id="verify-5"></a>[VERIFY-5](#verify-5) | Use requested oxlint-tsgolint checking and install oxfmt without weakening gates | [Sol medium](https://ampcode.com/threads/T-fb8879aa-fa27-4044-89bf-518b53b04498) | Inspect supported semantics, then bounded tooling implementation; no push grant |
+
+Mite explicitly requests using oxlint-tsgolint for the typecheck script instead of tsc and
+installing oxfmt. Inspect the installed tool's CLI and current upstream documentation before
+changing scripts. Compiler diagnostics and type-aware lint are different contracts: do not silently
+remove compiler checking or label lint as equivalent. Report the supported solution and any genuine
+unresolved product choice. Preserve production-build validation and existing strict workloads.
+
+The owner also requests CI modernization through create-ts-ci; the available matching workflow is
+setup-ts-ci. Extend the existing pipeline rather than replacing repo-specific gates with a generic
+template. The supported candidate uses `oxlint --type-aware --type-check` for typecheck and retains
+`tsc --noEmit` as a separate compiler-safety CI step while the new path is experimental. Preserve
+main-push/manual triggers, comparison against the pre-push commit, all browser/performance projects
+and no cancellation that skips unchecked commits. Pin oxfmt and provide a usable format command;
+retain the existing Prettier format check unless parity proves a zero-churn migration. Formatter
+config may carry existing style options and disable default package sorting.
+
+Reserve package.json, package-lock.json, .oxlintrc.json, formatter configuration and only necessary
+CI/hook/README command changes, including .github/workflows/ci.yml and lefthook.yml. No
+feature-source edits, broad formatting migration, baseline growth, threshold/retry changes or
+unrelated dependency upgrades. Existing REF-20, inspector, UI-2 and UI-3 candidate gates stay on
+their frozen toolchains; this work cannot retroactively qualify or invalidate a different candidate.
+Coordinate a latest-main successor before integration.
+
+Acceptance includes actual clean-project execution and intentional compiler-error/type-aware-lint
+probes proving what the new commands reject, formatter installation/version execution, reproducible
+lockfile install, applicable strict/build/unit/browser/performance gates without changed workloads,
+and an inspected diff proving no mass reformat. Existing Fable reviews the exact tested tooling
+candidate before landing, one ticket at a time. The coordinator retains the only main push slot;
+fetch/rebase, rerun affected gates, push once and wait for exact-SHA CI before release.
+
+Frozen tooling candidate
+[`1c99a72`](https://github.com/mite404/clipper/commit/1c99a72d07d7812635a99527417702567587ac91) is
+on review-only branch `wip/verify5-review-1c99a72`, based on accepted `af649b8`. Five paths differ:
+package/lock, Oxfmt config, README commands and two additive CI gates. Transferred worker receipts
+show clean locked install, 135 units, builds, 55 browser cases and ten separate performance cases.
+Compiler-negative and formatter probes are included. Existing Fable has the exact-diff review; this
+is not main delivery or exact-head CI qualification. No source/test workload or hook changed.
 
 ## Export selection and responsiveness ownership
 
@@ -905,6 +966,7 @@ support them but do not replace them. No GitHub or Linear issue creation is impl
 | Remove branding/title and move Save without changing save behavior                                                                        | [UI-3](#ui-3)                                                                |
 | Horizontal label scrubbing across numeric properties, not booleans/enums                                                                  | [UI-4](#ui-4)                                                                |
 | Drag media-pool/inspector widths using owner-authored Yaklabs pattern                                                                     | [UI-5](#ui-5)                                                                |
+| Cursor metadata import from source panel or targeted composition/timeline sidecar drop                                                    | [CLIP-11b](tickets/CLIP-11b.md)                                              |
 | Remove ORIGINAL, obsolete above-timeline cursor panel, L/R meter, Paused and selected slogans/tags                                        | [UI-6](#ui-6), with cursor access preserved by [CLIP-11](tickets/CLIP-11.md) |
 | One resolution selector, true selected-size composer plus copy/export, real MP4/MOV/WebM                                                  | [REF-27](#ref-27)                                                            |
 | Zoom creation at playhead for four seconds, B shortcut, old batch removal, editable ramps and referenced Bklit/D3/Motion curve technology | [CLIP-9b](#clip-9b)                                                          |
@@ -915,6 +977,7 @@ support them but do not replace them. No GitHub or Linear issue creation is impl
 | Functional 24/29.97/60/100/120/Auto FPS beside resolution, no fake 30 label                                                               | [CLIP-21b](#clip-21b)                                                        |
 | Auto-fit new visual media to selected composition and per-clip scale slider/numeric input                                                 | [CLIP-19b](tickets/CLIP-19b.md)                                              |
 | FCP7 XMEML choice, source-path mapping and real Premiere/relink qualification                                                             | [CLIP-31a](#clip-31a), [CLIP-31b](#clip-31b), [CLIP-31c](#clip-31c)          |
+| Requested oxlint-tsgolint typecheck script and oxfmt installation without lost compiler checks                                            | [VERIFY-5](#verify-5)                                                        |
 | Continuous bounded Sonnet candidates with actual Sol review and serialized exact-SHA CI                                                   | [Ticket workflow](ticket-workflow.md#continuous-small-ticket-sonnet-lane)    |
 
 The audit compared fetched `origin/main` at `6abc9df` with the coordinator's working docs. That
