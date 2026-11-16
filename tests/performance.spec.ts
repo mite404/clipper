@@ -124,3 +124,45 @@ for (const follow of [false, true]) {
     expect(result.longTaskMax).toBeLessThan(STALL_MS);
   });
 }
+
+test('rewind readouts stay bounded while transport keeps seeking at every speed', async ({
+  page,
+}) => {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+  await page.goto(process.env.PERF_URL || (process.env.CI ? 'http://127.0.0.1:5173' : '/'));
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
+  for (const presses of [1, 2, 3]) {
+    await playhead.fill('330');
+    await page.locator('.project-title').click();
+    for (let press = 0; press < presses; press++) await page.keyboard.press('j');
+    const speed = 2 ** (presses - 1);
+    await expect(page.getByTestId('transport-state')).toHaveText(`Rewinding · ${speed}×`);
+    const sample = await page.getByTestId('timecode').evaluate(async (readout) => {
+      let changes = 0;
+      const observer = new MutationObserver(() => changes++);
+      observer.observe(readout, { subtree: true, childList: true, characterData: true });
+      const start = performance.now();
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      observer.disconnect();
+      return { changes, elapsed: performance.now() - start };
+    });
+    await page.keyboard.press('k');
+    await expect(page.getByTestId('transport-state')).toHaveText('Paused');
+    const held = Number(await playhead.inputValue());
+    expect(held).toBeLessThan(330 - 30 * speed);
+    expect(held).toBeGreaterThan(0);
+    expect(sample.changes).toBeGreaterThan(5);
+    // One in-flight paint may straddle the observation window.
+    expect(sample.changes).toBeLessThanOrEqual(Math.ceil(sample.elapsed / 100) + 1);
+    await expect
+      .poll(() =>
+        page
+          .locator('[data-testid="camera-mask"] video:visible')
+          .evaluate((video: HTMLVideoElement) => Math.round(video.currentTime * 30)),
+      )
+      .toBe(held);
+    console.log(JSON.stringify({ ...sample, speed, held, cpuThrottle: 4 }));
+  }
+});

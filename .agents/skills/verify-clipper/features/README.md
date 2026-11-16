@@ -29,10 +29,14 @@ verification, and nothing in this skill may report it as verified:
 - Still-image import, still-image backgrounds and still clips (CLIP-20). Import accepts video and
   audio only.
 - MP4 AVC/AAC qualification (REF-27, blocked), MOV export, and any export format choice.
-- Rewind and export-progress re-render rate (REF-20), and the wider responsiveness work in REF-37.
-  The held-pause journey in `editor.spec.ts` is delivered and passes; it does not stand in for them.
+- The wider responsiveness work in REF-37, including scrubbing with very large telemetry.
 - Real OpenScreen recordings, Retina scale, window capture and multi-display (CLIP-11 stays
   Partial), plus click sounds, motion blur and keystroke overlays.
+
+REF-20 adds rewind held-frame parity, bounded readout changes and export progress/cancel/retry
+checks. See the transport and delivery pages for their limits. The executable checks do not measure
+App commits or encoding speed. Require the exact delivered commit and green CI before reporting
+REF-20 as delivered.
 
 Move an item up only after reconciling the exact `main` commit, its green CI run, the code and a
 spec. Ticket rows can lag the code: at `b9596c6` the UI-1 row in `docs/master-tickets.md` still

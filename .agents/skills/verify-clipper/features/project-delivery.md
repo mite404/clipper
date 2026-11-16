@@ -16,6 +16,13 @@ and Export video and inspect the downloaded file, not just progress text. Use
 `.agents/skills/verify-clipper/scripts/verify.mjs editor` for those UI export journeys too. Each
 command starts and cleans up its own Vite development server.
 
+`editor` also runs REF-20's real export progress/cancel/retry check. Cancel after progress exceeds
+10 percent and require no download, no progress bar and an enabled Export video button. Retry must
+start at zero, publish increasing values in [0, 1] with at most 101 distinct values, and download
+one nonempty HD video without uploads or page errors. This check bounds accessible progress updates,
+not React commits, encoding speed or codec fidelity. The decoded fixture checks above remain the
+export-content evidence.
+
 ## Guards and recovery
 
 `editor` runs the delivery guards in `refinements.spec.ts`; `delivery` does not. A logo click no
