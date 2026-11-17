@@ -335,9 +335,13 @@ for (const kind of ['video', 'audio']) {
       if (kind === 'video')
         await page.getByRole('button', { name: 'Play source', exact: true }).click();
       else {
-        const box = await source.boundingBox();
-        if (!box) throw new Error('Native source audio controls are not visible');
-        await page.mouse.click(box.x + 18, box.y + box.height / 2);
+        // The native control is believed to ignore a click until its media has loaded metadata, so
+        // wait for the loaded control, then click it as a user would.
+        await expect
+          .poll(() => source.evaluate((media: HTMLMediaElement) => media.readyState))
+          .toBeGreaterThanOrEqual(1);
+        const box = (await source.boundingBox())!;
+        await source.click({ position: { x: 18, y: box.height / 2 } });
       }
       await expect
         .poll(() => source.evaluate((media: HTMLMediaElement) => media.paused))
