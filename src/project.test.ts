@@ -8,18 +8,22 @@ import {
   type Edit,
 } from './project';
 import { cursorFixture } from './cursor.fixture';
+import { DEFAULT_TRACKS, type TrackDef } from './timeline-model';
 import type { CursorTrack } from './cursor';
 
 const edit: Edit = {
   clips: [{ id: 'clip', assetId: 'video', track: 'screen', start: 0, duration: 30, offset: 15 }],
   zooms: [{ id: 'zoom', start: 0, duration: 30, scale: 2, x: 25, y: 65 }],
   layout: { radius: 22, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
+  tracks: DEFAULT_TRACKS,
 };
 const media = [{ id: 'video', name: 'recording.mp4', data: 'data:video/mp4;base64,AAEC/w==' }];
+// A version 2 file: the four default tracks are implied, never written.
+const { tracks: _defaults, ...legacyEdit } = edit;
 const project = () => ({
   version: 2,
   fps: 30,
-  ...structuredClone(edit),
+  ...structuredClone(legacyEdit),
   media: structuredClone(media),
   muted: ['music'],
 });
@@ -471,7 +475,7 @@ describe('portable project serialization', () => {
     expect(JSON.parse(text)).toMatchObject({
       version: 2,
       fps: 30,
-      ...edit,
+      ...legacyEdit,
       muted: ['music'],
       locked: ['voice', 'screen'],
       selectedTracks: ['camera'],
@@ -580,5 +584,120 @@ describe('portable project serialization', () => {
     expect(librarySizeWarning([{ size: 300_000_000 }, { size: 75_000_001 }])).toContain(
       'Library media totals 376 MB and a project file holds 375 MB.',
     );
+  });
+});
+
+describe('the version 4 track registry', () => {
+  const registry: TrackDef[] = [
+    { id: 'bg-1', label: 'Background · Full frame', kind: 'visual', role: 'background' },
+    DEFAULT_TRACKS[1],
+    DEFAULT_TRACKS[0],
+    DEFAULT_TRACKS[2],
+    DEFAULT_TRACKS[3],
+    { id: 'audio-1', label: 'Audio', kind: 'audio', gain: 1 },
+  ];
+  const v4 = () => ({
+    ...project(),
+    version: 4,
+    tracks: structuredClone(registry),
+    clips: [
+      ...structuredClone(edit.clips),
+      { id: 'under', assetId: 'video', track: 'bg-1', start: 0, duration: 30, offset: 0 },
+      { id: 'extra', assetId: 'video', track: 'audio-1', start: 5, duration: 20, offset: 0 },
+    ],
+    muted: ['audio-1'],
+    locked: ['bg-1'],
+    selectedTracks: ['audio-1', 'camera'],
+  });
+
+  it('opens legacy files with the four default tracks', () => {
+    expect(parseProject(JSON.stringify(project())).edit.tracks).toEqual(DEFAULT_TRACKS);
+  });
+
+  it('saves a changed registry as version 4 and reopens order, roles, gains and toggles', async () => {
+    const url = URL.createObjectURL(
+      new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),
+    );
+    try {
+      const opened = parseProject(JSON.stringify(v4()));
+      expect(opened.edit.tracks).toEqual(registry);
+      const saved = await (
+        await serializeProject(opened.edit, [{ ...asset, url }], opened.muted, {
+          locked: opened.locked,
+          selectedTracks: opened.selectedTracks,
+        })
+      ).file.text();
+      expect(JSON.parse(saved)).toMatchObject({ version: 4, tracks: registry });
+      const reopened = parseProject(saved);
+      expect(reopened.edit).toEqual(opened.edit);
+      expect(reopened).toMatchObject({
+        muted: ['audio-1'],
+        locked: ['bg-1'],
+        selectedTracks: ['audio-1', 'camera'],
+      });
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+
+  it('keeps the legacy version when only toggles changed, and drops toggles of removed tracks', async () => {
+    const url = URL.createObjectURL(
+      new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),
+    );
+    try {
+      const saved = await (
+        await serializeProject(edit, [{ ...asset, url }], ['music', 'audio-gone'], {
+          locked: ['bg-gone', 'voice'],
+          selectedTracks: ['bg-gone'],
+        })
+      ).file.text();
+      expect(JSON.parse(saved)).toMatchObject({
+        version: 2,
+        muted: ['music'],
+        locked: ['voice'],
+        selectedTracks: [],
+      });
+      expect(JSON.parse(saved)).not.toHaveProperty('tracks');
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+
+  it.each([
+    ['a v4 file without tracks', { tracks: undefined }, /tracks/i],
+    ['tracks in a v2 file', { version: 2 }, /version 4/i],
+    ['duplicate track IDs', { tracks: [...registry, registry[0]] }, /duplicate/i],
+    [
+      'an unknown role',
+      { tracks: [{ ...registry[0], role: 'overlay' }, ...registry.slice(1)] },
+      /role/i,
+    ],
+    [
+      'a negative gain',
+      { tracks: [...registry.slice(0, 5), { ...registry[5], gain: -1 }] },
+      /gain/i,
+    ],
+    [
+      'a non-numeric gain',
+      { tracks: [...registry.slice(0, 5), { ...registry[5], gain: '1' }] },
+      /gain/i,
+    ],
+    [
+      'an unknown kind',
+      { tracks: [...registry.slice(0, 5), { ...registry[5], kind: 'midi' }] },
+      /kind/i,
+    ],
+    ['a clip on a missing track', { tracks: registry.slice(0, 5) }, /track/i],
+    ['a mute of a missing track', { muted: ['nope'] }, /track/i],
+    ['a lock of a missing track', { locked: ['nope'] }, /track/i],
+  ])('rejects %s', (_name, change, error) => {
+    expect(() => parseProject(JSON.stringify({ ...v4(), ...change }))).toThrow(error);
+  });
+
+  it('checks each clip against its track kind', () => {
+    const opened = parseProject(JSON.stringify(v4())).edit;
+    expect(() => validateSources(opened, [asset])).not.toThrow();
+    expect(() => validateSources(opened, [{ ...asset, hasAudio: false }])).toThrow(/audio/i);
+    expect(() => validateSources(opened, [{ ...asset, kind: 'audio' }])).toThrow(/video|image/i);
   });
 });

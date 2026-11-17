@@ -1,17 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import {
   covers,
+  createTrack,
+  paintOrder,
+  DEFAULT_TRACKS,
   insertClip,
   lockedChange,
+  moveTrack,
+  placeClip,
   snapFrame,
   splitWhere,
   sourceFrame,
   splitClip,
+  trackNumber,
   trimClip,
   zoomAt,
   zoomCamera,
   zoomsOverlap,
   type Clip,
+  type TrackDef,
 } from './timeline-model';
 
 const clip: Clip = {
@@ -177,5 +184,95 @@ describe('editing a timeline in frames', () => {
     expect(snapFrame(50, [58, 42], 8)).toBe(58);
     expect(snapFrame(50, [41, 59], 8)).toBe(50);
     expect(snapFrame(50, [], 8)).toBe(50);
+  });
+});
+
+describe('the track registry', () => {
+  const bg = { id: 'bg', label: 'Background · Full frame', kind: 'visual', role: 'background' };
+  const tracks = [bg, ...DEFAULT_TRACKS] as TrackDef[];
+
+  it('numbers visual tracks bottom to top and audio tracks in order', () => {
+    expect(
+      ['bg', 'screen', 'camera', 'voice', 'music'].map((id) => trackNumber(tracks, id)),
+    ).toEqual(['V1', 'V2', 'V3', 'A1', 'A2']);
+  });
+
+  it('places a clip only where its track is free, allowing exact adjacency', () => {
+    const lane = [{ ...clip, track: 'camera', start: 30, duration: 60 }];
+    const at = (start: number, duration = 30) => ({
+      ...clip,
+      id: 'new',
+      track: 'camera',
+      start,
+      duration,
+    });
+    expect(placeClip(lane, at(0))).toEqual([...lane, at(0)]);
+    expect(placeClip(lane, at(90))).toEqual([...lane, at(90)]);
+    expect(placeClip(lane, at(1))).toBeNull();
+    expect(placeClip(lane, at(89))).toBeNull();
+    expect(placeClip(lane, at(0, 200))).toBeNull();
+    // Another track's clip at the same time never collides.
+    expect(placeClip(lane, { ...at(40), track: 'screen' })).toHaveLength(2);
+  });
+
+  it('creates a background beneath, a masked screen in front, and audio last, with fresh IDs', () => {
+    const background = createTrack(DEFAULT_TRACKS, 'background');
+    expect(background.tracks.map((t) => t.id)).toEqual([
+      background.id,
+      'screen',
+      'camera',
+      'voice',
+      'music',
+    ]);
+    expect(background.tracks[0]).toMatchObject({ kind: 'visual', role: 'background' });
+    const screen = createTrack(background.tracks, 'screen');
+    expect(screen.tracks.map((t) => t.id).slice(0, 4)).toEqual([
+      background.id,
+      'screen',
+      'camera',
+      screen.id,
+    ]);
+    const audio = createTrack(screen.tracks, 'audio');
+    expect(audio.tracks.at(-1)).toEqual({
+      id: audio.id,
+      label: expect.any(String),
+      kind: 'audio',
+      gain: 1,
+    });
+    const ids = audio.tracks.map((t) => t.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(new Set(audio.tracks.map((t) => t.label)).size).toBe(ids.length);
+  });
+
+  it('paints back to front, with only the lowest track of each mask role painting its mask', () => {
+    const second = { id: 'screen-2', label: 'Screen 2', kind: 'visual', role: 'screen' } as const;
+    expect(paintOrder([...tracks, second])).toEqual([
+      { id: 'bg', role: 'background', placeholder: false },
+      { id: 'screen', role: 'screen', placeholder: true },
+      { id: 'camera', role: 'camera', placeholder: true },
+      { id: 'screen-2', role: 'screen', placeholder: false },
+    ]);
+  });
+
+  it('moves a track only past a neighbour of its own kind', () => {
+    const order = (list: TrackDef[]) => list.map((t) => t.id);
+    expect(order(moveTrack(tracks, 'bg', 1))).toEqual(['screen', 'bg', 'camera', 'voice', 'music']);
+    expect(order(moveTrack(tracks, 'camera', -1))).toEqual([
+      'bg',
+      'camera',
+      'screen',
+      'voice',
+      'music',
+    ]);
+    expect(moveTrack(tracks, 'camera', 1)).toBe(tracks);
+    expect(moveTrack(tracks, 'bg', -1)).toBe(tracks);
+    expect(moveTrack(tracks, 'voice', -1)).toBe(tracks);
+    expect(order(moveTrack(tracks, 'music', -1))).toEqual([
+      'bg',
+      'screen',
+      'camera',
+      'music',
+      'voice',
+    ]);
   });
 });

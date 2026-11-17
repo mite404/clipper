@@ -1,4 +1,11 @@
-export type Track = 'screen' | 'camera' | 'voice' | 'music';
+/** A track's stable ID. Its kind, role and gain come from the edit's track registry. */
+export type Track = string;
+/** Where a visual track paints: the full stage beneath everything, or one of the two masks. */
+export type VisualRole = 'background' | 'screen' | 'camera';
+/** One registry entry. Visual tracks are listed back to front, audio tracks in A order. */
+export type TrackDef =
+  | { id: Track; label: string; kind: 'visual'; role: VisualRole }
+  | { id: Track; label: string; kind: 'audio'; gain: number };
 export type Clip = {
   id: string;
   assetId: string;
@@ -20,8 +27,19 @@ export type Zoom = {
   source?: { assetId: string; clipId: string; start: number; x: number; y: number };
 };
 export const FPS = 30;
-/** Music's linear amplitude in playback and export. */
-export const MUSIC_GAIN = 0.22;
+// Music's linear amplitude in playback and export.
+const MUSIC_GAIN = 0.22;
+/** The four lanes every project had before the registry, and every version 2 or 3 file opens with. */
+export const DEFAULT_TRACKS: TrackDef[] = [
+  { id: 'screen', label: 'Screen recording', kind: 'visual', role: 'screen' },
+  { id: 'camera', label: 'Talking head', kind: 'visual', role: 'camera' },
+  { id: 'voice', label: 'Voiceover', kind: 'audio', gain: 1 },
+  { id: 'music', label: 'Music', kind: 'audio', gain: MUSIC_GAIN },
+];
+/** What a creation target makes: a full-frame background, a masked screen, or an audio track. */
+export type NewTrack = 'background' | 'screen' | 'audio';
+const NEW_LABELS = { background: 'Background', screen: 'Screen', audio: 'Audio' };
+const NEW_SUFFIX = { background: ' · Full frame', screen: ' · Masked', audio: '' };
 /** Limits every zoom obeys, whether drawn in the inspector, opened from a file or generated. */
 export const ZOOM_LIMITS = { minFrames: 6, minScale: 1, maxScale: 3 };
 
@@ -145,4 +163,74 @@ export function zoomCamera(zooms: Zoom[], frame: number): { scale: number; x: nu
   if (!zoom || scale === 1) return { scale: 1, x: 0, y: 0 };
   const weight = (scale - 1) / (zoom.scale - 1);
   return { scale, x: (50 - zoom.x) * scale * weight, y: (50 - zoom.y) * scale * weight };
+}
+
+/** Display number: visual tracks count V1 upward from the back, audio tracks A1 downward. */
+export function trackNumber(tracks: TrackDef[], id: Track): string {
+  const track = tracks.find((t) => t.id === id);
+  if (!track) return '';
+  const kin = tracks.filter((t) => t.kind === track.kind);
+  return `${track.kind === 'visual' ? 'V' : 'A'}${kin.indexOf(track) + 1}`;
+}
+
+/** Add a clip only where its track has no clip overlapping it; touching edges are allowed. */
+export function placeClip(clips: Clip[], clip: Clip): Clip[] | null {
+  const occupied = clips.some(
+    (c) =>
+      c.track === clip.track &&
+      c.start < clip.start + clip.duration &&
+      clip.start < c.start + c.duration,
+  );
+  return occupied ? null : [...clips, clip];
+}
+
+/**
+ * A new unlocked track with a fresh random ID: a background goes beneath every visual track, a
+ * masked screen in front of them, and audio after the last audio track.
+ */
+export function createTrack(tracks: TrackDef[], kind: NewTrack): { tracks: TrackDef[]; id: Track } {
+  const id = `${kind}-${crypto.randomUUID().slice(0, 8)}`;
+  const count = tracks.filter((t) =>
+    kind === 'audio' ? t.kind === 'audio' : t.kind === 'visual' && t.role === kind,
+  ).length;
+  const label = `${NEW_LABELS[kind]}${count ? ` ${count + 1}` : ''}${NEW_SUFFIX[kind]}`;
+  const track: TrackDef =
+    kind === 'audio'
+      ? { id, label, kind: 'audio', gain: 1 }
+      : { id, label, kind: 'visual', role: kind };
+  const at = {
+    background: 0,
+    screen: tracks.map((t) => t.kind).lastIndexOf('visual') + 1,
+    audio: tracks.length,
+  }[kind];
+  return { tracks: [...tracks.slice(0, at), track, ...tracks.slice(at)], id };
+}
+
+/**
+ * Swap a track with its nearest neighbour of the same kind, toward the front (+1) or back (-1).
+ * Returns the same list at either end.
+ */
+export function moveTrack(tracks: TrackDef[], id: Track, step: 1 | -1): TrackDef[] {
+  const from = tracks.findIndex((t) => t.id === id);
+  const kin = tracks.map((t, i) => (t.kind === tracks[from]?.kind ? i : -1)).filter((i) => i >= 0);
+  const to = kin[kin.indexOf(from) + step];
+  if (from < 0 || to === undefined) return tracks;
+  const next = [...tracks];
+  [next[from], next[to]] = [next[to], next[from]];
+  return next;
+}
+
+/**
+ * Visual tracks in paint order, back to front. Only the lowest screen and camera track paints its
+ * role's empty mask, so a masked track stacked above another never hides it.
+ */
+export function paintOrder(
+  tracks: TrackDef[],
+): { id: Track; role: VisualRole; placeholder: boolean }[] {
+  const visual = tracks.flatMap((t) => (t.kind === 'visual' ? [t] : []));
+  return visual.map(({ id, role }) => ({
+    id,
+    role,
+    placeholder: role !== 'background' && visual.find((t) => t.role === role)?.id === id,
+  }));
 }

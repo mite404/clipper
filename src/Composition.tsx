@@ -10,7 +10,7 @@ import {
 import { useMemo } from 'react';
 import type { Asset } from './media';
 import { cameraTransform, coverRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
-import { MUSIC_GAIN, type Clip, type Track, type Zoom } from './timeline-model';
+import { paintOrder, type Clip, type Track, type TrackDef, type Zoom } from './timeline-model';
 import { cursorFrame } from './cursor-render';
 import { prepareFraming, framingAt } from './framing';
 
@@ -19,11 +19,13 @@ export type CompositionProps = {
   assets: Asset[];
   zooms: Zoom[];
   layout: Layout;
+  /** The ordered registry: visual tracks paint back to front, audio tracks mix at their gains. */
+  tracks: TrackDef[];
   muted: Track[];
 };
 
 /** Frame-driven video masks, source trims, audio and camera motion share Remotion's clock. */
-export function Composition({ clips, assets, zooms, layout, muted }: CompositionProps) {
+export function Composition({ clips, assets, zooms, layout, tracks, muted }: CompositionProps) {
   const frame = useCurrentFrame();
   const size = useVideoConfig();
   const scale = size.width / STAGE.width;
@@ -33,6 +35,7 @@ export function Composition({ clips, assets, zooms, layout, muted }: Composition
   );
   const camera = framingAt(zooms, paths, frame);
   const cursor = cursorFrame(clips, assets, frame, layout, size);
+  const gains = new Map(tracks.flatMap((t) => (t.kind === 'audio' ? [[t.id, t.gain]] : [])));
   return (
     <AbsoluteFill
       style={{
@@ -40,28 +43,31 @@ export function Composition({ clips, assets, zooms, layout, muted }: Composition
         color: '#fff',
       }}
     >
-      {(['screen', 'camera'] as const).map((track) => {
-        const mask = maskRect(track, layout, size); // → actual render-pixel rect
-        const view = cameraTransform(mask, track === 'screen' ? camera : undefined); // → affine
-        const crop = cropPosition(track, layout); // → percent
+      {paintOrder(tracks).map(({ id, role, placeholder }) => {
+        const mask = maskRect(role, layout, size); // → actual render-pixel rect
+        const view = cameraTransform(mask, role === 'screen' ? camera : undefined); // → affine
+        const crop = cropPosition(role, layout); // → percent
         return (
           <div
-            key={track}
-            data-testid={`${track}-mask`}
+            key={id}
+            data-testid={`${id}-mask`}
+            data-role={role}
             style={{
               position: 'absolute',
               left: mask.x,
               top: mask.y,
               width: mask.width,
               height: mask.height,
-              borderRadius: layout.radius * scale,
+              borderRadius: role === 'background' ? 0 : layout.radius * scale,
               overflow: 'hidden',
-              background: '#10181b',
-              boxShadow: `0 ${25 * scale}px ${65 * scale}px #0005`,
+              ...(placeholder && {
+                background: '#10181b',
+                boxShadow: `0 ${25 * scale}px ${65 * scale}px #0005`,
+              }),
             }}
           >
             <div
-              data-testid={`${track}-content`}
+              data-testid={`${id}-content`}
               style={{
                 width: '100%',
                 height: '100%',
@@ -70,7 +76,7 @@ export function Composition({ clips, assets, zooms, layout, muted }: Composition
               }}
             >
               {clips
-                .filter((clip) => clip.track === track)
+                .filter((clip) => clip.track === id)
                 .map((clip) => {
                   const asset = assets.find((a) => a.id === clip.assetId);
                   if (!asset) return null;
@@ -104,7 +110,7 @@ export function Composition({ clips, assets, zooms, layout, muted }: Composition
                     </Sequence>
                   );
                 })}
-              {track === 'screen' && cursor && (
+              {id === 'screen' && cursor && (
                 <Img
                   data-testid="cursor-preview"
                   src={cursor.imageDataUrl}
@@ -127,7 +133,7 @@ export function Composition({ clips, assets, zooms, layout, muted }: Composition
         );
       })}
       {clips
-        .filter((clip) => clip.track === 'voice' || clip.track === 'music')
+        .filter((clip) => gains.has(clip.track))
         .map((clip) => {
           const asset = assets.find((a) => a.id === clip.assetId);
           return (
@@ -142,7 +148,7 @@ export function Composition({ clips, assets, zooms, layout, muted }: Composition
                 <Audio
                   src={asset.url}
                   trimBefore={clip.offset}
-                  volume={muted.includes(clip.track) ? 0 : clip.track === 'music' ? MUSIC_GAIN : 1}
+                  volume={muted.includes(clip.track) ? 0 : gains.get(clip.track)}
                 />
               </Sequence>
             )

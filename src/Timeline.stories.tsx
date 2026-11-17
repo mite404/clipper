@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Timeline, TRACKS, type TrackToggles } from './Timeline';
+import { Timeline, type TrackToggles } from './Timeline';
 import type { Asset } from './media';
-import { FPS, type Clip, type Track } from './timeline-model';
+import { DEFAULT_TRACKS as TRACKS, FPS, type Clip, type Track } from './timeline-model';
 import './styles.css';
 
 const CASES = {
@@ -56,6 +56,7 @@ function TimelineOverflow() {
     <>
       <section className="sequence-area" style={{ height: 300, marginBottom: 70 }}>
         <Timeline
+          registry={TRACKS}
           clips={clips}
           assets={
             mode === CASES['Demo data']

@@ -1,3 +1,5 @@
+import type { VisualRole } from './timeline-model';
+
 export type Layout = {
   swapped?: boolean;
   radius: number;
@@ -16,6 +18,7 @@ type Camera = { scale: number; x: number; y: number };
 type Affine = { scale: number; x: number; y: number };
 const STILL: Camera = { scale: 1, x: 0, y: 0 };
 type VideoTrack = 'screen' | 'camera';
+const CENTER: Point = { x: 50, y: 50 };
 
 /** Normalized edit coordinates. Actual composer and export dimensions are selected separately. */
 export const STAGE = { width: 1280, height: 720 };
@@ -24,8 +27,12 @@ const MARGIN = 10;
 const GAP = 18;
 const MASK_WIDTH = { screen: 880, camera: STAGE.width - 2 * MARGIN - GAP - 880 };
 
-/** Mask in render pixels, or normalized edit coordinates when size is omitted. */
-export function maskRect(track: VideoTrack, layout: Layout, size: Size = STAGE): Rect {
+/**
+ * Where a visual role paints, in render pixels or normalized edit coordinates when size is
+ * omitted: a background fills the whole stage, a screen or camera its mask.
+ */
+export function maskRect(track: VisualRole, layout: Layout, size: Size = STAGE): Rect {
+  if (track === 'background') return { x: 0, y: 0, ...size };
   const first: VideoTrack = layout.swapped ? 'camera' : 'screen';
   const scaleX = size.width / STAGE.width;
   const scaleY = size.height / STAGE.height;
@@ -37,8 +44,9 @@ export function maskRect(track: VideoTrack, layout: Layout, size: Size = STAGE):
   };
 }
 
-/** Crop position of a track in percent, with the meaning of CSS `object-position`. */
-export function cropPosition(track: VideoTrack, layout: Layout): Point {
+/** Crop position of a role in percent, with the meaning of CSS `object-position`. */
+export function cropPosition(track: VisualRole, layout: Layout): Point {
+  if (track === 'background') return CENTER;
   return track === 'screen'
     ? { x: layout.screenX, y: layout.screenY }
     : { x: layout.cameraX, y: layout.cameraY };

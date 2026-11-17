@@ -239,7 +239,7 @@ function LibraryRecord({ view, worst = false }: { view: string; worst?: boolean 
   if (view === 'source')
     return (
       <div style={{ width: 300, padding: 20 }}>
-        <SourceMonitor asset={data[0]} onInsert={() => {}} />
+        <SourceMonitor asset={data[0]} tracks={INITIAL_EDIT.tracks} onInsert={() => {}} />
       </div>
     );
   if (view === 'inspector')
@@ -276,6 +276,7 @@ function LibraryRecord({ view, worst = false }: { view: string; worst?: boolean 
       <div style={{ padding: 20 }}>
         {toggle}
         <Timeline
+          registry={INITIAL_EDIT.tracks}
           clips={clips}
           assets={data}
           zooms={[zoom]}

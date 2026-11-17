@@ -13,6 +13,17 @@ describe('laying out the stage', () => {
     expect(maskRect('camera', swapped)).toEqual({ x: 10, y: 10, width: 362, height: 700 });
   });
 
+  it('gives a background the whole actual stage and a centered crop, whatever the layout', () => {
+    for (const size of [STAGE, { width: 1920, height: 1080 }, { width: 3840, height: 2160 }])
+      for (const swapped of [false, true])
+        expect(maskRect('background', { ...layout, swapped }, size)).toEqual({
+          x: 0,
+          y: 0,
+          ...size,
+        });
+    expect(cropPosition('background', layout)).toEqual({ x: 50, y: 50 });
+  });
+
   it('uses actual HD and 4K pixels without changing normalized crop or zoom geometry', () => {
     const cases = [
       [

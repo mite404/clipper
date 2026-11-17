@@ -92,8 +92,9 @@ test('checkbox Enter toggles, select Enter opens its picker, and Space stays tra
   await track.focus();
   await page.keyboard.press('Enter');
   await expect(track).toHaveValue('screen');
+  // Targets list like the timeline rows, frontmost visual first, so Screen's next option is audio.
   await page.keyboard.press('ArrowDown');
-  await expect(track).toHaveValue('camera');
+  await expect(track).toHaveValue('voice');
   await expect(state).toHaveText('Paused');
 
   await page.locator('.app-header').click({ position: { x: 4, y: 4 } });
@@ -395,7 +396,11 @@ test.describe('Delete follows the last clicked or focused panel', () => {
   }) => {
     await clips(page).first().click();
     await pool(page).focus();
-    const grip = page.getByRole('slider', { name: 'Trim right edge' }).first();
+    // The selected screen clip's own grip: rows list frontmost first, so Talking head comes first.
+    const grip = page
+      .getByTestId('track-screen')
+      .getByRole('slider', { name: 'Trim right edge' })
+      .first();
     const box = (await grip.boundingBox())!;
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
     await page.mouse.down();

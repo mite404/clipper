@@ -55,7 +55,9 @@ export function classifyChange(
 ): HistoryStep {
   const clips = listChanges('clips', current.clips, next.clips); // → Change[] | null
   const zooms = listChanges('zooms', current.zooms, next.zooms); // → Change[] | null
-  if (!clips || !zooms) return { kind: 'push', gesture: null };
+  // A created or reordered track is a step of its own, never part of a drag.
+  const registry = JSON.stringify(current.tracks) !== JSON.stringify(next.tracks);
+  if (!clips || !zooms || registry) return { kind: 'push', gesture: null };
   const changes = [...clips, ...zooms, ...fieldChanges('layout', current.layout, next.layout)];
   if (!changes.length) return { kind: 'none' };
   const continues =

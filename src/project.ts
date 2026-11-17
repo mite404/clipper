@@ -1,12 +1,22 @@
 import type { Layout } from './stage';
 import { openMedia, type Asset } from './media';
-import { FPS, ZOOM_LIMITS, zoomsOverlap, type Clip, type Track, type Zoom } from './timeline-model';
+import {
+  DEFAULT_TRACKS,
+  FPS,
+  ZOOM_LIMITS,
+  zoomsOverlap,
+  type Clip,
+  type Track,
+  type TrackDef,
+  type Zoom,
+} from './timeline-model';
 import { parseCursorTrack, type CursorTrack } from './cursor';
 
 // No clip or zoom may end later than this: 24 hours of timeline.
 const MAX_FRAMES = 24 * 60 * 60 * FPS;
 
-export type Edit = { clips: Clip[]; zooms: Zoom[]; layout: Layout };
+/** The undoable edit. `tracks` is the ordered registry every clip's `track` resolves through. */
+export type Edit = { clips: Clip[]; zooms: Zoom[]; layout: Layout; tracks: TrackDef[] };
 
 function object(value: unknown, field: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -37,10 +47,30 @@ function frame(value: unknown, field: string, min = 0): number {
   return result;
 }
 
-function track(value: unknown): Track {
-  if (value !== 'screen' && value !== 'camera' && value !== 'voice' && value !== 'music')
-    throw new Error('Unknown track. Expected screen, camera, voice, or music.');
-  return value;
+function trackDef(value: unknown, i: number): TrackDef {
+  const item = object(value, `tracks[${i}]`);
+  const id = string(item.id, `tracks[${i}].id`);
+  const label = string(item.label, `tracks[${i}].label`);
+  if (item.kind === 'audio')
+    return { id, label, kind: 'audio', gain: number(item.gain, `tracks[${i}].gain`, 0, 16) };
+  if (item.kind !== 'visual') throw new Error(`tracks[${i}].kind must be visual or audio.`);
+  if (item.role !== 'background' && item.role !== 'screen' && item.role !== 'camera')
+    throw new Error(`tracks[${i}].role must be background, screen or camera.`);
+  return { id, label, kind: 'visual', role: item.role };
+}
+
+// Version 4 carries the registry; older files imply the four default tracks.
+function registry(root: Record<string, unknown>): TrackDef[] {
+  if (root.version !== 4) {
+    if (root.tracks !== undefined) throw new Error('A track registry requires version 4.');
+    return structuredClone(DEFAULT_TRACKS);
+  }
+  const tracks = array(root.tracks, 'tracks').map(trackDef);
+  unique(
+    tracks.map((t) => t.id),
+    'track',
+  );
+  return tracks;
 }
 
 function unique(ids: string[], field: string) {
@@ -78,8 +108,8 @@ function zoomSource(value: unknown, clips: Clip[], duration: number): NonNullabl
 function imageKind(kind: unknown, data: string, version: unknown): { kind?: 'image' } {
   const image = /^data:image\/(png|jpeg);base64,/.test(data);
   if (!image && kind === undefined) return {};
-  if (version !== 3 || !image || kind !== 'image')
-    throw new Error('Image kind and PNG/JPEG MIME require version 3.');
+  if (typeof version !== 'number' || version < 3 || !image || kind !== 'image')
+    throw new Error('Image kind and PNG/JPEG MIME require version 3 or later.');
   return { kind: 'image' };
 }
 
@@ -102,9 +132,15 @@ export function parseProject(text: string): {
     throw new Error(
       'Version 1 edit lists contain metadata only, not portable media. Save a version 2 project.',
     );
-  if (root.version !== 2 && root.version !== 3)
-    throw new Error('Unsupported project version; expected version 2 or 3.');
+  if (root.version !== 2 && root.version !== 3 && root.version !== 4)
+    throw new Error('Unsupported project version; expected version 2, 3 or 4.');
   if (root.fps !== FPS) throw new Error(`Unsupported fps; expected ${FPS}.`);
+  const tracks = registry(root);
+  const track = (value: unknown): Track => {
+    if (typeof value !== 'string' || !tracks.some((t) => t.id === value))
+      throw new Error(`Unknown track ${String(value)}; every reference must name a listed track.`);
+    return value;
+  };
 
   const media = array(root.media, 'media').map((entry, i) => {
     const item = object(entry, `media[${i}]`);
@@ -202,17 +238,17 @@ export function parseProject(text: string): {
     layout.swapped = settings.swapped;
   }
   // Track toggles validate like muted. Files saved before locks and track selection omit them.
-  const tracks = (field: 'muted' | 'locked' | 'selectedTracks', fallback?: unknown[]) => {
+  const toggles = (field: 'muted' | 'locked' | 'selectedTracks', fallback?: unknown[]) => {
     const list = array(root[field] === undefined ? fallback : root[field], field).map(track);
     unique(list, `${field} track`);
     return list;
   };
   return {
-    edit: { clips, zooms, layout },
+    edit: { clips, zooms, layout, tracks },
     media,
-    muted: tracks('muted'),
-    locked: tracks('locked', []),
-    selectedTracks: tracks('selectedTracks', []),
+    muted: toggles('muted'),
+    locked: toggles('locked', []),
+    selectedTracks: toggles('selectedTracks', []),
   };
 }
 
@@ -233,11 +269,22 @@ export function validateSources(edit: Edit, assets: Asset[]): void {
     range(clip.start, clip.duration, `Clip ${clip.id} timeline`);
     if (asset.kind !== 'image' && clip.offset + clip.duration > asset.duration)
       throw new Error(`Clip ${clip.id} source range exceeds ${asset.name}'s decoded duration.`);
-    if ((clip.track === 'screen' || clip.track === 'camera') && asset.kind === 'audio')
-      throw new Error(`Clip ${clip.id} on ${clip.track} requires video or image media.`);
-    if ((clip.track === 'voice' || clip.track === 'music') && !asset.hasAudio)
-      throw new Error(`Clip ${clip.id} on ${clip.track} requires an audio stream.`);
+    const track = edit.tracks.find((t) => t.id === clip.track);
+    if (!track) throw new Error(`Clip ${clip.id} is on unknown track ${clip.track}.`);
+    if (track.kind === 'visual' && asset.kind === 'audio')
+      throw new Error(`Clip ${clip.id} on ${track.label} requires video or image media.`);
+    if (track.kind === 'audio' && !asset.hasAudio)
+      throw new Error(`Clip ${clip.id} on ${track.label} requires an audio stream.`);
   }
+}
+
+// The version a file needs and its edit fields. Only a registry other than the default four
+// tracks is written, as version 4, so older builds still open every other project.
+function fileEdit(edit: Edit, media: { kind?: 'image' }[]) {
+  const { tracks, ...rest } = edit;
+  if (JSON.stringify(tracks) !== JSON.stringify(DEFAULT_TRACKS))
+    return { version: 4, tracks: { tracks }, ...rest };
+  return { version: media.some((item) => item.kind === 'image') ? 3 : 2, tracks: {}, ...rest };
 }
 
 // Source bytes one project file can embed. V8 refuses strings past 536,870,888 characters, and Save
@@ -294,17 +341,24 @@ function spareBytes(assets: Asset[], usedIds: Set<string>): number {
 /**
  * Embed local source bytes, never object URLs or browser-specific decoded metadata.
  * Media no clip uses is embedded too while it fits and can be read; the rest is named in `omitted`.
+ * An edit without a registry is the four legacy tracks, as export reads it.
  * @throws When the edit is invalid, when the media its clips use exceeds what one file can hold
  * (before any media is read), or when such media can no longer be read.
  */
 export async function serializeProject(
-  edit: Edit,
+  edit: Omit<Edit, 'tracks'> & Partial<Pick<Edit, 'tracks'>>,
   assets: Asset[],
   muted: Track[],
   toggles: { locked: Track[]; selectedTracks: Track[] } = { locked: [], selectedTracks: [] },
 ): Promise<{ file: Blob; omitted: string[] }> {
-  const snapshot = structuredClone(edit);
-  const trackSnapshot = { muted: [...muted], ...structuredClone(toggles) };
+  const snapshot: Edit = { tracks: DEFAULT_TRACKS, ...structuredClone(edit) };
+  // An undone track creation can leave toggles naming a track the registry no longer has.
+  const listed = (ids: Track[]) => ids.filter((id) => snapshot.tracks.some((t) => t.id === id));
+  const trackSnapshot = {
+    muted: listed(muted),
+    locked: listed(toggles.locked),
+    selectedTracks: listed(toggles.selectedTracks),
+  };
   validateSources(snapshot, assets);
   const usedIds = new Set(snapshot.clips.map((clip) => clip.assetId));
   let spare = spareBytes(assets, usedIds); // bytes left for media no clip uses
@@ -328,16 +382,18 @@ export async function serializeProject(
       ...(asset.cursor ? { cursor: asset.cursor } : {}),
     });
   }
-  const version = media.some((item) => item.kind === 'image') ? 3 : 2;
+  const { version, tracks, ...rest } = fileEdit(snapshot, media);
   const parsed = parseProject(
-    JSON.stringify({ version, fps: FPS, ...snapshot, media, ...trackSnapshot }),
+    JSON.stringify({ version, fps: FPS, ...rest, ...tracks, media, ...trackSnapshot }),
   );
+  const { tracks: _parsedTracks, ...parsedEdit } = parsed.edit;
   const file = new Blob(
     [
       JSON.stringify({
         version,
         fps: FPS,
-        ...parsed.edit,
+        ...parsedEdit,
+        ...(tracks.tracks && { tracks: parsed.edit.tracks }),
         media: parsed.media,
         muted: parsed.muted,
         locked: parsed.locked,

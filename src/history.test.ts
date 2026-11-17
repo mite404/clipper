@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
 import { classifyChange, type Gesture } from './history';
 import type { Edit } from './project';
+import { DEFAULT_TRACKS, createTrack, moveTrack } from './timeline-model';
 
 const base: Edit = {
   clips: [
@@ -9,6 +10,7 @@ const base: Edit = {
   ],
   zooms: [{ id: 'z', start: 10, duration: 60, scale: 1.8, x: 50, y: 50 }],
   layout: { radius: 22, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
+  tracks: DEFAULT_TRACKS,
 };
 const radius = (edit: Edit, value: number): Edit => ({
   ...edit,
@@ -120,4 +122,15 @@ it('does not continue a gesture after the edit was replaced by an undo or an ope
   const gesture = step.kind === 'none' ? null : step.gesture;
   // The editor is back on `base`, which is not the edit the gesture produced.
   expect(classifyChange(base, radius(base, 24), gesture, 10).kind).toBe('push');
+});
+
+it('makes a created or reordered track its own step, even mid-drag', () => {
+  expect(
+    run(base, [
+      [0, (edit) => radius(edit, 23)],
+      [10, (edit) => ({ ...edit, tracks: createTrack(edit.tracks, 'background').tracks })],
+      [20, (edit) => ({ ...edit, tracks: moveTrack(edit.tracks, 'camera', -1) })],
+      [30, (edit) => ({ ...edit, tracks: structuredClone(edit.tracks) })],
+    ]),
+  ).toEqual(['push', 'push', 'push', 'none']);
 });

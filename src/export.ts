@@ -18,12 +18,14 @@ import {
 import { openMedia, type Asset } from './media';
 import { cameraTransform, coverRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
 import {
+  DEFAULT_TRACKS,
   FPS,
-  MUSIC_GAIN,
   covers,
+  paintOrder,
   sourceFrame,
   type Clip,
   type Track,
+  type TrackDef,
   type Zoom,
 } from './timeline-model';
 import { cursorDrawing, decodeCursorImages } from './cursor-render';
@@ -34,6 +36,9 @@ export type RenderVideoOptions = {
   assets: Asset[];
   zooms: Zoom[];
   layout: Layout;
+  /** The ordered registry: visual tracks paint back to front, audio tracks mix at their gains.
+   * Omitted, it is the four legacy tracks, as a v2 or v3 project reads. */
+  tracks?: TrackDef[];
   muted: Track[];
   width: 1920 | 3840;
   /** Explicit container, with no substitution. Omit for automatic MP4/WebM negotiation.
@@ -108,6 +113,7 @@ async function clipAudio(
 async function mixAudio(
   inputs: Map<string, Input>,
   clips: Clip[],
+  gains: Map<Track, number>,
   frames: number,
   check: () => void,
 ): Promise<AudioBuffer> {
@@ -121,44 +127,51 @@ async function mixAudio(
     const source = mixer.createBufferSource();
     source.buffer = joined;
     const gain = mixer.createGain();
-    gain.gain.value = clip.track === 'music' ? MUSIC_GAIN : 1;
+    gain.gain.value = gains.get(clip.track) ?? 1;
     source.connect(gain).connect(mixer.destination);
     source.start(clip.start / FPS);
   }
   return mixer.startRendering();
 }
 
+const isVisual = (tracks: TrackDef[], clip: Clip) =>
+  tracks.some((t) => t.id === clip.track && t.kind === 'visual');
+
 // A decoded picture for one video track at the frame being drawn.
 type Layer = { track: Track; image: HTMLCanvasElement | OffscreenCanvas | ImageBitmap };
 
-// Paint one composition frame in stage pixels: backdrop, then each track's mask, crop and zoom.
-// Anything that must move with the screen, such as a recorded cursor, is drawn inside its clip.
+// Paint one composition frame in stage pixels: backdrop, then each visual track back to front in
+// its role's rect, crop and zoom. Anything that must move with the screen, such as a recorded cursor, is drawn inside its clip.
 function drawFrame(
   context: CanvasRenderingContext2D,
   layout: Layout,
+  tracks: TrackDef[],
   camera: { scale: number; x: number; y: number },
   layers: Layer[],
   cursor: ReturnType<typeof cursorDrawing>,
 ): void {
   context.fillStyle = '#172324';
   context.fillRect(0, 0, STAGE.width, STAGE.height);
-  for (const track of ['screen', 'camera'] as const) {
-    const mask = maskRect(track, layout); // → stage rect
+  for (const { id, role, placeholder } of paintOrder(tracks)) {
+    const mask = maskRect(role, layout); // → stage rect
     context.save();
     context.beginPath();
-    context.roundRect(mask.x, mask.y, mask.width, mask.height, Math.max(0, layout.radius));
+    const radius = role === 'background' ? 0 : Math.max(0, layout.radius);
+    context.roundRect(mask.x, mask.y, mask.width, mask.height, radius);
     context.clip();
-    context.fillStyle = '#10181b';
-    context.fillRect(mask.x, mask.y, mask.width, mask.height);
-    const view = cameraTransform(mask, track === 'screen' ? camera : undefined); // → affine
+    if (placeholder) {
+      context.fillStyle = '#10181b';
+      context.fillRect(mask.x, mask.y, mask.width, mask.height);
+    }
+    const view = cameraTransform(mask, role === 'screen' ? camera : undefined); // → affine
     context.translate(view.x, view.y);
     context.scale(view.scale, view.scale);
     for (const layer of layers) {
-      if (layer.track !== track) continue;
-      const cover = coverRect(mask, layer.image, cropPosition(track, layout)); // → local rect
+      if (layer.track !== id) continue;
+      const cover = coverRect(mask, layer.image, cropPosition(role, layout)); // → local rect
       context.drawImage(layer.image, cover.x, cover.y, cover.width, cover.height);
     }
-    if (track === 'screen' && cursor) {
+    if (id === 'screen' && cursor) {
       context.save();
       context.translate(cursor.x + cursor.hotspotX, cursor.y + cursor.hotspotY);
       context.rotate((cursor.rotation * Math.PI) / 180);
@@ -204,7 +217,7 @@ async function openInputs(
 
 export type RenderFrameImageOptions = Pick<
   RenderVideoOptions,
-  'clips' | 'assets' | 'zooms' | 'layout' | 'width' | 'signal'
+  'clips' | 'assets' | 'zooms' | 'layout' | 'tracks' | 'width' | 'signal'
 > & { frame: number };
 
 // Validate a timed visual once before asking its decoder for frames.
@@ -224,6 +237,7 @@ export async function renderFrameImage({
   assets,
   zooms,
   layout,
+  tracks = DEFAULT_TRACKS,
   frame,
   width,
   signal,
@@ -244,9 +258,7 @@ export async function renderFrameImage({
   const inputs = new Map<string, Input>();
   const images = new Map<string, ImageBitmap>();
   try {
-    const visible = clips.filter(
-      (clip) => (clip.track === 'screen' || clip.track === 'camera') && covers(clip, frame),
-    );
+    const visible = clips.filter((clip) => isVisual(tracks, clip) && covers(clip, frame));
     const cursorImages = await decodeCursorImages(assets);
     await openInputs(inputs, images, visible, assets, check, signal);
     const layers: Layer[] = [];
@@ -263,6 +275,7 @@ export async function renderFrameImage({
     drawFrame(
       context,
       layout,
+      tracks,
       framingAt(zooms, paths, frame),
       layers,
       cursorDrawing(clips, assets, frame, layout, cursorImages),
@@ -287,6 +300,7 @@ export async function renderVideo({
   assets,
   zooms,
   layout,
+  tracks = DEFAULT_TRACKS,
   muted,
   width,
   format,
@@ -299,9 +313,10 @@ export async function renderVideo({
   const frames = Math.max(0, ...clips.map((clip) => clip.start + clip.duration));
   if (!Number.isInteger(frames) || frames <= 0) throw new Error('Add clips before exporting.');
   const height = (width * 9) / 16;
+  const gains = new Map(tracks.flatMap((t) => (t.kind === 'audio' ? [[t.id, t.gain]] : [])));
   const audioClips = clips.filter(
     (clip) =>
-      (clip.track === 'voice' || clip.track === 'music') &&
+      gains.has(clip.track) &&
       !muted.includes(clip.track) &&
       assets.some((asset) => asset.id === clip.assetId && asset.hasAudio),
   );
@@ -362,10 +377,10 @@ export async function renderVideo({
   try {
     const cursorImages = await decodeCursorImages(assets);
     await openInputs(inputs, images, clips, assets, check, signal);
-    const mixed = audio && (await mixAudio(inputs, audioClips, frames, check));
+    const mixed = audio && (await mixAudio(inputs, audioClips, gains, frames, check));
     check();
     const visuals = [];
-    for (const clip of clips.filter((clip) => clip.track === 'screen' || clip.track === 'camera')) {
+    for (const clip of clips.filter((clip) => isVisual(tracks, clip))) {
       const image = images.get(clip.assetId);
       if (image) {
         visuals.push({ kind: 'image' as const, clip, image });
@@ -406,6 +421,7 @@ export async function renderVideo({
       drawFrame(
         context,
         layout,
+        tracks,
         framingAt(zooms, paths, frame),
         layers,
         cursorDrawing(clips, assets, frame, layout, cursorImages),

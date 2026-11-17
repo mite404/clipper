@@ -38,16 +38,19 @@ import {
 import { Composition } from './Composition';
 import { IconButton, MediaLibrary, Waveform, timecode } from './components';
 import { type Asset, DEFAULT_STILL_FRAMES, loadDemo, readMedia, unreadableNamesake } from './media';
-import { Timeline, TRACKS } from './Timeline';
+import { Timeline } from './Timeline';
 import {
+  DEFAULT_TRACKS,
   FPS,
   type Clip,
   type Track,
+  type TrackDef,
   type Zoom,
   insertClip,
   lockedChange,
   splitClip,
   splitWhere,
+  trackNumber,
   ZOOM_LIMITS,
   zoomsOverlap,
 } from './timeline-model';
@@ -98,6 +101,7 @@ export const INITIAL_EDIT: Edit = {
   ],
   zooms: [],
   layout: { radius: 22, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
+  tracks: DEFAULT_TRACKS,
 };
 
 // The status line for one import: the count of files read, then every failure by name.
@@ -207,9 +211,26 @@ function sourceRangeEnd(asset?: Asset): number {
   return asset.kind === 'image' ? DEFAULT_STILL_FRAMES : asset.duration;
 }
 
-function sourceTracks(kind?: Asset['kind']) {
-  if (kind === 'image') return TRACKS.filter((t) => ['screen', 'camera'].includes(t.id));
-  return TRACKS.filter((t) => kind !== 'audio' || ['voice', 'music'].includes(t.id));
+// Tracks a source can be inserted onto: stills and audio keep to their kind, video goes anywhere.
+// Display order: visual tracks front to back, then audio, the way the timeline lists them.
+function sourceTracks(tracks: TrackDef[], kind?: Asset['kind']): TrackDef[] {
+  const fits = tracks.filter(
+    (t) => kind === 'video' || (t.kind === 'audio') === (kind === 'audio'),
+  );
+  return [
+    ...fits.filter((t) => t.kind === 'visual').reverse(),
+    ...fits.filter((t) => t.kind === 'audio'),
+  ];
+}
+
+const role = (track: TrackDef) => (track.kind === 'audio' ? 'audio' : track.role);
+const labelOf = (tracks: TrackDef[], id: Track) => tracks.find((t) => t.id === id)?.label ?? id;
+
+// The insertion target a newly chosen source starts on: the first audio track for audio, else
+// the lowest screen, and a full-frame background only when it is the sole visual track.
+function defaultTrack(tracks: TrackDef[], kind?: Asset['kind']): Track {
+  const preference = kind === 'audio' ? ['audio'] : ['screen', 'camera', 'background'];
+  return preference.map((want) => tracks.find((t) => role(t) === want)).find(Boolean)?.id ?? '';
 }
 
 function resizeStill(edit: Edit, clip: Clip, duration: number): Edit {
@@ -234,16 +255,19 @@ function stillInsertionError(asset: Asset, edit: Edit, assets: Asset[]): string 
 /** Source preview with explicit in/out points and track-targeted ripple insertion. */
 export function SourceMonitor({
   asset,
+  tracks,
   onInsert,
   blocked = false,
 }: {
   asset?: Asset;
+  /** The edit's registry, so the target list follows created and reordered tracks. */
+  tracks: TrackDef[];
   onInsert: (track: Track, offset: number, duration: number) => void;
   /** Pause source playback while workspace controls cannot be used. */
   blocked?: boolean;
 }) {
   const [sourceUrl, setSourceUrl] = useState(() => asset?.url);
-  const [track, setTrack] = useState<Track>(asset?.kind === 'audio' ? 'voice' : 'screen');
+  const [track, setTrack] = useState<Track>(() => defaultTrack(tracks, asset?.kind));
   const [range, setRange] = useState(() => ({ start: 0, end: sourceRangeEnd(asset) }));
   const [preview, setPreview] = useState({ playing: false, time: 0, error: '' });
   const video = useRef<HTMLVideoElement>(null);
@@ -269,7 +293,7 @@ export function SourceMonitor({
   if (asset?.url !== sourceUrl) {
     setSourceUrl(asset?.url);
     setRange({ start: 0, end: sourceRangeEnd(asset) });
-    setTrack(asset?.kind === 'audio' ? 'voice' : 'screen');
+    setTrack(defaultTrack(tracks, asset?.kind));
     setPreview({ playing: false, time: 0, error: '' });
   }
   return (
@@ -410,14 +434,11 @@ export function SourceMonitor({
         <select
           aria-label="Insert onto track"
           value={track}
-          onChange={(e) => {
-            const value = TRACKS.find((t) => t.id === e.target.value);
-            if (value) setTrack(value.id);
-          }}
+          onChange={(e) => setTrack(e.target.value)}
         >
-          {sourceTracks(asset?.kind).map((t) => (
+          {sourceTracks(tracks, asset?.kind).map((t) => (
             <option key={t.id} value={t.id}>
-              {t.detail} · {t.label}
+              {trackNumber(tracks, t.id)} · {t.label}
             </option>
           ))}
         </select>
@@ -794,7 +815,7 @@ export function App() {
     (proposed: Edit): boolean => {
       const refused = lockedChange(edit.clips, proposed.clips, locked); // → Track | undefined
       if (refused) {
-        setMessage(`${TRACKS.find((t) => t.id === refused)!.label} is locked.`);
+        setMessage(`${labelOf(edit.tracks, refused)} is locked.`);
         return false;
       }
       const next = {
@@ -1127,7 +1148,7 @@ export function App() {
   const insert = useCallback(
     (track: Track, offset: number, length: number) => {
       if (!asset) return;
-      if (['voice', 'music'].includes(track) && !asset.hasAudio) {
+      if (edit.tracks.some((t) => t.id === track && t.kind === 'audio') && !asset.hasAudio) {
         setMessage('This source has no audio. Choose a video track.');
         return;
       }
@@ -1147,7 +1168,7 @@ export function App() {
       }
       if (!change(next)) return;
       setSelected(clip.id);
-      setMessage(`Inserted ${asset.name} onto ${TRACKS.find((t) => t.id === track)!.label}.`);
+      setMessage(`Inserted ${asset.name} onto ${labelOf(edit.tracks, track)}.`);
     },
     [asset, assets, edit, change],
   );
@@ -1316,8 +1337,10 @@ export function App() {
     [assets, sourceId, busy],
   );
   const sourceView = useMemo(
-    () => <SourceMonitor asset={asset} onInsert={insert} blocked={sourceBlocked} />,
-    [asset, insert, sourceBlocked],
+    () => (
+      <SourceMonitor asset={asset} tracks={edit.tracks} onInsert={insert} blocked={sourceBlocked} />
+    ),
+    [asset, edit.tracks, insert, sourceBlocked],
   );
   const playerView = useMemo(
     () => (
@@ -1676,6 +1699,7 @@ export function App() {
             <span className="timeline-toolbar-hint">Double-click a track to seek</span>
           </div>
           <Timeline
+            registry={edit.tracks}
             clips={edit.clips}
             assets={assets}
             zooms={edit.zooms}
