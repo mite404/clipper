@@ -31,9 +31,9 @@ shortcut guard with this contract rather than introducing contradictory predicat
   Space.
 - The owner keeps number inputs and other text-entry fields outside transport Space handling.
   Preserve text entry rather than silently exempting every INPUT element again.
-- The dropdown boundary remains open. Native closed selects use Space to open, and the scoping probe
-  found Enter did not open them in Chromium. Enter calling `showPicker()` with arrow-key fallback is
-  a proposal awaiting the owner's answer, not an approved behavior.
+- The owner confirmed that Enter opens a focused closed select via `showPicker()`, while Space
+  plays/pauses without changing its value. If `showPicker()` is unavailable or throws, preserve
+  arrow-key access. Native Enter alone did not open the closed select in the Chromium probe.
 - Preserve help-dialog, busy, export, markingMouse, modifier-chord and held-key repeat safeguards.
 
 ## Acceptance
@@ -44,8 +44,9 @@ shortcut guard with this contract rather than introducing contradictory predicat
 2. Buttons, custom trim sliders and resize separators retain working transport behavior. Cover
    Tab-acquired and pointer-acquired focus, and preserve REF-31's held-key rule.
 3. Checkbox Enter toggles without playing; checkbox Space plays without toggling. Text/number entry
-   does not operate transport. Test selects against the eventual explicit dropdown decision.
-   Preserve keyboard access to every affected control and prevent unintended native activation.
+   does not operate transport. Select Space toggles transport without changing the selection; Enter
+   opens its native picker when supported, with arrow keys remaining usable otherwise. Preserve
+   keyboard access to every affected control and prevent unintended native activation.
 4. Update the contradictory REF-31 playhead expectation and relevant UI-7 comments intentionally.
    Keep shortcut help accurate without changing C/V/cut scope or opening a source-lifecycle rewrite.
 5. Retain a browser red, corrected green and mutation check, inspected pointer/keyboard evidence,
@@ -54,6 +55,6 @@ shortcut guard with this contract rather than introducing contradictory predicat
 
 ## Source
 
-The Space relayed Mite's request from `M-034yrCdljjk3AmKs7rNeRr`. This brief records the scoped
-requirement and unresolved input boundaries. It grants no source implementation and does not
-interrupt REF-32 acceptance.
+The Space relayed Mite's request from `M-034yrCdljjk3AmKs7rNeRr`. The scoping owner returned the
+final checkbox, text-entry and dropdown decisions. This brief grants no source implementation; the
+master owns any subsequent exact-path grant. REF-32 is accepted independently.
