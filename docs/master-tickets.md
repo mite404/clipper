@@ -39,17 +39,17 @@ primary repository since 2026-11-16; the Amp-hosted scaffold is gone. See
 ## Two-lane staffing audit, 2026-11-17
 
 Audited against fetched `b44e7c9a71473e1be0bf1159e9130c4528429afe` and the preserved candidates,
-then reconciled after accepted `631f0bc`. There are 133 canonical IDs: 52 delivered rows, nine
-owner-decision rows and 72 remaining queue entries. The 72 comprise 67 implementation/qualification
+then reconciled after accepted `3260b3b`. There are 133 canonical IDs: 53 delivered rows, nine
+owner-decision rows and 71 remaining queue entries. The 71 comprise 66 implementation/qualification
 candidates below, four conditional or parked entries and one umbrella. These are ticket counts, not
-a claim that 67 source changes are approved or immediately runnable.
+a claim that 66 source changes are approved or immediately runnable.
 
-The Sonnet queue has three candidates: one ready and two dependency-held. The Opus queue has 64: 22
-ready to scope/assign and 42 dependency-, contract- or owner-gated. Across both lanes that is 23
-ready and 44 held. Ready means recorded technical predecessors are satisfied, not permission to edit
-shared paths or skip acceptance scoping. A held ticket can have an independently useful subpart, but
-its entire remaining scope is not ready. Preserve the delivery order above numeric order and
-optional cleanup. Reassess a classification when a bounded contract changes its scope.
+The Sonnet queue has two candidates, both dependency-held. The Opus queue has 64: 22 ready to
+scope/assign and 42 dependency-, contract- or owner-gated. Across both lanes that is 22 ready and 44
+held. Ready means recorded technical predecessors are satisfied, not permission to edit shared paths
+or skip acceptance scoping. A held ticket can have an independently useful subpart, but its entire
+remaining scope is not ready. Preserve the delivery order above numeric order and optional cleanup.
+Reassess a classification when a bounded contract changes its scope.
 
 ### Sonnet candidate queue
 
@@ -57,11 +57,10 @@ These are bounded follow-ups using established behavior, not new timing, persist
 models. The small lane must escalate newly discovered cross-module behavior rather than silently
 expand its grant.
 
-| Candidate             | Readiness                     | Why this lane; remaining gate                                                                                                                                                                     |
-| --------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [VERIFY-6](#verify-6) | Ready; first small-lane grant | Named journey/feature-map registration and existing native-launch executable override; no product behavior change.                                                                                |
-| [UI-6](#ui-6)         | Dependency-held               | Requested obsolete UI deletion only; reconcile still-source/metadata access after CLIP-20b and coordinate CLIP-11b before removing any attachment access. Optional cleanup cannot delay features. |
-| [CLIP-45](#clip-45)   | Dependency-held               | Existing-action widget and defaults only, after CLIP-40; reclassify if its scoped contract adds a new sharing/export pipeline.                                                                    |
+| Candidate           | Readiness       | Why this lane; remaining gate                                                                                                                                                                     |
+| ------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [UI-6](#ui-6)       | Dependency-held | Requested obsolete UI deletion only; reconcile still-source/metadata access after CLIP-20b and coordinate CLIP-11b before removing any attachment access. Optional cleanup cannot delay features. |
+| [CLIP-45](#clip-45) | Dependency-held | Existing-action widget and defaults only, after CLIP-40; reclassify if its scoped contract adds a new sharing/export pipeline.                                                                    |
 
 ### Opus candidate queue
 
@@ -127,7 +126,7 @@ coordinator-serialized; no review gate changes.
 | Lane            | Worker                                                                           | Current grant                                                                                                                                |
 | --------------- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | Opus 5.5 medium | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | CLIP-20b frozen `57b59b9`, eleven-path packet transferred/hash-verified; full126/126 and isolated performance20/20; review/delivery pending. |
-| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | VERIFY-6 frozen/transferred; authorized helper9/9 and editor37/37 passed; slot released; exact-successor reviews/qualification remain.       |
+| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | VERIFY-6 delivered at `3260b3b`, exact-SHA CI44018967483 green; grant released; no next assignment yet.                                      |
 
 Opus receives the existing exact eleven-path CLIP-20b patch, focused receipts and brief. Its future
 successor grant is limited to `src/media.ts`, `src/components.tsx`, still-source/insertion/duration
@@ -136,16 +135,18 @@ hunks in `src/App.tsx`, still rules in `src/styles.css`, image handling in `src/
 `tests/frame-image.spec.ts` and `tests/export.spec.ts`. It cannot alter the filename modal,
 `tests/refinements.spec.ts`, transport, cursor or dynamic-track behavior.
 
-Sonnet owns only `.agents/skills/verify-clipper/scripts/verify.mjs`, the adjacent `verify.test.mjs`,
-`.agents/skills/verify-clipper/SKILL.md`, its `features/README.md` and
+Sonnet's completed grant covered `.agents/skills/verify-clipper/scripts/verify.mjs`, the adjacent
+`verify.test.mjs`, `.agents/skills/verify-clipper/SKILL.md`, its `features/README.md` and
 `features/timeline-transport.md`, `tests/transport-lifecycle.spec.ts` and an optional
 `docs/tickets/VERIFY-6.md` evidence brief. No product source, performance workload, package/config,
 baseline, master or managing-tickets edits are granted. Its proofs must exercise the actual CLI's
 journey selection and native executable override, preserving REF-31's product assertions/timeouts.
 Neither lane may spawn another implementation worker, reviewer or start concurrent full acceptance.
-The coordinator owns VERIFY-6 successor review/integration and the sole main push slot. REF-27b
-acceptance is complete; CLIP-20b released its completed acceptance slot to the coordinator's fresh
-VERIFY-6 helper/editor/all checks. Neither worker has a push grant.
+VERIFY-6 acceptance is complete. On 2026-11-17 the Opus 5.5 medium successor
+[T-136752bf](https://ampcode.com/threads/T-136752bf-6ed3-4930-b791-1cd134662797) verified the hashed
+transfer from [T-6706048a](https://ampcode.com/threads/T-6706048a-c051-4e23-9ec6-68afd669b492) and
+received explicit release. It is now the sole coordinator, acceptance owner and main writer.
+CLIP-20b remains frozen; neither worker has a push grant or concurrent acceptance run.
 
 The earlier all-new-Opus cutoff audit found six children of this coordinator. Only the Opus REF-27
 reviewer was created after that standing rule; no new implementation worker on another model was
@@ -264,9 +265,9 @@ upload is authorized.
 
 | Lane                      | Thread                                                                           | Owns                                                                  |
 | ------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Queue and delivery        | [T-6706048a](https://ampcode.com/threads/T-6706048a-c051-4e23-9ec6-68afd669b492) | This file, acceptance and exclusive main push slot                    |
+| Queue and delivery        | [T-136752bf](https://ampcode.com/threads/T-136752bf-6ed3-4930-b791-1cd134662797) | This file, acceptance and exclusive main push slot                    |
 | Non-simple implementation | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Opus medium; CLIP-20b preserved-candidate successor                   |
-| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; VERIFY-6 exact tool/test grant                           |
+| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; VERIFY-6 delivered, no active grant                      |
 | Cursor implementation     | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant            |
 | Cursor inspector          | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) | Inspector delivered; no active implementation grant                   |
 | Workspace layout          | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | UI-2 delivered; no active implementation grant                        |
@@ -715,24 +716,24 @@ images were hosted, see [Known limits](#known-limits)).
 
 ### Current path reservations
 
-| Owner                    | Paths                                                                                                                                                                |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                                       |
-| Cursor inspector         | No active implementation reservation after green inspector delivery                                                                                                  |
-| Workspace layout         | UI-5 delivered at accepted 601ba78 with green exact-main CI; resize/layout/ruler reservation released                                                                |
-| Source-preview lifecycle | REF-32 delivered at 4b49623 with green exact-SHA CI; SourceMonitor/test reservation released; UI-8 remains research-only pending a new exact-path grant              |
-| Export integration       | REF-27 delivered at 27099dc with green exact-SHA CI44001648378; reservation released to bounded CLIP-20b image integration                                           |
-| Still timeline media     | CLIP-20b frozen `57b59b9`; exact eleven paths transferred; full126/126/performance20/20; independent LAND, Fable pending; no active worker runs or push              |
-| Verification follow-up   | VERIFY-6 frozen/transferred from Sonnet T-01a1e78d; helper9/9 and editor37/37 pass; coordinator owns exact-successor review/integration; no active worker acceptance |
-| Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                                       |
-| Media drawer follow-up   | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                                          |
-| Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5, accepted UI-7 successor and exact-path grant before edits                                                 |
-| Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                                 |
-| Transport lifecycle      | No active reservation after green REF-31 delivery; preserve accepted REF-20/31 transport behavior                                                                    |
-| Zoom regions             | No active implementation reservation; creation slice delivered, old owner quiescent, full ramps contract-held in Opus queue                                          |
-| Oxc tooling              | No active reservation after green VERIFY-5 delivery; VERIFY-6 follow-up needs a separate exact-path grant                                                            |
-| Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                                                                       |
-| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                     |
+| Owner                    | Paths                                                                                                                                                   |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                          |
+| Cursor inspector         | No active implementation reservation after green inspector delivery                                                                                     |
+| Workspace layout         | UI-5 delivered at accepted 601ba78 with green exact-main CI; resize/layout/ruler reservation released                                                   |
+| Source-preview lifecycle | REF-32 delivered at 4b49623 with green exact-SHA CI; SourceMonitor/test reservation released; UI-8 remains research-only pending a new exact-path grant |
+| Export integration       | REF-27 delivered at 27099dc with green exact-SHA CI44001648378; reservation released to bounded CLIP-20b image integration                              |
+| Still timeline media     | CLIP-20b frozen `57b59b9`; exact eleven paths transferred; full126/126/performance20/20; both exact-tree reviews LAND; no active worker runs or push    |
+| Verification follow-up   | VERIFY-6 delivered at `3260b3b`, exact-SHA CI44018967483 green; seven-path reservation released; no active worker acceptance                            |
+| Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                          |
+| Media drawer follow-up   | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                             |
+| Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5, accepted UI-7 successor and exact-path grant before edits                                    |
+| Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                    |
+| Transport lifecycle      | No active reservation after green REF-31 delivery; preserve accepted REF-20/31 transport behavior                                                       |
+| Zoom regions             | No active implementation reservation; creation slice delivered, old owner quiescent, full ramps contract-held in Opus queue                             |
+| Oxc tooling              | No active reservation after green VERIFY-5 delivery; VERIFY-6 follow-up needs a separate exact-path grant                                               |
+| Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                                                          |
+| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                        |
 
 ### Preservation branches
 
@@ -1209,9 +1210,9 @@ clipping remains; this promotion does not claim to repair it.
 retains native reds, mutation checks and inspected public-media recordings. No private recording,
 physical speaker or independent five-repeat performance qualification is claimed.
 
-| Ticket ID                                  | Feature                                                                                                      | State and dependency                                                                                                              |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| <a id="verify-6"></a>[VERIFY-6](#verify-6) | Include transport lifecycle in named editor/feature-map coverage and honor CHROME_PATH for its native launch | Frozen `88479af` transferred; authorized helper9/9 and editor37/37 pass; coordinator successor integration/reviews, not delivered |
+| Ticket ID                                  | Feature                                                                                                      | State and dependency                                                                                                                                                                                                           |
+| ------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| <a id="verify-6"></a>[VERIFY-6](#verify-6) | Include transport lifecycle in named editor/feature-map coverage and honor CHROME_PATH for its native launch | Delivered at [3260b3b](https://github.com/mite404/clipper/commit/3260b3b46ca8aee7cbae3fd1da2ef9fe39e0d03c); [green exact-SHA CI44018967483](https://github.com/mite404/clipper/actions/runs/44018967483); reservation released |
 
 VERIFY-6 preserves REF-31's behavior and timeout contract. Verify journey selection and executable
 override through the real CLI. It does not reopen REF-31 or require the completed worker to remain
@@ -1228,10 +1229,11 @@ Opus and Fable reviewers return LAND for this exact successor, with no blocking 
 successor static gates pass, including 134 units and strict shrink-only Fallow against `631f0bc`.
 After CLIP-20b released the slot, fresh coordinator helper9/9 and editor41/41 passed on the accepted
 filename successor. The subsequent full `all` qualification passed 109/109 in the same isolated
-delivery tree, with zero skipped, flaky or unexpected tests. Latest fetched main remains `631f0bc`;
-the seven reviewed blobs are unchanged. Exact pushed-main CI remains required. VERIFY-6 is this
-coordinator's final delivery before the owner's requested Opus 5.5 medium handoff; no next ticket
-delivery is started here. The completed baseline review is not repeated.
+delivery tree, with zero skipped, flaky or unexpected tests. The pre-push base was accepted
+`631f0bc`; the seven reviewed blobs are unchanged. Delivery at `3260b3b` has green exact-SHA
+CI44018967483. VERIFY-6 is this coordinator's final ticket before the owner's requested Opus 5.5
+medium handoff; no next ticket delivery is started here. The completed baseline review is not
+repeated.
 
 CLIP-9b retains the reference inventory's remaining zoom-edge interaction. `Timeline.tsx` renders
 zoom intervals as selection buttons only; inspector start/duration fields do not supply timeline
