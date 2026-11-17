@@ -93,13 +93,11 @@ const TrackHeader = memo(function TrackHeader({
   const moved = useRef<string[]>([]);
   useLayoutEffect(() => {
     const enabled = moved.current
-      .map((d) =>
-        toggles.current!.querySelector<HTMLElement>(`[aria-label="Move ${label} ${d}"]:enabled`),
-      )
+      .map((d) => toggles.current!.querySelector<HTMLElement>(`[data-move="${d}"]:enabled`))
       .find(Boolean);
     moved.current = [];
     enabled?.focus();
-  }, [registry, label]);
+  }, [registry]);
   return (
     <div className="track-label">
       <span className="track-code">{trackNumber(registry, id)}</span>
@@ -134,6 +132,7 @@ const TrackHeader = memo(function TrackHeader({
             <IconButton
               key={direction}
               label={`Move ${label} ${direction}`}
+              data-move={direction}
               disabled={moveTrack(registry, id, step) === registry}
               onClick={() => {
                 moved.current = direction === 'up' ? ['up', 'down'] : ['down', 'up'];

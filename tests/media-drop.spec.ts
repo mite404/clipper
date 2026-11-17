@@ -310,3 +310,37 @@ test('a Move button that reaches the end hands focus to the other one', async ({
   await expect(down).toBeDisabled();
   await expect(page.getByRole('button', { name: 'Move Talking head up' })).toBeFocused();
 });
+
+test('a track label with quotes, a backslash and a newline still moves and refocuses', async ({
+  page,
+}) => {
+  await open(page);
+  const saving = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const saved = JSON.parse(await readFile((await (await saving).path())!, 'utf8'));
+  // A v4 file names its tracks, so a label reaches the DOM verbatim.
+  // A quote or newline made the old label-built selector throw; a backslash lost focus.
+  const label = 'Cam "A" \\ B\nC';
+  // Accessible names collapse the newline to a space.
+  const name = label.replace('\n', ' ');
+  saved.version = 4;
+  saved.tracks = [
+    { id: 'screen', label: 'Screen recording', kind: 'visual', role: 'screen' },
+    { id: 'camera', label, kind: 'visual', role: 'camera' },
+    { id: 'voice', label: 'Voiceover', kind: 'audio', gain: 1 },
+    { id: 'music', label: 'Music', kind: 'audio', gain: 0.22 },
+  ];
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'quoted.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(saved)),
+  });
+  await expect(status(page)).toContainText('Project reopened');
+  const down = page.getByRole('button', { name: `Move ${name} down`, exact: true });
+  await down.click();
+  // The editor is still mounted: a selector built from the label used to throw and blank it.
+  await expect(page.getByRole('button', { name: 'Save project', exact: true })).toBeVisible();
+  await expect(down).toBeDisabled();
+  expect((await headers(page)).slice(0, 2)).toEqual(['V2 Screen recording', `V1 ${label}`]);
+  await expect(page.getByRole('button', { name: `Move ${name} up`, exact: true })).toBeFocused();
+});
