@@ -39,17 +39,18 @@ primary repository since 2026-11-16; the Amp-hosted scaffold is gone. See
 ## Two-lane staffing audit, 2026-11-17
 
 Audited against fetched `b44e7c9a71473e1be0bf1159e9130c4528429afe` and the preserved candidates,
-then reconciled after accepted `b9f4bc4`. There are 142 canonical IDs: 66 delivered rows, nine
-owner-decision rows and 67 remaining queue entries. The 67 comprise 62 implementation/qualification
+then reconciled after accepted `b9f4bc4`. There are 143 canonical IDs: 66 delivered rows, nine
+owner-decision rows and 68 remaining queue entries. The 68 comprise 63 implementation/qualification
 candidates below, four conditional or parked entries and one umbrella. These are ticket counts, not
-a claim that 62 source changes are approved or immediately runnable.
+a claim that 63 source changes are approved or immediately runnable.
 
-The Sonnet queue has one candidate: CLIP-45 held. The Opus queue has 61: CLIP-2c granted, 19 ready
-to scope/assign and 41 dependency-, contract- or owner-gated. Across both lanes that is 20 ready or
-granted and 42 held. Ready means recorded technical predecessors are satisfied, not permission to
-edit shared paths or skip acceptance scoping. A held ticket can have an independently useful
-subpart, but its entire remaining scope is not ready. Preserve the delivery order above numeric
-order and optional cleanup. Reassess a classification when a bounded contract changes its scope.
+The Sonnet queue has two candidates: REF-45 granted and CLIP-45 held. The Opus queue has 61: CLIP-2c
+granted, 19 ready to scope/assign and 41 dependency-, contract- or owner-gated. Across both lanes
+that is 21 ready or granted and 42 held. Ready means recorded technical predecessors are satisfied,
+not permission to edit shared paths or skip acceptance scoping. A held ticket can have an
+independently useful subpart, but its entire remaining scope is not ready. Preserve the delivery
+order above numeric order and optional cleanup. Reassess a classification when a bounded contract
+changes its scope.
 
 ### Sonnet candidate queue
 
@@ -59,6 +60,7 @@ expand its grant.
 
 | Candidate           | Readiness       | Why this lane; remaining gate                                                                                                  |
 | ------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| [REF-45](#ref-45)   | Granted         | Preview finding: no false Still duration status on an unchanged blur; check a lingering tooltip.                               |
 | [CLIP-45](#clip-45) | Dependency-held | Existing-action widget and defaults only, after CLIP-40; reclassify if its scoped contract adds a new sharing/export pipeline. |
 
 ### Opus candidate queue
@@ -124,7 +126,7 @@ coordinator-serialized; no review gate changes.
 | Lane            | Worker                                                                           | Current grant                                                                       |
 | --------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | Opus 5.5 medium | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | CLIP-2e delivered at `a26c7e7`, exact-SHA CI44050988058 green; now granted CLIP-2c. |
-| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | REF-44 delivered at `b9f4bc4`, exact-SHA CI44134842288 green; no active grant.      |
+| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | REF-44 delivered at `b9f4bc4`, exact-SHA CI44134842288 green; now granted REF-45.   |
 
 CLIP-20b is delivered at `6156fb4`, a cherry-pick of the reviewed tree onto `f6b77aa` with all
 eleven source blobs unchanged. Coordinator gates on that exact tree passed 136 units, strict
@@ -255,7 +257,14 @@ tracking replacing the `activeElement` guard). `all` passed 149/149 on the exact
 `performance` missed the cursor-follow `rafP95 < 100` bound once in five repeats, as unchanged
 `f8fa072` did in the same orb, so it is recorded as orb noise. Known, accepted: Enter on Hide
 timeline and Delete in the same frame can still delete; clicking the ruler leaves Delete inert
-(REF-40 slider rule). The Sonnet lane has no active grant.
+(REF-40 slider rule). Sonnet now holds REF-45, from the REF-44 preview receipt. Tabbing through the
+inspector's still Duration field without editing it commits on blur and shows "Still duration
+updated." although `classifyChange` finds no change, so no history step or unsaved state follows.
+Only a real change may report it. The same capture showed the A2 "Mute Music" tooltip after keyboard
+focus had moved on; reproduce first and fix only if a tooltip outlives its trigger's focus and
+hover. Granted paths are the `StillDuration` component and its commit call site in `src/App.tsx`,
+`src/components.tsx` tooltip handling if reproduced, `src/styles.css` tooltip rules if needed, and
+one focused spec.
 
 CLIP-2c is rebased and passes `all` 157/157, but isolated `performance` misses the cursor-follow
 bound more often than a same-orb base and paints about 10% fewer frames. It is not accepted-ready
@@ -398,7 +407,7 @@ upload is authorized.
 | ------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | Queue and delivery        | [T-136752bf](https://ampcode.com/threads/T-136752bf-6ed3-4930-b791-1cd134662797) | This file, acceptance and exclusive main push slot                    |
 | Non-simple implementation | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Opus medium; CLIP-2e delivered, CLIP-2c granted                       |
-| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; REF-44 delivered, no active grant                        |
+| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; REF-44 delivered, REF-45 granted                         |
 | Cursor implementation     | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant            |
 | Cursor inspector          | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) | Inspector delivered; no active implementation grant                   |
 | Workspace layout          | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | UI-2 delivered; no active implementation grant                        |
@@ -866,6 +875,7 @@ images were hosted, see [Known limits](#known-limits)).
 | Open project keyboard access | REF-42 delivered at `6d4350d` with green exact-SHA CI44111981121; reservation released                                                                                                  |
 | Open project placement       | REF-43 delivered at `f8fa072` with green exact-SHA CI44124453125; reservation released                                                                                                  |
 | Timeline-scoped Delete       | REF-44 delivered at `b9f4bc4` with green exact-SHA CI44134842288; reservation released                                                                                                  |
+| Still duration status        | REF-45 granted to Sonnet T-01a1e78d: StillDuration and its App call site, tooltip if reproduced, one spec                                                                               |
 | Verification follow-up       | VERIFY-6 delivered at `3260b3b`, exact-SHA CI44018967483 green; seven-path reservation released; no active worker acceptance                                                            |
 | Header cleanup               | No active implementation reservation after green UI-3 delivery                                                                                                                          |
 | Media drawer follow-up       | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                                                             |
@@ -1332,6 +1342,7 @@ original note for every row.
 | <a id="ref-42"></a>[REF-42](#ref-42)                 | Make Open project keyboard-reachable and refresh key-rule help/docs | Small  | Delivered at [6d4350d](https://github.com/mite404/clipper/commit/6d4350d81add221c831b428224c490e745cd3d3d); green exact-SHA [CI44111981121](https://github.com/mite404/clipper/actions/runs/44111981121) | The Open project input is `display: none` with no tab stop; help and timeline-transport docs predate REF-40/41      |
 | <a id="ref-43"></a>[REF-43](#ref-43)                 | Make Open project a Save-style button beside Save                   | Small  | Delivered at [f8fa072](https://github.com/mite404/clipper/commit/f8fa072553b10ecb744de84665fc93de0689a7c5); green exact-SHA [CI44124453125](https://github.com/mite404/clipper/actions/runs/44124453125) | Owner request; successor to REF-42, keeping its keyboard, chooser, discard and disabled behavior                    |
 | <a id="ref-44"></a>[REF-44](#ref-44)                 | Delete the selection only from the timeline                         | Small  | Delivered at [b9f4bc4](https://github.com/mite404/clipper/commit/b9f4bc4f94573a28c689f39212ff508b46598b9e); green exact-SHA [CI44134842288](https://github.com/mite404/clipper/actions/runs/44134842288) | Owner request; Delete/Backspace no-op when focus is outside the Main sequence panel                                 |
+| <a id="ref-45"></a>[REF-45](#ref-45)                 | Report Still duration only when it changes                          | Small  | Granted to Sonnet [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7)                                                                                                       | Preview finding after REF-44; also reproduce a tooltip that outlives keyboard focus                                 |
 | <a id="ref-32"></a>[REF-32](#ref-32)                 | Correct source-preview playback error and busy lifecycle            | Medium | Delivered at [4b49623](https://github.com/mite404/clipper/commit/4b4962397e4ac237ab774b8d4a2f2a44280514b2); [green exact-SHA CI](https://github.com/mite404/clipper/actions/runs/43986804408)            | Reservation released; canonical previews promoted and verified                                                      |
 | <a id="ref-33"></a>[REF-33](#ref-33)                 | Qualify download URL lifetime outside Chromium                      | Medium | Blocked                                                                                                                                                                                                  | another supported WebCodecs browser                                                                                 |
 | <a id="ref-34"></a>[REF-34](#ref-34)                 | Remove Player listener lifetime assumptions                         | Small  | Deferred proposal                                                                                                                                                                                        | reproduce a listener lifecycle defect first                                                                         |
