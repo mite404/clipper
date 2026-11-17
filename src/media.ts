@@ -5,20 +5,55 @@ import { validateCursorImages, type CursorTrack } from './cursor';
 export type Asset = {
   id: string;
   name: string;
-  kind: 'video' | 'audio';
   url: string;
   // Source bytes, so Save can refuse or leave out media before reading any of it.
   size: number;
-  duration: number;
   width: number;
   height: number;
   peaks: number[];
-  hasAudio: boolean;
   thumbnail: string;
   cursor?: CursorTrack;
-};
+} & (
+  | { kind: 'video' | 'audio'; duration: number; hasAudio: boolean }
+  | { kind: 'image'; duration?: never; hasAudio: false }
+);
 
 const DEMO_DEADLINE_MS = 15000;
+/** Initial timeline duration for a still, not a limit on its source pixels. */
+export const DEFAULT_STILL_FRAMES = 5 * FPS;
+
+async function readImage(file: Blob, name: string, id: string, mime: string): Promise<Asset> {
+  let bitmap: ImageBitmap;
+  const source = file.slice(0, file.size, mime);
+  try {
+    bitmap = await createImageBitmap(source);
+  } catch {
+    throw new Error('This PNG/JPEG image is corrupt or cannot be decoded. Try exporting it again.');
+  }
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.min(240, bitmap.width);
+    canvas.height = Math.max(1, Math.round((bitmap.height * canvas.width) / bitmap.width));
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Image preview is unavailable in this browser.');
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const thumbnail = canvas.toDataURL('image/png');
+    return {
+      id,
+      name,
+      kind: 'image',
+      url: URL.createObjectURL(source),
+      size: file.size,
+      width: bitmap.width,
+      height: bitmap.height,
+      peaks: [],
+      hasAudio: false,
+      thumbnail,
+    };
+  } finally {
+    bitmap.close();
+  }
+}
 
 /** Read metadata and decoded waveform locally. No media is uploaded.
  * @throws When the container or media codec cannot be decoded by this browser.
@@ -30,6 +65,15 @@ export async function readMedia(
   cursor?: CursorTrack,
 ): Promise<Asset> {
   await validateCursorImages(cursor);
+  const bytes = new Uint8Array(await file.slice(0, 8).arrayBuffer());
+  const mime = [137, 80, 78, 71, 13, 10, 26, 10].every((byte, i) => bytes[i] === byte)
+    ? 'image/png'
+    : bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255
+      ? 'image/jpeg'
+      : null;
+  if (mime) return readImage(file, name, id, mime);
+  if (file.type.startsWith('image/') || /\.(png|jpe?g)$/i.test(name))
+    throw new Error('Unsupported or corrupt image. Choose a valid PNG or JPEG file.');
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
   try {
     const [durationSeconds, video, audio] = await Promise.all([

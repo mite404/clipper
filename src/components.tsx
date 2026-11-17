@@ -1,5 +1,5 @@
 import { useMemo, type ButtonHTMLAttributes, type ReactNode } from 'react';
-import { Film, Music2, Plus, Upload } from 'lucide-react';
+import { Film, Image, Music2, Plus, Upload } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui-sdk/react/tooltip';
 import type { Asset } from './media';
 import { FPS } from './timeline-model';
@@ -101,7 +101,7 @@ export function MediaLibrary({
           aria-label="Import local media"
           type="file"
           multiple
-          accept="video/*,audio/*"
+          accept="video/*,audio/*,.mov,.mp4,.png,.jpg,.jpeg,image/png,image/jpeg"
           disabled={busy}
           onChange={(event) => {
             if (event.target.files) onImport(event.target.files);
@@ -121,7 +121,7 @@ export function MediaLibrary({
             onClick={() => onSelect(asset.id)}
           >
             <div className={`asset-image asset-image-${asset.kind}`}>
-              {asset.kind === 'video' ? (
+              {asset.kind !== 'audio' ? (
                 asset.thumbnail ? (
                   <img src={asset.thumbnail} alt="" />
                 ) : (
@@ -130,17 +130,25 @@ export function MediaLibrary({
               ) : (
                 <Waveform peaks={asset.peaks} />
               )}
-              <span className="asset-duration">{timecode(asset.duration).slice(0, 5)}</span>
+              <span className="asset-duration">
+                {asset.kind === 'image' ? 'STILL' : timecode(asset.duration).slice(0, 5)}
+              </span>
               <span className="asset-number">{String(index + 1).padStart(2, '0')}</span>
             </div>
             <div className="asset-name">
-              {asset.kind === 'video' ? <Film size={13} /> : <Music2 size={13} />}
+              {
+                {
+                  image: <Image size={13} />,
+                  video: <Film size={13} />,
+                  audio: <Music2 size={13} />,
+                }[asset.kind]
+              }
               <span title={asset.name}>{asset.name}</span>
               <Plus size={13} />
             </div>
             <div className="asset-meta">
-              {asset.kind === 'video'
-                ? `${asset.width} × ${asset.height} · Video`
+              {asset.kind !== 'audio'
+                ? `${asset.width} × ${asset.height} · ${{ image: 'Still image', video: 'Video' }[asset.kind]}`
                 : 'Audio · decoded waveform'}
             </div>
           </button>

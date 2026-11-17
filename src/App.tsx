@@ -34,7 +34,7 @@ import {
 } from 'lucide-react';
 import { Composition } from './Composition';
 import { IconButton, MediaLibrary, Waveform, timecode } from './components';
-import { type Asset, loadDemo, readMedia, unreadableNamesake } from './media';
+import { type Asset, DEFAULT_STILL_FRAMES, loadDemo, readMedia, unreadableNamesake } from './media';
 import { Timeline, TRACKS } from './Timeline';
 import {
   FPS,
@@ -111,6 +111,96 @@ async function importOne(file: File, library: Asset[], edit: Edit): Promise<Impo
   return { imported, replaces };
 }
 
+// A still owns timeline time, not a decoded source range. Match the portable 24-hour ceiling.
+function stillFrames(value: string): number | null {
+  const frames = Math.round(Number(value) * FPS);
+  return frames >= 1 && frames <= 24 * 3600 * FPS ? frames : null;
+}
+
+function StillDuration({
+  frames,
+  max = 86400 * FPS,
+  label,
+  onCommit,
+}: {
+  frames: number;
+  max?: number;
+  label: string;
+  onCommit: (frames: number) => string | null;
+}) {
+  const [draft, setDraft] = useState(String(Number((frames / FPS).toFixed(3))));
+  const [previous, setPrevious] = useState(frames);
+  const [error, setError] = useState<string | null>(null);
+  if (previous !== frames) {
+    setPrevious(frames);
+    setDraft(String(Number((frames / FPS).toFixed(3))));
+    setError(null);
+  }
+  return (
+    <div className="source-range">
+      <label>
+        Duration{' '}
+        <input
+          aria-label={label}
+          type="number"
+          min={1 / FPS}
+          max={max / FPS}
+          step={1 / FPS}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur();
+          }}
+          onBlur={() => {
+            const length = stillFrames(draft);
+            const failure =
+              length === null || length > max
+                ? 'Still duration must be at least one frame and fit within the 24-hour timeline.'
+                : onCommit(length);
+            setError(failure);
+            setDraft(String(Number(((failure ? frames : length!) / FPS).toFixed(3))));
+          }}
+        />{' '}
+        seconds
+      </label>
+      {error && (
+        <span className="source-error" role="status">
+          {error}
+        </span>
+      )}
+    </div>
+  );
+}
+
+function sourceRangeEnd(asset?: Asset): number {
+  if (!asset) return 0;
+  return asset.kind === 'image' ? DEFAULT_STILL_FRAMES : asset.duration;
+}
+
+function sourceTracks(kind?: Asset['kind']) {
+  if (kind === 'image') return TRACKS.filter((t) => ['screen', 'camera'].includes(t.id));
+  return TRACKS.filter((t) => kind !== 'audio' || ['voice', 'music'].includes(t.id));
+}
+
+function resizeStill(edit: Edit, clip: Clip, duration: number): Edit {
+  const next = edit.clips.find(
+    (c) => c.track === clip.track && c.start > clip.start && c.start < clip.start + duration,
+  );
+  if (next)
+    throw new Error('Still duration would overlap the following clip. No clips were changed.');
+  return { ...edit, clips: edit.clips.map((c) => (c.id === clip.id ? { ...c, duration } : c)) };
+}
+
+function stillInsertionError(asset: Asset, edit: Edit, assets: Asset[]): string | null {
+  if (asset.kind !== 'image') return null;
+  try {
+    validateSources(edit, assets);
+  } catch (error) {
+    return String(error);
+  }
+  return null;
+}
+
 /** Source preview with explicit in/out points and track-targeted ripple insertion. */
 export function SourceMonitor({
   asset,
@@ -124,7 +214,7 @@ export function SourceMonitor({
 }) {
   const [sourceUrl, setSourceUrl] = useState(() => asset?.url);
   const [track, setTrack] = useState<Track>(asset?.kind === 'audio' ? 'voice' : 'screen');
-  const [range, setRange] = useState(() => ({ start: 0, end: asset?.duration ?? 0 }));
+  const [range, setRange] = useState(() => ({ start: 0, end: sourceRangeEnd(asset) }));
   const [preview, setPreview] = useState({ playing: false, time: 0, error: '' });
   const video = useRef<HTMLVideoElement>(null);
   const audio = useRef<HTMLAudioElement>(null);
@@ -148,7 +238,7 @@ export function SourceMonitor({
   };
   if (asset?.url !== sourceUrl) {
     setSourceUrl(asset?.url);
-    setRange({ start: 0, end: asset?.duration ?? 0 });
+    setRange({ start: 0, end: sourceRangeEnd(asset) });
     setTrack(asset?.kind === 'audio' ? 'voice' : 'screen');
     setPreview({ playing: false, time: 0, error: '' });
   }
@@ -216,60 +306,76 @@ export function SourceMonitor({
               </span>
             )}
           </>
+        ) : asset?.kind === 'image' ? (
+          <img src={asset.url} alt={asset.name} />
         ) : asset ? (
           <div className="source-audio">
             <Waveform peaks={asset.peaks} />
             <audio ref={audio} src={asset.url} controls />
           </div>
         ) : (
-          <span className="empty-preview">Import a video or audio file</span>
+          <span className="empty-preview">Import video, audio or a PNG/JPEG image</span>
         )}
       </div>
       <div className="source-description">
         <span title={asset?.name}>{asset?.name ?? 'No source selected'}</span>
-        <span>{asset ? timecode(asset.duration) : '00:00:00'}</span>
+        <span>
+          {asset?.kind === 'image' ? 'Still image' : asset ? timecode(asset.duration) : '00:00:00'}
+        </span>
       </div>
-      <div className="source-range">
-        <label>
-          In{' '}
-          <input
-            aria-label="Source in seconds"
-            type="number"
-            min="0"
-            max={Math.max(0, (range.end - 1) / FPS)}
-            step={1 / FPS}
-            value={Number((range.start / FPS).toFixed(3))}
-            onChange={(e) => {
-              const start = Math.max(
-                0,
-                Math.min(range.end - 1, Math.round(Number(e.target.value) * FPS)),
-              );
-              setRange({ ...range, start });
-              if (video.current) video.current.currentTime = start / FPS;
-            }}
-          />
-        </label>
-        <label>
-          Out{' '}
-          <input
-            aria-label="Source out seconds"
-            type="number"
-            min={(range.start + 1) / FPS}
-            max={(asset?.duration ?? 0) / FPS}
-            step={1 / FPS}
-            value={Number((range.end / FPS).toFixed(3))}
-            onChange={(e) =>
-              setRange({
-                ...range,
-                end: Math.min(
-                  asset?.duration ?? 0,
-                  Math.max(range.start + 1, Math.round(Number(e.target.value) * FPS)),
-                ),
-              })
-            }
-          />
-        </label>
-      </div>
+      {asset?.kind === 'image' ? (
+        <StillDuration
+          key={asset.url}
+          frames={range.end}
+          label="Still duration seconds"
+          onCommit={(duration) => {
+            setRange({ start: 0, end: duration });
+            return null;
+          }}
+        />
+      ) : (
+        <div className="source-range">
+          <label>
+            In{' '}
+            <input
+              aria-label="Source in seconds"
+              type="number"
+              min="0"
+              max={Math.max(0, (range.end - 1) / FPS)}
+              step={1 / FPS}
+              value={Number((range.start / FPS).toFixed(3))}
+              onChange={(e) => {
+                const start = Math.max(
+                  0,
+                  Math.min(range.end - 1, Math.round(Number(e.target.value) * FPS)),
+                );
+                setRange({ ...range, start });
+                if (video.current) video.current.currentTime = start / FPS;
+              }}
+            />
+          </label>
+          <label>
+            Out{' '}
+            <input
+              aria-label="Source out seconds"
+              type="number"
+              min={(range.start + 1) / FPS}
+              max={(asset?.duration ?? 0) / FPS}
+              step={1 / FPS}
+              value={Number((range.end / FPS).toFixed(3))}
+              onChange={(e) =>
+                setRange({
+                  ...range,
+                  end: Math.min(
+                    asset?.duration ?? 0,
+                    Math.max(range.start + 1, Math.round(Number(e.target.value) * FPS)),
+                  ),
+                })
+              }
+            />
+          </label>
+        </div>
+      )}
       <div className="source-insert">
         <select
           aria-label="Insert onto track"
@@ -279,9 +385,7 @@ export function SourceMonitor({
             if (value) setTrack(value.id);
           }}
         >
-          {TRACKS.filter(
-            (t) => asset?.kind !== 'audio' || t.id === 'voice' || t.id === 'music',
-          ).map((t) => (
+          {sourceTracks(asset?.kind).map((t) => (
             <option key={t.id} value={t.id}>
               {t.detail} · {t.label}
             </option>
@@ -899,7 +1003,7 @@ export function App() {
   const insert = useCallback(
     (track: Track, offset: number, length: number) => {
       if (!asset) return;
-      if ((track === 'voice' || track === 'music') && !asset.hasAudio) {
+      if (['voice', 'music'].includes(track) && !asset.hasAudio) {
         setMessage('This source has no audio. Choose a video track.');
         return;
       }
@@ -911,11 +1015,17 @@ export function App() {
         duration: length,
         offset,
       };
-      change({ ...edit, clips: insertClip(edit.clips, clip, frameRef.current) });
+      const next = { ...edit, clips: insertClip(edit.clips, clip, frameRef.current) };
+      const failure = stillInsertionError(asset, next, assets);
+      if (failure) {
+        setMessage(failure);
+        return;
+      }
+      change(next);
       setSelected(clip.id);
       setMessage(`Inserted ${asset.name} onto ${TRACKS.find((t) => t.id === track)?.label}.`);
     },
-    [asset, edit, change],
+    [asset, assets, edit, change],
   );
   const downloadBlob = (blob: Blob, name: string) => {
     const url = URL.createObjectURL(blob);
@@ -961,6 +1071,8 @@ export function App() {
       for (const media of project.media) {
         const response = await fetch(media.data);
         imported.push(await readMedia(await response.blob(), media.name, media.id, media.cursor));
+        if ((imported[imported.length - 1].kind === 'image') !== (media.kind === 'image'))
+          throw new Error(`Image kind does not match embedded media ${media.name}.`);
       }
       validateSources(project.edit, imported);
       const previous = assets;
@@ -1499,6 +1611,26 @@ export function App() {
             });
           }}
         >
+          {selectedClip && assets.find((a) => a.id === selectedClip.assetId)?.kind === 'image' && (
+            <section className="cursor-controls" aria-label="Still image clip">
+              <h3>Still image</h3>
+              <StillDuration
+                key={selectedClip.id}
+                frames={selectedClip.duration}
+                max={86400 * FPS - selectedClip.start}
+                label="Selected still duration seconds"
+                onCommit={(duration) => {
+                  try {
+                    change(resizeStill(edit, selectedClip, duration));
+                  } catch (error) {
+                    return error instanceof Error ? error.message : String(error);
+                  }
+                  setMessage('Still duration updated.');
+                  return null;
+                }}
+              />
+            </section>
+          )}
           <CursorControls
             key={cursorAsset?.id}
             asset={cursorAsset}

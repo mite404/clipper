@@ -360,6 +360,75 @@ describe('decoded source validation', () => {
 });
 
 describe('portable project serialization', () => {
+  it('writes image envelopes as v3 with clip-owned duration and original bytes', async () => {
+    const bytes = new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]);
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'image/png' }));
+    const image = {
+      id: 'video',
+      name: 'overlay.png',
+      kind: 'image' as const,
+      url,
+      size: bytes.length,
+      width: 320,
+      height: 180,
+      hasAudio: false as const,
+      peaks: [],
+      thumbnail: '',
+    };
+    const stillEdit = { ...edit, clips: [{ ...edit.clips[0], duration: 180, offset: 90 }] };
+    try {
+      const saved = (await serializeProject(stillEdit, [image], [])).file;
+      const envelope = JSON.parse(await saved.text());
+      expect(envelope.version).toBe(3);
+      expect(envelope.media[0]).toMatchObject({
+        kind: 'image',
+        data: 'data:image/png;base64,iVBORw0KGgo=',
+      });
+      const reopened = parseProject(await saved.text());
+      expect(reopened.edit).toEqual(stillEdit);
+      expect(new Uint8Array(await (await fetch(reopened.media[0].data)).arrayBuffer())).toEqual(
+        bytes,
+      );
+      expect(() =>
+        validateSources({ ...stillEdit, clips: [{ ...stillEdit.clips[0], track: 'voice' }] }, [
+          image,
+        ]),
+      ).toThrow(/audio/i);
+      for (const invalid of [
+        { ...envelope, version: 2 },
+        { ...envelope, media: [{ ...envelope.media[0], kind: 'video' }] },
+        { ...envelope, media: [{ ...envelope.media[0], kind: undefined }] },
+        { ...envelope, media: [{ ...envelope.media[0], data: 'data:video/mp4;base64,AAEC/w==' }] },
+      ])
+        expect(() => parseProject(JSON.stringify(invalid))).toThrow(/image|kind|version/i);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+
+  it('chooses v2 when an unused image is omitted instead of embedded', async () => {
+    const url = URL.createObjectURL(
+      new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),
+    );
+    try {
+      const { duration: _duration, ...common } = asset;
+      const image = {
+        ...common,
+        id: 'image',
+        name: 'large.png',
+        kind: 'image' as const,
+        hasAudio: false as const,
+        size: 375_000_001,
+        url: 'blob:never-read',
+      };
+      const saved = await serializeProject(edit, [{ ...asset, url }, image], []);
+      expect(saved.omitted).toEqual(['large.png']);
+      expect(JSON.parse(await saved.file.text()).version).toBe(2);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+
   it('embeds the actual local bytes, retains top-level edits, and needs no old blob URL', async () => {
     const url = URL.createObjectURL(
       new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),

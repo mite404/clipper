@@ -59,6 +59,203 @@ test.beforeEach(async ({ page }, info) => {
   }
 });
 
+for (const kind of ['png', 'jpeg'])
+  for (const width of [1920, 3840])
+    for (const format of ['mp4', 'mov', 'webm'] as const) {
+      test(`exports ${kind} still images at ${width}px in ${format}`, async ({ page }, info) => {
+        test.setTimeout(120000);
+        await page.goto('/');
+        const result = await page.evaluate(
+          async ({ width, format, kind }) => {
+            const mediaModule = '/src/media.ts',
+              exportModule = '/src/export.ts';
+            const { readMedia } = await import(mediaModule);
+            const { renderVideo } = await import(exportModule);
+            const canvas = document.createElement('canvas');
+            canvas.width = 400;
+            canvas.height = 200;
+            const ctx = canvas.getContext('2d')!;
+            ctx.fillStyle = '#ff0000';
+            ctx.fillRect(0, 0, 200, 200);
+            ctx.fillStyle = '#0000ff80';
+            ctx.fillRect(200, 0, 100, 200);
+            const blob = await new Promise<Blob>((resolve) =>
+              canvas.toBlob((b) => resolve(b!), `image/${kind}`),
+            );
+            const asset = await readMedia(blob, `split.${kind}`);
+            try {
+              const video = await renderVideo({
+                assets: [asset],
+                clips: [
+                  {
+                    id: 'left',
+                    assetId: asset.id,
+                    track: 'screen',
+                    start: 0,
+                    duration: 15,
+                    offset: 0,
+                  },
+                  {
+                    id: 'right',
+                    assetId: asset.id,
+                    track: 'screen',
+                    start: 15,
+                    duration: 15,
+                    offset: 15,
+                  },
+                ],
+                zooms: [],
+                muted: [],
+                layout: { radius: 22, screenX: 100, screenY: 50, cameraX: 50, cameraY: 50 },
+                width,
+                format,
+                onProgress: () => {},
+              });
+              return {
+                bytes: Array.from(new Uint8Array(await video.arrayBuffer())),
+                mime: video.type,
+              };
+            } finally {
+              URL.revokeObjectURL(asset.url);
+            }
+          },
+          { width, format, kind },
+        );
+        expect(result.mime).toBe(format === 'mov' ? 'video/quicktime' : `video/${format}`);
+        const file = info.outputPath(`still.${format}`);
+        writeFileSync(file, Buffer.from(result.bytes));
+        inspectExport(file, width, format, false);
+        for (const seconds of ['0', '0.5', '0.966667']) {
+          for (const [x, expected] of [
+            [25, [255, 0, 0]],
+            [400, kind === 'png' ? [8, 12, 141] : [0, 0, 128]],
+            [850, kind === 'png' ? [16, 24, 27] : [0, 0, 0]],
+          ] as const) {
+            const pixels = execFileSync('ffmpeg', [
+              '-v',
+              'error',
+              '-ss',
+              seconds,
+              '-i',
+              file,
+              '-frames:v',
+              '1',
+              '-vf',
+              `format=rgb24,crop=1:1:${Math.round((x * width) / 1280)}:${Math.round((300 * width) / 1280)}`,
+              '-f',
+              'rawvideo',
+              '-',
+            ]);
+            expect(pixels.length).toBe(3);
+            expected.forEach((value, i) => expect(Math.abs(pixels[i] - value)).toBeLessThan(10));
+          }
+        }
+      });
+    }
+
+test('releases still bitmaps after success, cancellation and partial decode failure', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const result = await page.evaluate(async () => {
+    const mediaModule = '/src/media.ts',
+      exportModule = '/src/export.ts';
+    const { readMedia } = await import(mediaModule);
+    const { renderVideo, renderFrameImage } = await import(exportModule);
+    const decode = window.createImageBitmap;
+    let created = 0,
+      closed = 0;
+    window.createImageBitmap = new Proxy(decode, {
+      async apply(target, receiver, args) {
+        const bitmap: ImageBitmap = await Reflect.apply(target, receiver, args);
+        created++;
+        const close = bitmap.close.bind(bitmap);
+        bitmap.close = () => {
+          closed++;
+          close();
+        };
+        return bitmap;
+      },
+    });
+    const canvas = document.createElement('canvas');
+    canvas.width = 80;
+    canvas.height = 40;
+    const blob = await new Promise<Blob>((resolve) =>
+      canvas.toBlob((b) => resolve(b!), 'image/png'),
+    );
+    const asset = await readMedia(blob, 'local.png');
+    const badUrl = URL.createObjectURL(new Blob(['not pixels'], { type: 'image/png' }));
+    const options = {
+      assets: [asset],
+      clips: [
+        { id: 'a', assetId: asset.id, track: 'screen', start: 0, duration: 1, offset: 0 },
+        { id: 'b', assetId: asset.id, track: 'screen', start: 1, duration: 1, offset: 999 },
+      ],
+      layout: { radius: 22, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
+      zooms: [],
+      muted: [],
+      width: 1920,
+      onProgress: () => {},
+      format: 'mp4',
+    };
+    const counts = () => [created, closed];
+    try {
+      const imported = counts();
+      await renderVideo(options);
+      const success = counts();
+      const signal = new AbortController();
+      const cancelled = await renderVideo({
+        ...options,
+        signal: signal.signal,
+        onProgress: (p: number) => {
+          if (p >= 0.1) signal.abort();
+        },
+      }).then(
+        () => false,
+        () => true,
+      );
+      const cancellation = counts();
+      const failure = await renderVideo({
+        ...options,
+        assets: [asset, { ...asset, id: 'bad', url: badUrl }],
+        clips: [
+          ...options.clips,
+          { ...options.clips[0], id: 'bad', assetId: 'bad', track: 'camera' },
+        ],
+      }).then(
+        () => false,
+        () => true,
+      );
+      const failed = counts();
+      await renderFrameImage({ ...options, frame: 1 });
+      return {
+        imported,
+        success,
+        cancelled,
+        cancellation,
+        failure,
+        failed,
+        frame: counts(),
+        hasDuration: 'duration' in asset,
+      };
+    } finally {
+      window.createImageBitmap = decode;
+      URL.revokeObjectURL(asset.url);
+      URL.revokeObjectURL(badUrl);
+    }
+  });
+  expect(result).toEqual({
+    imported: [1, 1],
+    success: [2, 2],
+    cancelled: true,
+    cancellation: [3, 3],
+    failure: true,
+    failed: [4, 4],
+    frame: [5, 5],
+    hasDuration: false,
+  });
+});
+
 test('rejects cancelled exports and stops an in-progress render', async ({ page }) => {
   test.setTimeout(60000);
   await page.route('**/export-fixture', (route) =>

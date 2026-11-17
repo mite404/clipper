@@ -1,5 +1,328 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Locator } from '@playwright/test';
 import path from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
+
+type MediaWindow = Window & { liveMediaUrls: Set<string> };
+
+// An inline duration error must sit below its field, not float over neighbouring headings.
+async function expectBelow(error: Locator, field: Locator) {
+  const [e, f] = [(await error.boundingBox())!, (await field.boundingBox())!];
+  expect(e.y).toBeGreaterThanOrEqual(f.y + f.height);
+}
+
+test('imports still images with editable clip duration, alpha and portable reopen', async ({
+  page,
+}) => {
+  const uploads: string[] = [];
+  page.on('request', (r) => {
+    if (r.method() !== 'GET') uploads.push(r.url());
+  });
+  await page.addInitScript(() => {
+    const live = new Set<string>();
+    const create = URL.createObjectURL.bind(URL),
+      revoke = URL.revokeObjectURL.bind(URL);
+    URL.createObjectURL = (blob) => {
+      const url = create(blob);
+      live.add(url);
+      return url;
+    };
+    URL.revokeObjectURL = (url) => {
+      live.delete(url);
+      revoke(url);
+    };
+    Object.assign(window, { liveMediaUrls: live });
+  });
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const pictures = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 200;
+    const ctx = canvas.getContext('2d')!;
+    ctx.fillStyle = '#ff0000';
+    ctx.fillRect(0, 0, 200, 200);
+    ctx.fillStyle = '#0000ff80';
+    ctx.fillRect(200, 0, 100, 200);
+    return [canvas.toDataURL('image/png'), canvas.toDataURL('image/jpeg')];
+  });
+  const png = Buffer.from(pictures[0].split(',')[1], 'base64');
+  await page.getByLabel('Import local media').setInputFiles([
+    { name: 'overlay.PNG', mimeType: '', buffer: png },
+    { name: 'broken.png', mimeType: 'image/png', buffer: Buffer.from('invalid') },
+    {
+      name: 'portrait.JPG',
+      mimeType: '',
+      buffer: Buffer.from(pictures[1].split(',')[1], 'base64'),
+    },
+  ]);
+  await expect(page.getByTestId('media-status')).toHaveText('6 assets ready', { timeout: 30000 });
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('broken.png');
+  await page.getByRole('button', { name: 'Select overlay.PNG', exact: true }).click();
+  await expect(page.locator('.source-preview img')).toHaveJSProperty('naturalWidth', 400);
+  await expect(page.getByLabel('Still duration seconds', { exact: true })).toHaveValue('5');
+  await expect(page.getByLabel('Insert onto track').locator('option')).toHaveCount(2);
+  const stillDuration = page.getByLabel('Still duration seconds', { exact: true });
+  await stillDuration.fill('0');
+  await stillDuration.press('Enter');
+  await expect(page.locator('.source-panel .source-error')).toContainText('one frame');
+  await expectBelow(page.locator('.source-panel .source-error'), stillDuration);
+  await expect(stillDuration).toHaveValue('5');
+  await stillDuration.fill('0.033333');
+  await stillDuration.press('Enter');
+  await expect(stillDuration).toHaveValue('0.033');
+  await stillDuration.fill('86400.1');
+  await stillDuration.press('Enter');
+  await expect(stillDuration).toHaveValue('0.033');
+  await stillDuration.fill('86400');
+  await stillDuration.press('Enter');
+  await page.getByRole('button', { name: 'Insert source at playhead' }).click();
+  await expect(page.getByTestId('track-screen').getByRole('button')).toHaveCount(2);
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('24');
+  await stillDuration.fill('5');
+  await stillDuration.press('Enter');
+  await page.getByRole('button', { name: 'Insert source at playhead' }).click();
+  const screen = page.getByTestId('track-screen');
+  await expect(screen.getByRole('button')).toHaveCount(3);
+  await expect(page.getByLabel('Selected still duration seconds')).toHaveValue('5');
+  await page.getByLabel('Selected still duration seconds').fill('6');
+  await page.getByLabel('Selected still duration seconds').press('Enter');
+  await expect(
+    page.getByRole('region', { name: 'Still image clip' }).getByRole('status'),
+  ).toContainText('overlap');
+  await expectBelow(
+    page.getByRole('region', { name: 'Still image clip' }).getByRole('status'),
+    page.getByLabel('Selected still duration seconds'),
+  );
+  await expect(page.getByLabel('Selected still duration seconds')).toHaveValue('5');
+  await page.getByLabel('Selected still duration seconds').fill('2');
+  await page.getByLabel('Selected still duration seconds').press('Enter');
+  await expect(page.getByLabel('Selected still duration seconds')).toHaveValue('2');
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(page.getByLabel('Selected still duration seconds')).toHaveValue('5');
+  const originalClips = await page
+    .locator('.timeline-clip')
+    .evaluateAll((clips) => clips.map((c) => c.getAttribute('style')));
+  await page.getByLabel('Selected still duration seconds').fill('0');
+  await page.getByLabel('Selected still duration seconds').press('Enter');
+  await expect(page.getByLabel('Selected still duration seconds')).toHaveValue('5');
+  expect(
+    await page
+      .locator('.timeline-clip')
+      .evaluateAll((clips) => clips.map((c) => c.getAttribute('style'))),
+  ).toEqual(originalClips);
+  await page.getByLabel('Selected still duration seconds').fill('0.033333');
+  await page.getByLabel('Selected still duration seconds').press('Enter');
+  await expect(page.getByLabel('Selected still duration seconds')).toHaveValue('0.033');
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await page.getByRole('slider', { name: 'Timeline playhead' }).fill('45');
+  await page.getByRole('button', { name: 'Split selected clip', exact: true }).click();
+  await expect(screen.getByRole('button')).toHaveCount(4);
+  await page.getByRole('button', { name: 'Delete selected clip or zoom', exact: true }).click();
+  await expect(screen.getByRole('button')).toHaveCount(3);
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(screen.getByRole('button')).toHaveCount(4);
+  const rightStill = screen.getByRole('button', {
+    name: 'overlay.PNG at 1.5 seconds',
+    exact: true,
+  });
+  await rightStill.getByRole('slider', { name: 'Trim left edge' }).press('ArrowRight');
+  await expect(rightStill.getByRole('slider', { name: 'Trim left edge' })).toHaveAttribute(
+    'aria-valuenow',
+    '46',
+  );
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(
+    page.locator('[data-testid="screen-mask"] img[src^="blob:"]').first(),
+  ).toHaveJSProperty('naturalWidth', 400);
+  await page.getByRole('button', { name: 'Select portrait.JPG', exact: true }).click();
+  await page.getByLabel('Insert onto track').selectOption('camera');
+  await page.getByLabel('Still duration seconds', { exact: true }).fill('1');
+  await page.getByRole('button', { name: 'Insert source at playhead' }).click();
+  await expect(page.getByTestId('track-camera').getByRole('button')).toHaveCount(3);
+  const saving = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const download = await saving;
+  const { readFile } = await import('node:fs/promises');
+  const saved = await readFile((await download.path())!, 'utf8');
+  const envelope = JSON.parse(saved);
+  expect(envelope.version).toBe(3);
+  const embedded = envelope.media.find((m: { name: string }) => m.name === 'overlay.PNG');
+  expect(Buffer.from(embedded.data.split(',')[1], 'base64')).toEqual(png);
+  page.on('dialog', (d) => d.accept());
+  const urls = await page.evaluate(() => (window as unknown as MediaWindow).liveMediaUrls.size);
+  envelope.media.push({
+    id: 'corrupt-still',
+    name: 'corrupt.png',
+    kind: 'image',
+    data: 'data:image/png;base64,iVBORw0KGgo=',
+  });
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'corrupt.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(envelope)),
+  });
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('corrupt');
+  await expect(page.getByTestId('media-status')).toHaveText('6 assets ready');
+  await expect
+    .poll(() => page.evaluate(() => (window as unknown as MediaWindow).liveMediaUrls.size))
+    .toBe(urls);
+  await expect(screen.getByRole('button')).toHaveCount(4);
+  await page.reload();
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'stills.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(saved),
+  });
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Project reopened');
+  await expect(screen.getByRole('button')).toHaveCount(4);
+  await page.getByRole('slider', { name: 'Timeline playhead' }).fill('46');
+  await expect(
+    page.locator('[data-testid="screen-mask"] img[src^="blob:"]').first(),
+  ).toHaveJSProperty('naturalWidth', 400);
+  expect(uploads).toEqual([]);
+});
+
+test('imports qualified H264 and AAC MP4/MOV, rejects ProRes and reopens exported sources', async ({
+  page,
+}, info) => {
+  test.setTimeout(120000);
+  const files: string[] = [];
+  for (const [extension, audio] of [
+    ['mp4', false],
+    ['mp4', true],
+    ['mov', false],
+    ['mov', true],
+  ] as const) {
+    const file = info.outputPath(`h264${audio ? '-aac' : ''}.${extension}`);
+    execFileSync('ffmpeg', [
+      '-v',
+      'error',
+      '-y',
+      '-f',
+      'lavfi',
+      '-i',
+      'testsrc2=size=240x120:rate=30:duration=1',
+      ...(audio ? ['-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000:duration=1'] : []),
+      '-c:v',
+      'libx264',
+      '-pix_fmt',
+      'yuv420p',
+      ...(audio ? ['-c:a', 'aac', '-ac', '2'] : ['-an']),
+      file,
+    ]);
+    const probe = JSON.parse(
+      execFileSync(
+        'ffprobe',
+        ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', file],
+        { encoding: 'utf8' },
+      ),
+    );
+    expect(probe.streams[0].codec_name).toBe('h264');
+    expect(probe.streams[0].pix_fmt).toBe('yuv420p');
+    expect(probe.format.tags.major_brand).toBe(extension === 'mov' ? 'qt  ' : 'isom');
+    expect(probe.streams.some((s: { codec_name: string }) => s.codec_name === 'aac')).toBe(audio);
+    files.push(file);
+  }
+  const unsupported = info.outputPath('unsupported-prores.mov');
+  execFileSync('ffmpeg', [
+    '-v',
+    'error',
+    '-y',
+    '-f',
+    'lavfi',
+    '-i',
+    'testsrc2=size=240x120:rate=30:duration=1',
+    '-c:v',
+    'prores_ks',
+    '-pix_fmt',
+    'yuv422p10le',
+    '-threads',
+    '1',
+    unsupported,
+  ]);
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'empty.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(
+      JSON.stringify({
+        version: 2,
+        fps: 30,
+        media: [],
+        clips: [],
+        zooms: [],
+        muted: [],
+        layout: { radius: 22, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
+      }),
+    ),
+  });
+  await expect(page.getByTestId('media-status')).toHaveText('0 assets ready');
+  await page.getByLabel('Import local media').setInputFiles([...files, unsupported]);
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await expect(page.locator('.app-footer [role="status"]')).toContainText(
+    'video codec is not supported',
+  );
+  for (const file of files) {
+    await page.getByRole('button', { name: `Select ${path.basename(file)}`, exact: true }).click();
+    const video = page.locator('.source-preview video');
+    await page.getByRole('button', { name: 'Play source', exact: true }).click();
+    await expect
+      .poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime))
+      .toBeGreaterThan(0.15);
+    await page.getByRole('button', { name: 'Pause source', exact: true }).click();
+    await page.getByRole('button', { name: 'Insert source at playhead', exact: true }).click();
+  }
+  await page.getByLabel('Insert onto track').selectOption('voice');
+  await page.getByRole('button', { name: 'Insert source at playhead', exact: true }).click();
+  const saving = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const saved = readFileSync((await (await saving).path())!, 'utf8');
+  expect(JSON.parse(saved).version).toBe(2);
+  await page.reload();
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'qualified.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(saved),
+  });
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Project reopened');
+  await expect(page.getByTestId('track-screen').getByRole('button')).toHaveCount(4);
+  await expect(page.getByTestId('track-voice').getByRole('button')).toHaveCount(1);
+  const rendered = page.waitForEvent('download', { timeout: 90000 });
+  await page.getByRole('button', { name: 'Export video', exact: true }).click();
+  await page.getByRole('button', { name: 'Render video', exact: true }).click();
+  const output = info.outputPath('qualified.mp4');
+  await (await rendered).saveAs(output);
+  const probe = JSON.parse(
+    execFileSync(
+      'ffprobe',
+      ['-v', 'error', '-count_frames', '-show_streams', '-of', 'json', output],
+      { encoding: 'utf8' },
+    ),
+  );
+  expect(probe.streams[0].codec_name).toBe('h264');
+  expect(Number(probe.streams[0].nb_read_frames)).toBe(120);
+  expect(probe.streams[1].codec_name).toBe('aac');
+  const samples = execFileSync('ffmpeg', [
+    '-v',
+    'error',
+    '-i',
+    output,
+    '-map',
+    '0:a',
+    '-t',
+    '0.8',
+    '-f',
+    'f32le',
+    '-',
+  ]);
+  const audio = new Float32Array(samples.buffer, samples.byteOffset, samples.byteLength / 4);
+  expect(Math.max(...audio.subarray(0, 20000).map(Math.abs))).toBeGreaterThan(0.02);
+  execFileSync('ffmpeg', ['-v', 'error', '-i', output, '-f', 'null', '-']);
+});
 
 for (const kind of ['video', 'audio']) {
   test(`busy save, import and open pause source ${kind} without resuming`, async ({ page }) => {

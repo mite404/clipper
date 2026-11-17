@@ -129,7 +129,7 @@ async function mixAudio(
 }
 
 // A decoded picture for one video track at the frame being drawn.
-type Layer = { track: Track; image: HTMLCanvasElement | OffscreenCanvas };
+type Layer = { track: Track; image: HTMLCanvasElement | OffscreenCanvas | ImageBitmap };
 
 // Paint one composition frame in stage pixels: backdrop, then each track's mask, crop and zoom.
 // Anything that must move with the screen, such as a recorded cursor, is drawn inside its clip.
@@ -178,22 +178,26 @@ function drawFrame(
 // Open every clip's local media once, keyed by asset, so decoding never touches a stale URL.
 async function openInputs(
   inputs: Map<string, Input>,
+  images: Map<string, ImageBitmap>,
   clips: Clip[],
   assets: Asset[],
   check: () => void,
   signal?: AbortSignal,
 ): Promise<void> {
   for (const clip of clips) {
-    if (inputs.has(clip.assetId)) continue;
+    if (inputs.has(clip.assetId) || images.has(clip.assetId)) continue;
     const asset = assets.find((item) => item.id === clip.assetId);
     if (!asset) throw new Error(`Missing media for clip ${clip.id}.`);
     if (!asset.url.startsWith('blob:'))
       throw new Error(`Re-import ${asset.name}: export requires local blob media.`);
     const response = await openMedia(asset, signal);
-    inputs.set(
-      asset.id,
-      new Input({ source: new BlobSource(await response.blob()), formats: ALL_FORMATS }),
-    );
+    if (asset.kind === 'image') {
+      images.set(asset.id, await createImageBitmap(await response.blob()));
+    } else
+      inputs.set(
+        asset.id,
+        new Input({ source: new BlobSource(await response.blob()), formats: ALL_FORMATS }),
+      );
     check();
   }
 }
@@ -202,6 +206,14 @@ export type RenderFrameImageOptions = Pick<
   RenderVideoOptions,
   'clips' | 'assets' | 'zooms' | 'layout' | 'width' | 'signal'
 > & { frame: number };
+
+// Validate a timed visual once before asking its decoder for frames.
+async function videoSink(inputs: Map<string, Input>, clip: Clip, poolSize?: number) {
+  const track = await inputs.get(clip.assetId)!.getPrimaryVideoTrack();
+  if (!track || !(await track.canDecode()))
+    throw new Error(`Cannot decode video in clip ${clip.id}.`);
+  return new CanvasSink(track, { poolSize });
+}
 
 /**
  * Render one composition frame as a PNG through the same drawFrame, framing and cursor path as
@@ -230,18 +242,19 @@ export async function renderFrameImage({
   const context = canvas.getContext('2d');
   if (!context) throw new Error('Canvas rendering is unavailable in this browser.');
   const inputs = new Map<string, Input>();
+  const images = new Map<string, ImageBitmap>();
   try {
     const visible = clips.filter(
       (clip) => (clip.track === 'screen' || clip.track === 'camera') && covers(clip, frame),
     );
     const cursorImages = await decodeCursorImages(assets);
-    await openInputs(inputs, visible, assets, check, signal);
+    await openInputs(inputs, images, visible, assets, check, signal);
     const layers: Layer[] = [];
     for (const clip of visible) {
-      const track = await inputs.get(clip.assetId)!.getPrimaryVideoTrack();
-      if (!track || !(await track.canDecode()))
-        throw new Error(`Cannot decode video in clip ${clip.id}.`);
-      const sample = await new CanvasSink(track).getCanvas(sourceFrame(clip, frame) / FPS);
+      const image = images.get(clip.assetId);
+      const sample = image
+        ? { canvas: image }
+        : await (await videoSink(inputs, clip)).getCanvas(sourceFrame(clip, frame) / FPS);
       check();
       if (sample) layers.push({ track: clip.track, image: sample.canvas });
     }
@@ -258,6 +271,7 @@ export async function renderFrameImage({
     if (!blob) throw new Error('The browser could not encode the frame as PNG.');
     return blob;
   } finally {
+    for (const image of images.values()) image.close();
     for (const input of inputs.values()) input.dispose();
     canvas.width = 0;
     canvas.height = 0;
@@ -342,26 +356,30 @@ export async function renderVideo({
   output.addVideoTrack(video, { frameRate: FPS });
   if (audio) output.addAudioTrack(audio);
   const inputs = new Map<string, Input>();
+  const images = new Map<string, ImageBitmap>();
   const iterators: AsyncGenerator<Awaited<ReturnType<CanvasSink['getCanvas']>>, void, unknown>[] =
     [];
   try {
     const cursorImages = await decodeCursorImages(assets);
-    await openInputs(inputs, clips, assets, check, signal);
+    await openInputs(inputs, images, clips, assets, check, signal);
     const mixed = audio && (await mixAudio(inputs, audioClips, frames, check));
     check();
     const visuals = [];
     for (const clip of clips.filter((clip) => clip.track === 'screen' || clip.track === 'camera')) {
-      const track = await inputs.get(clip.assetId)!.getPrimaryVideoTrack();
-      if (!track || !(await track.canDecode()))
-        throw new Error(`Cannot decode video in clip ${clip.id}.`);
+      const image = images.get(clip.assetId);
+      if (image) {
+        visuals.push({ kind: 'image' as const, clip, image });
+        continue;
+      }
+      const sink = await videoSink(inputs, clip, 2);
       const times = Array.from(
         { length: clip.duration },
         (_, index) => sourceFrame(clip, clip.start + index) / FPS,
       );
       // Each canvas is drawn before the next is requested, so two pooled canvases never collide.
-      const iterator = new CanvasSink(track, { poolSize: 2 }).canvasesAtTimestamps(times);
+      const iterator = sink.canvasesAtTimestamps(times);
       iterators.push(iterator);
-      visuals.push({ clip, iterator });
+      visuals.push({ kind: 'video' as const, clip, iterator });
     }
     await output.start();
     onProgress(0.1);
@@ -374,9 +392,14 @@ export async function renderVideo({
     for (let frame = 0; frame < frames; frame++) {
       check();
       const layers: Layer[] = [];
-      for (const { clip, iterator } of visuals) {
+      for (const visual of visuals) {
+        const { clip } = visual;
         if (!covers(clip, frame)) continue;
-        const sample = (await iterator.next()).value; // → decoded canvas, reused two frames later
+        if (visual.kind === 'image') {
+          layers.push({ track: clip.track, image: visual.image });
+          continue;
+        }
+        const sample = (await visual.iterator.next()).value; // → decoded canvas, reused two frames later
         check();
         if (sample) layers.push({ track: clip.track, image: sample.canvas });
       }
@@ -405,6 +428,7 @@ export async function renderVideo({
       { cause: error },
     );
   } finally {
+    for (const image of images.values()) image.close();
     await Promise.all(iterators.map((iterator) => iterator.return()));
     for (const input of inputs.values()) input.dispose();
     canvas.width = 0;

@@ -33,6 +33,139 @@ test.beforeEach(async ({ page }) => {
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
 });
 
+for (const kind of ['png', 'jpeg'])
+  test(`copies ${kind} still pixels with cover fit and split offsets at both resolutions`, async ({
+    page,
+  }) => {
+    const result = await page.evaluate(async (kind) => {
+      const mediaModule = '/src/media.ts',
+        renderModule = '/src/export.ts';
+      const { readMedia } = await import(mediaModule);
+      const { renderFrameImage } = await import(renderModule);
+      const projectModule = '/src/project.ts';
+      const { serializeProject } = await import(projectModule);
+      const c = document.createElement('canvas');
+      c.width = 400;
+      c.height = 200;
+      const g = c.getContext('2d')!;
+      g.fillStyle = '#ff0000';
+      g.fillRect(0, 0, 200, 200);
+      g.fillStyle = '#0000ff80';
+      g.fillRect(200, 0, 100, 200);
+      const blob = await new Promise<Blob>((r) => c.toBlob((b) => r(b!), `image/${kind}`));
+      const asset = await readMedia(blob, `alpha.${kind}`);
+      try {
+        const options = {
+          assets: [asset],
+          clips: [
+            { id: 'left', assetId: asset.id, track: 'screen', start: 1, duration: 2, offset: 0 },
+            { id: 'right', assetId: asset.id, track: 'screen', start: 3, duration: 2, offset: 2 },
+          ],
+          zooms: [],
+          layout: { radius: 22, screenX: 100, screenY: 50, cameraX: 50, cameraY: 50 },
+        };
+        const samples = [];
+        for (const width of [1920, 3840])
+          for (const frame of [0, 1, 3, 4]) {
+            const bitmap = await createImageBitmap(
+              await renderFrameImage({ ...options, width, frame }),
+            );
+            c.width = bitmap.width;
+            c.height = bitmap.height;
+            g.drawImage(bitmap, 0, 0);
+            bitmap.close();
+            samples.push(
+              [25, 400, 850].map((x) =>
+                Array.from(
+                  g.getImageData(
+                    Math.round((x * width) / 1280),
+                    Math.round((300 * width) / 1280),
+                    1,
+                    1,
+                  ).data,
+                ),
+              ),
+            );
+          }
+        const project = await (await serializeProject(options, [asset], [])).file.text();
+        return { samples, project };
+      } finally {
+        URL.revokeObjectURL(asset.url);
+      }
+    }, kind);
+    for (let i = 0; i < result.samples.length; i++) {
+      const expected =
+        i % 4 === 0
+          ? [
+              [16, 24, 27],
+              [16, 24, 27],
+              [16, 24, 27],
+            ]
+          : [
+              [255, 0, 0],
+              kind === 'png' ? [8, 12, 141] : [0, 0, 128],
+              kind === 'png' ? [16, 24, 27] : [0, 0, 0],
+            ];
+      result.samples[i].forEach((pixel, j) => expect(near(pixel, expected[j], 2)).toBe(true));
+    }
+    await page.getByLabel('Open local project').setInputFiles({
+      name: 'pixels.clipper.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(result.project),
+    });
+    await expect(page.locator('.app-footer [role="status"]')).toContainText('Project reopened');
+    await page.getByLabel('Timeline playhead', { exact: true }).fill('3');
+    const mask = page.getByTestId('screen-mask');
+    await expect(mask.locator('img').first()).toHaveJSProperty('naturalWidth', 400);
+    const preview = (await mask.screenshot()).toString('base64');
+    const px = await page.evaluate(async (preview) => {
+      const bitmap = await createImageBitmap(
+        await (await fetch(`data:image/png;base64,${preview}`)).blob(),
+      );
+      const c = document.createElement('canvas');
+      c.width = bitmap.width;
+      c.height = bitmap.height;
+      const g = c.getContext('2d')!;
+      g.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      return [25, 400, 850].map((x) =>
+        Array.from(
+          g.getImageData(
+            Math.round(((x - 10) / 880) * c.width),
+            Math.round((290 / 700) * c.height),
+            1,
+            1,
+          ).data,
+        ),
+      );
+    }, preview);
+    const expected = [
+      [255, 0, 0],
+      kind === 'png' ? [8, 12, 141] : [0, 0, 128],
+      kind === 'png' ? [16, 24, 27] : [0, 0, 0],
+    ];
+    px.forEach((pixel, i) => expect(near(pixel, expected[i], 3)).toBe(true));
+    await page.getByRole('button', { name: 'Copy frame', exact: true }).click();
+    await expect(page.locator('.app-footer [role="status"]')).toContainText('copied');
+    const copied = await page.evaluate(async () => {
+      const [item] = await navigator.clipboard.read();
+      const bitmap = await createImageBitmap(await item.getType('image/png'));
+      const c = document.createElement('canvas');
+      c.width = bitmap.width;
+      c.height = bitmap.height;
+      const g = c.getContext('2d')!;
+      g.drawImage(bitmap, 0, 0);
+      bitmap.close();
+      return [25, 400, 850].map((x) =>
+        Array.from(
+          g.getImageData(Math.round((x / 1280) * c.width), Math.round((300 / 720) * c.height), 1, 1)
+            .data,
+        ),
+      );
+    });
+    copied.forEach((pixel, i) => expect(near(pixel, expected[i], 2)).toBe(true));
+  });
+
 async function buildFixture(page: import('@playwright/test').Page) {
   return page.evaluate(async () => {
     const bunnyModule = '/node_modules/mediabunny/dist/bundles/mediabunny.mjs';

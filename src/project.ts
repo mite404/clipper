@@ -75,10 +75,18 @@ function zoomSource(value: unknown, clips: Clip[], duration: number): NonNullabl
   };
 }
 
+function imageKind(kind: unknown, data: string, version: unknown): { kind?: 'image' } {
+  const image = /^data:image\/(png|jpeg);base64,/.test(data);
+  if (!image && kind === undefined) return {};
+  if (version !== 3 || !image || kind !== 'image')
+    throw new Error('Image kind and PNG/JPEG MIME require version 3.');
+  return { kind: 'image' };
+}
+
 /** Validates the portable envelope, not media codecs or decoded source durations. */
 export function parseProject(text: string): {
   edit: Edit;
-  media: { id: string; name: string; data: string; cursor?: CursorTrack }[];
+  media: { id: string; name: string; data: string; kind?: 'image'; cursor?: CursorTrack }[];
   muted: Track[];
 } {
   let value: unknown;
@@ -92,7 +100,8 @@ export function parseProject(text: string): {
     throw new Error(
       'Version 1 edit lists contain metadata only, not portable media. Save a version 2 project.',
     );
-  if (root.version !== 2) throw new Error('Unsupported project version; expected version 2.');
+  if (root.version !== 2 && root.version !== 3)
+    throw new Error('Unsupported project version; expected version 2 or 3.');
   if (root.fps !== FPS) throw new Error(`Unsupported fps; expected ${FPS}.`);
 
   const media = array(root.media, 'media').map((entry, i) => {
@@ -100,12 +109,13 @@ export function parseProject(text: string): {
     const id = string(item.id, `media[${i}].id`);
     const name = string(item.name, `media[${i}].name`);
     const data = string(item.data, `media[${i}].data`);
+    const kind = imageKind(item.kind, data, root.version);
     const match =
-      /^data:(?:video\/[a-z0-9.+-]+|audio\/[a-z0-9.+-]+|application\/(?:octet-stream|ogg));base64,([A-Za-z0-9+/]+={0,2})$/.exec(
+      /^data:(?:image\/(?:png|jpeg)|video\/[a-z0-9.+-]+|audio\/[a-z0-9.+-]+|application\/(?:octet-stream|ogg));base64,([A-Za-z0-9+/]+={0,2})$/.exec(
         data,
       );
     if (!match || match[1].length % 4 !== 0)
-      throw new Error(`media[${i}].data must be a base64 audio/video data URL.`);
+      throw new Error(`media[${i}].data must be a base64 audio/video or PNG/JPEG data URL.`);
     try {
       if (btoa(atob(match[1])) !== match[1]) throw new Error('Noncanonical base64');
     } catch {
@@ -115,6 +125,7 @@ export function parseProject(text: string): {
       id,
       name,
       data,
+      ...kind,
       ...(item.cursor === undefined ? {} : { cursor: parseCursorTrack(item.cursor) }),
     };
   });
@@ -200,16 +211,18 @@ export function validateSources(edit: Edit, assets: Asset[]): void {
     'media',
   );
   const sources = new Map(assets.map((asset) => [asset.id, asset]));
-  for (const asset of assets) frame(asset.duration, `Media ${asset.name} duration`, 1);
+  for (const asset of assets.filter((item) => item.kind !== 'image'))
+    frame(asset.duration, `Media ${asset.name} duration`, 1);
   for (const clip of edit.clips) {
     const asset = sources.get(clip.assetId);
     if (!asset) throw new Error(`Clip ${clip.id} references missing media ${clip.assetId}.`);
     frame(clip.offset, `Clip ${clip.id} offset`);
     frame(clip.duration, `Clip ${clip.id} duration`, 1);
-    if (clip.offset + clip.duration > asset.duration)
+    range(clip.start, clip.duration, `Clip ${clip.id} timeline`);
+    if (asset.kind !== 'image' && clip.offset + clip.duration > asset.duration)
       throw new Error(`Clip ${clip.id} source range exceeds ${asset.name}'s decoded duration.`);
-    if ((clip.track === 'screen' || clip.track === 'camera') && asset.kind !== 'video')
-      throw new Error(`Clip ${clip.id} on ${clip.track} requires video media.`);
+    if ((clip.track === 'screen' || clip.track === 'camera') && asset.kind === 'audio')
+      throw new Error(`Clip ${clip.id} on ${clip.track} requires video or image media.`);
     if ((clip.track === 'voice' || clip.track === 'music') && !asset.hasAudio)
       throw new Error(`Clip ${clip.id} on ${clip.track} requires an audio stream.`);
   }
@@ -239,7 +252,7 @@ async function dataUrl(blob: Blob): Promise<string> {
   let binary = '';
   for (let i = 0; i < bytes.length; i += 32768)
     binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
-  const mime = /^(?:video|audio)\/[a-z0-9.+-]+$/.test(blob.type)
+  const mime = /^(?:(?:video|audio)\/[a-z0-9.+-]+|image\/(?:png|jpeg))$/.test(blob.type)
     ? blob.type
     : 'application/octet-stream';
   return `data:${mime};base64,${btoa(binary)}`;
@@ -298,16 +311,18 @@ export async function serializeProject(
       id: asset.id,
       name: asset.name,
       data,
+      ...(asset.kind === 'image' ? { kind: 'image' as const } : {}),
       ...(asset.cursor ? { cursor: asset.cursor } : {}),
     });
   }
+  const version = media.some((item) => item.kind === 'image') ? 3 : 2;
   const parsed = parseProject(
-    JSON.stringify({ version: 2, fps: FPS, ...snapshot, media, muted: mutedSnapshot }),
+    JSON.stringify({ version, fps: FPS, ...snapshot, media, muted: mutedSnapshot }),
   );
   const file = new Blob(
     [
       JSON.stringify({
-        version: 2,
+        version,
         fps: FPS,
         ...parsed.edit,
         media: parsed.media,

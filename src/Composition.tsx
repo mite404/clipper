@@ -75,6 +75,13 @@ export function Composition({ clips, assets, zooms, layout, muted }: Composition
                   const asset = assets.find((a) => a.id === clip.assetId);
                   if (!asset) return null;
                   const cover = coverRect(mask, asset, crop);
+                  const style = {
+                    position: 'absolute' as const,
+                    left: cover.x,
+                    top: cover.y,
+                    width: cover.width,
+                    height: cover.height,
+                  };
                   return (
                     <Sequence
                       key={clip.id}
@@ -83,19 +90,17 @@ export function Composition({ clips, assets, zooms, layout, muted }: Composition
                       premountFor={30}
                       postmountFor={30}
                     >
-                      <Video
-                        src={asset.url}
-                        trimBefore={clip.offset}
-                        muted
-                        pauseWhenBuffering
-                        style={{
-                          position: 'absolute',
-                          left: cover.x,
-                          top: cover.y,
-                          width: cover.width,
-                          height: cover.height,
-                        }}
-                      />
+                      {asset.kind === 'image' ? (
+                        <Img src={asset.url} alt="" style={style} />
+                      ) : (
+                        <Video
+                          src={asset.url}
+                          trimBefore={clip.offset}
+                          muted
+                          pauseWhenBuffering
+                          style={style}
+                        />
+                      )}
                     </Sequence>
                   );
                 })}
