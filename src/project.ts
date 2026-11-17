@@ -3,6 +3,7 @@ import { openMedia, type Asset } from './media';
 import {
   DEFAULT_TRACKS,
   FPS,
+  MAX_FRAMES,
   ZOOM_LIMITS,
   zoomsOverlap,
   type Clip,
@@ -11,9 +12,6 @@ import {
   type Zoom,
 } from './timeline-model';
 import { parseCursorTrack, type CursorTrack } from './cursor';
-
-// No clip or zoom may end later than this: 24 hours of timeline.
-const MAX_FRAMES = 24 * 60 * 60 * FPS;
 
 /** The undoable edit. `tracks` is the ordered registry every clip's `track` resolves through. */
 export type Edit = { clips: Clip[]; zooms: Zoom[]; layout: Layout; tracks: TrackDef[] };

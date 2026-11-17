@@ -219,6 +219,15 @@ test('the keyboard places on existing and new tracks, reorders, and v4 files reo
   await page.keyboard.press('Enter');
   const target = page.getByLabel('Place onto');
   await target.selectOption({ label: 'New V1 background · Full frame' });
+  // Save refuses an edit past 24 hours, so placement refuses it first and adds nothing.
+  const clips = await page.locator('.timeline-clip').count();
+  await page.getByLabel('Place at seconds').fill('100000');
+  await page.getByRole('button', { name: 'Place on timeline' }).press('Enter');
+  await expect(status(page)).toContainText(
+    'That would pass the 24-hour timeline. Nothing was placed.',
+  );
+  await expect(page.locator('.timeline-clip')).toHaveCount(clips);
+  await expect(undo(page)).toBeDisabled();
   await page.getByLabel('Place at seconds').fill('1');
   await page.getByRole('button', { name: 'Place on timeline' }).press('Enter');
   expect(await starts(lane(page, 'Background · Full frame'))).toEqual(['1.0 seconds']);

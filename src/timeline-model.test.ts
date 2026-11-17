@@ -283,6 +283,16 @@ describe('the track registry', () => {
       reason: 'missing',
     });
     expect(place(video, { track: 'camera' }, -40)).toMatchObject({ refused: expect.any(String) });
+    // Ending exactly at 24 hours fits; one frame later is refused, even on a new track.
+    const day = 24 * 3600 * 30;
+    expect(place(video, { track: 'camera' }, day - 60)).toMatchObject({
+      clip: { start: day - 60 },
+    });
+    for (const target of [{ track: 'camera' }, { create: 'screen' as const }])
+      expect(place(video, target, day - 59)).toEqual({
+        refused: 'That would pass the 24-hour timeline.',
+        reason: 'occupied',
+      });
     const made = (media: typeof video, create: 'background' | 'screen' | 'audio') => {
       const result = place(media, { create }, -5);
       if ('refused' in result) throw new Error(result.refused);

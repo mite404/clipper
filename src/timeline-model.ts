@@ -27,6 +27,8 @@ export type Zoom = {
   source?: { assetId: string; clipId: string; start: number; x: number; y: number };
 };
 export const FPS = 30;
+/** No clip or zoom may end later than this: 24 hours of timeline. */
+export const MAX_FRAMES = 24 * 60 * 60 * FPS;
 // Music's linear amplitude in playback and export.
 const MUSIC_GAIN = 0.22;
 /** The four lanes every project had before the registry, and every version 2 or 3 file opens with. */
@@ -274,6 +276,9 @@ export function placeMedia(
     duration: media.duration,
     offset: 0,
   };
+  // Save refuses an edit past the cap, so placement never reports success for one.
+  if (clip.start + clip.duration > MAX_FRAMES)
+    return { refused: 'That would pass the 24-hour timeline.', reason: 'occupied' };
   const placed = placeClip(clips, clip);
   if (!placed) return { refused: `${track.label} already has a clip there.`, reason: 'occupied' };
   return { tracks: created.tracks, clips: placed, clip };
