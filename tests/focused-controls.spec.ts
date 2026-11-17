@@ -447,3 +447,59 @@ test.describe('Delete follows the last clicked or focused panel', () => {
     await expect(clips(page)).toHaveCount(2);
   });
 });
+
+test('tabbing through the still duration field reports nothing until it really changes', async ({
+  page,
+}) => {
+  await open(page);
+  const png = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 200;
+    canvas.getContext('2d')!.fillRect(0, 0, 400, 200);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  await page.getByLabel('Import local media').setInputFiles({
+    name: 'still.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(png, 'base64'),
+  });
+  await expect(page.getByTestId('media-status')).toHaveText('5 assets ready', { timeout: 30000 });
+  await page.getByRole('button', { name: 'Select still.png', exact: true }).click();
+  await page.getByRole('button', { name: 'Insert source at playhead', exact: true }).click();
+  const field = page.getByLabel('Selected still duration seconds');
+  const status = page.locator('.app-footer [role="status"]');
+  await expect(field).toHaveValue('5');
+  const inserted = await status.textContent();
+  expect(inserted).not.toContain('Still duration updated');
+
+  // Tab in and straight out, and Enter on the unchanged value: no change, no message.
+  await field.focus();
+  await page.keyboard.press('Tab');
+  await expect(field).not.toBeFocused();
+  await field.focus();
+  await page.keyboard.press('Enter');
+  await page.waitForTimeout(200);
+  await expect(status).toHaveText(inserted!);
+  await expect(field).toHaveValue('5');
+  await expect(
+    page.getByRole('region', { name: 'Still image clip' }).getByRole('status'),
+  ).toHaveCount(0);
+
+  // A real change still reports and can be committed with Enter.
+  await field.fill('2');
+  await field.press('Enter');
+  await expect(status).toContainText('Still duration updated.');
+  await expect(field).toHaveValue('2');
+  await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeEnabled();
+
+  // An invalid value still shows its error, and an unchanged blur afterwards clears it.
+  await field.fill('0');
+  await field.press('Enter');
+  const error = page.getByRole('region', { name: 'Still image clip' }).getByRole('status');
+  await expect(error).toContainText('at least one frame');
+  await expect(field).toHaveValue('2');
+  await field.focus();
+  await page.keyboard.press('Tab');
+  await expect(error).toHaveCount(0);
+});

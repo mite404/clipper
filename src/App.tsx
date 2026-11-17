@@ -140,6 +140,13 @@ function stillFrames(value: string): number | null {
   return frames >= 1 && frames <= 24 * 3600 * FPS ? frames : null;
 }
 
+// An unchanged value is not a commit: it reports nothing and records no step.
+const commitIfChanged = (
+  length: number,
+  frames: number,
+  onCommit: (frames: number) => string | null,
+) => (length === frames ? null : onCommit(length));
+
 function StillDuration({
   frames,
   max = 86400 * FPS,
@@ -179,7 +186,7 @@ function StillDuration({
             const failure =
               length === null || length > max
                 ? 'Still duration must be at least one frame and fit within the 24-hour timeline.'
-                : onCommit(length);
+                : commitIfChanged(length, frames, onCommit);
             setError(failure);
             setDraft(String(Number(((failure ? frames : length!) / FPS).toFixed(3))));
           }}
