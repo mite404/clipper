@@ -39,17 +39,18 @@ primary repository since 2026-11-16; the Amp-hosted scaffold is gone. See
 ## Two-lane staffing audit, 2026-11-17
 
 Audited against fetched `b44e7c9a71473e1be0bf1159e9130c4528429afe` and the preserved candidates,
-then reconciled after accepted `5a34428`. There are 143 canonical IDs: 67 delivered rows, nine
-owner-decision rows and 67 remaining queue entries. The 67 comprise 62 implementation/qualification
+then reconciled after accepted `1de89b5`. There are 145 canonical IDs: 68 delivered rows, nine
+owner-decision rows and 68 remaining queue entries. The 68 comprise 63 implementation/qualification
 candidates below, four conditional or parked entries and one umbrella. These are ticket counts, not
-a claim that 62 source changes are approved or immediately runnable.
+a claim that 63 source changes are approved or immediately runnable.
 
-The Sonnet queue has one candidate: CLIP-45 held. The Opus queue has 61: CLIP-2c granted, 19 ready
-to scope/assign and 41 dependency-, contract- or owner-gated. Across both lanes that is 20 ready or
-granted and 42 held. Ready means recorded technical predecessors are satisfied, not permission to
-edit shared paths or skip acceptance scoping. A held ticket can have an independently useful
-subpart, but its entire remaining scope is not ready. Preserve the delivery order above numeric
-order and optional cleanup. Reassess a classification when a bounded contract changes its scope.
+The Sonnet queue has two candidates: REF-46 granted and CLIP-45 held. The Opus queue has 61: 20
+ready to scope/assign and 41 dependency-, contract- or owner-gated. Across both lanes that is 21
+ready or granted and 42 held. Ready means recorded technical predecessors are satisfied, not
+permission to edit shared paths or skip acceptance scoping. A held ticket can have an independently
+useful subpart, but its entire remaining scope is not ready. Preserve the delivery order above
+numeric order and optional cleanup. Reassess a classification when a bounded contract changes its
+scope.
 
 ### Sonnet candidate queue
 
@@ -59,6 +60,7 @@ expand its grant.
 
 | Candidate           | Readiness       | Why this lane; remaining gate                                                                                                  |
 | ------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| [REF-46](#ref-46)   | Granted         | Owner-visible layout: every lane and the preview fit by default at common sizes.                                               |
 | [CLIP-45](#clip-45) | Dependency-held | Existing-action widget and defaults only, after CLIP-40; reclassify if its scoped contract adds a new sharing/export pipeline. |
 
 ### Opus candidate queue
@@ -87,7 +89,7 @@ their old Medium/test-only labels do not make either whole ticket a small mechan
 | [REF-36](#ref-36)                                                                                       | Dependency-held                     | Recovery/mute qualification after still-media integration; retain existing focused corrupt-open evidence and avoid duplicate work.               |
 | [REF-37](#ref-37)                                                                                       | Evidence/owner-held                 | Existing qualification remains open; no renewed broad stall investigation without the recorded standalone recurrence or new Amp-view request.    |
 | [CLIP-9b](#clip-9b)                                                                                     | Contract-held                       | Creation is delivered; full ramps need the referenced curve technology/API and coordinated gesture/numeric consumers.                            |
-| [CLIP-2c](#clip-2c)                                                                                     | Granted                             | Typed ordered track registry, pool-drag insertion, dynamic tracks and full-frame Background per contract revision 10.                            |
+| [REF-47](#ref-47)                                                                                       | Ready to scope                      | Cursor overlay for a clip on a second screen-role track; cursor telemetry ownership first.                                                       |
 | [CLIP-2b](#clip-2b)                                                                                     | Dependency/contract-held            | CLIP-2c accepted registry, then partial-cut membership on CLIP-2e's successor; explicit association semantics first.                             |
 | [CLIP-21b](#clip-21b), [CLIP-19b](#clip-19b)                                                            | Dependency-held                     | Image/parser and accepted PiP/fit geometry successors before timing/scale migration.                                                             |
 | [CLIP-12](#clip-12)                                                                                     | Contract-held                       | Licensed or original sound plus preview/export click-mix contract; not merely a volume control.                                                  |
@@ -121,10 +123,10 @@ coordinator-serialized; no review gate changes.
 
 ### Active two-worker grants
 
-| Lane            | Worker                                                                           | Current grant                                                                       |
-| --------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Opus 5.5 medium | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | CLIP-2e delivered at `a26c7e7`, exact-SHA CI44050988058 green; now granted CLIP-2c. |
-| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | REF-45 delivered at `5a34428`, exact-SHA CI44146318878 green; no active grant.      |
+| Lane            | Worker                                                                           | Current grant                                                                     |
+| --------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Opus 5.5 medium | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | CLIP-2c delivered at `1de89b5`, exact-SHA CI44185392612 green; no active grant.   |
+| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | REF-45 delivered at `5a34428`, exact-SHA CI44146318878 green; now granted REF-46. |
 
 CLIP-20b is delivered at `6156fb4`, a cherry-pick of the reviewed tree onto `f6b77aa` with all
 eleven source blobs unchanged. Coordinator gates on that exact tree passed 136 units, strict
@@ -267,9 +269,33 @@ the cursor-follow bound twice in five repeats, as unchanged `0ab5552` did in the
 main, not scheduled: a sub-200 ms "Play source" tooltip during very fast Tabbing, and duration
 changes within about a second undo as one step. The Sonnet lane has no active grant.
 
-CLIP-2c is rebased and passes `all` 157/157, but isolated `performance` misses the cursor-follow
-bound more often than a same-orb base and paints about 10% fewer frames. It is not accepted-ready
-until Opus bisects, profiles and fixes the per-frame cost at its cause.
+CLIP-2c is delivered at
+[1de89b5](https://github.com/mite404/clipper/commit/1de89b5895d8fcdd530c13d91bc34a4fe71e7942) with
+[CI44185392612](https://github.com/mite404/clipper/actions/runs/44185392612): thirteen reviewed
+commits replayed on `0a3fd3d`. It adds the ordered track registry, Move up/down, Background and
+extra audio tracks, pool drops onto lanes and creation rows, keyboard Place on timeline, and the
+owner's shadow-free masks in preview, Copy frame and export. Review rounds added the 24-hour
+placement cap, Delete after a drop (`drop` joins REF-44's panel tracking), live Place/Insert targets
+after Undo, decimal seconds, a sticky drop hint, one-line creation labels, Move refocus without a
+label selector and a "No video track" placeholder. A follow-playback regression from extra Tooltip
+IconButtons was bisected to the placement commit and fixed by memoizing `TrackHeader`. Both reviews
+returned LAND on the final delta (independent T-f987a229; source review moved from Fable T-2d1e888a
+to T-9f34d223 during CLIP-2c). Coordinator acceptance on the exact head passed gates, `all` 164/164
+and isolated `performance` 20/20 (follow p95 33-67 ms). A +72px default timeline height (`685854e`)
+was dropped because it clipped the stage, source and pool and broke `editor.spec.ts:408`; it is
+preserved as Opus local `clip2c-height72` for REF-46. Known and accepted: zoom applies to every
+screen-role track while the cursor stays on `screen` (REF-47); a refused drop counts as a timeline
+action for Delete; the "No video track" placeholder shows while audio tracks a video can go onto are
+listed.
+
+Sonnet now holds REF-46, the follow-up from CLIP-2c's review: with the creation rows, the default
+layout hides lanes (Music 48% visible at 1440x900, none at 1280x800, "New audio track" below the
+fold everywhere). By default at 1440x1000, 1440x900 and 1920x1080 every lane and the creation rows
+must be visible without clipping the preview stage, source controls or pool beyond today's base;
+1280x800 must not regress. Fitting the preview to its height or a smaller timeline bump are both in
+scope; inspect captures at all four sizes. Granted paths are `src/PanelResizeHandle.tsx`, layout
+rules in `src/styles.css`, player-stage sizing in `src/App.tsx` if needed, and
+`tests/workspace-layout.spec.ts` plus layout expectations it breaks.
 
 CLIP-2c owner decision: "there shouldn't be a drop shadow." The preview's mask shadow
 (`0 25px 65px #0005` in `src/Composition.tsx`) is removed, so preview, Copy frame and export are all
@@ -408,8 +434,8 @@ upload is authorized.
 | Lane                      | Thread                                                                           | Owns                                                                    |
 | ------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | Queue and delivery        | [T-136752bf](https://ampcode.com/threads/T-136752bf-6ed3-4930-b791-1cd134662797) | This file, acceptance and exclusive main push slot                      |
-| Non-simple implementation | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Opus medium; CLIP-2e delivered, CLIP-2c granted                         |
-| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; REF-45 delivered, no active grant                          |
+| Non-simple implementation | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Opus medium; CLIP-2c delivered, no active grant                         |
+| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; REF-45 delivered, REF-46 granted                           |
 | Independent review        | [T-f987a229](https://ampcode.com/threads/T-f987a229-4e36-414e-8f45-105461c86dce) | Opus medium; independent exact-tree review gate                         |
 | Source and tooling review | [T-9f34d223](https://ampcode.com/threads/T-9f34d223-cd32-4c23-a11f-8bca3ae61271) | Opus 5.5 medium; took over from Fable T-2d1e888a at the owner's request |
 | Cursor implementation     | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant              |
@@ -861,35 +887,36 @@ images were hosted, see [Known limits](#known-limits)).
 
 ### Current path reservations
 
-| Owner                        | Paths                                                                                                                                                                                   |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cursor implementation        | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                                                          |
-| Cursor inspector             | No active implementation reservation after green inspector delivery                                                                                                                     |
-| Workspace layout             | UI-5 delivered at accepted 601ba78 with green exact-main CI; resize/layout/ruler reservation released                                                                                   |
-| Source-preview lifecycle     | REF-32 delivered at 4b49623 with green exact-SHA CI; SourceMonitor/test reservation released; UI-8 remains research-only pending a new exact-path grant                                 |
-| Export integration           | REF-27 delivered at 27099dc with green exact-SHA CI44001648378; reservation released to bounded CLIP-20b image integration                                                              |
-| Still timeline media         | CLIP-20b delivered at `6156fb4` with green exact-SHA CI44022990182; eleven-path reservation released                                                                                    |
-| Focused-control Space        | REF-38 delivered at `02010f6` with green exact-SHA CI44035760045; reservation released                                                                                                  |
-| Verification docs            | VERIFY-7 delivered at `0d81c22` with green exact-SHA CI44032486736; reservation released                                                                                                |
-| Split tools and locks        | CLIP-2e delivered at `a26c7e7` with green exact-SHA CI44050988058; reservation released                                                                                                 |
-| Track registry and drops     | CLIP-2c granted to Opus T-0e774456: model, project, history, Timeline, components, App, styles, Composition, export, cursor layering, stage rectangle, stories, media-drop/export specs |
-| Obsolete UI deletion         | UI-6 delivered at `f164235` with green exact-SHA CI44041254397; reservation released                                                                                                    |
-| UI-6 leftovers               | UI-6b delivered at `3ec157c` with green exact-SHA CI44047934496; reservation released                                                                                                   |
-| Unsaved and shortcut fixes   | REF-39/40/41 delivered at `46e9dc7` with green exact-SHA CI44102354477; reservation released                                                                                            |
-| Open project keyboard access | REF-42 delivered at `6d4350d` with green exact-SHA CI44111981121; reservation released                                                                                                  |
-| Open project placement       | REF-43 delivered at `f8fa072` with green exact-SHA CI44124453125; reservation released                                                                                                  |
-| Timeline-scoped Delete       | REF-44 delivered at `b9f4bc4` with green exact-SHA CI44134842288; reservation released                                                                                                  |
-| Still duration status        | REF-45 delivered at `5a34428` with green exact-SHA CI44146318878; reservation released                                                                                                  |
-| Verification follow-up       | VERIFY-6 delivered at `3260b3b`, exact-SHA CI44018967483 green; seven-path reservation released; no active worker acceptance                                                            |
-| Header cleanup               | No active implementation reservation after green UI-3 delivery                                                                                                                          |
-| Media drawer follow-up       | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                                                             |
-| Media-pool views             | UI-8 reference/source research only; canonical T-fd12a7e5, accepted UI-7 successor and exact-path grant before edits                                                                    |
-| Track targets/visibility     | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                                                    |
-| Transport lifecycle          | No active reservation after green REF-31 delivery; preserve accepted REF-20/31 transport behavior                                                                                       |
-| Zoom regions                 | No active implementation reservation; creation slice delivered, old owner quiescent, full ramps contract-held in Opus queue                                                             |
-| Oxc tooling                  | No active reservation after green VERIFY-5 delivery; VERIFY-6 follow-up needs a separate exact-path grant                                                                               |
-| Queue implementation         | Queue/docs and acceptance; sole main push slot                                                                                                                                          |
-| Shared, keep edits small     | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                                        |
+| Owner                        | Paths                                                                                                                                                   |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cursor implementation        | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                          |
+| Cursor inspector             | No active implementation reservation after green inspector delivery                                                                                     |
+| Workspace layout             | UI-5 delivered at accepted 601ba78 with green exact-main CI; resize/layout/ruler reservation released                                                   |
+| Source-preview lifecycle     | REF-32 delivered at 4b49623 with green exact-SHA CI; SourceMonitor/test reservation released; UI-8 remains research-only pending a new exact-path grant |
+| Export integration           | REF-27 delivered at 27099dc with green exact-SHA CI44001648378; reservation released to bounded CLIP-20b image integration                              |
+| Still timeline media         | CLIP-20b delivered at `6156fb4` with green exact-SHA CI44022990182; eleven-path reservation released                                                    |
+| Focused-control Space        | REF-38 delivered at `02010f6` with green exact-SHA CI44035760045; reservation released                                                                  |
+| Verification docs            | VERIFY-7 delivered at `0d81c22` with green exact-SHA CI44032486736; reservation released                                                                |
+| Split tools and locks        | CLIP-2e delivered at `a26c7e7` with green exact-SHA CI44050988058; reservation released                                                                 |
+| Track registry and drops     | CLIP-2c delivered at `1de89b5` with green exact-SHA CI44185392612; reservation released                                                                 |
+| Default layout fit           | REF-46 granted to Sonnet T-01a1e78d: PanelResizeHandle, layout styles, App stage sizing if needed, workspace-layout spec                                |
+| Obsolete UI deletion         | UI-6 delivered at `f164235` with green exact-SHA CI44041254397; reservation released                                                                    |
+| UI-6 leftovers               | UI-6b delivered at `3ec157c` with green exact-SHA CI44047934496; reservation released                                                                   |
+| Unsaved and shortcut fixes   | REF-39/40/41 delivered at `46e9dc7` with green exact-SHA CI44102354477; reservation released                                                            |
+| Open project keyboard access | REF-42 delivered at `6d4350d` with green exact-SHA CI44111981121; reservation released                                                                  |
+| Open project placement       | REF-43 delivered at `f8fa072` with green exact-SHA CI44124453125; reservation released                                                                  |
+| Timeline-scoped Delete       | REF-44 delivered at `b9f4bc4` with green exact-SHA CI44134842288; reservation released                                                                  |
+| Still duration status        | REF-45 delivered at `5a34428` with green exact-SHA CI44146318878; reservation released                                                                  |
+| Verification follow-up       | VERIFY-6 delivered at `3260b3b`, exact-SHA CI44018967483 green; seven-path reservation released; no active worker acceptance                            |
+| Header cleanup               | No active implementation reservation after green UI-3 delivery                                                                                          |
+| Media drawer follow-up       | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                             |
+| Media-pool views             | UI-8 reference/source research only; canonical T-fd12a7e5, accepted UI-7 successor and exact-path grant before edits                                    |
+| Track targets/visibility     | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                    |
+| Transport lifecycle          | No active reservation after green REF-31 delivery; preserve accepted REF-20/31 transport behavior                                                       |
+| Zoom regions                 | No active implementation reservation; creation slice delivered, old owner quiescent, full ramps contract-held in Opus queue                             |
+| Oxc tooling                  | No active reservation after green VERIFY-5 delivery; VERIFY-6 follow-up needs a separate exact-path grant                                               |
+| Queue implementation         | Queue/docs and acceptance; sole main push slot                                                                                                          |
+| Shared, keep edits small     | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                        |
 
 ### Preservation branches
 
@@ -1347,6 +1374,8 @@ original note for every row.
 | <a id="ref-43"></a>[REF-43](#ref-43)                 | Make Open project a Save-style button beside Save                   | Small  | Delivered at [f8fa072](https://github.com/mite404/clipper/commit/f8fa072553b10ecb744de84665fc93de0689a7c5); green exact-SHA [CI44124453125](https://github.com/mite404/clipper/actions/runs/44124453125) | Owner request; successor to REF-42, keeping its keyboard, chooser, discard and disabled behavior                    |
 | <a id="ref-44"></a>[REF-44](#ref-44)                 | Delete the selection only from the timeline                         | Small  | Delivered at [b9f4bc4](https://github.com/mite404/clipper/commit/b9f4bc4f94573a28c689f39212ff508b46598b9e); green exact-SHA [CI44134842288](https://github.com/mite404/clipper/actions/runs/44134842288) | Owner request; Delete/Backspace no-op when focus is outside the Main sequence panel                                 |
 | <a id="ref-45"></a>[REF-45](#ref-45)                 | Report Still duration only when it changes                          | Small  | Delivered at [5a34428](https://github.com/mite404/clipper/commit/5a3442841d08a143ccdf3575bcd49849f8b4692a); green exact-SHA [CI44146318878](https://github.com/mite404/clipper/actions/runs/44146318878) | Preview finding after REF-44; also reproduce a tooltip that outlives keyboard focus                                 |
+| <a id="ref-46"></a>[REF-46](#ref-46)                 | Fit every lane and the preview in the default layout                | Small  | Granted to Sonnet [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7)                                                                                                       | CLIP-2c review follow-up; dropped +72px kept as reference                                                           |
+| <a id="ref-47"></a>[REF-47](#ref-47)                 | Cursor overlay for a second screen-role track                       | Medium | Ready to scope                                                                                                                                                                                           | CLIP-2c follow-up; zoom already applies to every screen-role track                                                  |
 | <a id="ref-32"></a>[REF-32](#ref-32)                 | Correct source-preview playback error and busy lifecycle            | Medium | Delivered at [4b49623](https://github.com/mite404/clipper/commit/4b4962397e4ac237ab774b8d4a2f2a44280514b2); [green exact-SHA CI](https://github.com/mite404/clipper/actions/runs/43986804408)            | Reservation released; canonical previews promoted and verified                                                      |
 | <a id="ref-33"></a>[REF-33](#ref-33)                 | Qualify download URL lifetime outside Chromium                      | Medium | Blocked                                                                                                                                                                                                  | another supported WebCodecs browser                                                                                 |
 | <a id="ref-34"></a>[REF-34](#ref-34)                 | Remove Player listener lifetime assumptions                         | Small  | Deferred proposal                                                                                                                                                                                        | reproduce a listener lifecycle defect first                                                                         |
@@ -1976,12 +2005,12 @@ Use the owner's terms "media pool pane" or "source media panel" in future UI/doc
 The later completed drag-insertion requirement is CLIP-2c below; it is distinct from same-track
 movement.
 
-| Ticket ID                                            | Scope                                                                     | Owner                                                                                 | State and dependency                                                                                                                                                                                                                                   |
-| ---------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| <a id="clip-2b"></a>[CLIP-2b](#clip-2b)              | Reposition clips with associated-audio link toggle                        | [Sol medium](https://ampcode.com/threads/T-e625cc4d-8431-4df9-b146-0869cf28ac8b)      | Research/path-held; explicit association contract and CLIP-9b successor before grant                                                                                                                                                                   |
-| <a id="clip-20b"></a>[CLIP-20b](tickets/CLIP-20b.md) | Import still timeline media and qualify MOV/MP4 paths                     | [Opus medium](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85)     | Delivered at [6156fb4](https://github.com/mite404/clipper/commit/6156fb49d25413086e3eff1090bfea392d6d38e8); [green exact-SHA CI44022990182](https://github.com/mite404/clipper/actions/runs/44022990182); reservation released                         |
-| <a id="clip-2c"></a>[CLIP-2c](#clip-2c)              | Media-pool drag insertion and dynamic track creation                      | [Opus 5.5 medium](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Granted after CLIP-2e; [contract revision 10](https://ampcode.com/artifacts/clip-2c-insertion-contract-6e8501c5-a3fb-40e0-b359-dfd8b483b92b) and research remain with [T-7a47f0bf](https://ampcode.com/threads/T-7a47f0bf-09c2-4891-92ec-aaf7ec41bd52) |
-| <a id="clip-2e"></a>[CLIP-2e](#clip-2e)              | Selection/Razor tools, selected-target Split and unlocked-track shortcuts | [Opus 5.5 medium](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Delivered at [a26c7e7](https://github.com/mite404/clipper/commit/a26c7e7139947049a2f592e62e8cecc119db2a88); green exact-SHA [CI44050988058](https://github.com/mite404/clipper/actions/runs/44050988058); reservation released                         |
+| Ticket ID                                            | Scope                                                                     | Owner                                                                                 | State and dependency                                                                                                                                                                                                           |
+| ---------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| <a id="clip-2b"></a>[CLIP-2b](#clip-2b)              | Reposition clips with associated-audio link toggle                        | [Sol medium](https://ampcode.com/threads/T-e625cc4d-8431-4df9-b146-0869cf28ac8b)      | Research/path-held; explicit association contract and CLIP-9b successor before grant                                                                                                                                           |
+| <a id="clip-20b"></a>[CLIP-20b](tickets/CLIP-20b.md) | Import still timeline media and qualify MOV/MP4 paths                     | [Opus medium](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85)     | Delivered at [6156fb4](https://github.com/mite404/clipper/commit/6156fb49d25413086e3eff1090bfea392d6d38e8); [green exact-SHA CI44022990182](https://github.com/mite404/clipper/actions/runs/44022990182); reservation released |
+| <a id="clip-2c"></a>[CLIP-2c](#clip-2c)              | Media-pool drag insertion and dynamic track creation                      | [Opus 5.5 medium](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Delivered at [1de89b5](https://github.com/mite404/clipper/commit/1de89b5895d8fcdd530c13d91bc34a4fe71e7942); green exact-SHA [CI44185392612](https://github.com/mite404/clipper/actions/runs/44185392612)                       |
+| <a id="clip-2e"></a>[CLIP-2e](#clip-2e)              | Selection/Razor tools, selected-target Split and unlocked-track shortcuts | [Opus 5.5 medium](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Delivered at [a26c7e7](https://github.com/mite404/clipper/commit/a26c7e7139947049a2f592e62e8cecc119db2a88); green exact-SHA [CI44050988058](https://github.com/mite404/clipper/actions/runs/44050988058); reservation released |
 
 CLIP-2b reproduced unchanged video and audio positions after real body drags into trimmed empty
 space. Accept same-track, frame-rounded nonnegative moves preserving duration and source fields.
