@@ -672,10 +672,10 @@ export function App() {
   const [frame, setFrame] = useState(0);
   const [speed, setSpeed] = useState(0);
   const [muted, setMuted] = useState<Track[]>([]);
-  // Locks and Split's track targets are saved with the project but are never undo steps.
+  // Mutes, locks and Split's track targets are saved with the project but are never undo steps.
   const [locked, setLocked] = useState<Track[]>([]);
   const [selectedTracks, setSelectedTracks] = useState<Track[]>([]);
-  const [savedTracks, setSavedTracks] = useState({ locked, selectedTracks });
+  const [savedTracks, setSavedTracks] = useState({ muted, locked, selectedTracks });
   const [tool, setTool] = useState<'select' | 'razor'>('select');
   const [message, setMessage] = useState('Ready for your next story.');
   const [help, setHelp] = useState(false);
@@ -793,6 +793,7 @@ export function App() {
   // Add a saved marker to the edit itself if that ever costs someone work.
   const unsaved =
     (history.length > 0 && edit !== savedEdit) ||
+    !sameTracks(muted, savedTracks.muted) ||
     !sameTracks(locked, savedTracks.locked) ||
     !sameTracks(selectedTracks, savedTracks.selectedTracks);
   const working = unsaved || exportProgress !== null;
@@ -1119,7 +1120,7 @@ export function App() {
       const { file, omitted } = await serializeProject(edit, assets, muted, tracks);
       downloadBlob(file, 'developer-walkthrough.clipper.json');
       setSavedEdit(edit);
-      setSavedTracks(tracks);
+      setSavedTracks({ muted, ...tracks });
       // The next change starts a new step, so Undo can return to exactly what was saved.
       gesture.current = null;
       setMessage(
@@ -1162,7 +1163,11 @@ export function App() {
       setMuted(project.muted);
       setLocked(project.locked);
       setSelectedTracks(project.selectedTracks);
-      setSavedTracks({ locked: project.locked, selectedTracks: project.selectedTracks });
+      setSavedTracks({
+        muted: project.muted,
+        locked: project.locked,
+        selectedTracks: project.selectedTracks,
+      });
       setHistory([]);
       setSelected(project.edit.clips[0]?.id ?? '');
       setSourceId(imported[0]?.id ?? '');

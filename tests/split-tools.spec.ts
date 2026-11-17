@@ -250,4 +250,36 @@ test('locks refuse delete, trim and insert, while toggles save, dirty and reopen
   );
   await expect(toggle(page, `Lock ${NAMES.voice}`)).toHaveAttribute('aria-pressed', 'false');
   await expect(undo).toBeDisabled();
+
+  // Mute is saved with the project like a lock: it makes the project unsaved, Save and Open set
+  // the baseline, and toggling back to the saved state is saved again. It is not an undo step.
+  const prompted = async () => {
+    const before = prompts;
+    await opener.setInputFiles(junk);
+    return prompts > before;
+  };
+  expect(await prompted()).toBe(false);
+  await toggle(page, `Mute ${NAMES.voice}`).click();
+  await expect(undo).toBeDisabled();
+  expect(await prompted()).toBe(true);
+  const savingMuted = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const savedMuted = JSON.parse(await readFile((await (await savingMuted).path())!, 'utf8'));
+  expect(savedMuted.muted).toEqual(['voice']);
+  expect(await prompted()).toBe(false);
+  await toggle(page, `Unmute ${NAMES.voice}`).click();
+  expect(await prompted()).toBe(true);
+  await toggle(page, `Mute ${NAMES.voice}`).click();
+  expect(await prompted()).toBe(false);
+
+  await page.reload();
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await opener.setInputFiles({
+    name: 'muted.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(savedMuted)),
+  });
+  await expect(status(page)).toContainText('Project reopened');
+  await expect(toggle(page, `Unmute ${NAMES.voice}`)).toBeVisible();
+  expect(await prompted()).toBe(false);
 });
