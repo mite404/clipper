@@ -512,6 +512,10 @@ export function SourceMonitor({
           value={track}
           onChange={(e) => setChoice(e.target.value)}
         >
+          {/* No default fits, so name the gap instead of showing a track Insert would not use. */}
+          {!track && (
+            <option value="">No {asset?.kind === 'audio' ? 'audio' : 'video'} track</option>
+          )}
           {targets.map((t) => (
             <option key={t.id} value={t.id}>
               {trackNumber(tracks, t.id)} · {t.label}

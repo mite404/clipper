@@ -344,3 +344,34 @@ test('a track label with quotes, a backslash and a newline still moves and refoc
   expect((await headers(page)).slice(0, 2)).toEqual(['V2 Screen recording', `V1 ${label}`]);
   await expect(page.getByRole('button', { name: `Move ${name} up`, exact: true })).toBeFocused();
 });
+
+test('a video in a file with only audio tracks names the missing track and cannot insert', async ({
+  page,
+}) => {
+  await open(page);
+  const saving = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const saved = JSON.parse(await readFile((await (await saving).path())!, 'utf8'));
+  const audio = ['voice', 'music'];
+  saved.version = 4;
+  saved.tracks = [
+    { id: 'voice', label: 'Voiceover', kind: 'audio', gain: 1 },
+    { id: 'music', label: 'Music', kind: 'audio', gain: 0.22 },
+  ];
+  saved.clips = saved.clips.filter((c: { track: string }) => audio.includes(c.track));
+  saved.zooms = [];
+  for (const list of ['muted', 'locked', 'selectedTracks'])
+    if (Array.isArray(saved[list]))
+      saved[list] = saved[list].filter((id: string) => audio.includes(id));
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'audio-only.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(saved)),
+  });
+  await expect(status(page)).toContainText('Project reopened');
+  await pool(page, 'Flower study').click();
+  const insertOnto = page.getByLabel('Insert onto track');
+  await expect(insertOnto).toHaveValue('');
+  await expect(insertOnto.locator('option:checked')).toHaveText('No video track');
+  await expect(page.getByRole('button', { name: 'Insert source at playhead' })).toBeDisabled();
+});
