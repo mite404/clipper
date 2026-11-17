@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import {
   createElement,
+  memo,
   useLayoutEffect,
   useRef,
   useState,
@@ -68,8 +69,9 @@ export type PoolDrag = {
 };
 
 // Name, number, toggles and order controls of one track. Up means toward the top of the list,
-// which is toward the front for visual tracks.
-function TrackHeader({
+// which is toward the front for visual tracks. Memoized: playback re-renders the timeline every
+// few frames, and each header's tooltipped buttons cost more script than the rest of a row.
+const TrackHeader = memo(function TrackHeader({
   track,
   registry,
   tracks,
@@ -129,7 +131,7 @@ function TrackHeader({
       </span>
     </div>
   );
-}
+});
 
 // What a lane says while a pool item is over it: why it would refuse, or where it would land.
 function dropHint(result: ReturnType<typeof placeMedia>, locked: boolean, at: number) {

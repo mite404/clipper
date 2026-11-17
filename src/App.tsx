@@ -1413,6 +1413,22 @@ export function App() {
       setCopying(false);
     }
   };
+  // Stable across playback frames, so the memoized track headers skip those renders.
+  const trackToggles = useMemo(
+    () => ({ muted, locked, selected: selectedTracks }),
+    [muted, locked, selectedTracks],
+  );
+  const toggleTrackIn = useCallback(
+    (list: keyof typeof trackToggles, track: Track) =>
+      ({ muted: setMuted, locked: setLocked, selected: setSelectedTracks })[list]((previous) =>
+        toggleTrack(previous, track),
+      ),
+    [],
+  );
+  const moveTrackBy = useCallback(
+    (id: Track, step: 1 | -1) => change({ ...edit, tracks: moveTrack(edit.tracks, id, step) }),
+    [change, edit],
+  );
   const libraryView = useMemo(
     () => (
       <MediaLibrary
@@ -1803,9 +1819,7 @@ export function App() {
           <Timeline
             registry={edit.tracks}
             drop={dragging && { media: placed(dragging), onDrop: place }}
-            onMoveTrack={(id, step) =>
-              change({ ...edit, tracks: moveTrack(edit.tracks, id, step) })
-            }
+            onMoveTrack={moveTrackBy}
             clips={edit.clips}
             assets={assets}
             zooms={edit.zooms}
@@ -1817,12 +1831,8 @@ export function App() {
               setMarkingZoomId(null);
             }}
             onSeek={seek}
-            tracks={{ muted, locked, selected: selectedTracks }}
-            onToggleTrack={(list, track) =>
-              ({ muted: setMuted, locked: setLocked, selected: setSelectedTracks })[list](
-                (previous) => toggleTrack(previous, track),
-              )
-            }
+            tracks={trackToggles}
+            onToggleTrack={toggleTrackIn}
             onTrim={(clip) => {
               setSpeed(0);
               change({ ...edit, clips: edit.clips.map((c) => (c.id === clip.id ? clip : c)) });
