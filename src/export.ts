@@ -141,7 +141,8 @@ const isVisual = (tracks: TrackDef[], clip: Clip) =>
 type Layer = { track: Track; image: HTMLCanvasElement | OffscreenCanvas | ImageBitmap };
 
 // Paint one composition frame in stage pixels: backdrop, then each visual track back to front in
-// its role's rect, crop and zoom. Anything that must move with the screen, such as a recorded cursor, is drawn inside its clip.
+// its role's rect, crop and zoom. Anything that must move with the screen, such as a recorded
+// cursor, is drawn inside its clip.
 function drawFrame(
   context: CanvasRenderingContext2D,
   layout: Layout,
