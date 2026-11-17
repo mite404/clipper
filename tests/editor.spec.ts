@@ -1,6 +1,197 @@
 import { test, expect } from '@playwright/test';
 import path from 'node:path';
 
+for (const kind of ['video', 'audio']) {
+  test(`busy save, import and open pause source ${kind} without resuming`, async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+    if (kind === 'audio')
+      await page.getByRole('button', { name: 'Select Voiceover', exact: true }).click();
+    const source = page.locator(`.source-preview ${kind}`);
+    for (const action of ['save', 'import', 'open']) {
+      if (kind === 'video')
+        await page.getByRole('button', { name: 'Play source', exact: true }).click();
+      else {
+        const box = await source.boundingBox();
+        if (!box) throw new Error('Native source audio controls are not visible');
+        await page.mouse.click(box.x + 18, box.y + box.height / 2);
+      }
+      await expect
+        .poll(() => source.evaluate((media: HTMLMediaElement) => media.paused))
+        .toBe(false);
+      if (action === 'save') {
+        const download = page.waitForEvent('download');
+        await page.getByRole('button', { name: 'Save project', exact: true }).click();
+        await download;
+      } else if (action === 'import') {
+        await page.getByLabel('Import local media').setInputFiles({
+          name: 'broken.mp4',
+          mimeType: 'video/mp4',
+          buffer: Buffer.from('not media'),
+        });
+        await expect(
+          page.getByRole('status').filter({ hasText: 'Could not import' }),
+        ).toBeVisible();
+      } else {
+        await page.getByLabel('Open local project').setInputFiles({
+          name: 'broken.json',
+          mimeType: 'application/json',
+          buffer: Buffer.from('not JSON'),
+        });
+        await expect(page.getByRole('status').filter({ hasText: 'Could not open' })).toBeVisible();
+      }
+      await expect(source).toHaveJSProperty('paused', true);
+      const held = await source.evaluate((media: HTMLMediaElement) => media.currentTime);
+      await expect(page.getByRole('button', { name: 'Save project', exact: true })).toBeEnabled();
+      await expect(source).toHaveJSProperty('currentTime', held);
+      await expect(page.locator('.source-error')).toHaveCount(0);
+    }
+  });
+}
+
+test('reports a genuine source decode failure and clears it on a new playback attempt', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const source = page.locator('.source-preview video');
+  const original = await source.evaluate((video: HTMLVideoElement) => {
+    const url = video.src;
+    video.src = 'data:video/mp4;base64,AAAA';
+    video.load();
+    return url;
+  });
+  await expect.poll(() => source.evaluate((video: HTMLVideoElement) => video.error?.code)).toBe(4);
+  await page.getByRole('button', { name: 'Play source', exact: true }).click();
+  await expect(page.locator('.source-error')).toHaveText(
+    'Source playback failed. Try a supported codec.',
+  );
+  await source.evaluate((video: HTMLVideoElement, url) => {
+    video.src = url;
+    video.load();
+  }, original);
+  await expect.poll(() => source.evaluate((video: HTMLVideoElement) => video.readyState)).toBe(4);
+  await page.getByRole('button', { name: 'Play source', exact: true }).click();
+  await expect
+    .poll(() => source.evaluate((video: HTMLVideoElement) => video.currentTime))
+    .toBeGreaterThan(0.25);
+  await expect(page.locator('.source-error')).toHaveCount(0);
+});
+
+test('does not report an interrupted old source as a codec failure on the new source', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const play: HTMLMediaElement['play'] = Object.getOwnPropertyDescriptor(
+      HTMLMediaElement.prototype,
+      'play',
+    )?.value;
+    let settled = 0;
+    let aborted = 0;
+    HTMLMediaElement.prototype.play = function () {
+      const promise = play.call(this);
+      if (this.matches('.source-preview video'))
+        void promise.then(
+          () => {
+            document.documentElement.dataset.sourceSettled = String(++settled);
+          },
+          (error: unknown) => {
+            if (error instanceof DOMException && error.name === 'AbortError')
+              document.documentElement.dataset.sourceAborts = String(++aborted);
+            document.documentElement.dataset.sourceSettled = String(++settled);
+          },
+        );
+      return promise;
+    };
+  });
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setCPUThrottlingRate', { rate: 6 });
+  const controls = [
+    page.getByRole('button', { name: 'Select Flower study', exact: true }),
+    page.locator('.source-controls button'),
+    page.getByRole('button', { name: 'Select A conversation', exact: true }),
+  ];
+  const boxes = await Promise.all(controls.map((control) => control.boundingBox()));
+  try {
+    for (let attempt = 1; attempt <= 6; attempt++) {
+      await Promise.all(
+        boxes.flatMap((box) => {
+          if (!box) throw new Error('Source playback or selection control is not visible');
+          return [false, true].map((released) =>
+            cdp.send('Input.dispatchMouseEvent', {
+              type: released ? 'mouseReleased' : 'mousePressed',
+              x: box.x + box.width / 2,
+              y: box.y + box.height / 2,
+              button: 'left',
+              clickCount: 1,
+            }),
+          );
+        }),
+      );
+      await expect(page.locator('html')).toHaveAttribute('data-source-settled', String(attempt));
+    }
+    await expect(page.locator('html')).toHaveAttribute('data-source-aborts', /^[1-9]\d*$/);
+  } finally {
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 1 });
+  }
+  await expect(page.locator('.source-description')).toContainText('A conversation');
+  await expect(page.locator('.source-error')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Play source', exact: true }).click();
+  await expect
+    .poll(() =>
+      page
+        .locator('.source-preview video')
+        .evaluate((video: HTMLVideoElement) => video.currentTime),
+    )
+    .toBeGreaterThan(0.25);
+  await page.getByRole('button', { name: 'Pause source', exact: true }).click();
+  await expect(page.locator('.source-error')).toHaveCount(0);
+});
+
+test('pauses source video and audio while export blocks the workspace without resuming', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  for (const kind of ['video', 'audio']) {
+    if (kind === 'audio')
+      await page.getByRole('button', { name: 'Select Voiceover', exact: true }).click();
+    await page.getByLabel('Source in seconds').fill('1');
+    await page.getByLabel('Source out seconds').fill('3');
+    const target = kind === 'video' ? 'camera' : 'music';
+    await page.getByLabel('Insert onto track').selectOption(target);
+    const source = page.locator(`.source-preview ${kind}`);
+    if (kind === 'video')
+      await page.getByRole('button', { name: 'Play source', exact: true }).click();
+    else {
+      const box = await source.boundingBox();
+      if (!box) throw new Error('Native source audio controls are not visible');
+      await page.mouse.click(box.x + 18, box.y + box.height / 2);
+    }
+    await expect
+      .poll(() =>
+        source.evaluate((media: HTMLMediaElement) => !media.paused && media.currentTime > 0.2),
+      )
+      .toBe(true);
+    const before = await source.evaluate((media: HTMLMediaElement) => media.currentTime);
+    await page.getByRole('button', { name: 'Export video', exact: true }).click();
+    await expect(page.getByRole('progressbar', { name: 'Video export progress' })).toBeVisible();
+    await expect.poll(() => source.evaluate((media: HTMLMediaElement) => media.paused)).toBe(true);
+    const held = await source.evaluate((media: HTMLMediaElement) => media.currentTime);
+    expect(held).toBeGreaterThanOrEqual(before);
+    await page.getByRole('button', { name: 'Cancel export', exact: true }).click();
+    await expect(page.getByRole('progressbar', { name: 'Video export progress' })).toHaveCount(0);
+    await expect(page.getByLabel('Source in seconds')).toHaveValue('1');
+    await expect(page.getByLabel('Source out seconds')).toHaveValue('3');
+    await expect(page.getByLabel('Insert onto track')).toHaveValue(target);
+    await expect(source).toHaveJSProperty('paused', true);
+    await expect(source).toHaveJSProperty('currentTime', held);
+    await expect(page.locator('.source-error')).toHaveCount(0);
+  }
+});
+
 test('splice, scrub, play, rewind and animate a real media composition', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));

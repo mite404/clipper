@@ -116,15 +116,37 @@ async function importOne(file: File, library: Asset[], edit: Edit): Promise<Impo
 export function SourceMonitor({
   asset,
   onInsert,
+  blocked = false,
 }: {
   asset?: Asset;
   onInsert: (track: Track, offset: number, duration: number) => void;
+  /** Pause source playback while workspace controls cannot be used. */
+  blocked?: boolean;
 }) {
   const [sourceUrl, setSourceUrl] = useState(() => asset?.url);
   const [track, setTrack] = useState<Track>(asset?.kind === 'audio' ? 'voice' : 'screen');
   const [range, setRange] = useState(() => ({ start: 0, end: asset?.duration ?? 0 }));
   const [preview, setPreview] = useState({ playing: false, time: 0, error: '' });
   const video = useRef<HTMLVideoElement>(null);
+  const audio = useRef<HTMLAudioElement>(null);
+  const playRequest = useRef<symbol | null>(null);
+  useLayoutEffect(() => {
+    playRequest.current = null;
+    if (!blocked) return;
+    video.current?.pause();
+    audio.current?.pause();
+  }, [blocked, asset?.url]);
+  const reportPlaybackFailure = (request: symbol, error: unknown) => {
+    if (
+      playRequest.current !== request ||
+      (error instanceof DOMException && error.name === 'AbortError')
+    )
+      return;
+    setPreview((p) => ({
+      ...p,
+      error: 'Source playback failed. Try a supported codec.',
+    }));
+  };
   if (asset?.url !== sourceUrl) {
     setSourceUrl(asset?.url);
     setRange({ start: 0, end: asset?.duration ?? 0 });
@@ -157,15 +179,19 @@ export function SourceMonitor({
               <IconButton
                 label={preview.playing ? 'Pause source' : 'Play source'}
                 onClick={() => {
-                  if (!video.current) return;
-                  if (video.current.paused)
-                    void video.current.play().catch(() =>
-                      setPreview((p) => ({
-                        ...p,
-                        error: 'Source playback failed. Try a supported codec.',
-                      })),
-                    );
-                  else video.current.pause();
+                  const current = video.current;
+                  if (!current || blocked) return;
+                  if (current.paused) {
+                    const request = Symbol();
+                    playRequest.current = request;
+                    setPreview((p) => ({ ...p, error: '' }));
+                    void current
+                      .play()
+                      .catch((error: unknown) => reportPlaybackFailure(request, error));
+                  } else {
+                    playRequest.current = null;
+                    current.pause();
+                  }
                 }}
               >
                 {preview.playing ? <Pause size={13} /> : <Play size={13} />}
@@ -194,7 +220,7 @@ export function SourceMonitor({
         ) : asset ? (
           <div className="source-audio">
             <Waveform peaks={asset.peaks} />
-            <audio src={asset.url} controls />
+            <audio ref={audio} src={asset.url} controls />
           </div>
         ) : (
           <span className="empty-preview">Import a video or audio file</span>
@@ -539,6 +565,7 @@ export function App() {
   const [markingZoomId, setMarkingZoomId] = useState<string | null>(null);
   const [exportWidth, setExportWidth] = useState<1920 | 3840>(1920);
   const [exportProgress, setExportProgress] = useState<number | null>(null);
+  const sourceBlocked = busy || exportProgress !== null;
   const {
     mode: mediaMode,
     instant: mediaInstant,
@@ -1056,8 +1083,8 @@ export function App() {
     [assets, sourceId, busy],
   );
   const sourceView = useMemo(
-    () => <SourceMonitor asset={asset} onInsert={insert} />,
-    [asset, insert],
+    () => <SourceMonitor asset={asset} onInsert={insert} blocked={sourceBlocked} />,
+    [asset, insert, sourceBlocked],
   );
   const playerView = useMemo(
     () => (
@@ -1179,7 +1206,7 @@ export function App() {
         className={`workspace${mediaMode === 'pinned' ? '' : ' media-hidden'}`}
         data-timeline-hidden={!timelineOpen || undefined}
         data-compact={compactPanels || undefined}
-        inert={exportProgress !== null || busy}
+        inert={sourceBlocked}
       >
         <div className="media-hot-zone" aria-hidden="true" />
         <div
