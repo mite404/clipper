@@ -39,18 +39,17 @@ primary repository since 2026-11-16; the Amp-hosted scaffold is gone. See
 ## Two-lane staffing audit, 2026-11-17
 
 Audited against fetched `b44e7c9a71473e1be0bf1159e9130c4528429afe` and the preserved candidates,
-then reconciled after accepted `1de89b5`. There are 145 canonical IDs: 68 delivered rows, nine
-owner-decision rows and 68 remaining queue entries. The 68 comprise 63 implementation/qualification
+then reconciled after accepted `729b72d`. There are 145 canonical IDs: 69 delivered rows, nine
+owner-decision rows and 67 remaining queue entries. The 67 comprise 62 implementation/qualification
 candidates below, four conditional or parked entries and one umbrella. These are ticket counts, not
-a claim that 63 source changes are approved or immediately runnable.
+a claim that 62 source changes are approved or immediately runnable.
 
-The Sonnet queue has two candidates: REF-46 granted and CLIP-45 held. The Opus queue has 61: 20
-ready to scope/assign and 41 dependency-, contract- or owner-gated. Across both lanes that is 21
-ready or granted and 42 held. Ready means recorded technical predecessors are satisfied, not
-permission to edit shared paths or skip acceptance scoping. A held ticket can have an independently
-useful subpart, but its entire remaining scope is not ready. Preserve the delivery order above
-numeric order and optional cleanup. Reassess a classification when a bounded contract changes its
-scope.
+The Sonnet queue has one candidate: CLIP-45 held. The Opus queue has 61: 20 ready to scope/assign
+and 41 dependency-, contract- or owner-gated. Across both lanes that is 20 ready or granted and 42
+held. Ready means recorded technical predecessors are satisfied, not permission to edit shared paths
+or skip acceptance scoping. A held ticket can have an independently useful subpart, but its entire
+remaining scope is not ready. Preserve the delivery order above numeric order and optional cleanup.
+Reassess a classification when a bounded contract changes its scope.
 
 ### Sonnet candidate queue
 
@@ -60,7 +59,6 @@ expand its grant.
 
 | Candidate           | Readiness       | Why this lane; remaining gate                                                                                                  |
 | ------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| [REF-46](#ref-46)   | Granted         | Owner-visible layout: every lane and the preview fit by default at common sizes.                                               |
 | [CLIP-45](#clip-45) | Dependency-held | Existing-action widget and defaults only, after CLIP-40; reclassify if its scoped contract adds a new sharing/export pipeline. |
 
 ### Opus candidate queue
@@ -69,39 +67,39 @@ Cross-cutting model, timing, audio, gesture, persistence, native qualification a
 bounded feature scopes stay here. In particular, REF-35/36 each cover several public contracts;
 their old Medium/test-only labels do not make either whole ticket a small mechanical change.
 
-| Candidates                                                                                              | Readiness                           | Classification and gate                                                                                                                          |
-| ------------------------------------------------------------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [REF-28](#ref-28)                                                                                       | Ready                               | Decoder sampling/null/early-end qualification; reproduce before defining behavior.                                                               |
-| [REF-35](#ref-35)                                                                                       | Ready                               | Multiple edit, parser, track and serialization boundary tests; preserve asymmetric cases.                                                        |
-| [UI-4](#ui-4), [UI-13](#ui-13)                                                                          | Ready                               | Shared numeric-gesture audit and waveform/audio-data foundation; coordinate consumer paths before edits.                                         |
-| [CLIP-11](#clip-11)                                                                                     | Ready for remaining synthetic scope | Audit remaining idle/loop/shake behavior against delivered cursor work; D-7 still gates real-recording claims.                                   |
-| [CLIP-19](#clip-19), [CLIP-20](#clip-20), [CLIP-21](#clip-21), [CLIP-22](#clip-22), [CLIP-24](#clip-24) | Ready to scope                      | REF-1 is delivered; remaining composition geometry/effects require preview/copy/export/persistence agreement, not label-only edits.              |
-| [CLIP-13](#clip-13), [CLIP-15](#clip-15), [CLIP-18](#clip-18)                                           | Ready to scope                      | Motion sampling, audio scrub and command/shortcut semantics; delivered technical predecessors do not settle their feature contracts.             |
-| [CLIP-29](#clip-29), [CLIP-27](#clip-27), [CLIP-40](#clip-40)                                           | Ready to scope                      | Persisted chapter/range and new export contracts; no small one-action assumption.                                                                |
-| [CLIP-41](#clip-41), [CLIP-42](#clip-42), [CLIP-30](#clip-30)                                           | Ready to scope                      | Quality/power policy, original-track extraction and synchronized player packaging are not yet bounded to existing-action wrappers.               |
-| [PUB-1](#pub-1)                                                                                         | Dependency/contract-held            | Preserved prototype, filename/App successor and private-use xeet payload/asset checks; required exact integrated Opus review remains.            |
-| [UI-8](#ui-8), [UI-9](#ui-9)                                                                            | Dependency-held                     | Still/media-kind successor and coordinated source-preview/target insertion contracts with CLIP-2b/2c.                                            |
-| [CLIP-11b](#clip-11b), [UI-11](#ui-11), [CLIP-2d](#clip-2d)                                             | Dependency-held                     | Targeted sidecars, selected-type inspector and whole-clip visibility need coordinated CLIP-9b/track consumers.                                   |
-| [UI-10](#ui-10)                                                                                         | Contract-held                       | Preserved shared-control experiment needs exact adoption scope; not wholesale replacement.                                                       |
-| [REF-22](#ref-22), [REF-30](#ref-30)                                                                    | Dependency/contract-held            | Bounded project container/cancellation design after CLIP-20b's image format; never reuse its v3 meaning incompatibly.                            |
-| [REF-23](#ref-23)                                                                                       | Owner-gated                         | D-1 source-time/source-coordinate decision.                                                                                                      |
-| [REF-33](#ref-33)                                                                                       | Environment-gated                   | Another supported WebCodecs browser is required for independent download-lifetime qualification.                                                 |
-| [REF-36](#ref-36)                                                                                       | Dependency-held                     | Recovery/mute qualification after still-media integration; retain existing focused corrupt-open evidence and avoid duplicate work.               |
-| [REF-37](#ref-37)                                                                                       | Evidence/owner-held                 | Existing qualification remains open; no renewed broad stall investigation without the recorded standalone recurrence or new Amp-view request.    |
-| [CLIP-9b](#clip-9b)                                                                                     | Contract-held                       | Creation is delivered; full ramps need the referenced curve technology/API and coordinated gesture/numeric consumers.                            |
-| [REF-47](#ref-47)                                                                                       | Ready to scope                      | Cursor overlay for a clip on a second screen-role track; cursor telemetry ownership first.                                                       |
-| [CLIP-2b](#clip-2b)                                                                                     | Dependency/contract-held            | CLIP-2c accepted registry, then partial-cut membership on CLIP-2e's successor; explicit association semantics first.                             |
-| [CLIP-21b](#clip-21b), [CLIP-19b](#clip-19b)                                                            | Dependency-held                     | Image/parser and accepted PiP/fit geometry successors before timing/scale migration.                                                             |
-| [CLIP-12](#clip-12)                                                                                     | Contract-held                       | Licensed or original sound plus preview/export click-mix contract; not merely a volume control.                                                  |
-| [CLIP-14](#clip-14), [CLIP-16](#clip-16)                                                                | Source-gated                        | No key-event source; manual retiming can be scoped separately, but typing suggestions remain blocked.                                            |
-| [CLIP-17](#clip-17), [CLIP-26](#clip-26)                                                                | Dependency-held                     | UI-13 audio-data foundation; multicam additionally needs stable tracks and association/mix semantics.                                            |
-| [CLIP-23](#clip-23), [CLIP-28](#clip-28), [CLIP-39](#clip-39)                                           | Dependency-held                     | Respectively CLIP-22, CLIP-27, and CLIP-19/20.                                                                                                   |
-| [CLIP-31a](#clip-31a), [CLIP-31b](#clip-31b), [CLIP-31c](#clip-31c)                                     | Owner/dependency-held               | Real Premiere D-9, proven FCP7 XML contract, then exporter and downloaded-file relink qualification. No all-six compatibility claim.             |
-| [CLIP-32](#clip-32), [CLIP-33](#clip-33), [CLIP-34](#clip-34), [CLIP-36](#clip-36)                      | Owner/dependency-held               | Local model/dependency approval, then transcription before subtitles/suggested edits and caption reconstruction.                                 |
-| [CLIP-35](#clip-35), [CLIP-37](#clip-37)                                                                | Owner/dependency-held               | D-5 license qualification, then graphics before batch/library consumers.                                                                         |
-| [CLIP-38](#clip-38)                                                                                     | Dependency-held                     | REF-22 saved-data foundation; the delivered unsaved warning is not counted again.                                                                |
-| [CLIP-7b](#clip-7b), [CLIP-43](#clip-43)                                                                | Owner-gated                         | D-4 real Screen Studio package; synthetic OpenScreen fixtures do not satisfy it.                                                                 |
-| [CLIP-44](#clip-44), [CLIP-46](#clip-46), [CLIP-47](#clip-47), [CLIP-48](#clip-48)                      | Owner/environment-gated             | Hosting, recording decision, recording-dependent teleprompter and native device path respectively; no deployment/capture authorization inferred. |
+| Candidates                                                                                              | Readiness                                                                                            | Classification and gate                                                                                                                          |
+| ------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [REF-28](#ref-28)                                                                                       | Ready                                                                                                | Decoder sampling/null/early-end qualification; reproduce before defining behavior.                                                               |
+| [REF-35](#ref-35)                                                                                       | Ready                                                                                                | Multiple edit, parser, track and serialization boundary tests; preserve asymmetric cases.                                                        |
+| [UI-4](#ui-4), [UI-13](#ui-13)                                                                          | Ready                                                                                                | Shared numeric-gesture audit and waveform/audio-data foundation; coordinate consumer paths before edits.                                         |
+| [CLIP-11](#clip-11)                                                                                     | Ready for remaining synthetic scope                                                                  | Audit remaining idle/loop/shake behavior against delivered cursor work; D-7 still gates real-recording claims.                                   |
+| [CLIP-19](#clip-19), [CLIP-20](#clip-20), [CLIP-21](#clip-21), [CLIP-22](#clip-22), [CLIP-24](#clip-24) | Ready to scope                                                                                       | REF-1 is delivered; remaining composition geometry/effects require preview/copy/export/persistence agreement, not label-only edits.              |
+| [CLIP-13](#clip-13), [CLIP-15](#clip-15), [CLIP-18](#clip-18)                                           | Ready to scope                                                                                       | Motion sampling, audio scrub and command/shortcut semantics; delivered technical predecessors do not settle their feature contracts.             |
+| [CLIP-29](#clip-29), [CLIP-27](#clip-27), [CLIP-40](#clip-40)                                           | Ready to scope                                                                                       | Persisted chapter/range and new export contracts; no small one-action assumption.                                                                |
+| [CLIP-41](#clip-41), [CLIP-42](#clip-42), [CLIP-30](#clip-30)                                           | Ready to scope                                                                                       | Quality/power policy, original-track extraction and synchronized player packaging are not yet bounded to existing-action wrappers.               |
+| [PUB-1](#pub-1)                                                                                         | Dependency/contract-held                                                                             | Preserved prototype, filename/App successor and private-use xeet payload/asset checks; required exact integrated Opus review remains.            |
+| [UI-8](#ui-8), [UI-9](#ui-9)                                                                            | Dependency-held                                                                                      | Still/media-kind successor and coordinated source-preview/target insertion contracts with CLIP-2b/2c.                                            |
+| [CLIP-11b](#clip-11b), [UI-11](#ui-11), [CLIP-2d](#clip-2d)                                             | Dependency-held                                                                                      | Targeted sidecars, selected-type inspector and whole-clip visibility need coordinated CLIP-9b/track consumers.                                   |
+| [UI-10](#ui-10)                                                                                         | Contract-held                                                                                        | Preserved shared-control experiment needs exact adoption scope; not wholesale replacement.                                                       |
+| [REF-22](#ref-22), [REF-30](#ref-30)                                                                    | Dependency/contract-held                                                                             | Bounded project container/cancellation design after CLIP-20b's image format; never reuse its v3 meaning incompatibly.                            |
+| [REF-23](#ref-23)                                                                                       | Owner-gated                                                                                          | D-1 source-time/source-coordinate decision.                                                                                                      |
+| [REF-33](#ref-33)                                                                                       | Environment-gated                                                                                    | Another supported WebCodecs browser is required for independent download-lifetime qualification.                                                 |
+| [REF-36](#ref-36)                                                                                       | Dependency-held                                                                                      | Recovery/mute qualification after still-media integration; retain existing focused corrupt-open evidence and avoid duplicate work.               |
+| [REF-37](#ref-37)                                                                                       | Evidence/owner-held                                                                                  | Existing qualification remains open; no renewed broad stall investigation without the recorded standalone recurrence or new Amp-view request.    |
+| [CLIP-9b](#clip-9b)                                                                                     | Contract-held                                                                                        | Creation is delivered; full ramps need the referenced curve technology/API and coordinated gesture/numeric consumers.                            |
+| [REF-47](#ref-47)                                                                                       | Granted\2 Cursor overlay for a clip on a second screen-role track; cursor telemetry ownership first. |
+| [CLIP-2b](#clip-2b)                                                                                     | Dependency/contract-held                                                                             | CLIP-2c accepted registry, then partial-cut membership on CLIP-2e's successor; explicit association semantics first.                             |
+| [CLIP-21b](#clip-21b), [CLIP-19b](#clip-19b)                                                            | Dependency-held                                                                                      | Image/parser and accepted PiP/fit geometry successors before timing/scale migration.                                                             |
+| [CLIP-12](#clip-12)                                                                                     | Contract-held                                                                                        | Licensed or original sound plus preview/export click-mix contract; not merely a volume control.                                                  |
+| [CLIP-14](#clip-14), [CLIP-16](#clip-16)                                                                | Source-gated                                                                                         | No key-event source; manual retiming can be scoped separately, but typing suggestions remain blocked.                                            |
+| [CLIP-17](#clip-17), [CLIP-26](#clip-26)                                                                | Dependency-held                                                                                      | UI-13 audio-data foundation; multicam additionally needs stable tracks and association/mix semantics.                                            |
+| [CLIP-23](#clip-23), [CLIP-28](#clip-28), [CLIP-39](#clip-39)                                           | Dependency-held                                                                                      | Respectively CLIP-22, CLIP-27, and CLIP-19/20.                                                                                                   |
+| [CLIP-31a](#clip-31a), [CLIP-31b](#clip-31b), [CLIP-31c](#clip-31c)                                     | Owner/dependency-held                                                                                | Real Premiere D-9, proven FCP7 XML contract, then exporter and downloaded-file relink qualification. No all-six compatibility claim.             |
+| [CLIP-32](#clip-32), [CLIP-33](#clip-33), [CLIP-34](#clip-34), [CLIP-36](#clip-36)                      | Owner/dependency-held                                                                                | Local model/dependency approval, then transcription before subtitles/suggested edits and caption reconstruction.                                 |
+| [CLIP-35](#clip-35), [CLIP-37](#clip-37)                                                                | Owner/dependency-held                                                                                | D-5 license qualification, then graphics before batch/library consumers.                                                                         |
+| [CLIP-38](#clip-38)                                                                                     | Dependency-held                                                                                      | REF-22 saved-data foundation; the delivered unsaved warning is not counted again.                                                                |
+| [CLIP-7b](#clip-7b), [CLIP-43](#clip-43)                                                                | Owner-gated                                                                                          | D-4 real Screen Studio package; synthetic OpenScreen fixtures do not satisfy it.                                                                 |
+| [CLIP-44](#clip-44), [CLIP-46](#clip-46), [CLIP-47](#clip-47), [CLIP-48](#clip-48)                      | Owner/environment-gated                                                                              | Hosting, recording decision, recording-dependent teleprompter and native device path respectively; no deployment/capture authorization inferred. |
 
 ### Excluded from new implementation assignments
 
@@ -123,10 +121,10 @@ coordinator-serialized; no review gate changes.
 
 ### Active two-worker grants
 
-| Lane            | Worker                                                                           | Current grant                                                                     |
-| --------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
-| Opus 5.5 medium | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | CLIP-2c delivered at `1de89b5`, exact-SHA CI44185392612 green; no active grant.   |
-| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | REF-45 delivered at `5a34428`, exact-SHA CI44146318878 green; now granted REF-46. |
+| Lane            | Worker                                                                           | Current grant                                                                      |
+| --------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Opus 5.5 medium | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | CLIP-2c delivered at `1de89b5`, exact-SHA CI44185392612 green; now granted REF-47. |
+| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | REF-46 delivered at `729b72d`, exact-SHA CI44198295097 green; no active grant.     |
 
 CLIP-20b is delivered at `6156fb4`, a cherry-pick of the reviewed tree onto `f6b77aa` with all
 eleven source blobs unchanged. Coordinator gates on that exact tree passed 136 units, strict
@@ -269,6 +267,16 @@ the cursor-follow bound twice in five repeats, as unchanged `0ab5552` did in the
 main, not scheduled: a sub-200 ms "Play source" tooltip during very fast Tabbing, and duration
 changes within about a second undo as one step. The Sonnet lane has no active grant.
 
+Opus now holds REF-47. Since CLIP-2c, a clip on a second screen-role track (such as V3 "Screen 2 -
+Masked") gets zoom but no cursor overlay: `cursorFrame` only reads clips on track `screen`, and
+preview and export only draw it inside that track's mask. First decide and record cursor telemetry
+ownership: which covering screen-role clip's sidecar draws, in which mask, and what happens when two
+overlap in time. Reproduce on base with synthetic media, then make preview, Copy frame and export
+agree, with framing, zoom generation and the inspector's mouse target following the same rule.
+Granted paths are `src/cursor-render.ts`, the cursor blocks in `src/Composition.tsx` and
+`src/export.ts`, the screen-track filters in `src/framing.ts`, `src/zoom-generation.ts` and
+`src/App.tsx`, `src/project.ts` only if persistence must change, and their unit and focused specs.
+
 CLIP-2c is delivered at
 [1de89b5](https://github.com/mite404/clipper/commit/1de89b5895d8fcdd530c13d91bc34a4fe71e7942) with
 [CI44185392612](https://github.com/mite404/clipper/actions/runs/44185392612): thirteen reviewed
@@ -288,14 +296,20 @@ screen-role track while the cursor stays on `screen` (REF-47); a refused drop co
 action for Delete; the "No video track" placeholder shows while audio tracks a video can go onto are
 listed.
 
-Sonnet now holds REF-46, the follow-up from CLIP-2c's review: with the creation rows, the default
-layout hides lanes (Music 48% visible at 1440x900, none at 1280x800, "New audio track" below the
-fold everywhere). By default at 1440x1000, 1440x900 and 1920x1080 every lane and the creation rows
-must be visible without clipping the preview stage, source controls or pool beyond today's base;
-1280x800 must not regress. Fitting the preview to its height or a smaller timeline bump are both in
-scope; inspect captures at all four sizes. Granted paths are `src/PanelResizeHandle.tsx`, layout
-rules in `src/styles.css`, player-stage sizing in `src/App.tsx` if needed, and
-`tests/workspace-layout.spec.ts` plus layout expectations it breaks.
+REF-46 is delivered at
+[729b72d](https://github.com/mite404/clipper/commit/729b72d5854e13cfbf4d7af845de99f95beb579b) with
+[CI44198295097](https://github.com/mite404/clipper/actions/runs/44198295097). Only timeline rows
+changed: transport, toolbar, scale label, footer, creation rows, end note, ruler and track heights.
+The top row and the default timeline height are untouched, so the stage, source Insert and pool
+match base. Compact 46px tracks apply up to a 1069px tall window, because a 1080p screen's browser
+viewport is about 950-990px; every lane and creation row fits from 900px tall up at 1440 and 1920
+wide. 1280x800 improves (134 to 57px hidden). Waveforms scale with their clips. v1 was blocked by
+the independent review for 951-1069px overflow and a waveform crossing clip titles; v2 fixed both.
+Both reviews returned LAND. Coordinator acceptance on the exact head passed gates; `all` 168/169 and
+isolated `performance` 19/20 each missed one rAF p95 sample, and a same-orb rerun's cursor-follow
+p95 matched unchanged `2cc11bd`. Optional later: a 58px tier below 1650 wide at 991-1069 tall, where
+1440x1000 now shows about 63px of spare space; the waveform title check has a 0.5px margin at 1650+
+wide. The Sonnet lane has no active grant.
 
 CLIP-2c owner decision: "there shouldn't be a drop shadow." The preview's mask shadow
 (`0 25px 65px #0005` in `src/Composition.tsx`) is removed, so preview, Copy frame and export are all
@@ -434,8 +448,8 @@ upload is authorized.
 | Lane                      | Thread                                                                           | Owns                                                                    |
 | ------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | Queue and delivery        | [T-136752bf](https://ampcode.com/threads/T-136752bf-6ed3-4930-b791-1cd134662797) | This file, acceptance and exclusive main push slot                      |
-| Non-simple implementation | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Opus medium; CLIP-2c delivered, no active grant                         |
-| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; REF-45 delivered, REF-46 granted                           |
+| Non-simple implementation | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Opus medium; CLIP-2c delivered, REF-47 granted                          |
+| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; REF-46 delivered, no active grant                          |
 | Independent review        | [T-f987a229](https://ampcode.com/threads/T-f987a229-4e36-414e-8f45-105461c86dce) | Opus medium; independent exact-tree review gate                         |
 | Source and tooling review | [T-9f34d223](https://ampcode.com/threads/T-9f34d223-cd32-4c23-a11f-8bca3ae61271) | Opus 5.5 medium; took over from Fable T-2d1e888a at the owner's request |
 | Cursor implementation     | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant              |
@@ -899,7 +913,8 @@ images were hosted, see [Known limits](#known-limits)).
 | Verification docs            | VERIFY-7 delivered at `0d81c22` with green exact-SHA CI44032486736; reservation released                                                                |
 | Split tools and locks        | CLIP-2e delivered at `a26c7e7` with green exact-SHA CI44050988058; reservation released                                                                 |
 | Track registry and drops     | CLIP-2c delivered at `1de89b5` with green exact-SHA CI44185392612; reservation released                                                                 |
-| Default layout fit           | REF-46 granted to Sonnet T-01a1e78d: PanelResizeHandle, layout styles, App stage sizing if needed, workspace-layout spec                                |
+| Default layout fit           | REF-46 delivered at `729b72d` with green exact-SHA CI44198295097; reservation released                                                                  |
+| Second-screen cursor         | REF-47 granted to Opus T-0e774456: cursor-render, Composition/export cursor blocks, screen-track filters, focused specs                                 |
 | Obsolete UI deletion         | UI-6 delivered at `f164235` with green exact-SHA CI44041254397; reservation released                                                                    |
 | UI-6 leftovers               | UI-6b delivered at `3ec157c` with green exact-SHA CI44047934496; reservation released                                                                   |
 | Unsaved and shortcut fixes   | REF-39/40/41 delivered at `46e9dc7` with green exact-SHA CI44102354477; reservation released                                                            |
@@ -1374,8 +1389,8 @@ original note for every row.
 | <a id="ref-43"></a>[REF-43](#ref-43)                 | Make Open project a Save-style button beside Save                   | Small  | Delivered at [f8fa072](https://github.com/mite404/clipper/commit/f8fa072553b10ecb744de84665fc93de0689a7c5); green exact-SHA [CI44124453125](https://github.com/mite404/clipper/actions/runs/44124453125) | Owner request; successor to REF-42, keeping its keyboard, chooser, discard and disabled behavior                    |
 | <a id="ref-44"></a>[REF-44](#ref-44)                 | Delete the selection only from the timeline                         | Small  | Delivered at [b9f4bc4](https://github.com/mite404/clipper/commit/b9f4bc4f94573a28c689f39212ff508b46598b9e); green exact-SHA [CI44134842288](https://github.com/mite404/clipper/actions/runs/44134842288) | Owner request; Delete/Backspace no-op when focus is outside the Main sequence panel                                 |
 | <a id="ref-45"></a>[REF-45](#ref-45)                 | Report Still duration only when it changes                          | Small  | Delivered at [5a34428](https://github.com/mite404/clipper/commit/5a3442841d08a143ccdf3575bcd49849f8b4692a); green exact-SHA [CI44146318878](https://github.com/mite404/clipper/actions/runs/44146318878) | Preview finding after REF-44; also reproduce a tooltip that outlives keyboard focus                                 |
-| <a id="ref-46"></a>[REF-46](#ref-46)                 | Fit every lane and the preview in the default layout                | Small  | Granted to Sonnet [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7)                                                                                                       | CLIP-2c review follow-up; dropped +72px kept as reference                                                           |
-| <a id="ref-47"></a>[REF-47](#ref-47)                 | Cursor overlay for a second screen-role track                       | Medium | Ready to scope                                                                                                                                                                                           | CLIP-2c follow-up; zoom already applies to every screen-role track                                                  |
+| <a id="ref-46"></a>[REF-46](#ref-46)                 | Fit every lane and the preview in the default layout                | Small  | Delivered at [729b72d](https://github.com/mite404/clipper/commit/729b72d5854e13cfbf4d7af845de99f95beb579b); green exact-SHA [CI44198295097](https://github.com/mite404/clipper/actions/runs/44198295097) | CLIP-2c review follow-up; dropped +72px kept as reference                                                           |
+| <a id="ref-47"></a>[REF-47](#ref-47)                 | Cursor overlay for a second screen-role track                       | Medium | Granted to Opus [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85)                                                                                                         | CLIP-2c follow-up; zoom already applies to every screen-role track                                                  |
 | <a id="ref-32"></a>[REF-32](#ref-32)                 | Correct source-preview playback error and busy lifecycle            | Medium | Delivered at [4b49623](https://github.com/mite404/clipper/commit/4b4962397e4ac237ab774b8d4a2f2a44280514b2); [green exact-SHA CI](https://github.com/mite404/clipper/actions/runs/43986804408)            | Reservation released; canonical previews promoted and verified                                                      |
 | <a id="ref-33"></a>[REF-33](#ref-33)                 | Qualify download URL lifetime outside Chromium                      | Medium | Blocked                                                                                                                                                                                                  | another supported WebCodecs browser                                                                                 |
 | <a id="ref-34"></a>[REF-34](#ref-34)                 | Remove Player listener lifetime assumptions                         | Small  | Deferred proposal                                                                                                                                                                                        | reproduce a listener lifecycle defect first                                                                         |
