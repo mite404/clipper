@@ -75,19 +75,28 @@ export function Waveform({
   );
 }
 
-/** Media library with local-file import and source selection. */
+/** Drag type of a media-pool item. A drop without it, such as a desktop file, is never placed. */
+export const ASSET_DRAG = 'application/x-clipper-asset';
+
+/** Media library with local-file import, source selection and drags onto the timeline. */
 export function MediaLibrary({
   assets,
   selected,
   onSelect,
   onImport,
+  onDrag,
   busy,
+  children,
 }: {
   assets: Asset[];
   selected: string;
   onSelect: (id: string) => void;
   onImport: (files: FileList) => void;
+  /** The asset being dragged, then null once the drag ends however it ends. */
+  onDrag?: (id: string | null) => void;
   busy: boolean;
+  /** Controls for the selected source, below the list. */
+  children?: ReactNode;
 }) {
   return (
     <aside className="library">
@@ -119,6 +128,13 @@ export function MediaLibrary({
             aria-label={`Select ${asset.name}`}
             aria-pressed={selected === asset.id}
             onClick={() => onSelect(asset.id)}
+            draggable
+            onDragStart={(event) => {
+              event.dataTransfer.setData(ASSET_DRAG, asset.id);
+              event.dataTransfer.effectAllowed = 'copy';
+              onDrag?.(asset.id);
+            }}
+            onDragEnd={() => onDrag?.(null)}
           >
             <div className={`asset-image asset-image-${asset.kind}`}>
               {asset.kind !== 'audio' ? (
@@ -154,6 +170,7 @@ export function MediaLibrary({
           </button>
         ))}
       </div>
+      {children}
       <div className="library-footer">
         <span className="status-dot" />{' '}
         <span data-testid="media-status">

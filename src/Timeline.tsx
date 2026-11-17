@@ -1,5 +1,7 @@
 import {
   Camera,
+  ChevronDown,
+  ChevronUp,
   Film,
   Image,
   Lock,
@@ -12,19 +14,32 @@ import {
   VolumeX,
   ZoomIn,
 } from 'lucide-react';
-import { useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
+import {
+  createElement,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type DragEvent,
+  type HTMLAttributes,
+  type MouseEvent,
+  type ReactNode,
+} from 'react';
 import type { Asset } from './media';
 import {
   FPS,
+  moveTrack,
+  placeMedia,
   snapFrame,
   trackNumber,
   trimClip,
   type Clip,
+  type DropTarget,
+  type NewTrack,
   type Track,
   type TrackDef,
   type Zoom,
 } from './timeline-model';
-import { IconButton, Waveform, timecode } from './components';
+import { ASSET_DRAG, IconButton, Waveform, timecode } from './components';
 
 /** Per-track toggle lists a project saves. */
 export type TrackToggles = Record<'muted' | 'locked' | 'selected', Track[]>;
@@ -35,13 +50,169 @@ const icon = (track: TrackDef) =>
   track.kind === 'visual' ? ICONS[track.role] : track.id === 'voice' ? Mic : Music2;
 
 // Rows list visual tracks frontmost first, then audio tracks in order.
-const rows = (tracks: TrackDef[]) => [
-  ...tracks.filter((t) => t.kind === 'visual').reverse(),
-  ...tracks.filter((t) => t.kind === 'audio'),
-];
+const visualRows = (tracks: TrackDef[]) => tracks.filter((t) => t.kind === 'visual').reverse();
+const audioRows = (tracks: TrackDef[]) => tracks.filter((t) => t.kind === 'audio');
+// Creation rows: a masked screen in front of the visual tracks, a background beneath them, audio
+// after the audio tracks.
+export const CREATE: Record<NewTrack, string> = {
+  screen: 'New screen track · Masked',
+  background: 'New V1 background · Full frame',
+  audio: 'New audio track',
+};
+
+/** A pool drag in progress: the source as placement needs it, and where a release goes. */
+export type PoolDrag = {
+  media: { assetId: string; audio: boolean; duration: number };
+  /** A pool item released on a lane or creation row, at the frame under the pointer. */
+  onDrop: (assetId: string, target: DropTarget, frame: number) => void;
+};
+
+// Name, number, toggles and order controls of one track. Up means toward the top of the list,
+// which is toward the front for visual tracks.
+function TrackHeader({
+  track,
+  registry,
+  tracks,
+  onToggleTrack,
+  onMoveTrack,
+}: {
+  track: TrackDef;
+  registry: TrackDef[];
+  tracks: TrackToggles;
+  onToggleTrack: (list: keyof TrackToggles, track: Track) => void;
+  onMoveTrack: (id: Track, step: 1 | -1) => void;
+}) {
+  const { id, label } = track;
+  const up = UP[track.kind];
+  const muted = tracks.muted.includes(id);
+  return (
+    <div className="track-label">
+      <span className="track-code">{trackNumber(registry, id)}</span>
+      {createElement(icon(track), { size: 14 })}
+      <span>{label}</span>
+      <span className="track-toggles">
+        {TOGGLES.map(({ list, name, icons }) => {
+          const pressed = tracks[list].includes(id);
+          const Shown = icons[Number(pressed)];
+          return (
+            <IconButton
+              key={list}
+              label={name(label)}
+              aria-pressed={pressed}
+              onClick={() => onToggleTrack(list, id)}
+            >
+              <Shown size={13} />
+            </IconButton>
+          );
+        })}
+        {track.kind === 'audio' && (
+          <IconButton
+            label={`${muted ? 'Unmute' : 'Mute'} ${label}`}
+            onClick={() => onToggleTrack('muted', id)}
+          >
+            {muted ? <VolumeX size={13} /> : <Volume2 size={13} />}
+          </IconButton>
+        )}
+        {MOVES.map(({ direction, sign, Icon }) => {
+          const step = (sign * up) as 1 | -1;
+          return (
+            <IconButton
+              key={direction}
+              label={`Move ${label} ${direction}`}
+              disabled={moveTrack(registry, id, step) === registry}
+              onClick={() => onMoveTrack(id, step)}
+            >
+              <Icon size={13} />
+            </IconButton>
+          );
+        })}
+      </span>
+    </div>
+  );
+}
+
+// What a lane says while a pool item is over it: why it would refuse, or where it would land.
+function dropHint(result: ReturnType<typeof placeMedia>, locked: boolean, at: number) {
+  if ('refused' in result)
+    return {
+      state: result.reason === 'kind' ? 'incompatible' : result.reason,
+      text: result.refused,
+    };
+  if (locked) return { state: 'locked', text: 'Locked' };
+  return { state: 'ok', text: `Place at ${(at / FPS).toFixed(1)} s` };
+}
+
+// A lane or creation row that takes pool drops. While a pool item is over it, it says why it
+// would refuse or where the item would land; each zone owns its hint, so leaving one lane never
+// clears the next one's.
+function DropZone({
+  drop,
+  target,
+  registry,
+  clips,
+  locked,
+  duration,
+  children,
+  ...rest
+}: {
+  drop?: PoolDrag;
+  target: DropTarget;
+  registry: TrackDef[];
+  clips: Clip[];
+  locked: Track[];
+  duration: number;
+  children: ReactNode;
+} & HTMLAttributes<HTMLDivElement>) {
+  const [hint, setHint] = useState<{ state: string; text: string }>();
+  // A hint outlives an Escape or outside drop that never left the zone, so only a drag shows it.
+  const shown = drop && hint;
+  const over = (event: DragEvent<HTMLDivElement>) => {
+    if (!drop || !event.dataTransfer.types.includes(ASSET_DRAG)) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+    const at = dropFrame(event, duration);
+    const refuse = 'track' in target && locked.includes(target.track);
+    const next = dropHint(placeMedia(registry, clips, drop.media, target, at), refuse, at);
+    setHint((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+  };
+  return (
+    <div
+      {...rest}
+      data-drop={shown ? shown.state : undefined}
+      onDragEnter={over}
+      onDragOver={over}
+      onDragLeave={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setHint(undefined);
+      }}
+      onDrop={(event) => {
+        const assetId = event.dataTransfer.getData(ASSET_DRAG);
+        if (!drop || !assetId) return;
+        event.preventDefault();
+        setHint(undefined);
+        drop.onDrop(assetId, target, dropFrame(event, duration));
+      }}
+    >
+      {children}
+      {shown && <span className="drop-hint">{shown.text}</span>}
+    </div>
+  );
+}
+
+// The frame under the pointer in a lane, never before the start.
+function dropFrame(event: DragEvent<HTMLElement>, duration: number): number {
+  const rect = event.currentTarget.getBoundingClientRect();
+  return Math.max(0, Math.floor(((event.clientX - rect.left) / rect.width) * duration));
+}
 
 // Razor snapping reaches this far on screen, to the playhead or any clip edge on any track.
 const SNAP_PIXELS = 8;
+// Up is toward the front for visual tracks and toward the end of the list for audio ones.
+const UP = { visual: 1, audio: -1 } as const;
+// Order buttons, top to bottom; a visual track's up is a step toward the front.
+const MOVES = [
+  { direction: 'up', sign: 1, Icon: ChevronUp },
+  { direction: 'down', sign: -1, Icon: ChevronDown },
+] as const;
 // Header toggles draw an off icon and an on icon, so an unpressed one never looks pressed.
 const TOGGLES = [
   {
@@ -127,10 +298,10 @@ export function Timeline({
   registry,
   tracks,
   onToggleTrack,
-  onZoomSelect,
   onTrim,
-  tool,
   onRazor,
+  drop,
+  onMoveTrack,
 }: {
   clips: Clip[];
   assets: Asset[];
@@ -145,11 +316,13 @@ export function Timeline({
   /** Saved per-track toggles: muted audio, locked lanes, and Split's selected tracks. */
   tracks: TrackToggles;
   onToggleTrack: (list: keyof TrackToggles, track: Track) => void;
-  onZoomSelect: (id: string) => void;
   onTrim?: (clip: Clip) => void;
-  /** Razor clicks cut a clip at the clicked frame instead of selecting it. */
-  tool: 'select' | 'razor';
-  onRazor: (clipId: string, frame: number) => void;
+  /** Set while the Razor tool is active: clicks cut a clip at the clicked frame instead of
+   * selecting it. */
+  onRazor?: (clipId: string, frame: number) => void;
+  /** The pool drag in progress, so lanes can say whether they would take it. */
+  drop?: PoolDrag;
+  onMoveTrack: (id: Track, step: 1 | -1) => void;
 }) {
   const seconds = duration / FPS;
   const { viewport, label, minScale, maxScale, scale, setScale, width } = useTimelineScale(seconds);
@@ -166,6 +339,166 @@ export function Timeline({
   // Where the pointer last went down: a Razor drag is not a click, so it never cuts.
   const pressX = useRef(0);
   const snapTargets = [frame, ...clips.flatMap((c) => [c.start, c.start + c.duration])];
+  const zone = { drop, registry, clips, locked: tracks.locked, duration };
+  const createRow = (kind: NewTrack) => (
+    <div className="track-row create-row" key={`create-${kind}`}>
+      <div className="track-label">{CREATE[kind]}</div>
+      <DropZone
+        {...zone}
+        target={{ create: kind }}
+        className="timeline-lane create-lane"
+        data-testid={`create-${kind}`}
+        aria-label={`${CREATE[kind]}: drop a media pool item here`}
+      >
+        Drop to create
+      </DropZone>
+    </div>
+  );
+  const laneRow = (track: TrackDef) => {
+    const { id } = track;
+    const audio = track.kind === 'audio';
+    return (
+      <div className={`track-row track-${id}`} key={id}>
+        <TrackHeader
+          track={track}
+          registry={registry}
+          tracks={tracks}
+          onToggleTrack={onToggleTrack}
+          onMoveTrack={onMoveTrack}
+        />
+        <DropZone
+          {...zone}
+          target={{ track: id }}
+          className="timeline-lane"
+          data-tool={onRazor ? 'razor' : 'select'}
+          data-locked={tracks.locked.includes(id)}
+          data-testid={`track-${id}`}
+          onDoubleClick={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            onSeek(
+              Math.min(
+                duration - 1,
+                Math.max(0, Math.round(((event.clientX - rect.left) / rect.width) * duration)),
+              ),
+            );
+          }}
+        >
+          {clips
+            .filter((c) => c.track === id)
+            .map((originalClip) => {
+              const clip =
+                drag?.clipId === originalClip.id
+                  ? trimClip(originalClip, drag.edge, drag.delta)
+                  : originalClip;
+              const asset = assets.find((a) => a.id === clip.assetId);
+              return (
+                <button
+                  key={clip.id}
+                  className={`timeline-clip ${selected === clip.id ? 'selected' : ''}`}
+                  aria-label={`${asset?.name ?? 'Missing media'} at ${(clip.start / FPS).toFixed(1)} seconds`}
+                  aria-pressed={selected === clip.id}
+                  onPointerDown={(event) => (pressX.current = event.clientX)}
+                  onClick={(event) => {
+                    const at = onRazor
+                      ? razorFrame(event, pressX.current, snapTargets, duration)
+                      : null;
+                    if (at === null) onSelect(clip.id);
+                    else onRazor?.(clip.id, at);
+                  }}
+                  style={{
+                    left: `${(clip.start / duration) * 100}%`,
+                    width: `${(clip.duration / duration) * 100}%`,
+                  }}
+                >
+                  <span className="clip-title">
+                    {audio ? <Music2 size={12} /> : <Film size={12} />}
+                    {asset?.name ?? 'Missing media'}
+                  </span>
+                  {audio ? (
+                    <Waveform
+                      peaks={asset?.peaks ?? []}
+                      offset={clip.offset}
+                      duration={clip.duration}
+                      progress={(frame - clip.start) / clip.duration}
+                    />
+                  ) : (
+                    <div className="filmstrip">
+                      {Array.from(
+                        {
+                          length: Math.min(12, Math.max(1, Math.ceil(clip.duration / FPS / 2))),
+                        },
+                        (_, i) => (
+                          <img key={i} src={asset?.thumbnail} alt="" />
+                        ),
+                      )}
+                    </div>
+                  )}
+                  {!tracks.locked.includes(id) &&
+                    (['left', 'right'] as const).map((edge) => (
+                      <span
+                        key={edge}
+                        inert={!!onRazor}
+                        className={`clip-grip ${edge}`}
+                        role="slider"
+                        tabIndex={0}
+                        aria-label={`Trim ${edge} edge`}
+                        aria-valuemin={0}
+                        aria-valuemax={clip.start + clip.duration}
+                        aria-valuenow={edge === 'left' ? clip.start : clip.start + clip.duration}
+                        onKeyDown={(event) => {
+                          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+                          event.preventDefault();
+                          event.stopPropagation();
+                          commitTrim(
+                            onTrim,
+                            clip,
+                            edge,
+                            (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 10 : 1),
+                          );
+                        }}
+                        onPointerDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          event.currentTarget.setPointerCapture(event.pointerId);
+                          const lane = event.currentTarget.closest('.timeline-lane');
+                          if (lane)
+                            setDrag({
+                              clipId: clip.id,
+                              edge,
+                              x: event.clientX,
+                              width: lane.getBoundingClientRect().width,
+                              delta: 0,
+                            });
+                          onSelect(clip.id);
+                        }}
+                        onPointerMove={(event) => {
+                          if (drag)
+                            setDrag({
+                              ...drag,
+                              delta: ((event.clientX - drag.x) / drag.width) * duration,
+                            });
+                        }}
+                        onPointerUp={(event) => {
+                          if (!drag) return;
+                          setDrag(undefined);
+                          // Pointer capture means this grip is the one the drag started on.
+                          commitTrim(
+                            onTrim,
+                            originalClip,
+                            drag.edge,
+                            ((event.clientX - drag.x) / drag.width) * duration,
+                          );
+                        }}
+                        onPointerCancel={() => setDrag(undefined)}
+                      />
+                    ))}
+                </button>
+              );
+            })}
+        </DropZone>
+      </div>
+    );
+  };
   return (
     <>
       <label className="timeline-scale">
@@ -248,7 +581,7 @@ export function Timeline({
                   left: `${(zoom.start / duration) * 100}%`,
                   width: `${(zoom.duration / duration) * 100}%`,
                 }}
-                onClick={() => onZoomSelect(zoom.id)}
+                onClick={() => onSelect(zoom.id)}
               >
                 <ZoomIn size={12} />
                 <span>{zoom.scale.toFixed(1)}× zoom</span>
@@ -258,183 +591,11 @@ export function Timeline({
               <span className="lane-hint">Add a zoom to bring the details closer</span>
             )}
           </div>
-          {rows(registry).map((track) => {
-            const { id, label } = track;
-            const Icon = icon(track);
-            const audio = track.kind === 'audio';
-            return (
-              <div className={`track-row track-${id}`} key={id}>
-                <div className="track-label">
-                  <span className="track-code">{trackNumber(registry, id)}</span>
-                  <Icon size={14} />
-                  <span>{label}</span>
-                  <span className="track-toggles">
-                    {TOGGLES.map(({ list, name, icons }) => {
-                      const pressed = tracks[list].includes(id);
-                      const Shown = icons[Number(pressed)];
-                      return (
-                        <IconButton
-                          key={list}
-                          label={name(label)}
-                          aria-pressed={pressed}
-                          onClick={() => onToggleTrack(list, id)}
-                        >
-                          <Shown size={13} />
-                        </IconButton>
-                      );
-                    })}
-                    {audio && (
-                      <IconButton
-                        label={`${tracks.muted.includes(id) ? 'Unmute' : 'Mute'} ${label}`}
-                        onClick={() => onToggleTrack('muted', id)}
-                      >
-                        {tracks.muted.includes(id) ? <VolumeX size={13} /> : <Volume2 size={13} />}
-                      </IconButton>
-                    )}
-                  </span>
-                </div>
-                <div
-                  className="timeline-lane"
-                  data-tool={tool}
-                  data-locked={tracks.locked.includes(id)}
-                  data-testid={`track-${id}`}
-                  onDoubleClick={(event) => {
-                    const rect = event.currentTarget.getBoundingClientRect();
-                    onSeek(
-                      Math.min(
-                        duration - 1,
-                        Math.max(
-                          0,
-                          Math.round(((event.clientX - rect.left) / rect.width) * duration),
-                        ),
-                      ),
-                    );
-                  }}
-                >
-                  {clips
-                    .filter((c) => c.track === id)
-                    .map((originalClip) => {
-                      const clip =
-                        drag?.clipId === originalClip.id
-                          ? trimClip(originalClip, drag.edge, drag.delta)
-                          : originalClip;
-                      const asset = assets.find((a) => a.id === clip.assetId);
-                      return (
-                        <button
-                          key={clip.id}
-                          className={`timeline-clip ${selected === clip.id ? 'selected' : ''}`}
-                          aria-label={`${asset?.name ?? 'Missing media'} at ${(clip.start / FPS).toFixed(1)} seconds`}
-                          aria-pressed={selected === clip.id}
-                          onPointerDown={(event) => (pressX.current = event.clientX)}
-                          onClick={(event) => {
-                            const at =
-                              tool === 'razor'
-                                ? razorFrame(event, pressX.current, snapTargets, duration)
-                                : null;
-                            if (at === null) onSelect(clip.id);
-                            else onRazor(clip.id, at);
-                          }}
-                          style={{
-                            left: `${(clip.start / duration) * 100}%`,
-                            width: `${(clip.duration / duration) * 100}%`,
-                          }}
-                        >
-                          <span className="clip-title">
-                            {audio ? <Music2 size={12} /> : <Film size={12} />}
-                            {asset?.name ?? 'Missing media'}
-                          </span>
-                          {audio ? (
-                            <Waveform
-                              peaks={asset?.peaks ?? []}
-                              offset={clip.offset}
-                              duration={clip.duration}
-                              progress={(frame - clip.start) / clip.duration}
-                            />
-                          ) : (
-                            <div className="filmstrip">
-                              {Array.from(
-                                {
-                                  length: Math.min(
-                                    12,
-                                    Math.max(1, Math.ceil(clip.duration / FPS / 2)),
-                                  ),
-                                },
-                                (_, i) => (
-                                  <img key={i} src={asset?.thumbnail} alt="" />
-                                ),
-                              )}
-                            </div>
-                          )}
-                          {!tracks.locked.includes(id) &&
-                            (['left', 'right'] as const).map((edge) => (
-                              <span
-                                key={edge}
-                                inert={tool === 'razor'}
-                                className={`clip-grip ${edge}`}
-                                role="slider"
-                                tabIndex={0}
-                                aria-label={`Trim ${edge} edge`}
-                                aria-valuemin={0}
-                                aria-valuemax={clip.start + clip.duration}
-                                aria-valuenow={
-                                  edge === 'left' ? clip.start : clip.start + clip.duration
-                                }
-                                onKeyDown={(event) => {
-                                  if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight')
-                                    return;
-                                  event.preventDefault();
-                                  event.stopPropagation();
-                                  commitTrim(
-                                    onTrim,
-                                    clip,
-                                    edge,
-                                    (event.key === 'ArrowLeft' ? -1 : 1) *
-                                      (event.shiftKey ? 10 : 1),
-                                  );
-                                }}
-                                onPointerDown={(event) => {
-                                  event.preventDefault();
-                                  event.stopPropagation();
-                                  event.currentTarget.setPointerCapture(event.pointerId);
-                                  const lane = event.currentTarget.closest('.timeline-lane');
-                                  if (lane)
-                                    setDrag({
-                                      clipId: clip.id,
-                                      edge,
-                                      x: event.clientX,
-                                      width: lane.getBoundingClientRect().width,
-                                      delta: 0,
-                                    });
-                                  onSelect(clip.id);
-                                }}
-                                onPointerMove={(event) => {
-                                  if (drag)
-                                    setDrag({
-                                      ...drag,
-                                      delta: ((event.clientX - drag.x) / drag.width) * duration,
-                                    });
-                                }}
-                                onPointerUp={(event) => {
-                                  if (!drag) return;
-                                  setDrag(undefined);
-                                  // Pointer capture means this grip is the one the drag started on.
-                                  commitTrim(
-                                    onTrim,
-                                    originalClip,
-                                    drag.edge,
-                                    ((event.clientX - drag.x) / drag.width) * duration,
-                                  );
-                                }}
-                                onPointerCancel={() => setDrag(undefined)}
-                              />
-                            ))}
-                        </button>
-                      );
-                    })}
-                </div>
-              </div>
-            );
-          })}
+          {createRow('screen')}
+          {visualRows(registry).map(laneRow)}
+          {createRow('background')}
+          {audioRows(registry).map(laneRow)}
+          {createRow('audio')}
           <div className="playhead-area">
             <div className="playhead" style={{ left: `${(frame / duration) * 100}%` }} />
           </div>

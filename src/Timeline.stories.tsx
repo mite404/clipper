@@ -57,6 +57,7 @@ function TimelineOverflow() {
       <section className="sequence-area" style={{ height: 300, marginBottom: 70 }}>
         <Timeline
           registry={TRACKS}
+          onMoveTrack={() => {}}
           clips={clips}
           assets={
             mode === CASES['Demo data']
@@ -80,9 +81,6 @@ function TimelineOverflow() {
                 : [...previous[list], track],
             }))
           }
-          tool="select"
-          onRazor={() => {}}
-          onZoomSelect={setSelected}
         />
       </section>
       <div

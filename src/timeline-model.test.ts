@@ -3,6 +3,7 @@ import {
   covers,
   createTrack,
   paintOrder,
+  placeMedia,
   DEFAULT_TRACKS,
   insertClip,
   lockedChange,
@@ -252,6 +253,45 @@ describe('the track registry', () => {
       { id: 'camera', role: 'camera', placeholder: true },
       { id: 'screen-2', role: 'screen', placeholder: false },
     ]);
+  });
+
+  it('places whole sources by kind, creating compatible tracks and refusing without moving', () => {
+    const video = { assetId: 'v', audio: false, duration: 60 };
+    const audio = { assetId: 'a', audio: true, duration: 30 };
+    const lane = [{ ...clip, track: 'camera', start: 0, duration: 90 }];
+    const place = (media: typeof video, target: Parameters<typeof placeMedia>[3], frame: number) =>
+      placeMedia(DEFAULT_TRACKS, lane, media, target, frame);
+    expect(place(video, { track: 'camera' }, 90)).toMatchObject({
+      clip: { track: 'camera', start: 90, duration: 60, offset: 0 },
+      tracks: DEFAULT_TRACKS,
+    });
+    expect(place(video, { track: 'camera' }, 89.6)).toMatchObject({ clip: { start: 90 } });
+    expect(place(video, { track: 'camera' }, 89)).toEqual({
+      refused: 'Talking head already has a clip there.',
+      reason: 'occupied',
+    });
+    expect(place(video, { track: 'voice' }, 0)).toEqual({
+      refused: 'Voiceover takes audio media.',
+      reason: 'kind',
+    });
+    expect(place(audio, { track: 'screen' }, 0)).toEqual({
+      refused: 'Screen recording takes video or still media.',
+      reason: 'kind',
+    });
+    expect(place(video, { track: 'gone' }, 0)).toEqual({
+      refused: 'That track no longer exists.',
+      reason: 'missing',
+    });
+    expect(place(video, { track: 'camera' }, -40)).toMatchObject({ refused: expect.any(String) });
+    const made = (media: typeof video, create: 'background' | 'screen' | 'audio') => {
+      const result = place(media, { create }, -5);
+      if ('refused' in result) throw new Error(result.refused);
+      return result.tracks.find((t) => t.id === result.clip.track)!;
+    };
+    expect(made(video, 'background')).toMatchObject({ kind: 'visual', role: 'background' });
+    expect(made(video, 'audio')).toMatchObject({ kind: 'visual', role: 'screen' });
+    expect(made(audio, 'background')).toMatchObject({ kind: 'audio', gain: 1 });
+    expect(place(video, { create: 'background' }, -5)).toMatchObject({ clip: { start: 0 } });
   });
 
   it('moves a track only past a neighbour of its own kind', () => {

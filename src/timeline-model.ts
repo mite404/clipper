@@ -234,3 +234,47 @@ export function paintOrder(
     placeholder: role !== 'background' && visual.find((t) => t.role === role)?.id === id,
   }));
 }
+
+/** Where a pool drop or keyboard placement goes: an existing track, or a track it creates. */
+export type DropTarget = { track: Track } | { create: NewTrack };
+
+/**
+ * Place a whole source at a frame without moving anything: an existing track must take the
+ * source's kind and be free there; a creation target makes a track of the source's kind, so audio
+ * always makes audio and video never makes audio. A refusal names the track and the reason.
+ */
+export function placeMedia(
+  tracks: TrackDef[],
+  clips: Clip[],
+  media: { assetId: string; audio: boolean; duration: number },
+  target: DropTarget,
+  frame: number,
+):
+  | { tracks: TrackDef[]; clips: Clip[]; clip: Clip }
+  | { refused: string; reason: 'missing' | 'kind' | 'occupied' } {
+  const created =
+    'create' in target
+      ? createTrack(
+          tracks,
+          media.audio ? 'audio' : target.create === 'audio' ? 'screen' : target.create,
+        )
+      : { tracks, id: target.track };
+  const track = created.tracks.find((t) => t.id === created.id);
+  if (!track) return { refused: 'That track no longer exists.', reason: 'missing' };
+  if ((track.kind === 'audio') !== media.audio)
+    return {
+      refused: `${track.label} takes ${media.audio ? 'video or still' : 'audio'} media.`,
+      reason: 'kind',
+    };
+  const clip: Clip = {
+    id: crypto.randomUUID(),
+    assetId: media.assetId,
+    track: track.id,
+    start: Math.max(0, Math.round(frame)),
+    duration: media.duration,
+    offset: 0,
+  };
+  const placed = placeClip(clips, clip);
+  if (!placed) return { refused: `${track.label} already has a clip there.`, reason: 'occupied' };
+  return { tracks: created.tracks, clips: placed, clip };
+}

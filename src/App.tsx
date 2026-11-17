@@ -38,16 +38,20 @@ import {
 import { Composition } from './Composition';
 import { IconButton, MediaLibrary, Waveform, timecode } from './components';
 import { type Asset, DEFAULT_STILL_FRAMES, loadDemo, readMedia, unreadableNamesake } from './media';
-import { Timeline } from './Timeline';
+import { CREATE, Timeline } from './Timeline';
 import {
   DEFAULT_TRACKS,
   FPS,
   type Clip,
+  type DropTarget,
+  type NewTrack,
   type Track,
   type TrackDef,
   type Zoom,
   insertClip,
   lockedChange,
+  moveTrack,
+  placeMedia,
   splitClip,
   splitWhere,
   trackNumber,
@@ -240,6 +244,72 @@ function resizeStill(edit: Edit, clip: Clip, duration: number): Edit {
   if (next)
     throw new Error('Still duration would overlap the following clip. No clips were changed.');
   return { ...edit, clips: edit.clips.map((c) => (c.id === clip.id ? { ...c, duration } : c)) };
+}
+
+// What placement needs of a source: whole video and audio ranges, a still's default duration.
+const placed = (asset: Asset) => ({
+  assetId: asset.id,
+  audio: asset.kind === 'audio',
+  duration: sourceRangeEnd(asset),
+});
+
+// Where a source can go: its compatible tracks, then the tracks it could create.
+function placeOptions(audio: boolean, tracks: TrackDef[]) {
+  const creates: NewTrack[] = audio ? ['audio'] : ['screen', 'background'];
+  return [
+    ...sourceTracks(tracks, audio ? 'audio' : 'image').map((t) => ({
+      value: t.id,
+      label: `${trackNumber(tracks, t.id)} · ${t.label}`,
+    })),
+    ...creates.map((kind) => ({ value: `new:${kind}`, label: CREATE[kind] })),
+  ];
+}
+
+/** Keyboard placement of the selected pool source: the same command as a drop. */
+function PlaceOnTimeline({
+  asset,
+  tracks,
+  onPlace,
+}: {
+  asset?: Asset;
+  tracks: TrackDef[];
+  onPlace: (target: DropTarget, seconds: number | null) => void;
+}) {
+  const [choice, setChoice] = useState('');
+  const [seconds, setSeconds] = useState('');
+  if (!asset) return null;
+  const options = placeOptions(asset.kind === 'audio', tracks);
+  const value = options.some((o) => o.value === choice) ? choice : options[0].value;
+  return (
+    <form
+      className="place-control"
+      onSubmit={(event) => {
+        event.preventDefault();
+        onPlace(
+          value.startsWith('new:') ? { create: value.slice(4) as NewTrack } : { track: value },
+          seconds === '' ? null : Number(seconds),
+        );
+      }}
+    >
+      <select aria-label="Place onto" value={value} onChange={(e) => setChoice(e.target.value)}>
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+      </select>
+      <input
+        aria-label="Place at seconds"
+        type="number"
+        min={0}
+        step={1 / FPS}
+        placeholder="Playhead"
+        value={seconds}
+        onChange={(e) => setSeconds(e.target.value)}
+      />
+      <button type="submit">Place on timeline</button>
+    </form>
+  );
 }
 
 function stillInsertionError(asset: Asset, edit: Edit, assets: Asset[]): string | null {
@@ -706,6 +776,8 @@ export function App() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [busy, setBusy] = useState(true);
   const [sourceId, setSourceId] = useState('landscape');
+  // The pool item a pointer is dragging, for lanes to preview; drops read the drag's own data.
+  const [dragAsset, setDragAsset] = useState<string | null>(null);
   const [edit, setEdit] = useState<Edit>(INITIAL_EDIT);
   const [history, setHistory] = useState<Edit[]>([]);
   // The edit the last Save wrote, compared by identity: undoing back to it is saved again.
@@ -753,6 +825,7 @@ export function App() {
   const rewinding = useRef(false);
   const duration = Math.max(1, ...edit.clips.map((c) => c.start + c.duration));
   const asset = assets.find((a) => a.id === sourceId);
+  const dragging = assets.find((a) => a.id === dragAsset);
   const selectedZoom = edit.zooms.find((z) => z.id === selected);
   // Marking belongs to one zoom, so it ends by itself when that zoom is removed, undone or deselected.
   const markingMouse = markingZoomId !== null && selectedZoom?.id === markingZoomId;
@@ -895,6 +968,26 @@ export function App() {
       if (change({ ...edit, clips: next })) setMessage('Razor cut. Source timing preserved.');
     },
     [edit, change],
+  );
+  // One command for pool drops and keyboard placement. It reads the source and the edit as they
+  // are at release, and a lock refuses it through change().
+  const place = useCallback(
+    (assetId: string, target: DropTarget, at: number) => {
+      const source = assets.find((a) => a.id === assetId);
+      if (!source) return;
+      const result = placeMedia(edit.tracks, edit.clips, placed(source), target, at);
+      if ('refused' in result) {
+        setMessage(`${result.refused} Nothing was placed.`);
+        return;
+      }
+      if (!change({ ...edit, tracks: result.tracks, clips: result.clips })) return;
+      setSelected(result.clip.id);
+      setMessage(
+        `Placed ${source.name} on ${labelOf(result.tracks, result.clip.track)} at ` +
+          `${(result.clip.start / FPS).toFixed(1)} seconds.`,
+      );
+    },
+    [assets, edit, change],
   );
   const removeSelected = useCallback(() => {
     if (selectedZoom) change({ ...edit, zooms: edit.zooms.filter((z) => z.id !== selected) });
@@ -1331,10 +1424,19 @@ export function App() {
           setMarkingZoomId(null);
         }}
         onImport={importFiles}
+        onDrag={setDragAsset}
         busy={busy}
-      />
+      >
+        <PlaceOnTimeline
+          asset={asset}
+          tracks={edit.tracks}
+          onPlace={(target, seconds) =>
+            place(sourceId, target, seconds === null ? frameRef.current : seconds * FPS)
+          }
+        />
+      </MediaLibrary>
     ),
-    [assets, sourceId, busy],
+    [assets, asset, sourceId, busy, edit.tracks, place],
   );
   const sourceView = useMemo(
     () => (
@@ -1700,6 +1802,10 @@ export function App() {
           </div>
           <Timeline
             registry={edit.tracks}
+            drop={dragging && { media: placed(dragging), onDrop: place }}
+            onMoveTrack={(id, step) =>
+              change({ ...edit, tracks: moveTrack(edit.tracks, id, step) })
+            }
             clips={edit.clips}
             assets={assets}
             zooms={edit.zooms}
@@ -1717,16 +1823,11 @@ export function App() {
                 (previous) => toggleTrack(previous, track),
               )
             }
-            onZoomSelect={(id) => {
-              setSelected(id);
-              setMarkingZoomId(null);
-            }}
             onTrim={(clip) => {
               setSpeed(0);
               change({ ...edit, clips: edit.clips.map((c) => (c.id === clip.id ? clip : c)) });
             }}
-            tool={tool}
-            onRazor={razor}
+            onRazor={tool === 'razor' ? razor : undefined}
           />
           <div className="sequence-footer">
             <span>
