@@ -62,7 +62,9 @@ their linked research. The audit baseline was accepted main
    movement delivery. No fragment lifecycle/schema is approved by the split research.
 5. Deliver UI-8 media rows/scrubbing on UI-7 and media metadata. Its old target selector stays until
    UI-9 works; remove it with the coordinated range-only insertion callback transition. Its
-   independent view/scrubbing portion may move earlier with a disjoint exact-path grant.
+   independent view/scrubbing portion may move earlier with a disjoint exact-path grant. UI-13
+   detailed waveforms may precede it after coordinating the shared Waveform hunk; deliver that
+   audio-data foundation before CLIP-17 and CLIP-26 consume it.
 6. Deliver CLIP-21b output FPS on REF-27. Complete CLIP-19b instance fit/scale and CLIP-22 PiP
    against the same accepted preview/copy/export geometry.
 7. Complete CLIP-9b ramps, CLIP-11b targeted sidecars, UI-11 selected-type inspector and CLIP-2d
@@ -247,7 +249,7 @@ without sacrificing preview room or accidentally selecting/trimming a clip.
 
 | Ticket ID                      | Scope                                                                          | Owner                                                                                    | State                                                                                                 |
 | ------------------------------ | ------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| <a id="ui-5"></a>[UI-5](#ui-5) | Panel resizing, timeline layout controls and visible playhead/scrub affordance | [Existing Sol owner](https://ampcode.com/threads/T-e1ee6ff4-16fb-49e6-b05b-45a0b6fcecff) | Delivered at 601ba78 with green exact-main CI43978647729; paths released; preview promotion requested |
+| <a id="ui-5"></a>[UI-5](#ui-5) | Panel resizing, timeline layout controls and visible playhead/scrub affordance | [Existing Sol owner](https://ampcode.com/threads/T-e1ee6ff4-16fb-49e6-b05b-45a0b6fcecff) | Delivered at 601ba78 with green exact-main CI43978647729; paths released; canonical previews verified |
 
 Accepted main is
 [`601ba78`](https://github.com/mite404/clipper/commit/601ba7891571c436da6360ec1a981b6dd468c0f7),
@@ -255,8 +257,11 @@ with successful required
 [CI43978647729](https://github.com/mite404/clipper/actions/runs/43978647729). The ruler correction
 changes only test layout preconditions, retaining all seeking expectations. Local acceptance passed
 132 unit tests, ten corrected ruler repetitions and the full 84-browser-test gate without retries or
-skips. Both existing exact-delta reviewers returned LAND. Canonical preview promotion requires its
-owner's actual revision and verification receipt before it is claimed.
+skips. Both existing exact-delta reviewers returned LAND. The canonical preview owner returned
+promotion receipts for editor and Storybook at `601ba78`, including authenticated public revision,
+matching editor bundle hash, native-video readiness and exercised keyboard resize/hide/restore.
+Coordinator inspected both public-preview captures. Existing media/inspector clipping is not
+resolved by this promotion; no production deployment is claimed.
 
 Use the requested Yaklabs implementation as the source reference, not a new splitter dependency.
 Research located `apps/web/src/shell/sidebar-resize.tsx` and `sidebar-width.ts` in mite404/yaklabs:
@@ -438,6 +443,23 @@ UI-7's reservation is released to UI-5. The coordinator retains the sole push sl
 preview promotion was requested directly; no updated-preview claim precedes its verification
 receipt. Real-device, Firefox/Safari and private-recording qualification remain unclaimed.
 
+### Detailed audio waveforms
+
+| Ticket ID                         | Scope                                                    | State                                     | Needs                                                                                     |
+| --------------------------------- | -------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------- |
+| <a id="ui-13"></a>[UI-13](#ui-13) | Dense, zoom-aware waveform envelope and inner level core | Planned; research scoped, no source grant | Coordinate UI-8 shared Waveform hunks; related REF-30; foundation for CLIP-17 and CLIP-26 |
+
+The [UI-13 brief](tickets/UI-13.md) records the owner's traditional waveform request and the
+[research findings](https://ampcode.com/threads/T-a7ae6f1e-63eb-400b-80a3-702a2ebd3335). Current
+decode samples every 32nd sample into frame-rate peaks, and the renderer stretches 120 bars
+regardless of timeline scale. Preserve short transients, expose useful detail at fit and maximum
+zoom, and preserve meter, trimming, played highlight and Save/Open behavior. The owner confirmed one
+combined stereo envelope and a fixed audio bins-per-second rate independent of video FPS. Follow BBC
+audiowaveform's data method in the existing Mediabunny loop, without a new dependency or second
+decode. The owner narrowed acceptance to rendered voice at fit/max zoom and existing gates and
+behavior staying green; no new mixed-rate CI/reference-comparison pipeline is required. This is not
+CLIP-15 audio scrubbing or delivered REF-14's FPS correction. REF-32 is accepted separately.
+
 ### Media-pool views and source scrubbing
 
 | Ticket ID                      | Scope                                                               | State                    | Needs                                               |
@@ -527,7 +549,7 @@ images were hosted, see [Known limits](#known-limits)).
 | Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                              |
 | Cursor inspector         | No active implementation reservation after green inspector delivery                                                                                         |
 | Workspace layout         | UI-5 delivered at accepted 601ba78 with green exact-main CI; resize/layout/ruler reservation released                                                       |
-| Source-preview lifecycle | REF-32 bounded App SourceMonitor/busy-state and tests/editor.spec.ts grant to existing Sol medium T-fd12a7e5; no UI-8 implementation or worker push         |
+| Source-preview lifecycle | REF-32 delivered at 4b49623 with green exact-SHA CI; SourceMonitor/test reservation released; UI-8 remains research-only pending a new exact-path grant     |
 | Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                              |
 | Media drawer follow-up   | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                                 |
 | Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5, accepted UI-7 successor and exact-path grant before edits                                        |
@@ -685,6 +707,11 @@ within that recording; they are not metadata attachment targets and require no p
 synchronization. Every use of the recording shares its source-time cursor data and synchronization
 offset. Preserve source-time mapping through clip edits. This clarification does not approve the
 separate D-1/REF-23 migration of existing manual zoom anchors.
+
+The owner further clarifies that, once both files are in Clipper, dragging the sidecar onto the
+source video in Project media makes them one logical recording asset. The cursor data accompanies
+that source through timeline use, not a separate metadata clip or track to align. This requested
+drop workflow remains CLIP-11b work, not delivered behavior or a physical merge into the source MP4.
 
 Recording-wide association and persistence in the Clipper project do not mean telemetry is embedded
 in the video container. The existing owner's
@@ -972,22 +999,36 @@ These rows make the review's informational recommendations explicit. They are pr
 confirmed defects. Optional cleanup does not delay features. The coverage table below identifies the
 original note for every row.
 
-| Ticket ID                                            | Title                                                            | Risk   | Status                                                                                                                                                                              | Needs                                                                                                   |
-| ---------------------------------------------------- | ---------------------------------------------------------------- | ------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| <a id="doc-2"></a>[DOC-2](#doc-2)                    | Audit ticket coverage, IDs and delivery evidence                 | Small  | Delivered at [a8078ff](https://github.com/mite404/clipper/commit/a8078ffb4d737bf028bd0b864f31125dbd510263), [green CI](https://github.com/mite404/clipper/actions/runs/43789649834) | nothing                                                                                                 |
-| <a id="ref-27"></a>[REF-27](#ref-27)                 | Select real MP4/MOV/WebM exports and qualify codecs              | Medium | Exporter/test-only implementation granted to T-66b606e9; App integration held                                                                                                       | Actual composition/codecs/gates before acceptance                                                       |
-| <a id="ref-28"></a>[REF-28](#ref-28)                 | Define missing decoded-frame behavior                            | Medium | Proposal                                                                                                                                                                            | reproduce null and early-end decoder cases                                                              |
-| <a id="ref-29"></a>[REF-29](#ref-29)                 | Assess complexity-score baseline blind spots                     | Small  | Deferred proposal                                                                                                                                                                   | only if count-only baseline permits real growth                                                         |
-| <a id="ref-30"></a>[REF-30](#ref-30)                 | Progress and cancellation for import, Open and Save              | Large  | Proposal                                                                                                                                                                            | define bounded-memory and cancellation behavior with REF-22                                             |
-| <a id="ref-31"></a>[REF-31](tickets/REF-31.md)       | Prevent hidden-tab rewind jumps and held-Space toggles           | Small  | Delivered at [9132ecf](https://github.com/mite404/clipper/commit/9132ecfa925389b5167e10a1ccc2ded27ee4a3ce); [green CI](https://github.com/mite404/clipper/actions/runs/43898463793) | Transport reservation released                                                                          |
-| <a id="ref-32"></a>[REF-32](#ref-32)                 | Correct source-preview playback error and busy lifecycle         | Medium | Bounded implementation granted to existing Sol medium T-fd12a7e5 on accepted 601ba78; coordinator owns review/integration/main delivery                                             | Reproduce existing native-media baselines, red/green regressions, strict/full gates                     |
-| <a id="ref-33"></a>[REF-33](#ref-33)                 | Qualify download URL lifetime outside Chromium                   | Medium | Blocked                                                                                                                                                                             | another supported WebCodecs browser                                                                     |
-| <a id="ref-34"></a>[REF-34](#ref-34)                 | Remove Player listener lifetime assumptions                      | Small  | Deferred proposal                                                                                                                                                                   | reproduce a listener lifecycle defect first                                                             |
-| <a id="ref-35"></a>[REF-35](#ref-35)                 | Close edit and project-boundary test gaps                        | Medium | Ready                                                                                                                                                                               | asymmetric ripple, fractional trim, parser bounds, source-track rules, save snapshot and chunking cases |
-| <a id="ref-36"></a>[REF-36](#ref-36)                 | Prove delivery recovery and individual audio mute                | Medium | Ready                                                                                                                                                                               | UI cancel and retry; failed export and partial-open recovery; one muted track at a time                 |
-| <a id="ref-37"></a>[REF-37](#ref-37)                 | Qualify video cadence, rewind, scrub and large telemetry         | Medium | Verification remains open; broad stall investigation stopped unless standalone recurrence or new Amp-view request                                                                   | Preserve existing performance thresholds; inspector ownership retained pending explicit closure         |
-| <a id="verify-3"></a>[VERIFY-3](tickets/VERIFY-3.md) | Bring the feature map in line with delivered motion and controls | Small  | Delivered at [f76a702](https://github.com/mite404/clipper/commit/f76a702f85a0bcdf64f7c8bc2b0726823c447003); [green CI](https://github.com/mite404/clipper/actions/runs/43798560663) | frame-step and zoom-field journeys; current cursor and follow coverage                                  |
-| <a id="clip-9b"></a>[CLIP-9b](#clip-9b)              | Visible zoom regions, editable ramps and numeric equivalents     | Medium | Creation accepted at ad40248; Add zoom label/map follow-up accepted at acb62f7 with green CI43938067635; full ramps open                                                            | UI-7 released; full ramps follow the audited feature order; preserve CLIP-9/10                          |
+| Ticket ID                                            | Title                                                            | Risk   | Status                                                                                                                                                                                        | Needs                                                                                                   |
+| ---------------------------------------------------- | ---------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| <a id="doc-2"></a>[DOC-2](#doc-2)                    | Audit ticket coverage, IDs and delivery evidence                 | Small  | Delivered at [a8078ff](https://github.com/mite404/clipper/commit/a8078ffb4d737bf028bd0b864f31125dbd510263), [green CI](https://github.com/mite404/clipper/actions/runs/43789649834)           | nothing                                                                                                 |
+| <a id="ref-27"></a>[REF-27](#ref-27)                 | Select real MP4/MOV/WebM exports and qualify codecs              | Medium | Exporter/test-only implementation granted to T-66b606e9; App integration held                                                                                                                 | Actual composition/codecs/gates before acceptance                                                       |
+| <a id="ref-28"></a>[REF-28](#ref-28)                 | Define missing decoded-frame behavior                            | Medium | Proposal                                                                                                                                                                                      | reproduce null and early-end decoder cases                                                              |
+| <a id="ref-29"></a>[REF-29](#ref-29)                 | Assess complexity-score baseline blind spots                     | Small  | Deferred proposal                                                                                                                                                                             | only if count-only baseline permits real growth                                                         |
+| <a id="ref-30"></a>[REF-30](#ref-30)                 | Progress and cancellation for import, Open and Save              | Large  | Proposal                                                                                                                                                                                      | define bounded-memory and cancellation behavior with REF-22                                             |
+| <a id="ref-31"></a>[REF-31](tickets/REF-31.md)       | Prevent hidden-tab rewind jumps and held-Space toggles           | Small  | Delivered at [9132ecf](https://github.com/mite404/clipper/commit/9132ecfa925389b5167e10a1ccc2ded27ee4a3ce); [green CI](https://github.com/mite404/clipper/actions/runs/43898463793)           | Transport reservation released                                                                          |
+| <a id="ref-38"></a>[REF-38](tickets/REF-38.md)       | Keep Space transport on keyboard-focused controls                | Medium | Scoped by T-ddaeb91f; dropdown decision open; no source grant                                                                                                                                 | Generalize UI-7, preserve REF-31 repeat rule and coordinate CLIP-2e; do not interrupt REF-32            |
+| <a id="ref-32"></a>[REF-32](#ref-32)                 | Correct source-preview playback error and busy lifecycle         | Medium | Delivered at [4b49623](https://github.com/mite404/clipper/commit/4b4962397e4ac237ab774b8d4a2f2a44280514b2); [green exact-SHA CI](https://github.com/mite404/clipper/actions/runs/43986804408) | Reservation released; canonical preview promotion requested                                             |
+| <a id="ref-33"></a>[REF-33](#ref-33)                 | Qualify download URL lifetime outside Chromium                   | Medium | Blocked                                                                                                                                                                                       | another supported WebCodecs browser                                                                     |
+| <a id="ref-34"></a>[REF-34](#ref-34)                 | Remove Player listener lifetime assumptions                      | Small  | Deferred proposal                                                                                                                                                                             | reproduce a listener lifecycle defect first                                                             |
+| <a id="ref-35"></a>[REF-35](#ref-35)                 | Close edit and project-boundary test gaps                        | Medium | Ready                                                                                                                                                                                         | asymmetric ripple, fractional trim, parser bounds, source-track rules, save snapshot and chunking cases |
+| <a id="ref-36"></a>[REF-36](#ref-36)                 | Prove delivery recovery and individual audio mute                | Medium | Ready                                                                                                                                                                                         | UI cancel and retry; failed export and partial-open recovery; one muted track at a time                 |
+| <a id="ref-37"></a>[REF-37](#ref-37)                 | Qualify video cadence, rewind, scrub and large telemetry         | Medium | Verification remains open; broad stall investigation stopped unless standalone recurrence or new Amp-view request                                                                             | Preserve existing performance thresholds; inspector ownership retained pending explicit closure         |
+| <a id="verify-3"></a>[VERIFY-3](tickets/VERIFY-3.md) | Bring the feature map in line with delivered motion and controls | Small  | Delivered at [f76a702](https://github.com/mite404/clipper/commit/f76a702f85a0bcdf64f7c8bc2b0726823c447003); [green CI](https://github.com/mite404/clipper/actions/runs/43798560663)           | frame-step and zoom-field journeys; current cursor and follow coverage                                  |
+| <a id="clip-9b"></a>[CLIP-9b](#clip-9b)              | Visible zoom regions, editable ramps and numeric equivalents     | Medium | Creation accepted at ad40248; Add zoom label/map follow-up accepted at acb62f7 with green CI43938067635; full ramps open                                                                      | UI-7 released; full ramps follow the audited feature order; preserve CLIP-9/10                          |
+
+REF-32's exact source/test patch retained SHA-256
+`66389e1674068a14284a6d865928e317122a5c629a45d7de9f5fb035c616cce4`. Both independent Sol and
+existing Fable reviews returned LAND without P0-P2 findings. Coordinator acceptance passed strict
+shrink-only/static gates, 132 unit tests, seven helper tests and all 89 browser cases with zero
+skipped, unexpected or flaky cases. The first full attempt hit an evidenced orb OOM; the unchanged
+retry passed. Source video and native audio now pause on busy/export without auto-resume or
+range/target/time reset. Intentional aborts and stale play requests no longer become codec warnings,
+while genuine current-request failure remains visible and a new Play clears the old warning. The
+accepted-main preview owner has the exact SHA and green CI; promotion awaits its actual receipt.
+[Acceptance evidence](https://ampcode.com/artifacts/ref-32-acceptance-evidence-f85dcd12-dc9e-4e93-96e3-21f23cf3a4b8)
+retains native reds, mutation checks and inspected public-media recordings. No private recording,
+physical speaker or independent five-repeat performance qualification is claimed.
 
 | Ticket ID                                  | Feature                                                                                                      | State and dependency                                                     |
 | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
@@ -1140,7 +1181,7 @@ imply the entire recommendation is done. The full source wording stays in the hi
 | [REF-29](#ref-29)                                       | R6     | Count-only Fallow baseline blind spots               | Deferred; REF-13 fixed comparison base, not score tracking                                |
 | [REF-30](#ref-30)                                       | R7     | Import, Open and Save progress and cancel            | Open; REF-21 limits size but does not add cancellation                                    |
 | [REF-31](#ref-31)                                       | R8     | Hidden-tab rewind and held Space                     | Delivered `9132ecf`; exact-main CI green                                                  |
-| [REF-32](#ref-32)                                       | R9     | SourceMonitor play rejection and busy lifecycle      | Open; no corresponding repair in delta                                                    |
+| [REF-32](#ref-32)                                       | R9     | SourceMonitor play rejection and busy lifecycle      | Delivered at `4b49623`; exact-SHA CI green                                                |
 | [REF-33](#ref-33)                                       | R10    | Download lifetime outside Chromium                   | Open; Chromium downloads alone are proven                                                 |
 | [REF-34](#ref-34)                                       | R11    | Player listener attachment assumptions               | Deferred; effect still depends on `hasAssets`                                             |
 | [REF-35](#ref-35)                                       | T1     | Cross-track ripple mutation survivors                | Open; existing voice fixture begins before insertion                                      |
@@ -1670,6 +1711,7 @@ support them but do not replace them. No GitHub or Linear issue creation is impl
 | Horizontal label scrubbing across numeric properties, not booleans/enums                                                                  | [UI-4](#ui-4)                                                                |
 | Resize side panes/timeline, hide/restore and default/custom height controls, visible ruler playhead and scrub affordance                  | [UI-5](#ui-5)                                                                |
 | Media before Save, temporary left-edge media-pool peek and Space-only timeline control                                                    | [UI-7](#ui-7)                                                                |
+| Space play/pause despite focused native controls, with checkbox Enter activation and text-entry exceptions                                | [REF-38](tickets/REF-38.md)                                                  |
 | Cursor metadata import from source panel or targeted composition/timeline sidecar drop                                                    | [CLIP-11b](tickets/CLIP-11b.md)                                              |
 | Remove ORIGINAL, obsolete above-timeline cursor panel, L/R meter, Paused and selected slogans/tags                                        | [UI-6](#ui-6), with cursor access preserved by [CLIP-11](tickets/CLIP-11.md) |
 | One resolution selector, true selected-size composer plus copy/export, real MP4/MOV/WebM                                                  | [REF-27](#ref-27)                                                            |
