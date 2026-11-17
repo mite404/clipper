@@ -113,9 +113,13 @@ exact-SHA green CI before releasing the slot.
 The archival audit has coordinator ownership clearance for the completed UI-3 worker/reviewer,
 REF-18/20/31 transport worker, tooltip pilot/repair, VERIFY-5, fresh-orb qualifier and OpenScreen
 comparison. They have no new assignments or reusable-worker reservations. This is clearance, not a
-claim that they were archived. UI-2 remains open until its historical stress-portal ownership is
-clear. Keep the inspector/REF-37 owner, dependency-held workers, Fable, coordinator, stable portal
-and unaccepted experiments open. SPEC-01 remains archived with its parked branch preserved.
+claim that they were archived. UI-2 and UI-5 also have coordinator archive-only clearance: no
+remaining worker assignment or dependency on their noncanonical local services is recorded. UI-2's
+historical stress fixture and portable evidence are preserved; its old live portal is not required.
+UI-5's 240px scroll-control acceptance is recorded in its brief, not an outstanding worker
+assignment. This clearance does not authorize deleting services, files, branches or worktrees. Keep
+the inspector/REF-37 owner, dependency-held workers, Fable, coordinator, stable portal and
+unaccepted experiments open. SPEC-01 remains archived with its parked branch preserved.
 
 The owner's one-ticket Sonnet 5.5 trial for VERIFY-3 in
 [T-24b3f0ad](https://ampcode.com/threads/T-24b3f0ad-9a83-4b3b-b297-6f86319b8e81) concluded with
@@ -544,22 +548,22 @@ images were hosted, see [Known limits](#known-limits)).
 
 ### Current path reservations
 
-| Owner                    | Paths                                                                                                                                                       |
-| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                              |
-| Cursor inspector         | No active implementation reservation after green inspector delivery                                                                                         |
-| Workspace layout         | UI-5 delivered at accepted 601ba78 with green exact-main CI; resize/layout/ruler reservation released                                                       |
-| Source-preview lifecycle | REF-32 delivered at 4b49623 with green exact-SHA CI; SourceMonitor/test reservation released; UI-8 remains research-only pending a new exact-path grant     |
-| Export integration       | REF-27 to T-66b606e9: exact fourteen-file export/actual-size geometry/test grant below on accepted c987ab6; no worker push; shared consumers held           |
-| Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                              |
-| Media drawer follow-up   | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                                 |
-| Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5, accepted UI-7 successor and exact-path grant before edits                                        |
-| Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                        |
-| Transport lifecycle      | No active reservation after green REF-31 delivery; preserve accepted REF-20/31 transport behavior                                                           |
-| Zoom regions             | CLIP-9b narrow App creation/B/hints, AutoZoomControls deletion, zoom-generation removal and listed test/story consumers; no Timeline/model/ramp/style edits |
-| Oxc tooling              | No active reservation after green VERIFY-5 delivery; VERIFY-6 follow-up needs a separate exact-path grant                                                   |
-| Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                                                              |
-| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                            |
+| Owner                    | Paths                                                                                                                                                        |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                               |
+| Cursor inspector         | No active implementation reservation after green inspector delivery                                                                                          |
+| Workspace layout         | UI-5 delivered at accepted 601ba78 with green exact-main CI; resize/layout/ruler reservation released                                                        |
+| Source-preview lifecycle | REF-32 delivered at 4b49623 with green exact-SHA CI; SourceMonitor/test reservation released; UI-8 remains research-only pending a new exact-path grant      |
+| Export integration       | REF-27 to T-66b606e9: actual-root geometry/test hunks active; MP4-default modal/fallback source held for revised plan; no worker push; shared consumers held |
+| Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                               |
+| Media drawer follow-up   | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                                  |
+| Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5, accepted UI-7 successor and exact-path grant before edits                                         |
+| Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                         |
+| Transport lifecycle      | No active reservation after green REF-31 delivery; preserve accepted REF-20/31 transport behavior                                                            |
+| Zoom regions             | CLIP-9b narrow App creation/B/hints, AutoZoomControls deletion, zoom-generation removal and listed test/story consumers; no Timeline/model/ramp/style edits  |
+| Oxc tooling              | No active reservation after green VERIFY-5 delivery; VERIFY-6 follow-up needs a separate exact-path grant                                                    |
+| Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                                                               |
+| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                             |
 
 ### Preservation branches
 
@@ -897,9 +901,9 @@ remain linked evidence, not another operational queue.
 
 ### Approved workspace layout unit
 
-| Ticket ID                      | Title                                                              | Status                                 | Owner                                                                            | Needs                                                                              |
-| ------------------------------ | ------------------------------------------------------------------ | -------------------------------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| <a id="ui-2"></a>[UI-2](#ui-2) | Hide/show media drawer, timeline room and two-axis track scrolling | Delivered ceb40bb; exact-main CI green | [Sol medium](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | Reservation released; historical stress portal ownership still needs clarification |
+| Ticket ID                      | Title                                                              | Status                                 | Owner                                                                            | Needs                                                                               |
+| ------------------------------ | ------------------------------------------------------------------ | -------------------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| <a id="ui-2"></a>[UI-2](#ui-2) | Hide/show media drawer, timeline room and two-axis track scrolling | Delivered ceb40bb; exact-main CI green | [Sol medium](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | Reservation released; historical stress portal not required; archive-only clearance |
 
 The owner approved this connected layout unit. It owns drawer UI state/toggle/library wrapper,
 workspace/sequence shell, Timeline viewport markup and scoped media/workspace/timeline CSS. The
@@ -1003,7 +1007,7 @@ original note for every row.
 | Ticket ID                                            | Title                                                            | Risk   | Status                                                                                                                                                                                        | Needs                                                                                                   |
 | ---------------------------------------------------- | ---------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | <a id="doc-2"></a>[DOC-2](#doc-2)                    | Audit ticket coverage, IDs and delivery evidence                 | Small  | Delivered at [a8078ff](https://github.com/mite404/clipper/commit/a8078ffb4d737bf028bd0b864f31125dbd510263), [green CI](https://github.com/mite404/clipper/actions/runs/43789649834)           | nothing                                                                                                 |
-| <a id="ref-27"></a>[REF-27](#ref-27)                 | Select real MP4/MOV/WebM exports and qualify codecs              | Medium | Bounded fourteen-file integration granted to existing Sol medium T-66b606e9 on accepted c987ab6                                                                                               | Exact source/test hunks below; no worker push or early review                                           |
+| <a id="ref-27"></a>[REF-27](#ref-27)                 | Select real MP4/MOV/WebM exports and qualify codecs              | Medium | Actual-root geometry/test integration active for existing Sol medium T-66b606e9; MP4-default modal/fallback revised plan pending                                                              | Preserve exporter candidate; exact hunks below; no worker push or early review                          |
 | <a id="ref-28"></a>[REF-28](#ref-28)                 | Define missing decoded-frame behavior                            | Medium | Proposal                                                                                                                                                                                      | reproduce null and early-end decoder cases                                                              |
 | <a id="ref-29"></a>[REF-29](#ref-29)                 | Assess complexity-score baseline blind spots                     | Small  | Deferred proposal                                                                                                                                                                             | only if count-only baseline permits real growth                                                         |
 | <a id="ref-30"></a>[REF-30](#ref-30)                 | Progress and cancellation for import, Open and Save              | Large  | Proposal                                                                                                                                                                                      | define bounded-memory and cancellation behavior with REF-22                                             |
@@ -1384,8 +1388,10 @@ the existing reviewer's successor review. No baseline growth or health suppressi
 
 ## Export selection and responsiveness ownership
 
-The owner explicitly requests selectable real MP4 and MOV alongside WebM. REF-27 now includes that
-selection and qualification, owned by
+The owner explicitly requires H.264 MP4 as the default export at the application's selected
+resolution, with alternative formats in an export modal. This supersedes the earlier WebM-default
+and header-only format-select plan without changing the actual selected-size render-root
+requirement. REF-27 includes selection and qualification, owned by
 [Sol research](https://ampcode.com/threads/T-66b606e9-c0a0-44fd-82a8-189dd0f928ba). Inspect
 installed Mediabunny muxers and actual encoder support before granting exporter/App/test edits.
 Container, MIME and extension must agree; never rename WebM or silently substitute another selected
@@ -1415,32 +1421,41 @@ copy/export. A fitted CSS display may remain constant, but CSS-only enlargement 
 1280×720 render root does not satisfy the request. Scope the true Player/composition dimensions and
 consistent geometry, crop, radius, cursor, zoom and marking transforms across preview/frame-copy/
 export. Internal logical coordinates may be retained only as a math detail with actual selected-size
-rendering and verified parity. Keep one selector beside Export video and delete duplicate readout.
+rendering and verified parity. Keep one resolution selector beside Export video and delete its
+duplicate readout. Format alternatives belong in the export modal, not a header-only selector.
 
-REF-27 owner is tracing proposed App/Composition/shared-stage/test hunks read-only. Preserve the
-already verified two-file exporter candidate. Final release must use the exact delivered
-inspector/UI-2 and header successors; serialize this resolution/geometry integration before full
-CLIP-9b ramp/PiP and still/dynamic-track renderer changes. Acceptance must inspect actual HD/4K
-render-root dimensions, decoded/copy/export parity, corners/crops/cursor/zoom and interactive
-marking, selection/playback during changes, legacy project behavior and fitted narrow/wide display.
+REF-27 owner may implement the actual-root geometry/test hunks below. Preserve the already verified
+two-file exporter candidate. Final release must use the exact delivered inspector/UI-2 and header
+successors; serialize this resolution/geometry integration before full CLIP-9b ramp/PiP and
+still/dynamic-track renderer changes. Acceptance must inspect actual HD/4K render-root dimensions,
+decoded/copy/export parity, corners/crops/cursor/zoom and interactive marking, selection/playback
+during changes, legacy project behavior and fitted narrow/wide display.
 
-The coordinator grants the owner's rev9 fourteen-file integration plan on accepted `c987ab6`, with
-green [exact-SHA CI43988105005](https://github.com/mite404/clipper/actions/runs/43988105005): the
-existing exporter pair, App export/actual-Player-size/marking hunks, Composition, stage,
-cursor-render and the listed geometry/parity tests. WebM is the visible default. The transferred
-exporter patch is verified at SHA-256
-`9253e6e7261ff0cf7a87e42771498d57469393111bb389bb9247622e4f363c1d`. Exact paths are `src/App.tsx`,
-`src/export.ts`, `src/Composition.tsx`, `src/stage.ts`, `src/cursor-render.ts`, `src/stage.test.ts`,
-`src/cursor-render.test.ts`, `tests/export.spec.ts`, `tests/refinements.spec.ts`,
-`tests/framing.spec.ts`, `tests/frame-image.spec.ts`, `tests/cursor-render.spec.ts`,
-`tests/cursor-speeds.spec.ts` and `tests/cursor-rotation.spec.ts`. The last three permit actual-unit
-expectation corrections only, preserving temporal/shape/angle assertions. No schema, packages,
-styles, FPS, ramp, PiP, still-image, fit or attachment changes. Keep SourceMonitor/sourceBlocked,
-Save, drawer, Inspector and transport listeners untouched. Use a fresh exact-base worktree and apply
-the preserved patch, not old `b9596c6` files in place. Return the integrated exact candidate and
-actual runtime evidence before the coordinator assigns Opus 5.5 medium independent review. No worker
-push or new reviewer grant is implied. PiP/UI-2 owners are notified; no silent fixed-stage exception
-or premature shared-source grant.
+The coordinator grants only the owner's rev9 actual-root geometry/test portion on accepted
+`c987ab6`, with green
+[exact-SHA CI43988105005](https://github.com/mite404/clipper/actions/runs/43988105005): App
+Player-size/marking hunks, Composition, stage, cursor-render and the listed geometry/parity tests.
+The preserved exporter pair remains separate. Export UI/container-state/default/modal/fallback
+production changes are held for the revised bounded plan. The transferred exporter patch is verified
+at SHA-256 `9253e6e7261ff0cf7a87e42771498d57469393111bb389bb9247622e4f363c1d`. Exact paths are
+`src/App.tsx`, `src/export.ts`, `src/Composition.tsx`, `src/stage.ts`, `src/cursor-render.ts`,
+`src/stage.test.ts`, `src/cursor-render.test.ts`, `tests/export.spec.ts`,
+`tests/refinements.spec.ts`, `tests/framing.spec.ts`, `tests/frame-image.spec.ts`,
+`tests/cursor-render.spec.ts`, `tests/cursor-speeds.spec.ts` and `tests/cursor-rotation.spec.ts`.
+The last three permit actual-unit expectation corrections only, preserving temporal/shape/angle
+assertions. No schema, packages, styles, FPS, ramp, PiP, still-image, fit or attachment changes.
+Keep SourceMonitor/sourceBlocked, Save, drawer, Inspector and transport listeners untouched. Use a
+fresh exact-base worktree and apply the preserved patch, not old `b9596c6` files in place. Return
+the integrated exact candidate and actual runtime evidence before the coordinator assigns Opus 5.5
+medium independent review. No worker push or new reviewer grant is implied. PiP/UI-2 owners are
+notified; no silent fixed-stage exception or premature shared-source grant.
+
+The owner requested investigating FFmpeg where browser export is insufficient. Native AVC MP4 and
+MOV/PCM are demonstrated; native AAC is the concrete orb gap. The existing owner is checking primary
+docs for a local `@mediabunny/aac-encoder` AAC-LC WASM fallback before proposing dependency,
+modal/API and path changes. This is investigation, not an approved package addition or a qualified
+AAC result. Preserve early actionable failure if encoding is unavailable, never dropping audio or
+silently substituting a container. No full ffmpeg.wasm dependency is granted.
 
 For reported whole-app multi-second stalls, the
 [inspector owner](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) is the sole
