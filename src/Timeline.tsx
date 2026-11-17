@@ -231,7 +231,11 @@ export function Timeline({
                   left: `${(zoom.start / duration) * 100}%`,
                   width: `${(zoom.duration / duration) * 100}%`,
                 }}
-                onClick={() => onZoomSelect(zoom.id)}
+                onClick={(event) => {
+                  // Safari does not focus a clicked button; Delete needs focus in the timeline.
+                  event.currentTarget.focus({ preventScroll: true });
+                  onZoomSelect(zoom.id);
+                }}
               >
                 <ZoomIn size={12} />
                 <span>{zoom.scale.toFixed(1)}× zoom</span>
@@ -307,6 +311,7 @@ export function Timeline({
                         aria-pressed={selected === clip.id}
                         onPointerDown={(event) => (pressX.current = event.clientX)}
                         onClick={(event) => {
+                          event.currentTarget.focus({ preventScroll: true });
                           const at =
                             tool === 'razor'
                               ? razorFrame(event, pressX.current, snapTargets, duration)

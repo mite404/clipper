@@ -340,3 +340,49 @@ test('Delete and Backspace remove the selection only from inside the timeline', 
   await page.keyboard.press('Delete');
   await expect(clips).toHaveCount(1);
 });
+
+test('a pointer selection moves focus into the timeline even where the browser would not', async ({
+  page,
+}) => {
+  await open(page);
+  const clips = page.getByTestId('track-screen').getByRole('button');
+  const zooms = page.getByRole('button', { name: 'Select zoom', exact: true });
+  const undo = page.getByRole('button', { name: 'Undo', exact: true });
+  const pool = page.getByRole('button', { name: 'Select A conversation', exact: true });
+  const inTimeline = () => page.evaluate(() => !!document.activeElement?.closest('#sequence-pane'));
+  // A programmatic click selects without moving focus in Chromium, as a click does in Safari.
+  const quiet = (target: Locator) => target.evaluate((el: HTMLElement) => el.click());
+
+  for (const key of ['Delete', 'Backspace']) {
+    await pool.focus();
+    await quiet(clips.first());
+    await expect(clips.first()).toHaveAttribute('aria-pressed', 'true');
+    expect(await inTimeline()).toBe(true);
+    await page.keyboard.press(key);
+    await expect(clips).toHaveCount(1);
+    await undo.click();
+    await expect(clips).toHaveCount(2);
+  }
+
+  await page.getByRole('button', { name: 'Add zoom at playhead' }).first().click();
+  await expect(zooms).toHaveCount(1);
+  await clips.first().click();
+  await pool.focus();
+  await quiet(zooms);
+  await expect(zooms).toHaveClass(/selected/);
+  expect(await inTimeline()).toBe(true);
+  await page.keyboard.press('Delete');
+  await expect(zooms).toHaveCount(0);
+  await expect(clips).toHaveCount(2);
+
+  // Pressing a trim grip selects its clip; its handler cancels the default focus change.
+  await pool.focus();
+  const grip = page.getByRole('slider', { name: 'Trim left edge' }).first();
+  const box = (await grip.boundingBox())!;
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.up();
+  expect(await inTimeline()).toBe(true);
+  await page.keyboard.press('Delete');
+  await expect(clips).toHaveCount(1);
+});
