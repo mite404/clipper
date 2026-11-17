@@ -38,7 +38,8 @@ button {
 button {
   border: 0;
 }
-button:disabled {
+button:disabled,
+.project-open:has(input:disabled) {
   opacity: 0.35;
   cursor: not-allowed;
 }
@@ -1996,7 +1997,6 @@ p {
 }
 .project-open {
   cursor: pointer;
-  font-size: 11px;
   position: relative;
 }
 .project-open input {
@@ -2007,7 +2007,6 @@ p {
   width: 100%;
 }
 .project-open:has(input:disabled) {
-  opacity: 0.45;
   pointer-events: none;
 }
 .project-open:focus-within {

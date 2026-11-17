@@ -10,6 +10,7 @@ import {
 import { Player, type PlayerRef } from '@remotion/player';
 import {
   ArrowDownToLine,
+  FolderOpen,
   ArrowLeft,
   ArrowRight,
   Check,
@@ -1337,21 +1338,21 @@ export function App() {
         >
           <ArrowDownToLine size={14} /> Save project
         </button>
+        <label className="save-button project-open">
+          <FolderOpen size={14} /> Open project
+          <input
+            aria-label="Open local project"
+            type="file"
+            accept=".json,.clipper"
+            disabled={busy || exportProgress !== null}
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              if (file && mayDiscard()) void openProject(file);
+              event.target.value = '';
+            }}
+          />
+        </label>
         <div className="header-actions">
-          <label className="project-open">
-            Open project
-            <input
-              aria-label="Open local project"
-              type="file"
-              accept=".json,.clipper"
-              disabled={busy || exportProgress !== null}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (file && mayDiscard()) void openProject(file);
-                event.target.value = '';
-              }}
-            />
-          </label>
           <div className="export-controls">
             <select
               aria-label="Export resolution"

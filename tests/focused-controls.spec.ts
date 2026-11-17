@@ -197,7 +197,16 @@ test('Open project looks and acts disabled while an export runs', async ({ page 
   await expect(page.getByRole('progressbar', { name: 'Video export progress' })).toBeVisible();
   const label = page.locator('.project-open');
   await expect(page.getByLabel('Open local project')).toBeDisabled();
-  await expect(label).toHaveCSS('opacity', '0.45');
+  // The same disabled look as Save project, from the shared button:disabled rule.
+  const save = page.getByRole('button', { name: 'Save project', exact: true });
+  await expect(save).toBeDisabled();
+  const look = (el: Locator) =>
+    el.evaluate((node) => {
+      const style = getComputedStyle(node);
+      return [style.opacity, style.cursor];
+    });
+  expect(await look(label)).toEqual(await look(save));
+  expect((await look(label))[0]).toBe('0.35');
   await expect(label).toHaveCSS('pointer-events', 'none');
   await page
     .locator('.app-header')
@@ -205,4 +214,27 @@ test('Open project looks and acts disabled while an export runs', async ({ page 
   await page.getByRole('button', { name: 'Cancel export', exact: true }).click();
   await expect(page.getByLabel('Open local project')).toBeEnabled();
   await expect(label).toHaveCSS('opacity', '1');
+});
+
+test('Open project is a filled button directly right of Save project in the same row', async ({
+  page,
+}) => {
+  await open(page);
+  for (const width of [1440, 960, 390]) {
+    await page.setViewportSize({ width, height: 1000 });
+    const save = page.getByRole('button', { name: 'Save project', exact: true });
+    const label = page.locator('.project-open');
+    const [s, o] = [(await save.boundingBox())!, (await label.boundingBox())!];
+    expect(Math.abs(o.y - s.y), `row at ${width}`).toBeLessThan(1);
+    expect(Math.abs(o.height - s.height), `height at ${width}`).toBeLessThan(1);
+    expect(o.x - (s.x + s.width), `gap at ${width}`).toBeGreaterThanOrEqual(0);
+    expect(o.x - (s.x + s.width), `gap at ${width}`).toBeLessThan(24);
+    const fill = (el: Locator) => el.evaluate((node) => getComputedStyle(node).backgroundColor);
+    expect(await fill(label)).toBe(await fill(save));
+    // Save, Open, then the right-hand group in DOM order: nothing sits between them.
+    const order = await page
+      .locator('.app-header')
+      .evaluate((header) => [...header.children].map((child) => child.className.split(' ')[0]));
+    expect(order.slice(1, 4)).toEqual(['save-button', 'save-button', 'header-actions']);
+  }
 });
