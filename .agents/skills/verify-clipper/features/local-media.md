@@ -35,10 +35,12 @@ waits for four loaded demo assets, and runs the four `editor.spec.ts` tests whos
 
 - `imports still images with editable clip duration, alpha and portable reopen` imports
   `overlay.PNG` (no MIME type), `portrait.JPG` and a corrupt `broken.png`. It requires six assets, a
-  status naming `broken.png`, both duration fields at their one-frame, 24-hour and overlap limits,
-  split, trim, delete and undo, a still on the camera track, and zero non-GET requests. It saves a
-  version 3 project whose embedded bytes equal the PNG, then reopens it after a reload. A project
-  with a corrupt embedded still leaves the current edit and its blob URLs unchanged.
+  status naming `broken.png`, and zero non-GET requests. The Still duration seconds field must
+  refuse zero and 86400.1 s and accept 86400 s. The Selected still duration seconds field must
+  refuse zero and a 6 s growth that would overlap the next clip, and accept 2 s. It also requires
+  split, trim, delete and undo, and a still on the camera track. It saves a version 3 project whose
+  embedded bytes equal the PNG, then reopens it after a reload. A project with a corrupt embedded
+  still leaves the current edit and its blob URLs unchanged.
 - `imports qualified H264 and AAC MP4/MOV, rejects ProRes and reopens exported sources` builds four
   H.264 MP4/MOV files and a ProRes MOV with FFmpeg and checks them with ffprobe. It requires four
   assets and an unsupported-codec status for the ProRes file, plays and inserts each file, saves a
@@ -52,10 +54,11 @@ waits for four loaded demo assets, and runs the four `editor.spec.ts` tests whos
 The `media` journey needs FFmpeg and ffprobe for the MP4/MOV test, although its doctor does not
 check them. It does not select the mixed-import naming or stalled-download checks; `editor` or `all`
 runs them. Require the status to name every unreadable file, and a stalled demo download to give up
-and free its blobs. The decoded results of stills live elsewhere: `all` alone runs
+and free its blobs. The decoded results of stills live elsewhere. `all` alone runs
 `frame-image.spec.ts` (PNG and JPEG still pixels, cover fit and split offsets in the copied frame at
-both resolutions) and `export.spec.ts` (PNG and JPEG stills decoded from MP4, MOV and WebM at HD and
-4K, and bitmap release after success, cancellation and a partial decode failure).
+both resolutions). `export` and `all` run `export.spec.ts` (PNG and JPEG stills decoded from MP4,
+MOV and WebM at HD and 4K, and bitmap release after success, cancellation and a partial decode
+failure).
 
 ## Gotchas
 

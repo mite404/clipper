@@ -37,9 +37,9 @@ verification, and nothing in this skill may report it as verified:
   (CLIP-20b at `6156fb4`, exact-SHA CI 44022990182).
 - MP4 and MOV playback in other players or editing software, encoding in browsers other than
   Chromium, every codec those containers can hold, EXIF-rotated JPEGs and real screen recordings.
-  MP4 import and export with H.264 and AAC fixtures, MOV and WebM export, and the export format
-  choice are delivered (REF-27 at `27099dc`, exact-SHA CI 44001648378; REF-27b at `631f0bc`,
-  exact-SHA CI 44012171159).
+  MP4/MOV import with H.264 and AAC fixtures is delivered (CLIP-20b at `6156fb4`, exact-SHA CI
+  44022990182). MP4, MOV and WebM export and the export format choice are delivered (REF-27 at
+  `27099dc`, exact-SHA CI 44001648378; REF-27b at `631f0bc`, exact-SHA CI 44012171159).
 - The wider responsiveness work in REF-37, including scrubbing with very large telemetry.
 - Real OpenScreen recordings, Retina scale, window capture and multi-display (CLIP-11 stays
   Partial), plus click sounds, motion blur and keystroke overlays.

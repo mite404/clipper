@@ -16,7 +16,7 @@ one-second HD/4K render checks in automatic, WebM, MOV and MP4 formats. Files ar
 inspected with FFmpeg and ffprobe, including pixel parity, source offsets, audio timing and music
 gain. UI export tests drive Export resolution and Export video and inspect the downloaded file, not
 just progress text. Use `.agents/skills/verify-clipper/scripts/verify.mjs editor` for those UI
-export journeys too. Each command starts and cleans up its own Vite development server.
+export journeys too. Each command starts and cleans up its own servers on fresh loopback ports.
 
 `editor` also runs REF-20's real export progress/cancel/retry check. Cancel after progress exceeds
 10 percent and require no download, no progress bar and an enabled Export video button. Retry must

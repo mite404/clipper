@@ -75,7 +75,7 @@ motion disables the animation style, and playback still starts.
 
 These checks use Chromium with a pointer or touch emulated by the browser. They do not qualify a
 physical touch device, a real mobile browser, other browsers or a Retina display. A hover preview
-and its delays are timing-based; the preview specs use fixed 350 ms and 600 ms waits. The tests
+and its delays are timing-based; the preview specs use fixed 100, 350 and 600 ms waits. The tests
 assert layout geometry and state, not pixel appearance; inspect screenshots before reporting visual
 quality. The cursor behavior itself is mapped in [cursor.md](cursor.md). No spec here proves a
 still-image backdrop, dynamic tracks or Inspector controls other than the cursor region.
