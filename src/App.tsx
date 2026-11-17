@@ -985,6 +985,7 @@ export function App() {
       setBusy(false);
     }
   };
+  const exportBasename = `developer-walkthrough-${exportWidth === 1920 ? '1080p' : '4k'}`;
   const exportVideo = async () => {
     setSpeed(0);
     setMarkingZoomId(null);
@@ -1010,7 +1011,7 @@ export function App() {
       });
       downloadBlob(
         blob,
-        `developer-walkthrough-${exportWidth === 1920 ? '1080p' : '4k'}.${blob.type.slice('video/'.length).replace('quicktime', 'mov')}`,
+        `${exportBasename}.${blob.type.slice('video/'.length).replace('quicktime', 'mov')}`,
       );
       setMessage(`Video exported at ${exportWidth} × ${(exportWidth * 9) / 16}. Rendered locally.`);
     } catch (error) {
@@ -1571,6 +1572,14 @@ export function App() {
             : exportFormat === 'mp4'
               ? 'H.264 video with AAC audio. A local encoder is used when native AAC is unavailable. Your browser must support H.264 encoding.'
               : 'VP9 video with Opus audio. Your browser must support these encoders.'}
+        </p>
+        <p>
+          Filename:{' '}
+          <strong>
+            {exportBasename}.{exportFormat}
+          </strong>
+          <br />
+          The save dialog may hide the extension. The saved file includes it.
         </p>
         <a href="/licenses/mediabunny-aac-encoder.txt" target="_blank" rel="noreferrer">
           Encoder licenses and source

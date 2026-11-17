@@ -6,7 +6,7 @@ import path from 'node:path';
 
 test('opens export settings with MP4 at the app resolution and isolates modal shortcuts', async ({
   page,
-}) => {
+}, info) => {
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready');
   await page.getByRole('combobox', { name: 'Export resolution' }).selectOption('3840');
@@ -17,6 +17,7 @@ test('opens export settings with MP4 at the app resolution and isolates modal sh
   await expect(dialog).toBeVisible();
   await expect(dialog.getByRole('combobox', { name: 'Format' })).toHaveValue('mp4');
   await expect(dialog).toContainText('3840 × 2160');
+  await expect(dialog).toContainText('developer-walkthrough-4k.mp4');
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).focus();
   await page.keyboard.press('ArrowRight');
   await expect(page.getByLabel('Timeline playhead', { exact: true })).toHaveValue('87');
@@ -28,6 +29,35 @@ test('opens export settings with MP4 at the app resolution and isolates modal sh
   await expect(open).toBeFocused();
   await open.click();
   await expect(dialog.getByRole('combobox', { name: 'Format' })).toHaveValue('mov');
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await expect(dialog).not.toBeVisible();
+  await expect(open).toBeFocused();
+  for (const viewport of [1440, 320]) {
+    await page.setViewportSize({ width: viewport, height: 1000 });
+    for (const width of [1920, 3840]) {
+      await page.getByRole('combobox', { name: 'Export resolution' }).selectOption(String(width));
+      await open.click();
+      for (const format of ['mp4', 'mov', 'webm']) {
+        await dialog.getByRole('combobox', { name: 'Format' }).selectOption(format);
+        const filename = `developer-walkthrough-${width === 1920 ? '1080p' : '4k'}.${format}`;
+        await expect(dialog.getByText(filename, { exact: true })).toBeVisible();
+        await expect(dialog).toContainText(
+          'The save dialog may hide the extension. The saved file includes it.',
+        );
+        expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(
+          true,
+        );
+        const bounds = (await dialog.boundingBox())!;
+        expect(bounds.x).toBeGreaterThanOrEqual(0);
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(viewport);
+        await dialog.screenshot({
+          path: info.outputPath(`filename-${viewport}-${width}-${format}.png`),
+        });
+      }
+      await page.keyboard.press('Escape');
+      await expect(open).toBeFocused();
+    }
+  }
 });
 
 test('renders at selected HD and 4K dimensions while preserving fitted framing and held state', async ({
@@ -382,8 +412,10 @@ test('rejects a malformed project without replacing the current edit', async ({ 
     .toBeGreaterThan(0.1);
 });
 
-for (const width of [1920, 3840]) {
-  test(`exports a spliced ${width}px project through the actual editor controls`, async ({
+for (const { width, format } of [1920, 3840].flatMap((width) =>
+  ['mp4', 'mov', 'webm'].map((format) => ({ width, format })),
+)) {
+  test(`exports a spliced ${width}px ${format} project through the actual editor controls`, async ({
     page,
   }, info) => {
     test.setTimeout(180000);
@@ -413,9 +445,16 @@ for (const width of [1920, 3840]) {
     const rendered = page.waitForEvent('download', { timeout: 150000 });
     await page.getByRole('button', { name: 'Export video', exact: true }).click();
     await expect(page.getByRole('combobox', { name: 'Format', exact: true })).toHaveValue('mp4');
+    await page.getByRole('combobox', { name: 'Format', exact: true }).selectOption(format);
+    const filename = `developer-walkthrough-${width === 1920 ? '1080p' : '4k'}.${format}`;
+    const displayed = await page
+      .getByRole('dialog', { name: 'Export video' })
+      .locator('strong')
+      .innerText();
+    expect(displayed).toBe(filename);
     await page.getByRole('button', { name: 'Render video', exact: true }).click();
     const download = await rendered;
-    expect(download.suggestedFilename()).toMatch(/\.mp4$/);
+    expect(download.suggestedFilename()).toBe(displayed);
     const file = info.outputPath(download.suggestedFilename());
     await download.saveAs(file);
     await expect(page.locator('.app-footer [role="status"]')).toContainText(
@@ -433,12 +472,13 @@ for (const width of [1920, 3840]) {
     );
     expect(video.width).toBe(width);
     expect(video.height).toBe((width * 9) / 16);
-    expect(video.codec_name).toBe('h264');
-    expect(probe.format.tags.major_brand).toBe('isom');
+    expect(video.codec_name).toBe(format === 'webm' ? 'vp9' : 'h264');
+    if (format === 'webm') expect(probe.format.format_name).toBe('matroska,webm');
+    else expect(probe.format.tags.major_brand).toBe(format === 'mov' ? 'qt  ' : 'isom');
     expect(
       probe.streams.find((stream: { codec_type: string }) => stream.codec_type === 'audio')
         .codec_name,
-    ).toBe('aac');
+    ).toBe(format === 'mp4' ? 'aac' : format === 'mov' ? 'pcm_s16le' : 'opus');
     expect(Number(video.nb_read_frames)).toBe(30);
     expect(Number(probe.format.duration)).toBeCloseTo(1, 1);
     expect(

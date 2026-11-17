@@ -12,7 +12,7 @@
         "count": 2
       },
       "crap_moderate": {
-        "count": 3
+        "count": 2
       }
     },
     "src/Composition.tsx": {
@@ -74,11 +74,6 @@
         "count": 1
       },
       "crap_critical": {
-        "count": 1
-      }
-    },
-    "src/App.tsx\u0000exportVideo": {
-      "crap_moderate": {
         "count": 1
       }
     },
