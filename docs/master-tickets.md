@@ -39,12 +39,12 @@ primary repository since 2026-11-16; the Amp-hosted scaffold is gone. See
 ## Two-lane staffing audit, 2026-11-17
 
 Audited against fetched `b44e7c9a71473e1be0bf1159e9130c4528429afe` and the preserved candidates,
-then reconciled after accepted `02010f6`. There are 134 canonical IDs: 56 delivered rows, nine
+then reconciled after accepted `f164235`. There are 135 canonical IDs: 57 delivered rows, nine
 owner-decision rows and 69 remaining queue entries. The 69 comprise 64 implementation/qualification
 candidates below, four conditional or parked entries and one umbrella. These are ticket counts, not
 a claim that 64 source changes are approved or immediately runnable.
 
-The Sonnet queue has two candidates: UI-6 granted and CLIP-45 held. The Opus queue has 62: CLIP-2e
+The Sonnet queue has two candidates: UI-6b granted and CLIP-45 held. The Opus queue has 62: CLIP-2e
 granted, 19 ready to scope/assign and 42 dependency-, contract- or owner-gated. Across both lanes
 that is 21 ready or granted and 43 held. Ready means recorded technical predecessors are satisfied,
 not permission to edit shared paths or skip acceptance scoping. A held ticket can have an
@@ -58,10 +58,10 @@ These are bounded follow-ups using established behavior, not new timing, persist
 models. The small lane must escalate newly discovered cross-module behavior rather than silently
 expand its grant.
 
-| Candidate           | Readiness       | Why this lane; remaining gate                                                                                                                                                                                |
-| ------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [UI-6](#ui-6)       | Granted         | Requested obsolete UI deletion only; CLIP-20b is delivered, so reconcile still-source/metadata access and coordinate CLIP-11b before removing any attachment access. Optional cleanup cannot delay features. |
-| [CLIP-45](#clip-45) | Dependency-held | Existing-action widget and defaults only, after CLIP-40; reclassify if its scoped contract adds a new sharing/export pipeline.                                                                               |
+| Candidate           | Readiness       | Why this lane; remaining gate                                                                                                  |
+| ------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| [UI-6b](#ui-6b)     | Granted         | Bounded UI-6 review leftovers: dead workspace-bar CSS, untested transport centering and test naming; no new UI.                |
+| [CLIP-45](#clip-45) | Dependency-held | Existing-action widget and defaults only, after CLIP-40; reclassify if its scoped contract adds a new sharing/export pipeline. |
 
 ### Opus candidate queue
 
@@ -126,7 +126,7 @@ coordinator-serialized; no review gate changes.
 | Lane            | Worker                                                                           | Current grant                                                                      |
 | --------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
 | Opus 5.5 medium | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | REF-38 delivered at `02010f6`, exact-SHA CI44035760045 green; now granted CLIP-2e. |
-| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | VERIFY-7 delivered at `0d81c22`, exact-SHA CI44032486736 green; now granted UI-6.  |
+| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | UI-6 delivered at `f164235`, exact-SHA CI44041254397 green; now granted UI-6b.     |
 
 CLIP-20b is delivered at `6156fb4`, a cherry-pick of the reviewed tree onto `f6b77aa` with all
 eleven source blobs unchanged. Coordinator gates on that exact tree passed 136 units, strict
@@ -171,8 +171,26 @@ hunks of `src/App.tsx`, split/lock/Razor rules in `src/styles.css`, new split-to
 `tests/` and help/shortcut expectations those changes break. Any other path needs a further
 exact-path grant.
 
-Sonnet now holds UI-6 per its scope below: removal hunks for the named remnants in `src/App.tsx` and
-the components and `src/styles.css` that render them, plus tests whose text-only assumptions those
+UI-6 is delivered at `f164235` with exact-SHA
+[CI44041254397](https://github.com/mite404/clipper/actions/runs/44041254397). It removes the
+ORIGINAL source tag (the AUDIO cue stays), the L/R meter and its calculation, EDIT WORKSPACE and the
+On your device tag. The coordinator kept the transport-state text accessible and clipped it while
+paused instead of rewriting Paused assertions; a desktop grid rule keeps the controls centered.
+Independent and Fable reviews returned LAND on tree `b606333f`; `all` 135/135, isolated
+`performance` 20/20, build and Storybook build passed. The other remnants were already absent and
+stay guarded by tests.
+
+CLIP-2e's grant also covers the `saveProject`/`openProject` lock and selection hunks, `change()`
+returning whether an edit applied so callers never report a refused edit as success, and the
+`src/Timeline.stories.tsx`/`src/Editor.stories.tsx` prop migration.
+
+Sonnet now holds UI-6b: the UI-6 review leftovers in `src/styles.css` workspace-bar rules and
+`tests/workspace-layout.spec.ts`. The stale meter comment in `src/timeline-model.ts` belongs to
+CLIP-2e's grant. Folding the remaining Shortcuts strip into the header is an owner choice, not
+UI-6b.
+
+The superseded UI-6 grant read: removal hunks for the named remnants in `src/App.tsx` and the
+components and `src/styles.css` that render them, plus tests whose text-only assumptions those
 removals break. Cursor/metadata access relocated to the inspector stays. UI-6 and CLIP-2e may
 prepare in parallel on disjoint hunks; delivery is serialized and UI-6 lands first.
 
@@ -302,7 +320,7 @@ upload is authorized.
 | ------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | Queue and delivery        | [T-136752bf](https://ampcode.com/threads/T-136752bf-6ed3-4930-b791-1cd134662797) | This file, acceptance and exclusive main push slot                    |
 | Non-simple implementation | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Opus medium; REF-38 delivered, CLIP-2e granted                        |
-| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; VERIFY-7 delivered, UI-6 granted                         |
+| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; UI-6 delivered, UI-6b granted                            |
 | Cursor implementation     | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant            |
 | Cursor inspector          | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) | Inspector delivered; no active implementation grant                   |
 | Workspace layout          | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | UI-2 delivered; no active implementation grant                        |
@@ -564,9 +582,10 @@ ResizeObserver should need no forced scale update.
 
 ### Selected obsolete UI deletion
 
-| Ticket ID                      | Scope                                               | State                                                                                              | Needs                                                                              |
-| ------------------------------ | --------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| <a id="ui-6"></a>[UI-6](#ui-6) | Remove selected source/old cursor/transport clutter | Granted to Sonnet [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Exact remnant hunks only; independent and Fable reviews before serialized delivery |
+| Ticket ID                         | Scope                                               | State                                                                                                                                                                                                    | Needs                                                                                                                                                                          |
+| --------------------------------- | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| <a id="ui-6"></a>[UI-6](#ui-6)    | Remove selected source/old cursor/transport clutter | Delivered at [f164235](https://github.com/mite404/clipper/commit/f164235d4b2ecd5e4761790a9943c2ee8eb9d5f4); green exact-SHA [CI44041254397](https://github.com/mite404/clipper/actions/runs/44041254397) | Reservation released                                                                                                                                                           |
+| <a id="ui-6b"></a>[UI-6b](#ui-6b) | Clear UI-6 review leftovers                         | Granted to Sonnet [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7)                                                                                                       | Delete dead `.workspace-bar` rules, pin desktop transport centering with a failing-first test, rename the accessible-Paused test and merge redundant absence checks; no new UI |
 
 Delete the source header ORIGINAL tag, the entire old above-timeline cursor-sidecar section,
 transport L/R meter and visible Paused text. Do not delete inspector cursor capabilities or source
@@ -762,7 +781,8 @@ images were hosted, see [Known limits](#known-limits)).
 | Focused-control Space    | REF-38 delivered at `02010f6` with green exact-SHA CI44035760045; reservation released                                                                  |
 | Verification docs        | VERIFY-7 delivered at `0d81c22` with green exact-SHA CI44032486736; reservation released                                                                |
 | Split tools and locks    | CLIP-2e granted to Opus T-0e774456: timeline model, project lock/selection, Timeline, App split/key/header hunks                                        |
-| Obsolete UI deletion     | UI-6 granted to Sonnet T-01a1e78d: named remnant removal hunks, their styles and broken text-only tests                                                 |
+| Obsolete UI deletion     | UI-6 delivered at `f164235` with green exact-SHA CI44041254397; reservation released                                                                    |
+| UI-6 leftovers           | UI-6b granted to Sonnet T-01a1e78d: workspace-bar CSS rules and workspace-layout spec only                                                              |
 | Verification follow-up   | VERIFY-6 delivered at `3260b3b`, exact-SHA CI44018967483 green; seven-path reservation released; no active worker acceptance                            |
 | Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                          |
 | Media drawer follow-up   | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                             |
