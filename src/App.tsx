@@ -1039,6 +1039,9 @@ export function App() {
         addZoom();
         return;
       }
+      // Deletion belongs to the timeline: with focus anywhere else the keys are left alone.
+      const deletion = key === 'delete' || key === 'backspace';
+      if (deletion && !document.activeElement?.closest('#sequence-pane')) return;
       if (['j', 'k', 'l', ' ', 'arrowleft', 'arrowright', 'delete', 'backspace'].includes(key))
         event.preventDefault();
       if (key === 'j') setSpeed((s) => (s < 0 ? Math.max(-4, s * 2) : -1));
@@ -1052,7 +1055,7 @@ export function App() {
       if (key === 'arrowright') seek(frameRef.current + 1);
       if (key === 'c' && !event.shiftKey) setTool('razor');
       if (key === 'v' && !event.shiftKey) setTool('select');
-      if (key === 'delete' || key === 'backspace') removeSelected();
+      if (deletion) removeSelected();
     };
     window.addEventListener('keydown', keydown);
     return () => window.removeEventListener('keydown', keydown);
@@ -1846,7 +1849,7 @@ export function App() {
           ['V / C', 'Selection tool / Razor tool (click a clip to cut it)'],
           [MAC ? '⌘ K' : 'Alt K', 'Cut every unlocked track at the playhead'],
           ['B', 'Create zoom at playhead (4 seconds)'],
-          ['Delete', 'Remove selected clip or zoom'],
+          ['Delete', 'Remove selected clip or zoom · only from the timeline'],
           ['⌘ / Ctrl Z', 'Undo last edit'],
         ].map(([key, text]) => (
           <div className="shortcut-row" key={key}>

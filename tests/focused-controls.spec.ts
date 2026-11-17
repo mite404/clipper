@@ -279,3 +279,64 @@ test('a mouse click on Open project leaves no ring and a press scales it like Sa
   expect(await pressed(label)).toBe(scale);
   expect(choosers).toBe(1);
 });
+
+test('Delete and Backspace remove the selection only from inside the timeline', async ({
+  page,
+}) => {
+  await open(page);
+  const clips = page.getByTestId('track-screen').getByRole('button');
+  const undo = page.getByRole('button', { name: 'Undo', exact: true });
+  // The editor claims a key with preventDefault; read its final state after dispatch ends.
+  await page.evaluate(() => {
+    const w = window as unknown as { claimed: [string, boolean][] };
+    w.claimed = [];
+    window.addEventListener(
+      'keydown',
+      (event) => setTimeout(() => w.claimed.push([event.code, event.defaultPrevented]), 0),
+      true,
+    );
+  });
+  const claimed = () =>
+    page.evaluate(() => (window as unknown as { claimed: [string, boolean][] }).claimed);
+  await expect(clips).toHaveCount(2);
+  await clips.first().click();
+  await expect(clips.first()).toHaveAttribute('aria-pressed', 'true');
+
+  // Focus outside the timeline: media pool, source monitor, inspector, header and the page body.
+  const outside = [
+    page.getByRole('button', { name: 'Select A conversation', exact: true }),
+    page.getByRole('button', { name: 'Insert source at playhead', exact: true }),
+    page.getByRole('button', { name: 'Composition: swap sides' }),
+    page.getByRole('button', { name: 'Save project', exact: true }),
+  ];
+  for (const control of outside) {
+    await control.focus();
+    for (const key of ['Delete', 'Backspace']) {
+      await page.keyboard.press(key);
+      await expect(clips).toHaveCount(2);
+      await expect(undo).toBeDisabled();
+    }
+  }
+  await page.locator('body').click({ position: { x: 2, y: 400 } });
+  for (const key of ['Delete', 'Backspace']) await page.keyboard.press(key);
+  await expect(clips).toHaveCount(2);
+  expect((await claimed()).filter(([, prevented]) => prevented)).toEqual([]);
+
+  // A pointer selection leaves focus in the timeline, so both keys remove it.
+  for (const key of ['Delete', 'Backspace']) {
+    await clips.first().click();
+    expect(await page.evaluate(() => !!document.activeElement?.closest('#sequence-pane'))).toBe(
+      true,
+    );
+    await page.keyboard.press(key);
+    await expect(clips).toHaveCount(1);
+    await undo.click();
+    await expect(clips).toHaveCount(2);
+  }
+
+  // A focused trim grip is inside the timeline too.
+  await clips.first().click();
+  await page.getByRole('slider', { name: 'Trim left edge' }).first().focus();
+  await page.keyboard.press('Delete');
+  await expect(clips).toHaveCount(1);
+});
