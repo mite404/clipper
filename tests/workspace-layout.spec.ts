@@ -746,3 +746,73 @@ test.describe('obsolete labels stay removed', () => {
     await expect(page.locator('.inspector').getByLabel('Attach cursor sidecar')).toHaveCount(1);
   });
 });
+
+test.describe('default layout shows the whole timeline', () => {
+  // Base (2cc11bd) top-row numbers: the timeline rows must fit without taking this space back.
+  const sizes = [
+    { width: 1440, height: 1000, stage: 244, pool: [1, 0.57] },
+    { width: 1440, height: 900, stage: 209, pool: [1, 0.24] },
+    { width: 1920, height: 1080, stage: 319, pool: [1, 0.61] },
+    // A 1080p screen leaves a browser window about 950 to 990px tall, and 980 is a 1440-wide laptop.
+    { width: 1920, height: 960, stage: 203, pool: [1, 0.26] },
+    { width: 1440, height: 980, stage: 223, pool: [1, 0.5] },
+  ];
+  const lanes = ['screen', 'camera', 'voice', 'music'].map((id) => `track-${id}`);
+  const creates = ['screen', 'background', 'audio'].map((kind) => `create-${kind}`);
+
+  for (const { width, height, stage, pool } of sizes) {
+    test(`${width}x${height} fits every lane and creation row, and keeps the top row`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height });
+      await page.goto('/');
+      await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', {
+        timeout: 30000,
+      });
+      const scroll = (await page.getByTestId('timeline-scroll').boundingBox())!;
+      for (const id of [...lanes, ...creates]) {
+        const box = (await page.getByTestId(id).boundingBox())!;
+        expect(box.y, `${id} top`).toBeGreaterThanOrEqual(scroll.y - 0.5);
+        expect(box.y + box.height, `${id} bottom`).toBeLessThanOrEqual(
+          scroll.y + scroll.height + 0.5,
+        );
+      }
+      // Fitting the rows must not shrink clips to unreadable sizes or run the waveform through titles.
+      for (const id of ['track-camera', 'track-voice']) {
+        const clip = (await page.getByTestId(id).locator('.timeline-clip').first().boundingBox())!;
+        expect(clip.height, `${id} clip height`).toBeGreaterThanOrEqual(38);
+      }
+      // The title is drawn over the waveform by design; the bars must not start above its text.
+      const { waveTop, textTop } = await page
+        .getByTestId('track-voice')
+        .locator('.timeline-clip')
+        .first()
+        .evaluate((clip) => {
+          const text = Array.from(clip.querySelector('.clip-title')!.childNodes).find(
+            (node) => node.nodeType === Node.TEXT_NODE,
+          )!;
+          const range = document.createRange();
+          range.selectNodeContents(text);
+          return {
+            waveTop: clip.querySelector('svg[data-waveform]')!.getBoundingClientRect().top,
+            textTop: range.getBoundingClientRect().top,
+          };
+        });
+      expect(waveTop).toBeGreaterThanOrEqual(textTop);
+      // Reclaiming timeline height must not come out of the stage, source controls or pool.
+      const editing = (await page.locator('.editing-area').boundingBox())!;
+      const visible = (box: { y: number; height: number }, within: typeof editing) =>
+        Math.max(0, Math.min(box.y + box.height, within.y + within.height) - box.y);
+      const stageBox = (await page.getByTestId('compose-monitor').boundingBox())!;
+      expect(visible(stageBox, editing)).toBeGreaterThanOrEqual(stage);
+      const insert = (await page.getByLabel('Insert source at playhead').boundingBox())!;
+      expect(visible(insert, editing)).toBeCloseTo(insert.height, 0);
+      const drawer = (await page.locator('.media-drawer').boundingBox())!;
+      const cards = page.locator('#media-drawer .asset');
+      for (const [index, least] of pool.entries()) {
+        const card = (await cards.nth(index).boundingBox())!;
+        expect(visible(card, drawer) / card.height).toBeGreaterThanOrEqual(least - 0.02);
+      }
+    });
+  }
+});
