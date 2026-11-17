@@ -405,20 +405,22 @@ upload is authorized.
 
 ## Owners
 
-| Lane                      | Thread                                                                           | Owns                                                                  |
-| ------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Queue and delivery        | [T-136752bf](https://ampcode.com/threads/T-136752bf-6ed3-4930-b791-1cd134662797) | This file, acceptance and exclusive main push slot                    |
-| Non-simple implementation | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Opus medium; CLIP-2e delivered, CLIP-2c granted                       |
-| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; REF-45 delivered, no active grant                        |
-| Cursor implementation     | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant            |
-| Cursor inspector          | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) | Inspector delivered; no active implementation grant                   |
-| Workspace layout          | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | UI-2 delivered; no active implementation grant                        |
-| Transport lifecycle       | [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59) | REF-31 delivered; no active implementation grant                      |
-| Zoom preservation         | [T-46d4a5ee](https://ampcode.com/threads/T-46d4a5ee-39f1-46ae-bde0-eced0da19a5a) | Quiescent historical candidate/evidence only; no implementation grant |
-| Cursor preservation       | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94) | Frozen original CLIP-11 work, no implementation or push               |
-| Editor and bootstrap      | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da) | `.agents/setup`, `.agents/resume`                                     |
-| Verification tools        | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc) | Archived after delivery; no active path reservation                   |
-| Canonical preview         | [T-6dd30293](https://ampcode.com/threads/T-6dd30293-c740-418a-8174-5d2a1b69da89) | Accepted-main promotion and revision/check receipts                   |
+| Lane                      | Thread                                                                           | Owns                                                                    |
+| ------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Queue and delivery        | [T-136752bf](https://ampcode.com/threads/T-136752bf-6ed3-4930-b791-1cd134662797) | This file, acceptance and exclusive main push slot                      |
+| Non-simple implementation | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Opus medium; CLIP-2e delivered, CLIP-2c granted                         |
+| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; REF-45 delivered, no active grant                          |
+| Independent review        | [T-f987a229](https://ampcode.com/threads/T-f987a229-4e36-414e-8f45-105461c86dce) | Opus medium; independent exact-tree review gate                         |
+| Source and tooling review | [T-9f34d223](https://ampcode.com/threads/T-9f34d223-cd32-4c23-a11f-8bca3ae61271) | Opus 5.5 medium; took over from Fable T-2d1e888a at the owner's request |
+| Cursor implementation     | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant              |
+| Cursor inspector          | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) | Inspector delivered; no active implementation grant                     |
+| Workspace layout          | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | UI-2 delivered; no active implementation grant                          |
+| Transport lifecycle       | [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59) | REF-31 delivered; no active implementation grant                        |
+| Zoom preservation         | [T-46d4a5ee](https://ampcode.com/threads/T-46d4a5ee-39f1-46ae-bde0-eced0da19a5a) | Quiescent historical candidate/evidence only; no implementation grant   |
+| Cursor preservation       | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94) | Frozen original CLIP-11 work, no implementation or push                 |
+| Editor and bootstrap      | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da) | `.agents/setup`, `.agents/resume`                                       |
+| Verification tools        | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc) | Archived after delivery; no active path reservation                     |
+| Canonical preview         | [T-6dd30293](https://ampcode.com/threads/T-6dd30293-c740-418a-8174-5d2a1b69da89) | Accepted-main promotion and revision/check receipts                     |
 
 The archival audit has coordinator ownership clearance for the completed UI-3 worker/reviewer,
 REF-18/20/31 transport worker, tooltip pilot/repair, VERIFY-5, fresh-orb qualifier and OpenScreen
