@@ -143,6 +143,8 @@ test('drops refuse occupied spans, the wrong media kind, Escape, the outside and
   await expect(create.locator('.drop-hint')).toHaveText('New background track at 3.3 s');
   // A video over the audio row says it makes a masked screen.
   const audioRow = page.getByTestId('create-audio');
+  // The last row can sit below the timeline's fold at the default height.
+  await audioRow.scrollIntoViewIfNeeded();
   const below = await at(audioRow, 100);
   await page.mouse.move(below.x, below.y, { steps: 4 });
   await expect(audioRow.locator('.drop-hint')).toHaveText('New screen track at 3.3 s');
