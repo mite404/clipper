@@ -684,19 +684,28 @@ test.describe('obsolete labels stay removed', () => {
     });
   });
 
-  test('the source header drops ORIGINAL and keeps the AUDIO cue for audio', async ({ page }) => {
+  test('removed labels, tags and the L/R meter stay gone', async ({ page }) => {
     const title = page.locator('.source-panel .monitor-title');
     await expect(title).toHaveText('Source');
     await page.getByRole('button', { name: 'Select Ambient bed' }).click();
     await expect(title).toHaveText('SourceAUDIO');
-  });
-
-  test('the transport has no L/R level meter', async ({ page }) => {
     await expect(page.locator('.audio-meter')).toHaveCount(0);
     await expect(page.locator('[aria-label^="Audio level"]')).toHaveCount(0);
+    for (const text of [
+      'EDIT WORKSPACE',
+      'On your device',
+      'LOCAL PROJECT',
+      'Make something worth watching.',
+      '1280 × 720',
+    ])
+      await expect(page.getByText(text, { exact: true })).toHaveCount(0);
+    await expect(page.locator('.workspace-label, .privacy')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Shortcuts', exact: true })).toBeVisible();
+    await expect(page.getByLabel('Open local project')).toHaveCount(1);
+    await expect(page.getByRole('combobox', { name: 'Export resolution' })).toHaveCount(1);
   });
 
-  test('a paused transport announces Paused with its text clipped away', async ({ page }) => {
+  test('a paused transport keeps Paused readable but not visible', async ({ page }) => {
     const state = page.getByTestId('transport-state');
     const clip = () => state.evaluate((element) => getComputedStyle(element).clipPath);
     const buttons = page.locator('.transport-buttons');
@@ -714,24 +723,15 @@ test.describe('obsolete labels stay removed', () => {
     expect(await clip()).toBe('inset(50%)');
   });
 
-  test('the workspace bar drops its EDIT WORKSPACE label and keeps Shortcuts', async ({ page }) => {
-    await expect(page.getByText('EDIT WORKSPACE', { exact: true })).toHaveCount(0);
-    await expect(page.locator('.workspace-label')).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Shortcuts', exact: true })).toBeVisible();
-  });
-
-  test('the header drops its On your device tag and keeps its controls', async ({ page }) => {
-    await expect(page.getByText('On your device', { exact: true })).toHaveCount(0);
-    await expect(page.locator('.privacy')).toHaveCount(0);
-    await expect(page.getByLabel('Open local project')).toHaveCount(1);
-    await expect(page.getByRole('combobox', { name: 'Export resolution' })).toHaveCount(1);
-  });
-
-  test('earlier removals stay gone: brand, slogan and the duplicate resolution label', async ({
-    page,
-  }) => {
-    for (const text of ['LOCAL PROJECT', 'Make something worth watching.', '1280 × 720'])
-      await expect(page.getByText(text, { exact: true })).toHaveCount(0);
+  test('wide transport controls stay centered without the meter', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const center = async (selector: string) => {
+      const box = (await page.locator(selector).boundingBox())!;
+      return box.x + box.width / 2;
+    };
+    expect(
+      Math.abs((await center('.transport-buttons')) - (await center('.transport'))),
+    ).toBeLessThan(1);
   });
 
   test('cursor data lives only in the inspector, not above the timeline', async ({ page }) => {

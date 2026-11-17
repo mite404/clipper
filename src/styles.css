@@ -1530,9 +1530,6 @@ p {
   .workspace-bar {
     padding: 0 18px;
   }
-  .workspace-bar > span:nth-child(2) {
-    display: none;
-  }
   .timeline-grid {
     min-width: 520px;
   }
@@ -2395,9 +2392,6 @@ p {
   }
 }
 @media (max-width: 620px) {
-  .workspace-bar {
-    gap: 8px;
-  }
   .sequence-area {
     grid-row: auto;
   }
