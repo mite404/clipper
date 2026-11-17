@@ -13,7 +13,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
-  ChevronDown,
   CircleHelp,
   Clapperboard,
   CornerUpLeft,
@@ -564,6 +563,7 @@ export function App() {
   const [help, setHelp] = useState(false);
   const [markingZoomId, setMarkingZoomId] = useState<string | null>(null);
   const [exportWidth, setExportWidth] = useState<1920 | 3840>(1920);
+  const [exportFormat, setExportFormat] = useState<'mp4' | 'mov' | 'webm'>('mp4');
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   const sourceBlocked = busy || exportProgress !== null;
   const {
@@ -585,6 +585,7 @@ export function App() {
   } = usePanelLayout(mediaMode === 'pinned', busy || help || exportProgress !== null);
   const [copying, setCopying] = useState(false);
   const exportAbort = useRef<AbortController | null>(null);
+  const exportDialog = useRef<HTMLDialogElement>(null);
   const helpDialog = useRef<HTMLDialogElement>(null);
   const player = useRef<PlayerRef>(null);
   const assetsRef = useRef<Asset[]>([]);
@@ -814,7 +815,8 @@ export function App() {
 
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
-      if (help || busy || exportProgress !== null || markingMouse) return;
+      if (help || busy || exportProgress !== null || markingMouse || exportDialog.current?.open)
+        return;
       if (
         event.target instanceof HTMLElement &&
         (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName) ||
@@ -997,6 +999,7 @@ export function App() {
         assets,
         muted,
         width: exportWidth,
+        format: exportFormat,
         onProgress: (value) => {
           const next = Math.round(value * 100) / 100;
           if (next === progress) return;
@@ -1007,7 +1010,7 @@ export function App() {
       });
       downloadBlob(
         blob,
-        `developer-walkthrough-${exportWidth === 1920 ? '1080p' : '4k'}.${blob.type.includes('mp4') ? 'mp4' : 'webm'}`,
+        `developer-walkthrough-${exportWidth === 1920 ? '1080p' : '4k'}.${blob.type.slice('video/'.length).replace('quicktime', 'mov')}`,
       );
       setMessage(`Video exported at ${exportWidth} × ${(exportWidth * 9) / 16}. Rendered locally.`);
     } catch (error) {
@@ -1093,8 +1096,8 @@ export function App() {
         component={Composition}
         inputProps={compositionProps}
         durationInFrames={duration}
-        compositionWidth={STAGE.width}
-        compositionHeight={STAGE.height}
+        compositionWidth={exportWidth}
+        compositionHeight={(exportWidth * 9) / 16}
         fps={FPS}
         playbackRate={Math.max(1, speed)}
         controls={false}
@@ -1104,7 +1107,7 @@ export function App() {
         style={{ width: '100%', aspectRatio: '16 / 9' }}
       />
     ),
-    [compositionProps, duration, speed],
+    [compositionProps, duration, speed, exportWidth],
   );
 
   return (
@@ -1171,7 +1174,10 @@ export function App() {
             <button
               className="secondary-button"
               disabled={busy || !edit.clips.length || exportProgress !== null}
-              onClick={() => void exportVideo()}
+              onClick={() => {
+                setSpeed(0);
+                exportDialog.current?.showModal();
+              }}
             >
               Export video
             </button>
@@ -1228,9 +1234,6 @@ export function App() {
                 <span>
                   Composition <span className="active-pill">LIVE</span>
                 </span>
-                <span className="muted-text">
-                  {STAGE.width} × {STAGE.height} <ChevronDown size={12} />
-                </span>
               </div>
               <div className="compose-stage" data-testid="compose-monitor">
                 {assets.length > 0 ? (
@@ -1249,7 +1252,7 @@ export function App() {
                       top: `${(screenMask.y / STAGE.height) * 100}%`,
                       width: `${(screenMask.width / STAGE.width) * 100}%`,
                       height: `${(screenMask.height / STAGE.height) * 100}%`,
-                      borderRadius: edit.layout.radius,
+                      borderRadius: `${(edit.layout.radius / screenMask.width) * 100}% / ${(edit.layout.radius / screenMask.height) * 100}%`,
                     }}
                     onClick={(event) => {
                       const rect = event.currentTarget.getBoundingClientRect();
@@ -1539,6 +1542,53 @@ export function App() {
           REMOTION × MEDIABUNNY <span className="footer-version">STEEL THREAD 0.1</span>
         </span>
       </footer>
+      <dialog ref={exportDialog} aria-labelledby="export-title" className="export-dialog">
+        <h2 id="export-title">Export video</h2>
+        <p>Rendered on this device. Your media stays local.</p>
+        <dl>
+          <dt>Resolution</dt>
+          <dd>
+            {exportWidth} × {(exportWidth * 9) / 16} · 30 fps
+          </dd>
+        </dl>
+        <label htmlFor="export-format">Format</label>
+        <select
+          id="export-format"
+          value={exportFormat}
+          aria-describedby="export-format-description"
+          onChange={(event) => {
+            const value = event.target.value;
+            if (value === 'mp4' || value === 'mov' || value === 'webm') setExportFormat(value);
+          }}
+        >
+          <option value="mp4">MP4 · H.264 / AAC</option>
+          <option value="mov">MOV · H.264 / PCM</option>
+          <option value="webm">WebM · VP9 / Opus</option>
+        </select>
+        <p id="export-format-description">
+          {exportFormat === 'mov'
+            ? 'Uncompressed PCM audio adds about 11.5 MB per minute at stereo 48 kHz. Playback support varies by app.'
+            : exportFormat === 'mp4'
+              ? 'H.264 video with AAC audio. A local encoder is used when native AAC is unavailable. Your browser must support H.264 encoding.'
+              : 'VP9 video with Opus audio. Your browser must support these encoders.'}
+        </p>
+        <a href="/licenses/mediabunny-aac-encoder.txt" target="_blank" rel="noreferrer">
+          Encoder licenses and source
+        </a>
+        <form method="dialog" className="export-dialog-actions">
+          <button className="secondary-button">Cancel</button>
+          <button
+            className="save-button"
+            type="button"
+            onClick={() => {
+              exportDialog.current?.close();
+              void exportVideo();
+            }}
+          >
+            Render video
+          </button>
+        </form>
+      </dialog>
       <dialog
         ref={helpDialog}
         aria-label="Keyboard shortcuts"

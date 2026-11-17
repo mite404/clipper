@@ -4,6 +4,81 @@ import { execFileSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
 
+test('opens export settings with MP4 at the app resolution and isolates modal shortcuts', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready');
+  await page.getByRole('combobox', { name: 'Export resolution' }).selectOption('3840');
+  await page.getByLabel('Timeline playhead', { exact: true }).fill('87');
+  const open = page.getByRole('button', { name: 'Export video', exact: true });
+  await open.click();
+  const dialog = page.getByRole('dialog', { name: 'Export video' });
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByRole('combobox', { name: 'Format' })).toHaveValue('mp4');
+  await expect(dialog).toContainText('3840 × 2160');
+  await dialog.getByRole('button', { name: 'Cancel', exact: true }).focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.getByLabel('Timeline playhead', { exact: true })).toHaveValue('87');
+  await dialog.getByRole('combobox', { name: 'Format' }).selectOption('mov');
+  await expect(dialog).toContainText('PCM');
+  await expect(dialog).toContainText('11.5 MB');
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect(open).toBeFocused();
+  await open.click();
+  await expect(dialog.getByRole('combobox', { name: 'Format' })).toHaveValue('mov');
+});
+
+test('renders at selected HD and 4K dimensions while preserving fitted framing and held state', async ({
+  page,
+}, testInfo) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready');
+  await page.getByLabel('screen horizontal crop', { exact: true }).fill('17');
+  await page.getByRole('slider', { name: 'Corner radius', exact: true }).fill('38');
+  await page.getByLabel('Timeline playhead', { exact: true }).fill('87');
+  const source = await page.getByTestId('screen-mask').locator('video').first().elementHandle();
+  for (const viewport of [1440, 617]) {
+    await page.setViewportSize({ width: viewport, height: 1000 });
+    const monitor = (await page.getByTestId('compose-monitor').boundingBox())!;
+    for (const width of [1920, 3840, 1920]) {
+      await page.getByRole('combobox', { name: 'Export resolution' }).selectOption(String(width));
+      const root = await page.getByTestId('screen-mask').evaluate((element) => {
+        const style = getComputedStyle(element.parentElement!);
+        return { width: parseFloat(style.width), height: parseFloat(style.height) };
+      });
+      expect(root).toEqual({ width, height: (width * 9) / 16 });
+      const scale = width / 1280;
+      await expect(page.getByTestId('screen-mask')).toHaveCSS('width', `${880 * scale}px`);
+      await expect(page.getByTestId('screen-mask')).toHaveCSS('height', `${700 * scale}px`);
+      await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', `${38 * scale}px`);
+      await expect(page.getByLabel('Timeline playhead', { exact: true })).toHaveValue('87');
+      await expect(page.getByLabel('screen horizontal crop', { exact: true })).toHaveValue('17');
+      expect(
+        await page
+          .getByTestId('screen-mask')
+          .locator('video')
+          .first()
+          .evaluate((video, original) => video === original, source),
+      ).toBe(true);
+      const fitted = (await page.getByTestId('compose-monitor').boundingBox())!;
+      expect(fitted.width).toBeCloseTo(monitor.width, 1);
+      expect(fitted.height).toBeCloseTo(monitor.height, 1);
+      await page
+        .getByTestId('compose-monitor')
+        .screenshot({ path: testInfo.outputPath(`composer-${viewport}-${width}.png`) });
+    }
+  }
+  await page.getByRole('button', { name: 'Play composition', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Export resolution' }).selectOption('3840');
+  await expect(page.getByRole('button', { name: 'Pause playback', exact: true })).toBeVisible();
+  await expect
+    .poll(() => page.getByLabel('Timeline playhead', { exact: true }).inputValue())
+    .not.toBe('87');
+  await page.getByRole('button', { name: 'Pause playback', exact: true }).click();
+});
+
 test('keeps project delivery controls readable at desktop and narrow widths', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
@@ -118,6 +193,8 @@ test('marks a mouse position, centers it during zoom and reopens embedded media 
   await page.getByRole('button', { name: 'Mark mouse position' }).click();
   await expect(page.getByText(/Recordings do not contain cursor metadata/)).toBeVisible();
   const target = page.getByRole('button', { name: 'Set mouse focus on screen' });
+  await page.getByRole('combobox', { name: 'Export resolution' }).selectOption('3840');
+  await expect(target).toHaveCSS('border-top-left-radius', '2.5% 3.14286%');
   const box = await target.boundingBox();
   await page.mouse.click(box!.x + box!.width * 0.25, box!.y + box!.height * 0.65);
   await expect(page.getByRole('button', { name: 'Mark mouse position' })).toBeVisible();
@@ -140,6 +217,8 @@ test('marks a mouse position, centers it during zoom and reopens embedded media 
   expect(before.scale).toBeCloseTo(2, 2);
   expect(before.focusX).toBeCloseTo(0.5, 2);
   expect(before.focusY).toBeCloseTo(0.5, 2);
+  await page.getByRole('combobox', { name: 'Export resolution' }).selectOption('1920');
+  expect(await held()).toEqual(before);
   await page.getByRole('button', { name: 'Composition: swap sides' }).click();
   const swapped = await held();
   expect(swapped.focusX).toBeCloseTo(0.5, 2);
@@ -242,7 +321,7 @@ test('keeps unsaved edits through a tab close and an opened project', async ({ p
 
   await radius.fill('33');
   expect(await warnsOnUnload()).toBe(true);
-  await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', '33px');
+  await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', '49.5px');
 
   const downloaded = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Save project', exact: true }).click();
@@ -259,14 +338,14 @@ test('keeps unsaved edits through a tab close and an opened project', async ({ p
   });
   await page.getByLabel('Open local project').setInputFiles(saved);
   await expect.poll(() => questions).toEqual([expect.stringContaining('unsaved')]);
-  await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', '12px');
+  await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', '18px');
 
   page.once('dialog', (dialog) => void dialog.accept());
   await page.getByLabel('Open local project').setInputFiles(saved);
   await expect(page.locator('.app-footer [role="status"]')).toContainText('Project reopened', {
     timeout: 30000,
   });
-  await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', '33px');
+  await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', '49.5px');
   expect(await warnsOnUnload()).toBe(false);
 });
 
@@ -291,7 +370,7 @@ test('rejects a malformed project without replacing the current edit', async ({ 
     await page.evaluate(() => window.scrollTo(0, 0));
     await expect(page.locator('.app-footer [role="status"]')).toBeInViewport({ ratio: 1 });
   }
-  await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', '33px');
+  await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', '49.5px');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready');
   await page.getByRole('button', { name: 'Play composition', exact: true }).click();
   await expect
@@ -333,7 +412,10 @@ for (const width of [1920, 3840]) {
     await page.getByRole('combobox', { name: 'Export resolution' }).selectOption(String(width));
     const rendered = page.waitForEvent('download', { timeout: 150000 });
     await page.getByRole('button', { name: 'Export video', exact: true }).click();
+    await expect(page.getByRole('combobox', { name: 'Format', exact: true })).toHaveValue('mp4');
+    await page.getByRole('button', { name: 'Render video', exact: true }).click();
     const download = await rendered;
+    expect(download.suggestedFilename()).toMatch(/\.mp4$/);
     const file = info.outputPath(download.suggestedFilename());
     await download.saveAs(file);
     await expect(page.locator('.app-footer [role="status"]')).toContainText(
@@ -351,6 +433,12 @@ for (const width of [1920, 3840]) {
     );
     expect(video.width).toBe(width);
     expect(video.height).toBe((width * 9) / 16);
+    expect(video.codec_name).toBe('h264');
+    expect(probe.format.tags.major_brand).toBe('isom');
+    expect(
+      probe.streams.find((stream: { codec_type: string }) => stream.codec_type === 'audio')
+        .codec_name,
+    ).toBe('aac');
     expect(Number(video.nb_read_frames)).toBe(30);
     expect(Number(probe.format.duration)).toBeCloseTo(1, 1);
     expect(
@@ -404,6 +492,7 @@ test('saves around media that changed on disk, and a re-import repairs media in 
   await save.click();
   await expect(status).toContainText('Could not read local media take.mp4. Import it again');
   await page.getByRole('button', { name: 'Export video', exact: true }).click();
+  await page.getByRole('button', { name: 'Render video', exact: true }).click();
   await expect(status).toContainText(
     'Export failed. Video export failed: Could not read local media take.mp4. Import it again',
   );

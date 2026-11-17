@@ -171,8 +171,8 @@ test('rotates about the recorded hotspot in preview and encoded output with offs
     await page.getByRole('button', { name: 'Next frame', exact: true }).click();
     if (frame === 2) {
       await expect.poll(angle).toBeCloseTo(12);
-      await expect(cursor).toHaveCSS('transform-origin', '6.3px 3.5px');
-      await expect(cursor).toHaveCSS('left', '549.7px');
+      await expect(cursor).toHaveCSS('transform-origin', '9.45px 5.25px');
+      await expect(cursor).toHaveCSS('left', '824.55px');
     }
     if (frame === 4) await expect.poll(angle).toBeCloseTo(-12);
   }

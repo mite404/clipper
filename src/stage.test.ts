@@ -13,6 +13,33 @@ describe('laying out the stage', () => {
     expect(maskRect('camera', swapped)).toEqual({ x: 10, y: 10, width: 362, height: 700 });
   });
 
+  it('uses actual HD and 4K pixels without changing normalized crop or zoom geometry', () => {
+    const cases = [
+      [
+        1920,
+        1080,
+        { x: 585, y: 15, width: 1320, height: 1050 },
+        { x: 15, y: 15, width: 543, height: 1050 },
+      ],
+      [
+        3840,
+        2160,
+        { x: 1170, y: 30, width: 2640, height: 2100 },
+        { x: 30, y: 30, width: 1086, height: 2100 },
+      ],
+    ] as const;
+    for (const [width, height, screen, camera] of cases) {
+      const swapped = { ...layout, swapped: true };
+      expect(maskRect('screen', swapped, { width, height })).toEqual(screen);
+      expect(maskRect('camera', swapped, { width, height })).toEqual(camera);
+      const cover = coverRect(screen, { width: 1760, height: 700 }, { x: 25, y: 50 });
+      const point = sourceToStage({ x: 0.5, y: 0.5 }, screen, cover, { scale: 2, x: 10, y: 0 });
+      expect(point.x / width).toBeCloseTo(1358 / 1280);
+      expect(point.y / height).toBeCloseTo(0.5);
+      expect(cropPosition('screen', swapped)).toEqual({ x: 20, y: 70 });
+    }
+  });
+
   it('reads each track its own crop position', () => {
     expect(cropPosition('screen', layout)).toEqual({ x: 20, y: 70 });
     expect(cropPosition('camera', layout)).toEqual({ x: 80, y: 25 });

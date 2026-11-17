@@ -1747,6 +1747,69 @@ p {
     padding: 22px;
   }
 }
+
+.export-dialog {
+  width: min(440px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  padding: 28px;
+  border: 1px solid #45494a;
+  border-radius: 14px;
+  background: #202223;
+  color: #eceeea;
+  box-shadow: 0 24px 80px #0008;
+}
+
+.export-dialog::backdrop {
+  background: #070a0dc9;
+}
+
+.export-dialog h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.export-dialog p {
+  margin: 12px 0;
+  color: #b4b9b7;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.export-dialog dl {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 24px 0;
+  font-size: 13px;
+}
+
+.export-dialog dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.export-dialog label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+
+.export-dialog select {
+  width: 100%;
+  min-height: 40px;
+}
+
+.export-dialog a {
+  color: #b4b9b7;
+  font-size: 12px;
+}
+
+.export-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
 @media (prefers-reduced-motion: reduce) {
   button:active:not(:disabled) {
     transform: none;

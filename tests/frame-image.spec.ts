@@ -225,9 +225,12 @@ test('draws the rotated cursor about its hotspot and nothing without rotation', 
     [2, 1056, 260],
     [4, 832, 200],
   ];
-  for (const [frame, x, y] of rotated) {
-    const { px } = await renderAt(page, frame, [[x, y]]);
-    expect(near(px[0], [255, 0, 255], 40), `rotated frame ${frame}`).toBe(true);
+  for (const width of [1920, 3840]) {
+    for (const [frame, x, y] of rotated) {
+      const { w, h, px } = await renderAt(page, frame, [[x, y]], { width });
+      expect([w, h]).toEqual([width, (width * 9) / 16]);
+      expect(near(px[0], [255, 0, 255], 40), `rotated frame ${frame} at ${width}`).toBe(true);
+    }
   }
   const flat = await page.evaluate(async () => {
     const w = window as unknown as FrameWindow;

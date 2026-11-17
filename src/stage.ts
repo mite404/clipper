@@ -17,21 +17,23 @@ type Affine = { scale: number; x: number; y: number };
 const STILL: Camera = { scale: 1, x: 0, y: 0 };
 type VideoTrack = 'screen' | 'camera';
 
-/** Composition size in stage pixels. Preview, export and overlays all draw in this space. */
+/** Normalized edit coordinates. Actual composer and export dimensions are selected separately. */
 export const STAGE = { width: 1280, height: 720 };
 
 const MARGIN = 10;
 const GAP = 18;
 const MASK_WIDTH = { screen: 880, camera: STAGE.width - 2 * MARGIN - GAP - 880 };
 
-/** Stage rectangle of a video track's mask; `swapped` puts the camera on the left. */
-export function maskRect(track: VideoTrack, layout: Layout): Rect {
+/** Mask in render pixels, or normalized edit coordinates when size is omitted. */
+export function maskRect(track: VideoTrack, layout: Layout, size: Size = STAGE): Rect {
   const first: VideoTrack = layout.swapped ? 'camera' : 'screen';
+  const scaleX = size.width / STAGE.width;
+  const scaleY = size.height / STAGE.height;
   return {
-    x: track === first ? MARGIN : MARGIN + MASK_WIDTH[first] + GAP,
-    y: MARGIN,
-    width: MASK_WIDTH[track],
-    height: STAGE.height - 2 * MARGIN,
+    x: (track === first ? MARGIN : MARGIN + MASK_WIDTH[first] + GAP) * scaleX,
+    y: MARGIN * scaleY,
+    width: MASK_WIDTH[track] * scaleX,
+    height: (STAGE.height - 2 * MARGIN) * scaleY,
   };
 }
 

@@ -667,6 +667,7 @@ test('export cancellation restores short-window timeline resizing without viewpo
   await expect(workspace).not.toHaveAttribute('data-compact');
   await expect(handle).toBeVisible();
   await page.getByRole('button', { name: 'Export video', exact: true }).click();
+  await page.getByRole('button', { name: 'Render video', exact: true }).click();
   await expect(page.getByRole('progressbar', { name: 'Video export progress' })).toBeVisible();
   await expect(workspace).toHaveAttribute('data-compact', 'true');
   await page.getByRole('button', { name: 'Cancel export', exact: true }).click();

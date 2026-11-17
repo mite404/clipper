@@ -177,6 +177,7 @@ test('pauses source video and audio while export blocks the workspace without re
       .toBe(true);
     const before = await source.evaluate((media: HTMLMediaElement) => media.currentTime);
     await page.getByRole('button', { name: 'Export video', exact: true }).click();
+    await page.getByRole('button', { name: 'Render video', exact: true }).click();
     await expect(page.getByRole('progressbar', { name: 'Video export progress' })).toBeVisible();
     await expect.poll(() => source.evaluate((media: HTMLMediaElement) => media.paused)).toBe(true);
     const held = await source.evaluate((media: HTMLMediaElement) => media.currentTime);
@@ -271,8 +272,8 @@ test('splice, scrub, play, rewind and animate a real media composition', async (
         .evaluate((video: HTMLVideoElement) => video.currentTime),
     )
     .toBeCloseTo(2.5, 0);
-  await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', '22px');
-  await expect(page.getByTestId('camera-mask')).toHaveCSS('border-radius', '22px');
+  await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', '33px');
+  await expect(page.getByTestId('camera-mask')).toHaveCSS('border-radius', '33px');
   // After the screen splice, its source jumps by one second; camera and split speech do not.
   await scrub.fill('225');
   for (const [selector, expected] of [
@@ -549,7 +550,7 @@ test('undoes a slider drag in one step and ignores edits that change nothing', a
   expect(dragged).toBeGreaterThan(40);
 
   await undo.click();
-  await expect(mask).toHaveCSS('border-radius', '22px');
+  await expect(mask).toHaveCSS('border-radius', '33px');
   await expect(clips).toHaveCount(3);
   await undo.click();
   await expect(clips).toHaveCount(2);
@@ -742,6 +743,7 @@ test('reports export progress, cancels cleanly and downloads on retry', async ({
   let downloads = 0;
   page.on('download', () => downloads++);
   await exportButton.click();
+  await page.getByRole('button', { name: 'Render video', exact: true }).click();
   await expect(progress).toBeVisible();
   await expect.poll(async () => Number(await progress.getAttribute('value'))).toBeGreaterThan(0.1);
   await expect(exportButton).toBeDisabled();
@@ -768,6 +770,7 @@ test('reports export progress, cancels cleanly and downloads on retry', async ({
   });
   const downloaded = page.waitForEvent('download', { timeout: 150000 });
   await exportButton.click();
+  await page.getByRole('button', { name: 'Render video', exact: true }).click();
   const download = await downloaded;
   await expect(status).toContainText('Video exported at 1920');
   await expect(progress).toHaveCount(0);

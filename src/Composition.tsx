@@ -1,7 +1,15 @@
-import { AbsoluteFill, Audio, Img, Sequence, Video, useCurrentFrame } from 'remotion';
+import {
+  AbsoluteFill,
+  Audio,
+  Img,
+  Sequence,
+  Video,
+  useCurrentFrame,
+  useVideoConfig,
+} from 'remotion';
 import { useMemo } from 'react';
 import type { Asset } from './media';
-import { cameraTransform, coverRect, cropPosition, maskRect, type Layout } from './stage';
+import { cameraTransform, coverRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
 import { MUSIC_GAIN, type Clip, type Track, type Zoom } from './timeline-model';
 import { cursorFrame } from './cursor-render';
 import { prepareFraming, framingAt } from './framing';
@@ -17,12 +25,14 @@ export type CompositionProps = {
 /** Frame-driven video masks, source trims, audio and camera motion share Remotion's clock. */
 export function Composition({ clips, assets, zooms, layout, muted }: CompositionProps) {
   const frame = useCurrentFrame();
+  const size = useVideoConfig();
+  const scale = size.width / STAGE.width;
   const paths = useMemo(
     () => prepareFraming(zooms, clips, assets, layout),
     [zooms, clips, assets, layout],
   );
   const camera = framingAt(zooms, paths, frame);
-  const cursor = cursorFrame(clips, assets, frame, layout);
+  const cursor = cursorFrame(clips, assets, frame, layout, size);
   return (
     <AbsoluteFill
       style={{
@@ -31,7 +41,7 @@ export function Composition({ clips, assets, zooms, layout, muted }: Composition
       }}
     >
       {(['screen', 'camera'] as const).map((track) => {
-        const mask = maskRect(track, layout); // → stage rect
+        const mask = maskRect(track, layout, size); // → actual render-pixel rect
         const view = cameraTransform(mask, track === 'screen' ? camera : undefined); // → affine
         const crop = cropPosition(track, layout); // → percent
         return (
@@ -44,10 +54,10 @@ export function Composition({ clips, assets, zooms, layout, muted }: Composition
               top: mask.y,
               width: mask.width,
               height: mask.height,
-              borderRadius: layout.radius,
+              borderRadius: layout.radius * scale,
               overflow: 'hidden',
               background: '#10181b',
-              boxShadow: '0 25px 65px #0005',
+              boxShadow: `0 ${25 * scale}px ${65 * scale}px #0005`,
             }}
           >
             <div

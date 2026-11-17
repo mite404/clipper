@@ -7,6 +7,7 @@ import {
   CanvasSink,
   CanvasSource,
   Input,
+  MovOutputFormat,
   Mp4OutputFormat,
   Output,
   WebMOutputFormat,
@@ -35,9 +36,43 @@ export type RenderVideoOptions = {
   layout: Layout;
   muted: Track[];
   width: 1920 | 3840;
+  /** Explicit container, with no substitution. Omit for automatic MP4/WebM negotiation.
+   * MOV uses AVC and uncompressed 16-bit PCM audio (about 11.5 MB/minute at stereo 48 kHz).
+   */
+  format?: 'mp4' | 'mov' | 'webm';
   onProgress: (progress: number) => void;
   signal?: AbortSignal;
 };
+
+// Capability queries do not start the worker. Qualify AAC before reading project media.
+async function prepareAac(signal?: AbortSignal): Promise<void> {
+  const options = { sampleRate: 48000, numberOfChannels: 2, bitrate: 128000 };
+  signal?.throwIfAborted();
+  const output = new Output({ target: new BufferTarget(), format: new Mp4OutputFormat() });
+  try {
+    if (!(await canEncodeAudio('aac', options))) {
+      const { registerAacEncoder } = await import('@mediabunny/aac-encoder');
+      registerAacEncoder();
+    }
+    signal?.throwIfAborted();
+    const audio = new AudioBufferSource({ codec: 'aac', ...options });
+    output.addAudioTrack(audio);
+    await output.start();
+    await audio.add(new AudioBuffer({ length: 2048, ...options }));
+    audio.close();
+    await output.finalize();
+    signal?.throwIfAborted();
+  } catch (error) {
+    signal?.throwIfAborted();
+    throw new Error(
+      'MP4 AAC audio could not initialize locally. Allow local encoder workers, reload and retry, or choose MOV or WebM. ' +
+        (error instanceof Error ? error.message : String(error)),
+      { cause: error },
+    );
+  } finally {
+    if (output.state !== 'finalized') await output.cancel();
+  }
+}
 
 // One clip's decoded audio as a single buffer whose first frame is the clip's source in-point.
 // Decoders hand back a buffer per packet, about 50 a second; one audio node per packet made the
@@ -229,7 +264,10 @@ export async function renderFrameImage({
   }
 }
 
-/** Render and encode locally at 30fps. The Blob MIME identifies the negotiated container. */
+/** Render and encode locally at 30fps. The Blob MIME identifies the actual container.
+ * @throws When the selected codecs are unavailable, media cannot decode, or encoding fails.
+ * @throws {DOMException} When the abort signal is cancelled.
+ */
 export async function renderVideo({
   clips,
   assets,
@@ -237,6 +275,7 @@ export async function renderVideo({
   layout,
   muted,
   width,
+  format,
   onProgress,
   signal,
 }: RenderVideoOptions): Promise<Blob> {
@@ -260,21 +299,32 @@ export async function renderVideo({
     bitrate: width === 3840 ? 24_000_000 : 8_000_000,
   };
   const audioOptions = { sampleRate: 48000, numberOfChannels: 2, bitrate: 128000 };
-  const mp4 =
-    (await canEncodeVideo('avc', videoOptions)) &&
-    (!audioClips.length || (await canEncodeAudio('aac', audioOptions)));
-  if (
-    !mp4 &&
-    !(
-      (await canEncodeVideo('vp9', videoOptions)) &&
-      (!audioClips.length || (await canEncodeAudio('opus', audioOptions)))
-    )
-  ) {
+  const selected =
+    format ??
+    ((await canEncodeVideo('avc', videoOptions)) &&
+    (!audioClips.length || (await canEncodeAudio('aac', audioOptions)))
+      ? 'mp4'
+      : 'webm');
+  const profiles = {
+    mp4: { container: new Mp4OutputFormat(), video: 'avc', audio: 'aac' },
+    mov: { container: new MovOutputFormat(), video: 'avc', audio: 'pcm-s16' },
+    webm: { container: new WebMOutputFormat(), video: 'vp9', audio: 'opus' },
+  } as const;
+  const profile = profiles[selected];
+  const videoSupported = await canEncodeVideo(profile.video, videoOptions);
+  if (videoSupported && selected === 'mp4' && audioClips.length) await prepareAac(signal);
+  const audioSupported = !audioClips.length || (await canEncodeAudio(profile.audio, audioOptions));
+  check();
+  if (!videoSupported) {
     throw new Error(
-      `This browser cannot encode ${width}×${height} video${audioClips.length ? ' with audio' : ''}. Try Chrome with WebCodecs support or a smaller export.`,
+      `This browser cannot encode ${selected.toUpperCase()} ${profile.video.toUpperCase()} at ${width}×${height}. Try a smaller resolution, another format, or a browser with this encoder.`,
     );
   }
-  check();
+  if (!audioSupported) {
+    throw new Error(
+      `This browser cannot encode ${selected.toUpperCase()} ${profile.audio.toUpperCase()} audio. Choose MOV (uncompressed audio, larger files) or WebM, or use a browser with this audio encoder. Audio has not been removed.`,
+    );
+  }
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -283,11 +333,11 @@ export async function renderVideo({
   const target = new BufferTarget();
   const output = new Output({
     target,
-    format: mp4 ? new Mp4OutputFormat() : new WebMOutputFormat(),
+    format: profile.container,
   });
-  const video = new CanvasSource(canvas, { codec: mp4 ? 'avc' : 'vp9', ...videoOptions });
+  const video = new CanvasSource(canvas, { codec: profile.video, ...videoOptions });
   const audio = audioClips.length
-    ? new AudioBufferSource({ codec: mp4 ? 'aac' : 'opus', ...audioOptions })
+    ? new AudioBufferSource({ codec: profile.audio, ...audioOptions })
     : undefined;
   output.addVideoTrack(video, { frameRate: FPS });
   if (audio) output.addAudioTrack(audio);

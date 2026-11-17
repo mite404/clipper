@@ -35,6 +35,22 @@ const clips: Clip[] = [
 ];
 const layout = { radius: 22, screenX: 25, screenY: 80, cameraX: 50, cameraY: 50 };
 
+it('scales actual render coordinates, bitmap and fractional hotspot together at HD and 4K', () => {
+  for (const [width, height, x, y, bitmap, hotspotX, hotspotY] of [
+    [1920, 1080, 1169.475, 208.95, 2.1, 0.525, 1.05],
+    [3840, 2160, 2338.95, 417.9, 4.2, 1.05, 2.1],
+  ]) {
+    const cursor = cursorFrame(clips, [asset], 30, layout, { width, height });
+    expect(cursor?.x).toBeCloseTo(x);
+    expect(cursor?.y).toBeCloseTo(y);
+    expect(cursor?.width).toBeCloseTo(bitmap);
+    expect(cursor?.height).toBeCloseTo(bitmap);
+    expect(cursor?.hotspotX).toBeCloseTo(hotspotX);
+    expect(cursor?.hotspotY).toBeCloseTo(hotspotY);
+    expect(cursor?.rotation).toBe(0);
+  }
+});
+
 it('projects source-time cursor positions through cover crop and fractional scaled hotspots', () => {
   // 1600×1000 cover-fits at 0.7, crop x = -60. Source (0.75, 0.2) becomes (780, 140).
   const first = cursorFrame(clips, [asset], 30, layout);

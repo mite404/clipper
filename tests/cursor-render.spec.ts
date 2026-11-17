@@ -229,17 +229,17 @@ test('draws source-offset cursors through a cut, crop, side swap and zoom in pre
   await expect(cursor).toBeVisible();
   expect(
     await cursor.evaluate((element) => parseFloat(getComputedStyle(element).left)),
-  ).toBeCloseTo(773.7);
+  ).toBeCloseTo(773.7 * 1.5);
   expect(await cursor.evaluate((element) => parseFloat(getComputedStyle(element).top))).toBeCloseTo(
-    136.5,
+    136.5 * 1.5,
   );
   for (let frame = 0; frame < 3; frame++)
     await page.getByRole('button', { name: 'Next frame', exact: true }).click();
   expect(
     await cursor.evaluate((element) => parseFloat(getComputedStyle(element).left)),
-  ).toBeCloseTo(493.7);
+  ).toBeCloseTo(493.7 * 1.5);
   expect(await cursor.evaluate((element) => parseFloat(getComputedStyle(element).top))).toBeCloseTo(
-    346.5,
+    346.5 * 1.5,
   );
   await page.getByLabel('Cursor style', { exact: true }).selectOption('touch');
   await page.getByText('Advanced cursor', { exact: true }).click();
@@ -248,17 +248,17 @@ test('draws source-offset cursors through a cut, crop, side swap and zoom in pre
     await page.getByRole('button', { name: 'Previous frame', exact: true }).click();
   expect(
     await cursor.evaluate((element) => parseFloat(getComputedStyle(element).left)),
-  ).toBeCloseTo(757.6);
+  ).toBeCloseTo(757.6 * 1.5);
   expect(await cursor.evaluate((element) => parseFloat(getComputedStyle(element).top))).toBeCloseTo(
-    117.6,
+    117.6 * 1.5,
   );
   for (let frame = 0; frame < 2; frame++)
     await page.getByRole('button', { name: 'Next frame', exact: true }).click();
   expect(
     await cursor.evaluate((element) => parseFloat(getComputedStyle(element).left)),
-  ).toBeCloseTo(757.6);
+  ).toBeCloseTo(757.6 * 1.5);
   expect(await cursor.evaluate((element) => parseFloat(getComputedStyle(element).top))).toBeCloseTo(
-    117.6,
+    117.6 * 1.5,
   );
   await page.getByLabel('Hide cursor', { exact: true }).check();
   await expect(cursor).toHaveCount(0);

@@ -179,7 +179,7 @@ test('renders distinct cursor speed styles with default pixel parity through off
     await page.getByRole('button', { name: 'Next frame', exact: true }).click();
   await expect
     .poll(() => cursor.evaluate((element) => parseFloat(getComputedStyle(element).left)))
-    .toBeCloseTo(656.45);
+    .toBeCloseTo(656.45 * 1.5);
   const mask = page.getByTestId('screen-mask');
   const original = await mask.screenshot();
   await animation.selectOption('smooth');
@@ -196,16 +196,16 @@ test('renders distinct cursor speed styles with default pixel parity through off
       await page.getByRole('button', { name: 'Next frame', exact: true }).click();
     await expect
       .poll(() => cursor.evaluate((element) => parseFloat(getComputedStyle(element).left)))
-      .toBeCloseTo(x);
+      .toBeCloseTo(x * 1.5);
     for (let frame = 0; frame < 7; frame++)
       await page.getByRole('button', { name: 'Next frame', exact: true }).click();
     await expect
       .poll(() => cursor.evaluate((element) => parseFloat(getComputedStyle(element).left)))
-      .toBeCloseTo(x);
+      .toBeCloseTo(x * 1.5);
     for (let frame = 0; frame < 7; frame++)
       await page.getByRole('button', { name: 'Previous frame', exact: true }).click();
     await expect
       .poll(() => cursor.evaluate((element) => parseFloat(getComputedStyle(element).left)))
-      .toBeCloseTo(x);
+      .toBeCloseTo(x * 1.5);
   }
 });
