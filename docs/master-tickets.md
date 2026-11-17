@@ -271,11 +271,12 @@ CLIP-2c is rebased and passes `all` 157/157, but isolated `performance` misses t
 bound more often than a same-orb base and paints about 10% fewer frames. It is not accepted-ready
 until Opus bisects, profiles and fixes the per-frame cost at its cause.
 
-CLIP-2c coordinator decision: copy and export draw the preview's mask shadow (`0 25px 65px #0005`,
-scaled by width / 1280), so preview, copy and export agree over a Background. This fixes a
-pre-existing preview/export mismatch and changes exported pixels near masks for every project. It
-lands as its own reviewed commit with an export-time comparison and isolated `performance`. CLIP-2c
-gates now include full `all`, because fixture specs call the shared render functions directly.
+CLIP-2c owner decision: "there shouldn't be a drop shadow." The preview's mask shadow
+(`0 25px 65px #0005` in `src/Composition.tsx`) is removed, so preview, Copy frame and export are all
+shadow-free and agree over a Background. This supersedes the unshipped coordinator choice to draw
+the shadow in copy and export. It lands as its own reviewed CLIP-2c commit with a same-pixel
+preview/copy/export comparison and isolated `performance`. CLIP-2c gates now include full `all`,
+because fixture specs call the shared render functions directly.
 
 The superseded UI-6 grant read: removal hunks for the named remnants in `src/App.tsx` and the
 components and `src/styles.css` that render them, plus tests whose text-only assumptions those
