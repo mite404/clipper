@@ -18,10 +18,9 @@ repository root. This skill owns the workflow policy, not ticket status or curre
 - Preserve existing assignments, models, candidates and unshipped changes. Obtain the coordinator's
   exact-path grant before a worker edits shared files. The coordinator retains the sole main writer
   and push slot; disjoint preparation does not grant concurrent delivery or acceptance runs.
-- All newly created threads use `anthropic/claude-opus-5-5` with medium effort until the owner
-  changes that default. Existing threads/models stay unchanged. This default does not replace an
-  existing ticket's required reviewer or model; reuse that reviewer or escalate a conflict before
-  creating a replacement. The workflow itself is independent of the implementation model.
+- Implementation workers use `openai/gpt-6.1-sol` with medium effort. Opus and Fable are reserved
+  for research/review, called sparingly. Preserve existing work and locked thread models; assign
+  future independent reviews under the model policy below.
 - Follow poteto-mode and emil-design-eng. Selected tickets may have `docs/tickets/<ID>.md` briefs
   with the ID as H1 and a link to their master anchor. Briefs hold acceptance/evidence, not another
   live status field. Proposals may retain inline scope in the master until selected.
@@ -53,8 +52,10 @@ repository root. This skill owns the workflow policy, not ticket status or curre
 ## Review the exact candidate
 
 - Require an actual independent exact-diff review for implementation tickets and fix accepted
-  findings before delivery. Preserve already-required GPT-6.1 Sol medium reviews and existing
-  assignments; moving policy does not waive them or substitute the new-thread default for them.
+  findings before delivery. New independent pre-landing review assignments use
+  `anthropic/claude-opus-5-5` with medium effort until the owner changes this rule. This supersedes
+  older Sol-review wording in ticket briefs. Retain completed Sol verdicts; do not repeat an
+  accepted review solely for this model change or mutate a review thread's locked model.
 - Source and tooling tickets additionally require the existing Fable reviewer's pre-landing verdict
   on the exact candidate or correction delta, one ticket at a time. Use Fable sparingly for review,
   not implementation or coordination. Do not repeat the completed baseline review. Docs-only
