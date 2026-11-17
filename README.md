@@ -10,8 +10,10 @@ npm ci
 npm run dev
 ```
 
-In an Amp orb, run `amp orb services ensure` for supervised editor and Storybook previews. Use the
-portal URLs it prints rather than sharing localhost URLs.
+`npm run dev` serves on port 5173 and exits with a port-in-use error if it is taken, rather than
+moving to another port. In an Amp orb, run `amp orb services ensure` for supervised editor and
+Storybook previews. Use the portal URLs it prints rather than sharing localhost URLs. The editor
+service holds 5173, so beside it run `npm run dev -- --port <free port>`.
 
 ## What works
 
