@@ -991,7 +991,12 @@ export function App() {
       // playhead still takes every shortcut. Text and number entry keep every key.
       const slider = target instanceof HTMLInputElement && target.type === 'range';
       if (slider && (key === 'enter' || SLIDER_KEYS.includes(key))) return;
-      if (target instanceof HTMLInputElement && !slider && target.type !== 'checkbox') return;
+      // A file input gives only Space to transport, so it never opens the chooser; Enter and
+      // clicks still do.
+      const file = target instanceof HTMLInputElement && target.type === 'file';
+      if (file && key !== ' ') return;
+      if (target instanceof HTMLInputElement && !slider && !file && target.type !== 'checkbox')
+        return;
       if (target instanceof HTMLSelectElement || target instanceof HTMLInputElement) {
         if (key === 'enter' && target.type !== 'range') {
           event.preventDefault();

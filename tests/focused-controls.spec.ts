@@ -130,3 +130,28 @@ test('checkbox Enter toggles, select Enter opens its picker, and Space stays tra
   await expect(state).toHaveText('Paused');
   await expect(source).toHaveValue('2');
 });
+
+// The Open project input is display:none, so it can never hold keyboard focus.
+test('Space plays and pauses from the focused Import media file input without opening the chooser', async ({
+  page,
+}) => {
+  await open(page);
+  const state = page.getByTestId('transport-state');
+  const input = page.getByLabel('Import local media');
+  let choosers = 0;
+  page.on('filechooser', () => choosers++);
+  await tabTo(page, input);
+  await expect(state).toHaveText('Paused');
+  await page.keyboard.press('Space');
+  await expect(state).toHaveText('Playing · 1×');
+  await page.keyboard.press('Space');
+  await expect(state).toHaveText('Paused');
+  await expect(input).toBeFocused();
+  // The chooser would open on the key's release, so wait for it before counting.
+  await page.waitForTimeout(300);
+  expect(choosers).toBe(0);
+
+  await page.keyboard.press('Enter');
+  await expect.poll(() => choosers).toBe(1);
+  await expect(state).toHaveText('Paused');
+});
