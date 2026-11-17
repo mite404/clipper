@@ -60,10 +60,7 @@ export function Composition({ clips, assets, zooms, layout, tracks, muted }: Com
               height: mask.height,
               borderRadius: role === 'background' ? 0 : layout.radius * scale,
               overflow: 'hidden',
-              ...(placeholder && {
-                background: '#10181b',
-                boxShadow: `0 ${25 * scale}px ${65 * scale}px #0005`,
-              }),
+              ...(placeholder && { background: '#10181b' }),
             }}
           >
             <div

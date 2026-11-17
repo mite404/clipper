@@ -1167,3 +1167,154 @@ for (const muted of [[], ['a3']])
     console.log(`new-track audio error ${Math.sqrt(squaredError / energy)}`);
     expect(Math.sqrt(squaredError / energy)).toBeLessThan(0.12);
   });
+
+// Stage points outside both masks: left, top and right margins and the centre gap. The timeline
+// covers the preview's bottom edge, so the bottom margin, where a drop shadow falls deepest, is
+// probed in Copy frame and export only.
+const MARGINS: [number, number][] = [
+  [4, 360],
+  [640, 4],
+  [899, 360],
+  [1276, 360],
+];
+const PROBES: [number, number][] = [...MARGINS, [640, 715]];
+
+test.describe('no mask shadow', () => {
+  // A large, sharp preview, so the 10px stage margins are several screen pixels wide.
+  test.use({ viewport: { width: 2400, height: 1500 }, deviceScaleFactor: 2 });
+  test('preview, Copy frame and export show a white Background unshaded around the masks at 1920px', async ({
+    page,
+  }, info) => {
+    test.setTimeout(120000);
+    const width = 1920;
+    await page.goto('/');
+    await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', {
+      timeout: 30000,
+    });
+    const result = await page.evaluate(
+      async ({ width, points }) => {
+        const mediaModule = '/src/media.ts',
+          exportModule = '/src/export.ts',
+          projectModule = '/src/project.ts',
+          modelModule = '/src/timeline-model.ts';
+        const { readMedia } = await import(mediaModule);
+        const { renderFrameImage, renderVideo } = await import(exportModule);
+        const { serializeProject } = await import(projectModule);
+        const { DEFAULT_TRACKS } = await import(modelModule);
+        const canvas = document.createElement('canvas');
+        canvas.width = 320;
+        canvas.height = 180;
+        const g = canvas.getContext('2d')!;
+        g.fillStyle = '#ffffff';
+        g.fillRect(0, 0, 320, 180);
+        const png = await new Promise<Blob>((r) => canvas.toBlob((b) => r(b!), 'image/png'));
+        const asset = await readMedia(png, 'white.png');
+        // A white still on a Background beneath the empty masks.
+        const edit = {
+          tracks: [
+            { id: 'bg', label: 'Background · Full frame', kind: 'visual', role: 'background' },
+            ...DEFAULT_TRACKS,
+          ],
+          clips: [{ id: 'w', assetId: asset.id, track: 'bg', start: 0, duration: 30, offset: 0 }],
+          zooms: [],
+          layout: { radius: 22, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
+        };
+        const copied = await createImageBitmap(
+          await renderFrameImage({ ...edit, assets: [asset], width, frame: 1 }),
+        );
+        canvas.width = copied.width;
+        canvas.height = copied.height;
+        g.drawImage(copied, 0, 0);
+        copied.close();
+        const k = canvas.width / 1280;
+        const copy = points.map(([x, y]) =>
+          Array.from(g.getImageData(Math.round(x * k), Math.round(y * k), 1, 1).data).slice(0, 3),
+        );
+        const video = await renderVideo({
+          ...edit,
+          assets: [asset],
+          muted: [],
+          width,
+          format: 'mp4',
+          onProgress: () => {},
+        });
+        const project = await (await serializeProject(edit, [asset], [])).file.text();
+        return { copy, video: Array.from(new Uint8Array(await video.arrayBuffer())), project };
+      },
+      { width, points: PROBES },
+    );
+    const file = info.outputPath('no-shadow.mp4');
+    writeFileSync(file, Buffer.from(result.video));
+    inspectExport(file, width, 'mp4', false);
+    const exported = PROBES.map(([x, y]) =>
+      Array.from(
+        execFileSync('ffmpeg', [
+          '-v',
+          'error',
+          '-ss',
+          '0.033',
+          '-i',
+          file,
+          '-frames:v',
+          '1',
+          '-vf',
+          `format=rgb24,crop=1:1:${Math.round((x * width) / 1280)}:${Math.round((y * width) / 1280)}`,
+          '-f',
+          'rawvideo',
+          '-',
+        ]),
+      ),
+    );
+
+    // The preview at the same render size, through the editor's own project path.
+    await page.getByRole('combobox', { name: 'Export resolution' }).selectOption(String(width));
+    await page.getByLabel('Open local project').setInputFiles({
+      name: 'no-shadow.clipper.json',
+      mimeType: 'application/json',
+      buffer: Buffer.from(result.project),
+    });
+    await expect(page.locator('.app-footer [role="status"]')).toContainText('Project reopened');
+    const stage = page.getByTestId('screen-mask').locator('..');
+    await expect(stage.locator('img').first()).toHaveJSProperty('naturalWidth', 320);
+    // Every probe must land on the stage itself, not on a panel drawn over it.
+    const box = (await stage.boundingBox())!;
+    for (const [x, y] of MARGINS)
+      expect(
+        await page.evaluate(
+          ([x, y]) =>
+            document
+              .querySelector('[data-testid="screen-mask"]')!
+              .parentElement!.contains(document.elementFromPoint(x, y)),
+          [box.x + (x * box.width) / 1280, box.y + (y * box.height) / 720],
+        ),
+      ).toBe(true);
+    const shot = (await stage.screenshot()).toString('base64');
+    const preview = await page.evaluate(
+      async ({ shot, points }) => {
+        const bitmap = await createImageBitmap(
+          await (await fetch(`data:image/png;base64,${shot}`)).blob(),
+        );
+        const c = document.createElement('canvas');
+        c.width = bitmap.width;
+        c.height = bitmap.height;
+        const g = c.getContext('2d')!;
+        g.drawImage(bitmap, 0, 0);
+        const k = bitmap.width / 1280;
+        return points.map(([x, y]) =>
+          Array.from(g.getImageData(Math.round(x * k), Math.round(y * k), 1, 1).data).slice(0, 3),
+        );
+      },
+      { shot, points: MARGINS },
+    );
+    console.log('no-shadow', JSON.stringify({ preview, copy: result.copy, exported }));
+    // A drop shadow darkens these by tens of levels; codec rounding moves white by a few at most.
+    for (const [name, pixels, points] of [
+      ['preview', preview, MARGINS],
+      ['copy', result.copy, PROBES],
+      ['export', exported, PROBES],
+    ] as const)
+      pixels.forEach((pixel, i) =>
+        expect(Math.min(...pixel), `${name} ${points[i].join()}`).toBeGreaterThanOrEqual(245),
+      );
+  });
+});
