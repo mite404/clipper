@@ -38,13 +38,10 @@ import { type Asset, DEFAULT_STILL_FRAMES, loadDemo, readMedia, unreadableNamesa
 import { Timeline, TRACKS } from './Timeline';
 import {
   FPS,
-  MUSIC_GAIN,
   type Clip,
   type Track,
   type Zoom,
-  covers,
   insertClip,
-  sourceFrame,
   splitClip,
   ZOOM_LIMITS,
   zoomsOverlap,
@@ -246,7 +243,7 @@ export function SourceMonitor({
     <section className="source-panel">
       <div className="monitor-title">
         <span>Source</span>
-        <span className="muted-text">{asset?.kind === 'audio' ? 'AUDIO' : 'ORIGINAL'}</span>
+        {asset?.kind === 'audio' && <span className="muted-text">AUDIO</span>}
       </div>
       <div className="source-preview">
         {asset?.kind === 'video' ? (
@@ -1182,22 +1179,6 @@ export function App() {
       setCopying(false);
     }
   };
-  const volume = Math.max(
-    0,
-    ...edit.clips
-      .filter(
-        (c) =>
-          (c.track === 'voice' || c.track === 'music') &&
-          !muted.includes(c.track) &&
-          covers(c, frame),
-      )
-      .map(
-        (c) =>
-          (assets.find((a) => a.id === c.assetId)?.peaks[sourceFrame(c, frame)] ?? 0) *
-          (c.track === 'music' ? MUSIC_GAIN : 1),
-      ),
-  );
-
   const libraryView = useMemo(
     () => (
       <MediaLibrary
@@ -1264,9 +1245,6 @@ export function App() {
           <ArrowDownToLine size={14} /> Save project
         </button>
         <div className="header-actions">
-          <span className="privacy">
-            <span className="status-dot" /> On your device
-          </span>
           <label className="project-open">
             Open project
             <input
@@ -1314,9 +1292,6 @@ export function App() {
         </div>
       </header>
       <div className="workspace-bar">
-        <span className="workspace-label">
-          <span className="workspace-dot" /> EDIT WORKSPACE
-        </span>
         <button
           className="text-button"
           onClick={() => {
@@ -1512,23 +1487,16 @@ export function App() {
               <IconButton label="Next frame" onClick={() => seek(frameRef.current + 1)}>
                 <ArrowRight size={15} />
               </IconButton>
-              <span className="playback-state" data-testid="transport-state">
+              <span
+                className={speed ? 'playback-state' : 'playback-state idle'}
+                data-testid="transport-state"
+              >
                 {speed > 0
                   ? `Playing · ${speed}×`
                   : speed < 0
                     ? `Rewinding · ${-speed}×`
                     : 'Paused'}
               </span>
-            </div>
-            <div
-              className="audio-meter"
-              aria-label={`Audio level ${Math.round(volume * 100)} percent`}
-            >
-              <span>L</span>
-              {Array.from({ length: 12 }, (_, i) => (
-                <i key={i} style={{ opacity: speed > 0 && volume * 12 > i ? 1 : 0.18 }} />
-              ))}
-              <span>R</span>
             </div>
           </div>
           <div className="timeline-toolbar">
