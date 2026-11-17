@@ -140,6 +140,12 @@ test('drops refuse occupied spans, the wrong media kind, Escape, the outside and
   const free = await at(create, 100);
   await page.mouse.move(free.x, free.y, { steps: 4 });
   await expect(create).toHaveAttribute('data-drop', 'ok');
+  await expect(create.locator('.drop-hint')).toHaveText('New background track at 3.3 s');
+  // A video over the audio row says it makes a masked screen.
+  const audioRow = page.getByTestId('create-audio');
+  const below = await at(audioRow, 100);
+  await page.mouse.move(below.x, below.y, { steps: 4 });
+  await expect(audioRow.locator('.drop-hint')).toHaveText('New screen track at 3.3 s');
   await page.keyboard.press('Escape');
   await page.mouse.up();
   expect(await headers(page)).toHaveLength(4);
@@ -291,4 +297,14 @@ test('Insert and Place start on the same track and fall back when Undo removes t
   await page.getByRole('button', { name: 'Insert source at playhead' }).click();
   await expect(status(page)).toContainText('Inserted Flower study onto Screen recording.');
   expect(await headers(page)).toHaveLength(4);
+});
+
+test('a Move button that reaches the end hands focus to the other one', async ({ page }) => {
+  await open(page);
+  const down = page.getByRole('button', { name: 'Move Talking head down' });
+  await down.focus();
+  await page.keyboard.press('Enter');
+  expect((await headers(page)).slice(0, 2)).toEqual(['V2 Screen recording', 'V1 Talking head']);
+  await expect(down).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Move Talking head up' })).toBeFocused();
 });

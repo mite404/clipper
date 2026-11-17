@@ -87,12 +87,25 @@ const TrackHeader = memo(function TrackHeader({
   const { id, label } = track;
   const up = UP[track.kind];
   const muted = tracks.muted.includes(id);
+  // A move that reaches the end disables its own button, so focus goes to the other one.
+  const toggles = useRef<HTMLSpanElement>(null);
+  // Directions to refocus after a move, the pressed one first.
+  const moved = useRef<string[]>([]);
+  useLayoutEffect(() => {
+    const enabled = moved.current
+      .map((d) =>
+        toggles.current!.querySelector<HTMLElement>(`[aria-label="Move ${label} ${d}"]:enabled`),
+      )
+      .find(Boolean);
+    moved.current = [];
+    enabled?.focus();
+  }, [registry, label]);
   return (
     <div className="track-label">
       <span className="track-code">{trackNumber(registry, id)}</span>
       {createElement(icon(track), { size: 14 })}
       <span>{label}</span>
-      <span className="track-toggles">
+      <span className="track-toggles" ref={toggles}>
         {TOGGLES.map(({ list, name, icons }) => {
           const pressed = tracks[list].includes(id);
           const Shown = icons[Number(pressed)];
@@ -122,7 +135,10 @@ const TrackHeader = memo(function TrackHeader({
               key={direction}
               label={`Move ${label} ${direction}`}
               disabled={moveTrack(registry, id, step) === registry}
-              onClick={() => onMoveTrack(id, step)}
+              onClick={() => {
+                moved.current = direction === 'up' ? ['up', 'down'] : ['down', 'up'];
+                onMoveTrack(id, step);
+              }}
             >
               <Icon size={13} />
             </IconButton>
@@ -134,14 +150,27 @@ const TrackHeader = memo(function TrackHeader({
 });
 
 // What a lane says while a pool item is over it: why it would refuse, or where it would land.
-function dropHint(result: ReturnType<typeof placeMedia>, locked: boolean, at: number) {
+function dropHint(
+  result: ReturnType<typeof placeMedia>,
+  target: DropTarget,
+  locked: boolean,
+  at: number,
+) {
   if ('refused' in result)
     return {
       state: result.reason === 'kind' ? 'incompatible' : result.reason,
       text: result.refused,
     };
   if (locked) return { state: 'locked', text: 'Locked' };
-  return { state: 'ok', text: `Place at ${(at / FPS).toFixed(1)} s` };
+  return { state: 'ok', text: placeText(result, target, at) };
+}
+
+// A creation row names the track it would make, since a video on the audio row makes a screen.
+function placeText(result: { tracks: TrackDef[]; clip: Clip }, target: DropTarget, at: number) {
+  const where = `at ${(at / FPS).toFixed(1)} s`;
+  if (!('create' in target)) return `Place ${where}`;
+  const made = result.tracks.find((t) => t.id === result.clip.track)!;
+  return `New ${made.kind === 'audio' ? 'audio' : made.role} track ${where}`;
 }
 
 // A lane or creation row that takes pool drops. While a pool item is over it, it says why it
@@ -174,7 +203,7 @@ function DropZone({
     event.dataTransfer.dropEffect = 'copy';
     const at = dropFrame(event, duration);
     const refuse = 'track' in target && locked.includes(target.track);
-    const next = dropHint(placeMedia(registry, clips, drop.media, target, at), refuse, at);
+    const next = dropHint(placeMedia(registry, clips, drop.media, target, at), target, refuse, at);
     setHint((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
   };
   return (
@@ -344,7 +373,9 @@ export function Timeline({
   const zone = { drop, registry, clips, locked: tracks.locked, duration };
   const createRow = (kind: NewTrack) => (
     <div className="track-row create-row" key={`create-${kind}`}>
-      <div className="track-label">{CREATE[kind]}</div>
+      <div className="track-label">
+        <span title={CREATE[kind]}>{CREATE[kind]}</span>
+      </div>
       <DropZone
         {...zone}
         target={{ create: kind }}
