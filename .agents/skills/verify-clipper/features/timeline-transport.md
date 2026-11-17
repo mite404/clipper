@@ -6,6 +6,9 @@ Splice video and speech, seek synchronized media, and shuttle with keyboard cont
 
 - Two video tracks, two audio tracks, ruler, selected clip, and frame playhead.
 - Split, delete, undo, and track-local ripple insertion.
+- Selection (V) and Razor (C) tools; a Razor click cuts at the clicked frame, snapping to the
+  playhead and clip edges. Per-track Select and Lock toggles save with the project; a locked track
+  refuses new clip edits but undo still restores (CLIP-2e).
 - Previous frame and Next frame buttons and the arrow keys step exactly one frame and stop at the
   first and last frame.
 - Play/pause via transport and Space; J rewind, K pause, L play, repeated J/L for faster speeds.
@@ -15,15 +18,18 @@ Splice video and speech, seek synchronized media, and shuttle with keyboard cont
 - After a pause the arrow key and the frame buttons step from the frame the timecode shows, so Next
   frame then Previous frame returns to it (REF-9 delivered).
 - Delete or Backspace removes the selection, seeking clamps at both ends, and Ctrl, Cmd and Alt
-  chords never split, delete, seek or drive the transport (REF-7, REF-19).
+  chords never delete, seek or drive the transport (REF-7, REF-19). The one chord that splits is
+  Cmd+K on Mac or Alt+K elsewhere, which cuts every unlocked track.
 - A slider drag or held key is one undo step and an edit that changes nothing is none. Undo keeps
   the last 50 edits (REF-16).
 
 ## How to get to it (user POV)
 
-Use the timeline below Composition. Select a clip and choose Split or press S. Delete removes the
-selection; Undo or Ctrl/Cmd+Z restores it. Scrub the ruler or double-click a track to seek.
-Shortcuts shows the keyboard guide and pauses playback.
+Use the timeline below Composition. Select a clip or check track headers and choose Split, which
+cuts the selected clip and selected unlocked tracks; there is no S binding. Press C for Razor and
+click a clip to cut it, V to return to Selection. Delete removes the selection; Undo or Ctrl/Cmd+Z
+restores it. Scrub the ruler or double-click a track to seek. Shortcuts shows the keyboard guide and
+pauses playback.
 
 ## Driving it with Playwright
 
@@ -38,7 +44,9 @@ playhead at 30 and the camera video at 1.0 s, Previous frame must return to 00:0
 clicks must read 00:01:02. Previous at frame 0 and Next at frame 359 must not move. `editor` also
 runs the held-pause journey (five pauses after 430 to 590 ms of playback; each requires the
 displayed timecode to rise by one on the arrow key and to return on Previous frame), the
-modified-key and delete/undo/clamp journeys, the one-step slider undo and the 50-edit limit. Run
+modified-key and delete/undo/clamp journeys, the one-step slider undo and the 50-edit limit. `all`
+also runs `tests/split-tools.spec.ts` for Split targets, Cmd+K and Alt+K, Razor snapping, and locks
+refusing split, delete, trim and insert while toggles save, dirty and reopen. Run
 `.agents/skills/verify-clipper/scripts/verify.mjs performance` separately for five production
 playback responsiveness checks without trace/video overhead.
 
