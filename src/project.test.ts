@@ -154,6 +154,8 @@ describe('portable project parsing', () => {
     [JSON.stringify({ ...project(), muted: ['other'] }), /track/i],
     [JSON.stringify({ ...project(), muted: ['music', 'music'] }), /duplicate/i],
     [JSON.stringify({ ...project(), locked: 'voice' }), /locked/i],
+    [JSON.stringify({ ...project(), locked: null }), /locked/i],
+    [JSON.stringify({ ...project(), selectedTracks: null }), /selectedTracks/i],
     [JSON.stringify({ ...project(), locked: ['V1'] }), /track/i],
     [JSON.stringify({ ...project(), locked: ['voice', 'voice'] }), /duplicate/i],
     [JSON.stringify({ ...project(), selectedTracks: {} }), /selectedTracks/i],

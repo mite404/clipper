@@ -2,8 +2,10 @@ import {
   Camera,
   Film,
   Lock,
+  LockOpen,
   Mic,
   Music2,
+  Square,
   SquareCheckBig,
   Volume2,
   VolumeX,
@@ -26,6 +28,15 @@ export const TRACKS = [
 
 // Razor snapping reaches this far on screen, to the playhead or any clip edge on any track.
 const SNAP_PIXELS = 8;
+// Header toggles draw an off icon and an on icon, so an unpressed one never looks pressed.
+const TOGGLES = [
+  {
+    list: 'selected',
+    name: (label: string) => `Select ${label} track`,
+    icons: [Square, SquareCheckBig],
+  },
+  { list: 'locked', name: (label: string) => `Lock ${label}`, icons: [LockOpen, Lock] },
+] as const;
 
 // The frame a still Razor click cuts at, snapped; null for a keyboard press or a pointer drag,
 // which select the clip as the Selection tool does.
@@ -237,20 +248,20 @@ export function Timeline({
                 <Icon size={14} />
                 <span>{label}</span>
                 <span className="track-toggles">
-                  <IconButton
-                    label={`Select ${label} track`}
-                    aria-pressed={tracks.selected.includes(id)}
-                    onClick={() => onToggleTrack('selected', id)}
-                  >
-                    <SquareCheckBig size={13} />
-                  </IconButton>
-                  <IconButton
-                    label={`Lock ${label}`}
-                    aria-pressed={tracks.locked.includes(id)}
-                    onClick={() => onToggleTrack('locked', id)}
-                  >
-                    <Lock size={13} />
-                  </IconButton>
+                  {TOGGLES.map(({ list, name, icons }) => {
+                    const pressed = tracks[list].includes(id);
+                    const Shown = icons[Number(pressed)];
+                    return (
+                      <IconButton
+                        key={list}
+                        label={name(label)}
+                        aria-pressed={pressed}
+                        onClick={() => onToggleTrack(list, id)}
+                      >
+                        <Shown size={13} />
+                      </IconButton>
+                    );
+                  })}
                   {(id === 'voice' || id === 'music') && (
                     <IconButton
                       label={`${tracks.muted.includes(id) ? 'Unmute' : 'Mute'} ${label}`}

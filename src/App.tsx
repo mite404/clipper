@@ -1028,8 +1028,8 @@ export function App() {
       if (key === ' ' && !event.repeat) setSpeed((s) => (s ? 0 : 1));
       if (key === 'arrowleft') seek(frameRef.current - 1);
       if (key === 'arrowright') seek(frameRef.current + 1);
-      if (key === 'c') setTool('razor');
-      if (key === 'v') setTool('select');
+      if (key === 'c' && !event.shiftKey) setTool('razor');
+      if (key === 'v' && !event.shiftKey) setTool('select');
       if (key === 'delete' || key === 'backspace') removeSelected();
     };
     window.addEventListener('keydown', keydown);

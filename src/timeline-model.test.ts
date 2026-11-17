@@ -174,6 +174,7 @@ describe('editing a timeline in frames', () => {
   it('snaps to the nearest target inside the radius and prefers the first on a tie', () => {
     expect(snapFrame(50, [40, 57], 8)).toBe(57);
     expect(snapFrame(50, [42, 58], 8)).toBe(42);
+    expect(snapFrame(50, [58, 42], 8)).toBe(58);
     expect(snapFrame(50, [41, 59], 8)).toBe(50);
     expect(snapFrame(50, [], 8)).toBe(50);
   });

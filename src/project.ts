@@ -203,7 +203,7 @@ export function parseProject(text: string): {
   }
   // Track toggles validate like muted. Files saved before locks and track selection omit them.
   const tracks = (field: 'muted' | 'locked' | 'selectedTracks', fallback?: unknown[]) => {
-    const list = array(root[field] ?? fallback, field).map(track);
+    const list = array(root[field] === undefined ? fallback : root[field], field).map(track);
     unique(list, `${field} track`);
     return list;
   };

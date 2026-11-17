@@ -75,7 +75,7 @@ export function lockedChange(before: Clip[], after: Clip[], locked: Track[]): Tr
   return locked.find((track) => lane(before, track) !== lane(after, track));
 }
 
-/** The nearest target within `radius` frames, the earlier target on a tie, else the frame. */
+/** The nearest target within `radius` frames, the first listed one on a tie, else the frame. */
 export function snapFrame(frame: number, targets: number[], radius: number): number {
   const near = targets.filter((t) => Math.abs(t - frame) <= radius);
   return near.reduce(

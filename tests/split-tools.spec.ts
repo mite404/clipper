@@ -131,10 +131,11 @@ test('C picks Razor and V picks Selection; Razor cuts at the clicked frame, snap
   await page.keyboard.press('c');
   await expect(selection).toHaveAttribute('aria-pressed', 'true');
   await page.locator('.app-header').click({ position: { x: 4, y: 4 } });
-  for (const chord of ['Control+c', 'Meta+c', 'Alt+c']) await page.keyboard.press(chord);
+  for (const chord of ['Control+c', 'Meta+c', 'Alt+c', 'Shift+c']) await page.keyboard.press(chord);
   await expect(selection).toHaveAttribute('aria-pressed', 'true');
   await page.keyboard.press('c');
   await expect(razor).toHaveAttribute('aria-pressed', 'true');
+  await page.keyboard.press('Shift+v');
   await page.keyboard.press('Escape');
   await expect(razor).toHaveAttribute('aria-pressed', 'true');
   const camera = page.getByTestId('track-camera').locator('.timeline-clip').first();
@@ -192,7 +193,11 @@ test('locks refuse delete, trim and insert, while toggles save, dirty and reopen
 }) => {
   await open(page);
   const undo = page.getByRole('button', { name: 'Undo', exact: true });
+  // An unpressed toggle draws a different icon, not a pressed-looking one in another colour.
+  const icon = (name: string) => toggle(page, name).locator('svg');
+  const unlocked = await icon(`Lock ${NAMES.screen}`).getAttribute('class');
   await toggle(page, `Lock ${NAMES.screen}`).click();
+  await expect(icon(`Lock ${NAMES.screen}`)).not.toHaveAttribute('class', unlocked!);
   await expect(page.getByTestId('track-screen').getByRole('slider')).toHaveCount(0);
   await page.getByRole('button', { name: 'Flower study at 0.0 seconds', exact: true }).click();
   await page.keyboard.press('Delete');
@@ -204,7 +209,9 @@ test('locks refuse delete, trim and insert, while toggles save, dirty and reopen
   await expect(status(page)).not.toContainText('Inserted');
   await expect(undo).toBeDisabled();
 
+  const unselected = await icon(`Select ${NAMES.camera} track`).getAttribute('class');
   await toggle(page, `Select ${NAMES.camera} track`).click();
+  await expect(icon(`Select ${NAMES.camera} track`)).not.toHaveAttribute('class', unselected!);
   let prompts = 0;
   page.on('dialog', (dialog) => {
     prompts++;
