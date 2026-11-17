@@ -1109,11 +1109,11 @@ export function App() {
       inTimeline.current =
         event.target instanceof Element && !!event.target.closest('#sequence-pane');
     };
-    window.addEventListener('pointerdown', track, true);
-    window.addEventListener('focusin', track, true);
+    // A pool drop lands in the timeline, so it hands Delete to the clip it selects.
+    const events = ['pointerdown', 'focusin', 'drop'];
+    for (const name of events) window.addEventListener(name, track, true);
     return () => {
-      window.removeEventListener('pointerdown', track, true);
-      window.removeEventListener('focusin', track, true);
+      for (const name of events) window.removeEventListener(name, track, true);
     };
   }, []);
 

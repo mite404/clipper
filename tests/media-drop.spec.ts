@@ -92,7 +92,8 @@ test('a pool drop lands at the release frame on a scrolled, rescaled lane, and a
   await expect(status(page)).toContainText(
     'Placed Flower study on Screen recording at 6.0 seconds',
   );
-  await undo(page).click();
+  // A drop is a timeline action, so Delete removes the clip it placed and selected.
+  await page.keyboard.press('Delete');
   expect(await starts(screen)).toEqual(['0.0 seconds']);
 
   // A different scale and a horizontal scroll move the lane; the release point still decides.
