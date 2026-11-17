@@ -548,22 +548,22 @@ images were hosted, see [Known limits](#known-limits)).
 
 ### Current path reservations
 
-| Owner                    | Paths                                                                                                                                                        |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                               |
-| Cursor inspector         | No active implementation reservation after green inspector delivery                                                                                          |
-| Workspace layout         | UI-5 delivered at accepted 601ba78 with green exact-main CI; resize/layout/ruler reservation released                                                        |
-| Source-preview lifecycle | REF-32 delivered at 4b49623 with green exact-SHA CI; SourceMonitor/test reservation released; UI-8 remains research-only pending a new exact-path grant      |
-| Export integration       | REF-27 to T-66b606e9: actual-root geometry/test hunks active; MP4-default modal/fallback source held for revised plan; no worker push; shared consumers held |
-| Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                               |
-| Media drawer follow-up   | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                                  |
-| Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5, accepted UI-7 successor and exact-path grant before edits                                         |
-| Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                         |
-| Transport lifecycle      | No active reservation after green REF-31 delivery; preserve accepted REF-20/31 transport behavior                                                            |
-| Zoom regions             | CLIP-9b narrow App creation/B/hints, AutoZoomControls deletion, zoom-generation removal and listed test/story consumers; no Timeline/model/ramp/style edits  |
-| Oxc tooling              | No active reservation after green VERIFY-5 delivery; VERIFY-6 follow-up needs a separate exact-path grant                                                    |
-| Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                                                               |
-| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                             |
+| Owner                    | Paths                                                                                                                                                         |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                                |
+| Cursor inspector         | No active implementation reservation after green inspector delivery                                                                                           |
+| Workspace layout         | UI-5 delivered at accepted 601ba78 with green exact-main CI; resize/layout/ruler reservation released                                                         |
+| Source-preview lifecycle | REF-32 delivered at 4b49623 with green exact-SHA CI; SourceMonitor/test reservation released; UI-8 remains research-only pending a new exact-path grant       |
+| Export integration       | REF-27 to T-66b606e9: actual-root geometry, MP4-default modal and bounded local AAC fallback active; exact paths below; no worker push; shared consumers held |
+| Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                                |
+| Media drawer follow-up   | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                                   |
+| Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5, accepted UI-7 successor and exact-path grant before edits                                          |
+| Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                          |
+| Transport lifecycle      | No active reservation after green REF-31 delivery; preserve accepted REF-20/31 transport behavior                                                             |
+| Zoom regions             | CLIP-9b narrow App creation/B/hints, AutoZoomControls deletion, zoom-generation removal and listed test/story consumers; no Timeline/model/ramp/style edits   |
+| Oxc tooling              | No active reservation after green VERIFY-5 delivery; VERIFY-6 follow-up needs a separate exact-path grant                                                     |
+| Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                                                                |
+| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                              |
 
 ### Preservation branches
 
@@ -1007,7 +1007,7 @@ original note for every row.
 | Ticket ID                                            | Title                                                            | Risk   | Status                                                                                                                                                                                        | Needs                                                                                                   |
 | ---------------------------------------------------- | ---------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | <a id="doc-2"></a>[DOC-2](#doc-2)                    | Audit ticket coverage, IDs and delivery evidence                 | Small  | Delivered at [a8078ff](https://github.com/mite404/clipper/commit/a8078ffb4d737bf028bd0b864f31125dbd510263), [green CI](https://github.com/mite404/clipper/actions/runs/43789649834)           | nothing                                                                                                 |
-| <a id="ref-27"></a>[REF-27](#ref-27)                 | Select real MP4/MOV/WebM exports and qualify codecs              | Medium | Actual-root geometry/test integration active for existing Sol medium T-66b606e9; MP4-default modal/fallback revised plan pending                                                              | Preserve exporter candidate; exact hunks below; no worker push or early review                          |
+| <a id="ref-27"></a>[REF-27](#ref-27)                 | Select real MP4/MOV/WebM exports and qualify codecs              | Medium | Actual-root geometry, MP4-default modal and bounded local AAC fallback integration active for existing Sol medium T-66b606e9                                                                  | Preserve exporter candidate; exact hunks below; no worker push or early review                          |
 | <a id="ref-28"></a>[REF-28](#ref-28)                 | Define missing decoded-frame behavior                            | Medium | Proposal                                                                                                                                                                                      | reproduce null and early-end decoder cases                                                              |
 | <a id="ref-29"></a>[REF-29](#ref-29)                 | Assess complexity-score baseline blind spots                     | Small  | Deferred proposal                                                                                                                                                                             | only if count-only baseline permits real growth                                                         |
 | <a id="ref-30"></a>[REF-30](#ref-30)                 | Progress and cancellation for import, Open and Save              | Large  | Proposal                                                                                                                                                                                      | define bounded-memory and cancellation behavior with REF-22                                             |
@@ -1431,31 +1431,46 @@ still/dynamic-track renderer changes. Acceptance must inspect actual HD/4K rende
 decoded/copy/export parity, corners/crops/cursor/zoom and interactive marking, selection/playback
 during changes, legacy project behavior and fitted narrow/wide display.
 
-The coordinator grants only the owner's rev9 actual-root geometry/test portion on accepted
-`c987ab6`, with green
+The coordinator's initial grant covered the owner's rev9 actual-root geometry/test portion on
+accepted `c987ab6`, with green
 [exact-SHA CI43988105005](https://github.com/mite404/clipper/actions/runs/43988105005): App
 Player-size/marking hunks, Composition, stage, cursor-render and the listed geometry/parity tests.
-The preserved exporter pair remains separate. Export UI/container-state/default/modal/fallback
-production changes are held for the revised bounded plan. The transferred exporter patch is verified
-at SHA-256 `9253e6e7261ff0cf7a87e42771498d57469393111bb389bb9247622e4f363c1d`. Exact paths are
-`src/App.tsx`, `src/export.ts`, `src/Composition.tsx`, `src/stage.ts`, `src/cursor-render.ts`,
-`src/stage.test.ts`, `src/cursor-render.test.ts`, `tests/export.spec.ts`,
-`tests/refinements.spec.ts`, `tests/framing.spec.ts`, `tests/frame-image.spec.ts`,
-`tests/cursor-render.spec.ts`, `tests/cursor-speeds.spec.ts` and `tests/cursor-rotation.spec.ts`.
-The last three permit actual-unit expectation corrections only, preserving temporal/shape/angle
-assertions. No schema, packages, styles, FPS, ramp, PiP, still-image, fit or attachment changes.
-Keep SourceMonitor/sourceBlocked, Save, drawer, Inspector and transport listeners untouched. Use a
-fresh exact-base worktree and apply the preserved patch, not old `b9596c6` files in place. Return
-the integrated exact candidate and actual runtime evidence before the coordinator assigns Opus 5.5
-medium independent review. No worker push or new reviewer grant is implied. PiP/UI-2 owners are
-notified; no silent fixed-stage exception or premature shared-source grant.
+The preserved exporter pair remains separate. The revised bounded modal/AAC plan below is now
+approved for integration. The transferred exporter patch is verified at SHA-256
+`9253e6e7261ff0cf7a87e42771498d57469393111bb389bb9247622e4f363c1d`. Exact paths are `src/App.tsx`,
+`src/export.ts`, `src/Composition.tsx`, `src/stage.ts`, `src/cursor-render.ts`, `src/stage.test.ts`,
+`src/cursor-render.test.ts`, `tests/export.spec.ts`, `tests/refinements.spec.ts`,
+`tests/framing.spec.ts`, `tests/frame-image.spec.ts`, `tests/cursor-render.spec.ts`,
+`tests/cursor-speeds.spec.ts` and `tests/cursor-rotation.spec.ts`. The last three permit actual-unit
+expectation corrections only, preserving temporal/shape/angle assertions. Additional exact paths are
+`package.json`, generated `package-lock.json`, scoped export-dialog hunks in `src/styles.css`, and
+`public/licenses/mediabunny-aac-encoder.txt`. `tests/editor.spec.ts` permits only inserting Render
+video clicks after the three existing Export video activations in the source-blocking and
+progress/cancel/retry cases, plus three radius expectations from 22px to 33px for the actual HD root
+in composition playback and slider undo; preserve every assertion. No schema, FPS, ramp, PiP,
+still-image, fit or attachment changes. Keep SourceMonitor/sourceBlocked, Save, drawer and Inspector
+untouched. The only transport-listener exception suppresses editor shortcuts while the export modal
+is open. Use a fresh exact-base worktree and apply the preserved patch, not old `b9596c6` files in
+place. Return the integrated exact candidate and actual runtime evidence before the coordinator
+assigns Opus 5.5 medium independent review. No worker push or new reviewer grant is implied.
+PiP/UI-2 owners are notified; no silent fixed-stage exception or premature shared-source grant.
 
 The owner requested investigating FFmpeg where browser export is insufficient. Native AVC MP4 and
-MOV/PCM are demonstrated; native AAC is the concrete orb gap. The existing owner is checking primary
-docs for a local `@mediabunny/aac-encoder` AAC-LC WASM fallback before proposing dependency,
-modal/API and path changes. This is investigation, not an approved package addition or a qualified
-AAC result. Preserve early actionable failure if encoding is unavailable, never dropping audio or
-silently substituting a container. No full ffmpeg.wasm dependency is granted.
+MOV/PCM are demonstrated; native AAC is the concrete orb gap. Approve exact
+`@mediabunny/aac-encoder@1.66.0`, matching installed Mediabunny, without a core upgrade or full
+ffmpeg.wasm. Prefer native AAC; dynamically load the local fallback only for audible MP4 requiring
+it, and prove encoder initialization before source decoding/rendering. Preserve actionable early
+failure, never dropping audio or silently substituting a container. Inspect distributed license
+notices and retain corresponding-source/rebuild links. Require positive AAC full-decode/audio-sync
+evidence and worker/load-failure, cancellation and retry checks before qualification.
+
+Use a native export dialog with H.264 MP4 initial-session default and current application resolution
+shown read-only. Offer MOV H.264/PCM with size disclosure and WebM VP9/Opus alternatives. Export
+video opens the dialog; Render video starts the existing export lifecycle. Verify Close, Escape and
+focus return. Keep the sole resolution selector in the header, with no header format selector.
+Worker reports of positive AAC output and passing local gates remain provisional until integrated
+evidence and the complete isolated suite are accepted; no delivery or compatibility claim follows
+yet.
 
 For reported whole-app multi-second stalls, the
 [inspector owner](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) is the sole
