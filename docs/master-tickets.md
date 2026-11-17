@@ -39,18 +39,17 @@ primary repository since 2026-11-16; the Amp-hosted scaffold is gone. See
 ## Two-lane staffing audit, 2026-11-17
 
 Audited against fetched `b44e7c9a71473e1be0bf1159e9130c4528429afe` and the preserved candidates,
-then reconciled after accepted `f8fa072`. There are 142 canonical IDs: 65 delivered rows, nine
-owner-decision rows and 68 remaining queue entries. The 68 comprise 63 implementation/qualification
+then reconciled after accepted `b9f4bc4`. There are 142 canonical IDs: 66 delivered rows, nine
+owner-decision rows and 67 remaining queue entries. The 67 comprise 62 implementation/qualification
 candidates below, four conditional or parked entries and one umbrella. These are ticket counts, not
-a claim that 63 source changes are approved or immediately runnable.
+a claim that 62 source changes are approved or immediately runnable.
 
-The Sonnet queue has two candidates: REF-44 granted and CLIP-45 held. The Opus queue has 61: CLIP-2c
-granted, 19 ready to scope/assign and 41 dependency-, contract- or owner-gated. Across both lanes
-that is 21 ready or granted and 42 held. Ready means recorded technical predecessors are satisfied,
-not permission to edit shared paths or skip acceptance scoping. A held ticket can have an
-independently useful subpart, but its entire remaining scope is not ready. Preserve the delivery
-order above numeric order and optional cleanup. Reassess a classification when a bounded contract
-changes its scope.
+The Sonnet queue has one candidate: CLIP-45 held. The Opus queue has 61: CLIP-2c granted, 19 ready
+to scope/assign and 41 dependency-, contract- or owner-gated. Across both lanes that is 20 ready or
+granted and 42 held. Ready means recorded technical predecessors are satisfied, not permission to
+edit shared paths or skip acceptance scoping. A held ticket can have an independently useful
+subpart, but its entire remaining scope is not ready. Preserve the delivery order above numeric
+order and optional cleanup. Reassess a classification when a bounded contract changes its scope.
 
 ### Sonnet candidate queue
 
@@ -60,7 +59,6 @@ expand its grant.
 
 | Candidate           | Readiness       | Why this lane; remaining gate                                                                                                  |
 | ------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| [REF-44](#ref-44)   | Granted         | Owner request: Delete/Backspace removes the selection only while focus is in the timeline.                                     |
 | [CLIP-45](#clip-45) | Dependency-held | Existing-action widget and defaults only, after CLIP-40; reclassify if its scoped contract adds a new sharing/export pipeline. |
 
 ### Opus candidate queue
@@ -126,7 +124,7 @@ coordinator-serialized; no review gate changes.
 | Lane            | Worker                                                                           | Current grant                                                                       |
 | --------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
 | Opus 5.5 medium | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | CLIP-2e delivered at `a26c7e7`, exact-SHA CI44050988058 green; now granted CLIP-2c. |
-| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | REF-43 delivered at `f8fa072`, exact-SHA CI44124453125 green; now granted REF-44.   |
+| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | REF-44 delivered at `b9f4bc4`, exact-SHA CI44134842288 green; no active grant.      |
 
 CLIP-20b is delivered at `6156fb4`, a cherry-pick of the reviewed tree onto `f6b77aa` with all
 eleven source blobs unchanged. Coordinator gates on that exact tree passed 136 units, strict
@@ -245,15 +243,23 @@ LAND after one delta that matched Open's press, focus-visible ring and disabled 
 `all` passed on the exact head. A click within about 1.5 px of either button's right edge misses
 because of the shared 0.97 press scale; every button behaves this way.
 
-Sonnet now holds REF-44, the owner's request: Delete and Backspace remove the selected clip or zoom
-only while focus is inside the Main sequence panel (`#sequence-pane`, including the timeline body,
-clip trim grips and track controls). From the media pool, source, inspector, header, composition or
-page body they do nothing. Clicking a clip must leave focus in the timeline so the key works after a
-pointer selection. REF-40's slider exception stays. Granted paths are the Delete/Backspace branch of
-the window keydown handler in `src/App.tsx`, the timeline focus handling in `src/Timeline.tsx` if
-needed, the Shortcuts help row, a focused spec and
-`.agents/skills/verify-clipper/features/timeline-transport.md`. CLIP-2c touches neither area but
-adds a `place` callback directly above `removeSelected`; whichever lands second keeps both.
+REF-44 is delivered at
+[b9f4bc4](https://github.com/mite404/clipper/commit/b9f4bc4f94573a28c689f39212ff508b46598b9e) with
+[CI44134842288](https://github.com/mite404/clipper/actions/runs/44134842288). Delete and Backspace
+remove the selected clip or zoom only when the last panel the user pressed or focused is the Main
+sequence panel (`#sequence-pane`), tracked by capture-phase window `pointerdown` and `focusin`.
+Elsewhere the keys do nothing and are not claimed. It stays live after Undo or Ctrl+Z drops focus to
+the body, after clicks on the panel title or timecode, and after a trim-grip drag; hiding the
+timeline turns it off. Both reviews returned LAND after two deltas (Safari click focus, then panel
+tracking replacing the `activeElement` guard). `all` passed 149/149 on the exact head; isolated
+`performance` missed the cursor-follow `rafP95 < 100` bound once in five repeats, as unchanged
+`f8fa072` did in the same orb, so it is recorded as orb noise. Known, accepted: Enter on Hide
+timeline and Delete in the same frame can still delete; clicking the ruler leaves Delete inert
+(REF-40 slider rule). The Sonnet lane has no active grant.
+
+CLIP-2c is rebased and passes `all` 157/157, but isolated `performance` misses the cursor-follow
+bound more often than a same-orb base and paints about 10% fewer frames. It is not accepted-ready
+until Opus bisects, profiles and fixes the per-frame cost at its cause.
 
 CLIP-2c coordinator decision: copy and export draw the preview's mask shadow (`0 25px 65px #0005`,
 scaled by width / 1280), so preview, copy and export agree over a Background. This fixes a
@@ -392,7 +398,7 @@ upload is authorized.
 | ------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
 | Queue and delivery        | [T-136752bf](https://ampcode.com/threads/T-136752bf-6ed3-4930-b791-1cd134662797) | This file, acceptance and exclusive main push slot                    |
 | Non-simple implementation | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Opus medium; CLIP-2e delivered, CLIP-2c granted                       |
-| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; REF-43 delivered, REF-44 granted                         |
+| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; REF-44 delivered, no active grant                        |
 | Cursor implementation     | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant            |
 | Cursor inspector          | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) | Inspector delivered; no active implementation grant                   |
 | Workspace layout          | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | UI-2 delivered; no active implementation grant                        |
@@ -859,7 +865,7 @@ images were hosted, see [Known limits](#known-limits)).
 | Unsaved and shortcut fixes   | REF-39/40/41 delivered at `46e9dc7` with green exact-SHA CI44102354477; reservation released                                                                                            |
 | Open project keyboard access | REF-42 delivered at `6d4350d` with green exact-SHA CI44111981121; reservation released                                                                                                  |
 | Open project placement       | REF-43 delivered at `f8fa072` with green exact-SHA CI44124453125; reservation released                                                                                                  |
-| Timeline-scoped Delete       | REF-44 granted to Sonnet T-01a1e78d: App keydown Delete branch, Timeline focus, help row, focused spec, timeline-transport page                                                         |
+| Timeline-scoped Delete       | REF-44 delivered at `b9f4bc4` with green exact-SHA CI44134842288; reservation released                                                                                                  |
 | Verification follow-up       | VERIFY-6 delivered at `3260b3b`, exact-SHA CI44018967483 green; seven-path reservation released; no active worker acceptance                                                            |
 | Header cleanup               | No active implementation reservation after green UI-3 delivery                                                                                                                          |
 | Media drawer follow-up       | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                                                             |
@@ -1325,7 +1331,7 @@ original note for every row.
 | <a id="ref-41"></a>[REF-41](#ref-41)                 | Give Space to transport from a focused file input                   | Small  | Delivered at [46e9dc7](https://github.com/mite404/clipper/commit/46e9dc7d1affa2dfc7c722f67cbce9983ea9bfd8); green exact-SHA [CI44102354477](https://github.com/mite404/clipper/actions/runs/44102354477) | Owner-requested; Enter and click still open the chooser                                                             |
 | <a id="ref-42"></a>[REF-42](#ref-42)                 | Make Open project keyboard-reachable and refresh key-rule help/docs | Small  | Delivered at [6d4350d](https://github.com/mite404/clipper/commit/6d4350d81add221c831b428224c490e745cd3d3d); green exact-SHA [CI44111981121](https://github.com/mite404/clipper/actions/runs/44111981121) | The Open project input is `display: none` with no tab stop; help and timeline-transport docs predate REF-40/41      |
 | <a id="ref-43"></a>[REF-43](#ref-43)                 | Make Open project a Save-style button beside Save                   | Small  | Delivered at [f8fa072](https://github.com/mite404/clipper/commit/f8fa072553b10ecb744de84665fc93de0689a7c5); green exact-SHA [CI44124453125](https://github.com/mite404/clipper/actions/runs/44124453125) | Owner request; successor to REF-42, keeping its keyboard, chooser, discard and disabled behavior                    |
-| <a id="ref-44"></a>[REF-44](#ref-44)                 | Delete the selection only from the timeline                         | Small  | Granted to Sonnet [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7)                                                                                                       | Owner request; Delete/Backspace no-op when focus is outside the Main sequence panel                                 |
+| <a id="ref-44"></a>[REF-44](#ref-44)                 | Delete the selection only from the timeline                         | Small  | Delivered at [b9f4bc4](https://github.com/mite404/clipper/commit/b9f4bc4f94573a28c689f39212ff508b46598b9e); green exact-SHA [CI44134842288](https://github.com/mite404/clipper/actions/runs/44134842288) | Owner request; Delete/Backspace no-op when focus is outside the Main sequence panel                                 |
 | <a id="ref-32"></a>[REF-32](#ref-32)                 | Correct source-preview playback error and busy lifecycle            | Medium | Delivered at [4b49623](https://github.com/mite404/clipper/commit/4b4962397e4ac237ab774b8d4a2f2a44280514b2); [green exact-SHA CI](https://github.com/mite404/clipper/actions/runs/43986804408)            | Reservation released; canonical previews promoted and verified                                                      |
 | <a id="ref-33"></a>[REF-33](#ref-33)                 | Qualify download URL lifetime outside Chromium                      | Medium | Blocked                                                                                                                                                                                                  | another supported WebCodecs browser                                                                                 |
 | <a id="ref-34"></a>[REF-34](#ref-34)                 | Remove Player listener lifetime assumptions                         | Small  | Deferred proposal                                                                                                                                                                                        | reproduce a listener lifecycle defect first                                                                         |
