@@ -283,3 +283,92 @@ test('locks refuse delete, trim and insert, while toggles save, dirty and reopen
   await expect(toggle(page, `Unmute ${NAMES.voice}`)).toBeVisible();
   expect(await prompted()).toBe(false);
 });
+
+for (const [platform, cut] of [
+  ['MacIntel', 'Meta+KeyK'],
+  ['Win32', 'Alt+KeyK'],
+] as const)
+  test(`after a real ruler scrub the playhead keeps its arrow keys and gives ${cut} on ${platform}, L, K, C and V to the editor`, async ({
+    page,
+  }) => {
+    await open(page, platform);
+    const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
+    const box = (await playhead.boundingBox())!;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(box.x + box.width * 0.1, y);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width * 0.4, y, { steps: 8 });
+    await page.mouse.up();
+    await expect(playhead).toBeFocused();
+    const scrubbed = Number(await playhead.inputValue());
+    expect(scrubbed).toBeGreaterThan(30);
+    expect(scrubbed).toBeLessThan(170);
+
+    // Whether the editor claimed a key is its final defaultPrevented, read after dispatch ends.
+    await page.evaluate(() => {
+      const w = window as unknown as { claimed: [string, boolean][] };
+      w.claimed = [];
+      window.addEventListener(
+        'keydown',
+        (event) => setTimeout(() => w.claimed.push([event.code, event.defaultPrevented]), 0),
+        true,
+      );
+    });
+    const claimed = () =>
+      page.evaluate(() => (window as unknown as { claimed: [string, boolean][] }).claimed);
+    const clips = async () => Object.values(await lanes(page)).flat().length;
+    const state = page.getByTestId('transport-state');
+
+    await page.keyboard.press('ArrowRight');
+    await expect(playhead).toHaveValue(String(scrubbed + 1));
+    await expect(state).toHaveText('Paused');
+    expect(await clips()).toBe(5);
+    await expect.poll(claimed).toEqual([['ArrowRight', false]]);
+
+    // Deletion keys do nothing on a focused slider, even with a clip selected.
+    const undo = page.getByRole('button', { name: 'Undo', exact: true });
+    await expect(page.locator('.timeline-clip.selected')).toHaveCount(1);
+    for (const deletion of ['Delete', 'Backspace']) {
+      await page.keyboard.press(deletion);
+      expect(await clips()).toBe(5);
+      await expect(undo).toBeDisabled();
+    }
+    await page.getByRole('slider', { name: 'Corner radius' }).focus();
+    for (const deletion of ['Delete', 'Backspace']) {
+      await page.keyboard.press(deletion);
+      expect(await clips()).toBe(5);
+      await expect(undo).toBeDisabled();
+    }
+    await playhead.focus();
+
+    await page.keyboard.press(cut);
+    expect(await clips()).toBeGreaterThan(5);
+    await undo.click();
+    expect(await clips()).toBe(5);
+
+    await page.keyboard.press('KeyL');
+    await expect(state).toHaveText('Playing · 1×');
+    await page.keyboard.press('KeyK');
+    await expect(state).toHaveText('Paused');
+    await page.keyboard.press('KeyC');
+    await expect(toggle(page, 'Razor tool')).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('KeyV');
+    await expect(toggle(page, 'Selection tool')).toHaveAttribute('aria-pressed', 'true');
+    await playhead.focus();
+    await page.keyboard.press('Enter');
+    await expect(state).toHaveText('Paused');
+    await expect.poll(async () => (await claimed()).at(-1)).toEqual(['Enter', false]);
+
+    // A source-monitor slider keeps its arrows too, so the timeline playhead does not move.
+    const held = await playhead.inputValue();
+    const source = page.getByRole('slider', { name: 'Source preview position' });
+    await source.focus();
+    const before = await source.inputValue();
+    await page.keyboard.press('ArrowRight');
+    await expect(source).not.toHaveValue(before);
+    await expect(playhead).toHaveValue(held);
+    await expect.poll(async () => (await claimed()).at(-1)).toEqual(['ArrowRight', false]);
+    await page.keyboard.press('KeyL');
+    await expect(state).toHaveText('Playing · 1×');
+    await page.keyboard.press('KeyK');
+  });

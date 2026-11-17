@@ -69,6 +69,19 @@ import './styles.css';
 // Cmd+K cuts every unlocked track on a Mac; Alt+K does elsewhere, leaving Ctrl+K to the browser.
 const MAC = /Mac|iP(hone|ad|od)/.test(navigator.platform);
 
+// A focused slider keeps its movement keys and ignores deletion; everything else is a shortcut.
+const SLIDER_KEYS = [
+  'delete',
+  'backspace',
+  'arrowleft',
+  'arrowright',
+  'arrowup',
+  'arrowdown',
+  'home',
+  'end',
+  'pageup',
+  'pagedown',
+];
 // Saved track toggles compared as sets: their order carries no meaning.
 const toggleTrack = (tracks: Track[], track: Track) =>
   tracks.includes(track) ? tracks.filter((t) => t !== track) : [...tracks, track];
@@ -972,11 +985,13 @@ export function App() {
         return;
       const target = event.target instanceof HTMLElement ? event.target : null;
       const key = event.key.toLowerCase();
-      // Sliders, checkboxes and menus keep their own keys but give Space to transport. Enter
-      // replaces their Space action: it toggles a checkbox and opens a menu, whose arrow keys
-      // still work where showPicker is unavailable. Text and number entry keep every key.
-      if (target instanceof HTMLInputElement && !['range', 'checkbox'].includes(target.type))
-        return;
+      // Checkboxes and menus keep their own keys but give Space to transport. Enter replaces
+      // their Space action: it toggles a checkbox and opens a menu, whose arrow keys still work
+      // where showPicker is unavailable. A slider keeps only its movement keys, so a scrubbed
+      // playhead still takes every shortcut. Text and number entry keep every key.
+      const slider = target instanceof HTMLInputElement && target.type === 'range';
+      if (slider && (key === 'enter' || SLIDER_KEYS.includes(key))) return;
+      if (target instanceof HTMLInputElement && !slider && target.type !== 'checkbox') return;
       if (target instanceof HTMLSelectElement || target instanceof HTMLInputElement) {
         if (key === 'enter' && target.type !== 'range') {
           event.preventDefault();
@@ -991,7 +1006,7 @@ export function App() {
             target.click();
           }
         }
-        if (key !== ' ') return;
+        if (key !== ' ' && !slider) return;
       } else if (target?.tagName === 'TEXTAREA' || target?.isContentEditable) return;
       // Physical K, so Option+K's dead key still matches; only the platform's one modifier.
       if (
