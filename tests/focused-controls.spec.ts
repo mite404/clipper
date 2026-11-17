@@ -131,7 +131,6 @@ test('checkbox Enter toggles, select Enter opens its picker, and Space stays tra
   await expect(source).toHaveValue('2');
 });
 
-// The Open project input is display:none, so it can never hold keyboard focus.
 test('Space plays and pauses from the focused Import media file input without opening the chooser', async ({
   page,
 }) => {
@@ -154,4 +153,56 @@ test('Space plays and pauses from the focused Import media file input without op
   await page.keyboard.press('Enter');
   await expect.poll(() => choosers).toBe(1);
   await expect(state).toHaveText('Paused');
+});
+
+test('Tab reaches Open project, Enter opens one chooser and Space plays without one', async ({
+  page,
+}, info) => {
+  await open(page);
+  const state = page.getByTestId('transport-state');
+  const input = page.getByLabel('Open local project');
+  let choosers = 0;
+  page.on('filechooser', () => choosers++);
+  await page.locator('.app-header').click({ position: { x: 4, y: 4 } });
+  let presses = 0;
+  while (presses < 12 && !(await input.evaluate((el) => el === document.activeElement))) {
+    await page.keyboard.press('Tab');
+    presses++;
+  }
+  await expect(input).toBeFocused();
+  // Chromium reports a 3px width with style none when there is no outline, so check the style.
+  const ring = await page.locator('.project-open').evaluate((el) => {
+    const style = getComputedStyle(el);
+    return { width: parseFloat(style.outlineWidth), style: style.outlineStyle };
+  });
+  expect(ring.style).toBe('solid');
+  expect(ring.width).toBeGreaterThanOrEqual(2);
+  await page.locator('.app-header').screenshot({
+    path: info.outputPath('open-project-focus.png'),
+  });
+  await page.keyboard.press('Space');
+  await expect(state).toHaveText('Playing · 1×');
+  await page.keyboard.press('Space');
+  await expect(state).toHaveText('Paused');
+  await page.waitForTimeout(300);
+  expect(choosers).toBe(0);
+  await page.keyboard.press('Enter');
+  await expect.poll(() => choosers).toBe(1);
+});
+
+test('Open project looks and acts disabled while an export runs', async ({ page }, info) => {
+  await open(page);
+  await page.getByRole('button', { name: 'Export video', exact: true }).click();
+  await page.getByRole('button', { name: 'Render video', exact: true }).click();
+  await expect(page.getByRole('progressbar', { name: 'Video export progress' })).toBeVisible();
+  const label = page.locator('.project-open');
+  await expect(page.getByLabel('Open local project')).toBeDisabled();
+  await expect(label).toHaveCSS('opacity', '0.45');
+  await expect(label).toHaveCSS('pointer-events', 'none');
+  await page
+    .locator('.app-header')
+    .screenshot({ path: info.outputPath('open-project-disabled.png') });
+  await page.getByRole('button', { name: 'Cancel export', exact: true }).click();
+  await expect(page.getByLabel('Open local project')).toBeEnabled();
+  await expect(label).toHaveCSS('opacity', '1');
 });

@@ -1839,7 +1839,7 @@ export function App() {
           ['J', 'Rewind · repeat for 2× / 4× (silent)'],
           ['K', 'Pause'],
           ['L', 'Play · repeat for 2× / 4×'],
-          ['Space', 'Play / pause · also from sliders, menus and checkboxes'],
+          ['Space', 'Play / pause · also from sliders, menus, checkboxes and file buttons'],
           ['Enter', 'Toggle a focused checkbox or open a focused menu'],
           ['← / →', 'Step one frame'],
           ['V / C', 'Selection tool / Razor tool (click a clip to cut it)'],

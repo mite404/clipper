@@ -1997,9 +1997,22 @@ p {
 .project-open {
   cursor: pointer;
   font-size: 11px;
+  position: relative;
 }
 .project-open input {
-  display: none;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+}
+.project-open:has(input:disabled) {
+  opacity: 0.45;
+  pointer-events: none;
+}
+.project-open:focus-within {
+  outline: 2px solid var(--violet);
+  outline-offset: 3px;
 }
 .export-controls {
   display: flex;

@@ -65,6 +65,13 @@ that a focused checkbox toggles once on Enter, even when Enter is held, and neve
 Space. It checks that a focused select opens its picker on Enter, keeps arrow keys when `showPicker`
 throws, and plays on Space. It also checks that number entry never drives transport.
 
+REF-40 and REF-41 refine that rule, and `split-tools.spec.ts` and `focused-controls.spec.ts` check
+it. A focused slider keeps arrows, Home, End and the Page keys, ignores Delete and Backspace, and
+passes every other key to the shortcuts. After a real mouse scrub of the ruler, K/L, C/V and the cut
+chord still work and arrows only step the playhead. A focused file input, Import media or Open
+project, gives Space to transport without opening its chooser, while Enter still opens it. Tab
+reaches the Open project input (REF-42) and a visible focus ring marks its label.
+
 REF-20 adds an independent held-rewind check in `editor`. At 1×, 2× and 4× it pauses between readout
 paints, compares the held playhead with camera media time, steps forward once and returns with
 Previous frame. It also rewinds to zero and steps to frame 1. `performance` observes readout
