@@ -1057,6 +1057,7 @@ original note for every row.
 | ---------------------------------------------------- | ---------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | <a id="doc-2"></a>[DOC-2](#doc-2)                    | Audit ticket coverage, IDs and delivery evidence                 | Small  | Delivered at [a8078ff](https://github.com/mite404/clipper/commit/a8078ffb4d737bf028bd0b864f31125dbd510263), [green CI](https://github.com/mite404/clipper/actions/runs/43789649834)           | nothing                                                                                                 |
 | <a id="ref-27"></a>[REF-27](#ref-27)                 | Select real MP4/MOV/WebM exports and qualify codecs              | Medium | Delivered at [27099dc](https://github.com/mite404/clipper/commit/27099dcf976a1d6eae6b39d431e33afae7659f9a); [green exact-SHA CI](https://github.com/mite404/clipper/actions/runs/44001648378) | Reservation released                                                                                    |
+| <a id="ref-27b"></a>[REF-27b](#ref-27b)              | Show the complete export filename before the native save dialog  | Small  | Queued; GPT-6.1 Sol medium implementation required                                                                                                                                            | Bounded export-dialog hunk grant; coordinate active CLIP-20b App ownership                              |
 | <a id="ref-28"></a>[REF-28](#ref-28)                 | Define missing decoded-frame behavior                            | Medium | Proposal                                                                                                                                                                                      | reproduce null and early-end decoder cases                                                              |
 | <a id="ref-29"></a>[REF-29](#ref-29)                 | Assess complexity-score baseline blind spots                     | Small  | Deferred proposal                                                                                                                                                                             | only if count-only baseline permits real growth                                                         |
 | <a id="ref-30"></a>[REF-30](#ref-30)                 | Progress and cancellation for import, Open and Save              | Large  | Proposal                                                                                                                                                                                      | define bounded-memory and cancellation behavior with REF-22                                             |
@@ -1534,6 +1535,16 @@ public; native AAC, Safari/macOS, physical speakers, universal MOV playback and 
 compatibility remain unclaimed. See the
 [acceptance evidence](https://ampcode.com/artifacts/ref-27-acceptance-evidence-1c4d6327-5fb4-4334-862f-e575e5279762).
 No deployment or preview promotion is claimed.
+
+REF-27b follows the owner's portal test: MP4/MOV exports work and saved files have extensions, but
+the native save-dialog filename field hides them. Clipper already supplies the extension through
+`anchor.download`; do not append a second suffix or claim control of native OS display settings.
+Show the complete prospective filename in the export dialog, updating with format/resolution, with a
+short note that the save dialog may hide the extension. Preserve actual MIME/container/download
+agreement. Keep scope to export-dialog/name hunks and existing affected browser tests; coordinate
+the active CLIP-20b App reservation before granting edits. Verify MP4/MOV/WebM filename display,
+actual suggested download names, long-name/narrow layout and keyboard access. No codec, encoder,
+native-dialog replacement, naming-system redesign or still-media change is requested.
 
 For reported whole-app multi-second stalls, the
 [inspector owner](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) is the sole
