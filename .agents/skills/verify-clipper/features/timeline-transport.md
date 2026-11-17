@@ -72,10 +72,13 @@ chord still work and arrows only step the playhead. A focused file input, Import
 project, gives Space to transport without opening its chooser, while Enter still opens it. Tab
 reaches the Open project input (REF-42) and a visible focus ring marks its label.
 
-REF-44 limits Delete and Backspace to the timeline. They remove the selected clip or zoom only when
-focus is inside the Main sequence panel, including a clip a pointer just selected and a trim grip.
-With focus in the media pool, source monitor, inspector, header or page body they do nothing and the
-browser keeps the key (`focused-controls.spec.ts`, run by `all`).
+REF-44 limits Delete and Backspace to the timeline panel. They remove the selected clip or zoom only
+while the last pressed or focused element was inside the Main sequence panel. The editor tracks that
+panel itself rather than `document.activeElement`, so Delete still works after the app drops focus
+(Delete then Undo, or Undo disabling itself), after a click on the panel title or timecode, and
+after a pointer selection a browser does not focus. Pressing or tabbing into the media pool, source
+monitor, inspector, header or page body hands the keys back: they do nothing and the browser keeps
+them (`focused-controls.spec.ts`, run by `all`).
 
 REF-20 adds an independent held-rewind check in `editor`. At 1×, 2× and 4× it pauses between readout
 paints, compares the held playhead with camera media time, steps forward once and returns with

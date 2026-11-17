@@ -341,48 +341,109 @@ test('Delete and Backspace remove the selection only from inside the timeline', 
   await expect(clips).toHaveCount(1);
 });
 
-test('a pointer selection moves focus into the timeline even where the browser would not', async ({
-  page,
-}) => {
-  await open(page);
-  const clips = page.getByTestId('track-screen').getByRole('button');
-  const zooms = page.getByRole('button', { name: 'Select zoom', exact: true });
-  const undo = page.getByRole('button', { name: 'Undo', exact: true });
-  const pool = page.getByRole('button', { name: 'Select A conversation', exact: true });
-  const inTimeline = () => page.evaluate(() => !!document.activeElement?.closest('#sequence-pane'));
-  // A programmatic click selects without moving focus in Chromium, as a click does in Safari.
-  const quiet = (target: Locator) => target.evaluate((el: HTMLElement) => el.click());
+test.describe('Delete follows the last clicked or focused panel', () => {
+  test.beforeEach(async ({ page }) => {
+    await open(page);
+  });
+  const clips = (page: Page) => page.getByTestId('track-screen').getByRole('button');
+  const pool = (page: Page) =>
+    page.getByRole('button', { name: 'Select A conversation', exact: true });
 
-  for (const key of ['Delete', 'Backspace']) {
-    await pool.focus();
-    await quiet(clips.first());
-    await expect(clips.first()).toHaveAttribute('aria-pressed', 'true');
-    expect(await inTimeline()).toBe(true);
-    await page.keyboard.press(key);
-    await expect(clips).toHaveCount(1);
+  test('survives the app taking focus away, by Undo and by a disabling Undo', async ({ page }) => {
+    const undo = page.getByRole('button', { name: 'Undo', exact: true });
+    await clips(page).nth(1).click();
+    await page.keyboard.press('Delete');
+    await expect(clips(page)).toHaveCount(1);
+    await page.keyboard.press('ControlOrMeta+z');
+    await expect(clips(page)).toHaveCount(2);
+    await expect(clips(page).nth(1)).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Delete');
+    await expect(clips(page)).toHaveCount(1);
     await undo.click();
-    await expect(clips).toHaveCount(2);
-  }
+    await expect(clips(page)).toHaveCount(2);
 
-  await page.getByRole('button', { name: 'Add zoom at playhead' }).first().click();
-  await expect(zooms).toHaveCount(1);
-  await clips.first().click();
-  await pool.focus();
-  await quiet(zooms);
-  await expect(zooms).toHaveClass(/selected/);
-  expect(await inTimeline()).toBe(true);
-  await page.keyboard.press('Delete');
-  await expect(zooms).toHaveCount(0);
-  await expect(clips).toHaveCount(2);
+    // Cut at a mid frame, then Undo disables itself and drops focus to the page body.
+    await page.getByRole('slider', { name: 'Timeline playhead' }).fill('90');
+    await clips(page).first().click();
+    await page.keyboard.press('Alt+KeyK');
+    await expect(clips(page)).toHaveCount(3);
+    await undo.click();
+    await expect(undo).toBeDisabled();
+    await expect(clips(page)).toHaveCount(2);
+    await expect(clips(page).first()).toHaveAttribute('aria-pressed', 'true');
+    await page.keyboard.press('Delete');
+    await expect(clips(page)).toHaveCount(1);
+  });
 
-  // Pressing a trim grip selects its clip; its handler cancels the default focus change.
-  await pool.focus();
-  const grip = page.getByRole('slider', { name: 'Trim left edge' }).first();
-  const box = (await grip.boundingBox())!;
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.mouse.down();
-  await page.mouse.up();
-  expect(await inTimeline()).toBe(true);
-  await page.keyboard.press('Delete');
-  await expect(clips).toHaveCount(1);
+  test('a click on the panel title or timecode keeps Delete live', async ({ page }) => {
+    for (const target of [
+      page.getByText('Main sequence', { exact: true }),
+      page.getByTestId('timecode'),
+    ]) {
+      await clips(page).first().click();
+      await pool(page).focus();
+      await target.click();
+      await page.keyboard.press('Delete');
+      await expect(clips(page)).toHaveCount(1);
+      await page.getByRole('button', { name: 'Undo', exact: true }).click();
+      await expect(clips(page)).toHaveCount(2);
+    }
+  });
+
+  test('a real drag on a trim grip, or a click that never focuses, leaves the timeline active', async ({
+    page,
+  }) => {
+    await clips(page).first().click();
+    await pool(page).focus();
+    const grip = page.getByRole('slider', { name: 'Trim right edge' }).first();
+    const box = (await grip.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 - 40, box.y + box.height / 2, { steps: 4 });
+    await page.mouse.up();
+    await page.keyboard.press('Delete');
+    await expect(clips(page)).toHaveCount(1);
+    await page.getByRole('button', { name: 'Undo', exact: true }).first().click();
+
+    // Safari fires pointerdown on the clip but does not focus a clicked button.
+    await clips(page)
+      .first()
+      .evaluate((el: HTMLElement) => {
+        document.body.focus();
+        el.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, pointerId: 1 }));
+        el.click();
+      });
+    await pool(page).evaluate((el: HTMLElement) => el.blur());
+    await page.keyboard.press('Delete');
+    await expect(clips(page)).toHaveCount(1);
+  });
+
+  test('moving focus out of the timeline by Tab hands Delete back to the page', async ({
+    page,
+  }) => {
+    await clips(page).first().click();
+    await expect(clips(page).first()).toBeFocused();
+    const where = () =>
+      page.evaluate(() => {
+        const el = document.activeElement;
+        return el?.closest('#sequence-pane')
+          ? 'timeline'
+          : el?.closest('.inspector')
+            ? 'inspector'
+            : 'other';
+      });
+    let reached = false;
+    for (const key of ['Tab', 'Shift+Tab']) {
+      for (let press = 0; press < 80 && !reached; press++) {
+        await page.keyboard.press(key);
+        reached = (await where()) === 'inspector';
+      }
+      if (reached) break;
+      await clips(page).first().focus();
+    }
+    expect(reached).toBe(true);
+    await page.keyboard.press('Delete');
+    await page.keyboard.press('Backspace');
+    await expect(clips(page)).toHaveCount(2);
+  });
 });

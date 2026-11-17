@@ -980,6 +980,22 @@ export function App() {
     );
   }, [duration, edit, change]);
 
+  // Delete follows the last panel the user pressed or focused, not document.activeElement, which
+  // drops to the body whenever the app removes or disables the focused control.
+  const inTimeline = useRef(false);
+  useEffect(() => {
+    const track = (event: Event) => {
+      inTimeline.current =
+        event.target instanceof Element && !!event.target.closest('#sequence-pane');
+    };
+    window.addEventListener('pointerdown', track, true);
+    window.addEventListener('focusin', track, true);
+    return () => {
+      window.removeEventListener('pointerdown', track, true);
+      window.removeEventListener('focusin', track, true);
+    };
+  }, []);
+
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (help || busy || exportProgress !== null || markingMouse || exportDialog.current?.open)
@@ -1039,9 +1055,9 @@ export function App() {
         addZoom();
         return;
       }
-      // Deletion belongs to the timeline: with focus anywhere else the keys are left alone.
+      // Deletion belongs to the timeline: after a press or focus anywhere else the keys are left alone.
       const deletion = key === 'delete' || key === 'backspace';
-      if (deletion && !document.activeElement?.closest('#sequence-pane')) return;
+      if (deletion && !inTimeline.current) return;
       if (['j', 'k', 'l', ' ', 'arrowleft', 'arrowright', 'delete', 'backspace'].includes(key))
         event.preventDefault();
       if (key === 'j') setSpeed((s) => (s < 0 ? Math.max(-4, s * 2) : -1));
