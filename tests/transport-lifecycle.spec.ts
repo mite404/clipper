@@ -47,12 +47,12 @@ test('hiding the native tab pauses rewind and returning holds its frame', async 
   test.setTimeout(60000);
   const profile = await mkdtemp(path.join(tmpdir(), 'clipper-visibility-'));
   // Playwright's normal page session emulates focus and keeps background tabs visible.
-  const process = spawn(
-    chromium.executablePath(),
+  const chrome = spawn(
+    process.env.CHROME_PATH || chromium.executablePath(),
     ['--headless=new', '--no-sandbox', '--remote-debugging-port=0', `--user-data-dir=${profile}`],
     { stdio: 'ignore' },
   );
-  const exited = new Promise((resolve) => process.once('exit', resolve));
+  const exited = new Promise((resolve) => chrome.once('exit', resolve));
   let browser;
   try {
     const portFile = path.join(profile, 'DevToolsActivePort');
@@ -148,7 +148,7 @@ test('hiding the native tab pauses rewind and returning holds its frame', async 
     }
   } finally {
     await browser?.close();
-    process.kill();
+    chrome.kill();
     await exited;
     await rm(profile, { recursive: true, force: true, maxRetries: 5 });
   }

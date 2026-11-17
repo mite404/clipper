@@ -63,9 +63,10 @@ journeys cannot accidentally target a stale shared preview.
 - `delivery` runs the mouse-focus save/reopen check and the malformed-project check only.
 - `export` runs every `export.spec.ts` check: cancellation, muted audio, decoded HD/4K fixtures,
   exact source frames and long-audio mix timing.
-- `editor` runs every `editor.spec.ts`, `transport-end.spec.ts` and `refinements.spec.ts` check,
-  including undo, keys, held pause, eight forward endings, mixed and stalled imports, unsaved-edit
-  guards, save recovery and UI-driven HD/4K export.
+- `editor` runs every `editor.spec.ts`, `transport-end.spec.ts`, `transport-lifecycle.spec.ts` and
+  `refinements.spec.ts` check, including undo, keys, held pause, eight forward endings, held-Space
+  and hidden-tab transport lifecycle, mixed and stalled imports, unsaved-edit guards, save recovery
+  and UI-driven HD/4K export.
 - `storybook` builds and tests the shared library and its stress states (`storybook.spec.ts` only).
 - `performance` builds production code and repeats the responsiveness assertions five times.
 - `all` builds both previews and discovers the entire existing suite, including new spec files. It

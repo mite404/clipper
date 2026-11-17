@@ -42,6 +42,14 @@ modified-key and delete/undo/clamp journeys, the one-step slider undo and the 50
 `.agents/skills/verify-clipper/scripts/verify.mjs performance` separately for five production
 playback responsiveness checks without trace/video overhead.
 
+REF-31 adds `tests/transport-lifecycle.spec.ts` to `editor`: a held Space toggles once until it is
+released and pressed again; hiding a real second tab pauses rewind at 1× and 4× and returning holds
+the frame, timecode and both videos for twenty paints, with a fresh rewind afterwards; and a focused
+playhead slider, modifier chords, the shortcuts dialog, J/K/L and repeated arrow stepping keep
+working. The hidden-tab test spawns Chromium, so it launches `CHROME_PATH` when set and the
+installed Chromium otherwise. Its test budget is sixty seconds, including a thirty-second wait for
+the DevTools port.
+
 REF-20 adds an independent held-rewind check in `editor`. At 1×, 2× and 4× it pauses between readout
 paints, compares the held playhead with camera media time, steps forward once and returns with
 Previous frame. It also rewinds to zero and steps to frame 1. `performance` observes readout
@@ -53,9 +61,9 @@ time matching the held playhead after pause.
 
 The older held-pause journey proves stepping is consistent with the displayed timecode, not
 independent player parity. REF-20 compares camera media time, not decoded pixels or the player's
-internal frame, and bounds DOM changes rather than React commits. Hidden-tab rewind jumps,
-held-Space toggles (REF-31), mute of one track at a time (REF-36) and per-clip retiming (CLIP-16)
-have no coverage.
+internal frame, and bounds DOM changes rather than React commits. Mute of one track at a time
+(REF-36) and per-clip retiming (CLIP-16) have no coverage. The REF-31 checks use Chromium only; they
+do not cover Safari, Firefox, a physical device or speaker output.
 
 J is silent frame-by-frame seeking because browsers do not decode reverse audio. Click a source
 preview to play it independently; it is not the composition clock. Filmstrips repeat the decoded

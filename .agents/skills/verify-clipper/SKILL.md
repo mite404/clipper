@@ -47,7 +47,8 @@ Require `Clipper CLI doctor OK`. Doctor checks bundled media files, launches the
 opens a video-recording-capable context, closes it, and checks FFmpeg/ffprobe. It does not install
 anything, start a server, or prove playback. Journeys then require `4 assets ready` through the
 actual UI and assert the feature's observable result. `CHROME_PATH` optionally overrides the browser
-binary; it is not required with Playwright Chromium installed.
+binary for doctor and for the native hidden-tab launch in `tests/transport-lifecycle.spec.ts`; it is
+not required with Playwright Chromium installed.
 
 ## Gate
 
@@ -110,11 +111,11 @@ playback, and Mediabunny decoding. No media APIs are mocked.
 .agents/skills/verify-clipper/scripts/verify.mjs all
 ```
 
-`editor` runs editor, transport-end and refinement specs. The other names select feature specs or
-titles in `scripts/verify.mjs`. `all` discovers every spec, preserving the root configuration's
-separate editor/4K projects. These specs run only under `all`: `controls`, `cursor`,
-`cursor-render`, `cursor-rotation`, `cursor-shapes`, `cursor-speeds`, `auto-zoom`, `framing`,
-`frame-image` and `icon-button`. There are no narrower journeys for them on purpose;
+`editor` runs editor, transport-end, transport-lifecycle and refinement specs. The other names
+select feature specs or titles in `scripts/verify.mjs`. `all` discovers every spec, preserving the
+root configuration's separate editor/4K projects. These specs run only under `all`: `controls`,
+`cursor`, `cursor-render`, `cursor-rotation`, `cursor-shapes`, `cursor-speeds`, `auto-zoom`,
+`framing`, `frame-image` and `icon-button`. There are no narrower journeys for them on purpose;
 features/README.md lists what each named journey selects. All runs use one worker, no retries, and
 fail on skipped, flaky, or zero tests. New journeys belong in the same table, not a second browser
 implementation.
@@ -145,6 +146,9 @@ ms delay.
 The eight-ending transport check retains DOM/action/network traces and final screenshots, but
 disables trace screencast frames and video. Continuous raster recording competes with media decoding
 on two-core runners. This file-level exception leaves all other editor capture settings unchanged.
+`transport-lifecycle.spec.ts` makes the same exception for a stronger reason: raster capture keeps a
+background tab visible, so its native hidden-tab test launches Chromium itself and connects over
+CDP.
 
 Import checks observe non-GET requests and require zero uploads. Save checks read the actual JSON
 download and reopen it after reload. Export checks use ffprobe and FFmpeg to inspect the actual

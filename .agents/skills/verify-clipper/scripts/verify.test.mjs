@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { spawn, spawnSync } from 'node:child_process';
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -178,6 +179,107 @@ test('doctor diagnoses an invalid browser executable', () => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Browser launch failed/);
   assert.match(result.stderr, /CHROME_PATH/);
+});
+
+test('editor journey runs the transport lifecycle spec and no unrelated spec', async () => {
+  const workspace = await mkdtemp(path.join(tmpdir(), 'clipper-select-test-'));
+  try {
+    const scripts = path.join(workspace, '.agents/skills/verify-clipper/scripts');
+    await mkdir(scripts, { recursive: true });
+    await cp(cli, path.join(scripts, 'verify.mjs'));
+    await symlink(path.join(root, 'node_modules'), path.join(workspace, 'node_modules'));
+    await symlink(path.join(root, 'public'), path.join(workspace, 'public'));
+    await writeFile(path.join(workspace, 'index.html'), '<h1>Selection stub</h1>');
+    await writeFile(
+      path.join(scripts, 'playwright.config.mjs'),
+      `export default { testDir: ${JSON.stringify(workspace)} };`,
+    );
+    for (const spec of [
+      'editor',
+      'transport-end',
+      'refinements',
+      'transport-lifecycle',
+      'controls',
+    ]) {
+      await writeFile(
+        path.join(workspace, `${spec}.spec.ts`),
+        `import { test } from "@playwright/test"; test("${spec} ran", () => {});`,
+      );
+    }
+    const result = spawnSync(process.execPath, [path.join(scripts, 'verify.mjs'), 'editor'], {
+      encoding: 'utf8',
+      env: { ...process.env, VERIFY_EVIDENCE: path.join(workspace, 'evidence') },
+      timeout: 60000,
+    });
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const [run] = await readdir(path.join(workspace, 'evidence'));
+    const results = JSON.parse(
+      await readFile(path.join(workspace, 'evidence', run, 'results.json')),
+    );
+    assert.deepEqual(results.suites.map((suite) => suite.file).sort(), [
+      'editor.spec.ts',
+      'refinements.spec.ts',
+      'transport-end.spec.ts',
+      'transport-lifecycle.spec.ts',
+    ]);
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
+});
+
+test('native tab test launches the CHROME_PATH executable', async () => {
+  const workspace = await mkdtemp(path.join(tmpdir(), 'clipper-native-path-test-'));
+  try {
+    const { chromium } = await import('@playwright/test');
+    const launched = path.join(workspace, 'launched.txt');
+    const wrapper = path.join(workspace, 'chrome-wrapper.sh');
+    await writeFile(
+      wrapper,
+      '#!/bin/sh\nprintf "%s\\n" "$@" >> "$WRAPPER_LOG"\nexec "$WRAPPED_CHROME" "$@"\n',
+      { mode: 0o755 },
+    );
+    const closed = createServer();
+    await new Promise((resolve) => closed.listen(0, '127.0.0.1', resolve));
+    const { port } = closed.address();
+    await new Promise((resolve) => closed.close(resolve));
+    const config = path.join(workspace, 'playwright.config.mjs');
+    await writeFile(
+      config,
+      `export default { testDir: ${JSON.stringify(path.join(root, 'tests'))}, outputDir: ${JSON.stringify(path.join(workspace, 'results'))}, workers: 1, retries: 0, use: { baseURL: 'http://127.0.0.1:${port}' } };`,
+    );
+    const result = spawnSync(
+      process.execPath,
+      [
+        'node_modules/@playwright/test/cli.js',
+        'test',
+        '--config',
+        config,
+        '--reporter=json',
+        'transport-lifecycle',
+        '--grep',
+        'hiding the native tab',
+      ],
+      {
+        cwd: root,
+        encoding: 'utf8',
+        env: {
+          ...process.env,
+          CHROME_PATH: wrapper,
+          WRAPPED_CHROME: process.env.CHROME_PATH || chromium.executablePath(),
+          WRAPPER_LOG: launched,
+        },
+        timeout: 60000,
+      },
+    );
+    // The app is deliberately unreachable: the test must fail at navigation, after the browser
+    // it launched has connected.
+    assert.match(result.stdout, /ERR_CONNECTION_REFUSED/, result.stdout + result.stderr);
+    const args = await readFile(launched, 'utf8');
+    assert.match(args, /--remote-debugging-port=0/);
+    assert.match(args, /clipper-visibility-/);
+  } finally {
+    await rm(workspace, { recursive: true, force: true });
+  }
 });
 
 test('interruption retains a failed verdict and releases test server ports', async () => {
