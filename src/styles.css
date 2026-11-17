@@ -43,7 +43,8 @@ button:disabled,
   opacity: 0.35;
   cursor: not-allowed;
 }
-button:active:not(:disabled) {
+button:active:not(:disabled),
+.project-open:active:not(:has(input:disabled)) {
   transform: scale(0.97);
 }
 a {
@@ -1815,7 +1816,8 @@ p {
   margin-top: 24px;
 }
 @media (prefers-reduced-motion: reduce) {
-  button:active:not(:disabled) {
+  button:active:not(:disabled),
+  .project-open:active:not(:has(input:disabled)) {
     transform: none;
   }
 }
@@ -2006,11 +2008,11 @@ p {
   cursor: pointer;
   width: 100%;
 }
-.project-open:has(input:disabled) {
+.project-open input:disabled {
   pointer-events: none;
 }
-.project-open:focus-within {
-  outline: 2px solid var(--violet);
+.project-open:has(input:focus-visible) {
+  outline: 2px solid #c2b4ff;
   outline-offset: 3px;
 }
 .export-controls {

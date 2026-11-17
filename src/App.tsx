@@ -10,7 +10,6 @@ import {
 import { Player, type PlayerRef } from '@remotion/player';
 import {
   ArrowDownToLine,
-  FolderOpen,
   ArrowLeft,
   ArrowRight,
   Check,
@@ -19,6 +18,7 @@ import {
   CornerUpLeft,
   Copy,
   Crop,
+  FolderOpen,
   Maximize2,
   MousePointer2,
   PanelLeftClose,

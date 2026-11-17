@@ -173,10 +173,13 @@ test('Tab reaches Open project, Enter opens one chooser and Space plays without 
   // Chromium reports a 3px width with style none when there is no outline, so check the style.
   const ring = await page.locator('.project-open').evaluate((el) => {
     const style = getComputedStyle(el);
-    return { width: parseFloat(style.outlineWidth), style: style.outlineStyle };
+    return {
+      width: parseFloat(style.outlineWidth),
+      style: style.outlineStyle,
+      color: style.outlineColor,
+    };
   });
-  expect(ring.style).toBe('solid');
-  expect(ring.width).toBeGreaterThanOrEqual(2);
+  expect(ring).toEqual({ width: 2, style: 'solid', color: 'rgb(194, 180, 255)' });
   await page.locator('.app-header').screenshot({
     path: info.outputPath('open-project-focus.png'),
   });
@@ -207,7 +210,16 @@ test('Open project looks and acts disabled while an export runs', async ({ page 
     });
   expect(await look(label)).toEqual(await look(save));
   expect((await look(label))[0]).toBe('0.35');
-  await expect(label).toHaveCSS('pointer-events', 'none');
+  // Only the input ignores the pointer, so hovering the label still shows not-allowed.
+  await expect(page.getByLabel('Open local project')).toHaveCSS('pointer-events', 'none');
+  await expect(label).toHaveCSS('pointer-events', 'auto');
+  let choosers = 0;
+  page.on('filechooser', () => choosers++);
+  await label.click({ force: true });
+  await page.waitForTimeout(300);
+  expect(choosers).toBe(0);
+  await expect(page.getByLabel('Open local project')).not.toBeFocused();
+  expect(await look(label)).toEqual(await look(save));
   await page
     .locator('.app-header')
     .screenshot({ path: info.outputPath('open-project-disabled.png') });
@@ -237,4 +249,33 @@ test('Open project is a filled button directly right of Save project in the same
       .evaluate((header) => [...header.children].map((child) => child.className.split(' ')[0]));
     expect(order.slice(1, 4)).toEqual(['save-button', 'save-button', 'header-actions']);
   }
+});
+
+test('a mouse click on Open project leaves no ring and a press scales it like Save', async ({
+  page,
+}) => {
+  await open(page);
+  const label = page.locator('.project-open');
+  const save = page.getByRole('button', { name: 'Save project', exact: true });
+  let choosers = 0;
+  page.on('filechooser', () => choosers++);
+  await label.click();
+  await expect.poll(() => choosers).toBe(1);
+  expect(await label.evaluate((el) => getComputedStyle(el).outlineStyle)).toBe('none');
+
+  // Press and hold, read the transform, then release away from the label so no chooser opens.
+  const pressed = async (el: Locator) => {
+    const box = (await el.boundingBox())!;
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+    await page.mouse.down();
+    const transform = await el.evaluate((node) => getComputedStyle(node).transform);
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height + 200);
+    await page.mouse.up();
+    return transform;
+  };
+  const scale = 'matrix(0.97, 0, 0, 0.97, 0, 0)';
+  expect(await pressed(save)).toBe(scale);
+  await expect(label).toHaveCSS('transform', 'none');
+  expect(await pressed(label)).toBe(scale);
+  expect(choosers).toBe(1);
 });
