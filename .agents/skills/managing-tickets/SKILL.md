@@ -15,12 +15,18 @@ repository root. This skill owns the workflow policy, not ticket status or curre
 - Read the master's current scope, dependencies, owner and path reservations before assigning work.
   Prioritize correctness, performance and unblocking changes before dependent features; optional
   cleanup must not delay features. Wait for dependencies rather than taking another owner's paths.
-- Preserve existing assignments, models, candidates and unshipped changes. Obtain the coordinator's
-  exact-path grant before a worker edits shared files. The coordinator retains the sole main writer
-  and push slot; disjoint preparation does not grant concurrent delivery or acceptance runs.
-- Implementation workers use `openai/gpt-6.1-sol` with medium effort. Opus and Fable are reserved
-  for research/review, called sparingly. Preserve existing work and locked thread models; assign
-  future independent reviews under the model policy below.
+- Preserve existing models, candidates and unshipped changes when transferring assignments. Obtain
+  the coordinator's exact-path grant before a worker edits shared files. The coordinator retains the
+  sole main writer and push slot; disjoint preparation does not grant concurrent delivery or
+  acceptance runs.
+- Maintain exactly two implementation workers: `anthropic/claude-opus-5-5` with medium effort for
+  non-simple tickets, and `anthropic/claude-sonnet-5-5` with high effort for easy, bounded tickets.
+  Keep both queues, readiness, ownership transfers and disjoint grants in the master. Transfer
+  preserved candidates before editing; former implementation owners retain evidence without a
+  concurrent implementation grant. Additional implementation workers need the owner's approval.
+- Other newly created worker threads use `anthropic/claude-opus-5-5` with medium effort unless Mite
+  explicitly names an exception. Existing threads retain their locked models. The two-lane
+  implementation exception does not change required reviews or authorize extra reviewers.
 - Follow poteto-mode and emil-design-eng. Selected tickets may have `docs/tickets/<ID>.md` briefs
   with the ID as H1 and a link to their master anchor. Briefs hold acceptance/evidence, not another
   live status field. Proposals may retain inline scope in the master until selected.
@@ -52,9 +58,8 @@ repository root. This skill owns the workflow policy, not ticket status or curre
 ## Review the exact candidate
 
 - Require an actual independent exact-diff review for implementation tickets and fix accepted
-  findings before delivery. New independent pre-landing review assignments use
-  `anthropic/claude-opus-5-5` with medium effort until the owner changes this rule. This supersedes
-  older Sol-review wording in ticket briefs. Retain completed Sol verdicts; do not repeat an
+  findings before delivery. Newly created review threads follow the general new-worker rule above,
+  superseding older Sol-review wording in ticket briefs. Retain completed verdicts; do not repeat an
   accepted review solely for this model change or mutate a review thread's locked model.
 - Source and tooling tickets additionally require the existing Fable reviewer's pre-landing verdict
   on the exact candidate or correction delta, one ticket at a time. Use Fable sparingly for review,
