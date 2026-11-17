@@ -20,7 +20,7 @@ export type Zoom = {
   source?: { assetId: string; clipId: string; start: number; x: number; y: number };
 };
 export const FPS = 30;
-/** Music's linear amplitude in playback, export and the level meter. */
+/** Music's linear amplitude in playback and export. */
 export const MUSIC_GAIN = 0.22;
 /** Limits every zoom obeys, whether drawn in the inspector, opened from a file or generated. */
 export const ZOOM_LIMITS = { minFrames: 6, minScale: 1, maxScale: 3 };
@@ -56,6 +56,32 @@ export function splitClip(clips: Clip[], id: string, frame: number): Clip[] {
       },
     ];
   });
+}
+
+/**
+ * Cut every clip `target` accepts that strictly crosses a frame, as one new clip list. Returns the
+ * same list when nothing crosses, so a boundary or gap is no edit.
+ */
+export function splitWhere(clips: Clip[], frame: number, target: (clip: Clip) => boolean): Clip[] {
+  return clips
+    .filter((c) => target(c) && c.start < frame && frame < c.start + c.duration)
+    .reduce((next, c) => splitClip(next, c.id, frame), clips);
+}
+
+/** First locked track whose clips differ between two clip lists, regardless of their order. */
+export function lockedChange(before: Clip[], after: Clip[], locked: Track[]): Track | undefined {
+  const lane = (clips: Clip[], track: Track) =>
+    JSON.stringify(clips.filter((c) => c.track === track).sort((a, b) => a.id.localeCompare(b.id)));
+  return locked.find((track) => lane(before, track) !== lane(after, track));
+}
+
+/** The nearest target within `radius` frames, the earlier target on a tie, else the frame. */
+export function snapFrame(frame: number, targets: number[], radius: number): number {
+  const near = targets.filter((t) => Math.abs(t - frame) <= radius);
+  return near.reduce(
+    (best, t) => (Math.abs(t - frame) < Math.abs(best - frame) ? t : best),
+    near[0] ?? frame,
+  );
 }
 
 /** Insert on one track and ripple only that track's later material. */

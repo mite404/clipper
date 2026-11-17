@@ -309,7 +309,7 @@ test('a trim grip commits only real trims, on the clip as it is at release', asy
   await page.mouse.move(at.x, at.y);
   await page.mouse.down();
   await page.mouse.move(at.x - 20, at.y, { steps: 5 });
-  await page.keyboard.press('s');
+  await page.keyboard.press('Alt+KeyK');
   await expect(clips).toHaveCount(3);
   await page.mouse.up();
   const first = (await clips.nth(0).boundingBox())!;

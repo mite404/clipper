@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
-import { Timeline, TRACKS } from './Timeline';
+import { Timeline, TRACKS, type TrackToggles } from './Timeline';
 import type { Asset } from './media';
 import { FPS, type Clip, type Track } from './timeline-model';
 import './styles.css';
@@ -42,7 +42,7 @@ function TimelineOverflow() {
   );
   const [selected, setSelected] = useState('');
   const [frame, setFrame] = useState(0);
-  const [muted, setMuted] = useState<Track[]>([]);
+  const [tracks, setTracks] = useState<TrackToggles>({ muted: [], locked: [], selected: [] });
   const { count, duration, length } = mode;
   const clips: Clip[] = Array.from({ length: count }, (_, index) => ({
     id: `clip-${index}`,
@@ -70,14 +70,17 @@ function TimelineOverflow() {
           selected={selected}
           onSelect={setSelected}
           onSeek={setFrame}
-          muted={muted}
-          onMute={(track) =>
-            setMuted((previous) =>
-              previous.includes(track)
-                ? previous.filter((item) => item !== track)
-                : [...previous, track],
-            )
+          tracks={tracks}
+          onToggleTrack={(list, track: Track) =>
+            setTracks((previous) => ({
+              ...previous,
+              [list]: previous[list].includes(track)
+                ? previous[list].filter((item) => item !== track)
+                : [...previous[list], track],
+            }))
           }
+          tool="select"
+          onRazor={() => {}}
           onZoomSelect={setSelected}
         />
       </section>

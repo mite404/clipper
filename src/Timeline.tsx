@@ -1,8 +1,21 @@
-import { Camera, Film, Mic, Music2, Volume2, VolumeX, ZoomIn } from 'lucide-react';
-import { useLayoutEffect, useRef, useState } from 'react';
+import {
+  Camera,
+  Film,
+  Lock,
+  Mic,
+  Music2,
+  SquareCheckBig,
+  Volume2,
+  VolumeX,
+  ZoomIn,
+} from 'lucide-react';
+import { useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
 import type { Asset } from './media';
-import { FPS, trimClip, type Clip, type Track, type Zoom } from './timeline-model';
+import { FPS, snapFrame, trimClip, type Clip, type Track, type Zoom } from './timeline-model';
 import { IconButton, Waveform, timecode } from './components';
+
+/** Per-track toggle lists a project saves. */
+export type TrackToggles = Record<'muted' | 'locked' | 'selected', Track[]>;
 
 export const TRACKS = [
   { id: 'screen', label: 'Screen recording', detail: 'V1', Icon: Film },
@@ -10,6 +23,23 @@ export const TRACKS = [
   { id: 'voice', label: 'Voiceover', detail: 'A1', Icon: Mic },
   { id: 'music', label: 'Music', detail: 'A2', Icon: Music2 },
 ] satisfies { id: Track; label: string; detail: string; Icon: typeof Film }[];
+
+// Razor snapping reaches this far on screen, to the playhead or any clip edge on any track.
+const SNAP_PIXELS = 8;
+
+// The frame a still Razor click cuts at, snapped; null for a keyboard press or a pointer drag,
+// which select the clip as the Selection tool does.
+function razorFrame(
+  event: MouseEvent<HTMLElement>,
+  pressX: number,
+  targets: number[],
+  duration: number,
+): number | null {
+  if (!event.detail || Math.abs(event.clientX - pressX) > SNAP_PIXELS / 2) return null;
+  const lane = event.currentTarget.parentElement!.getBoundingClientRect(); // → lane box in px
+  const at = Math.round(((event.clientX - lane.left) / lane.width) * duration); // → frame
+  return snapFrame(at, targets, (SNAP_PIXELS / lane.width) * duration);
+}
 
 // Report a trim only when it moved the edge. trimClip only shortens, so an equal duration means
 // nothing moved: a plain click on a grip, or an arrow key in the direction it cannot go.
@@ -69,10 +99,12 @@ export function Timeline({
   selected,
   onSelect,
   onSeek,
-  muted,
-  onMute,
+  tracks,
+  onToggleTrack,
   onZoomSelect,
   onTrim,
+  tool,
+  onRazor,
 }: {
   clips: Clip[];
   assets: Asset[];
@@ -82,10 +114,14 @@ export function Timeline({
   selected: string;
   onSelect: (id: string) => void;
   onSeek: (frame: number) => void;
-  muted: Track[];
-  onMute: (track: Track) => void;
+  /** Saved per-track toggles: muted audio, locked lanes, and Split's selected tracks. */
+  tracks: TrackToggles;
+  onToggleTrack: (list: keyof TrackToggles, track: Track) => void;
   onZoomSelect: (id: string) => void;
   onTrim?: (clip: Clip) => void;
+  /** Razor clicks cut a clip at the clicked frame instead of selecting it. */
+  tool: 'select' | 'razor';
+  onRazor: (clipId: string, frame: number) => void;
 }) {
   const seconds = duration / FPS;
   const { viewport, label, minScale, maxScale, scale, setScale, width } = useTimelineScale(seconds);
@@ -99,6 +135,9 @@ export function Timeline({
     width: number;
     delta: number;
   }>();
+  // Where the pointer last went down: a Razor drag is not a click, so it never cuts.
+  const pressX = useRef(0);
+  const snapTargets = [frame, ...clips.flatMap((c) => [c.start, c.start + c.duration])];
   return (
     <>
       <label className="timeline-scale">
@@ -197,17 +236,35 @@ export function Timeline({
                 <span className="track-code">{detail}</span>
                 <Icon size={14} />
                 <span>{label}</span>
-                {(id === 'voice' || id === 'music') && (
+                <span className="track-toggles">
                   <IconButton
-                    label={`${muted.includes(id) ? 'Unmute' : 'Mute'} ${label}`}
-                    onClick={() => onMute(id)}
+                    label={`Select ${label} track`}
+                    aria-pressed={tracks.selected.includes(id)}
+                    onClick={() => onToggleTrack('selected', id)}
                   >
-                    {muted.includes(id) ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                    <SquareCheckBig size={13} />
                   </IconButton>
-                )}
+                  <IconButton
+                    label={`Lock ${label}`}
+                    aria-pressed={tracks.locked.includes(id)}
+                    onClick={() => onToggleTrack('locked', id)}
+                  >
+                    <Lock size={13} />
+                  </IconButton>
+                  {(id === 'voice' || id === 'music') && (
+                    <IconButton
+                      label={`${tracks.muted.includes(id) ? 'Unmute' : 'Mute'} ${label}`}
+                      onClick={() => onToggleTrack('muted', id)}
+                    >
+                      {tracks.muted.includes(id) ? <VolumeX size={13} /> : <Volume2 size={13} />}
+                    </IconButton>
+                  )}
+                </span>
               </div>
               <div
                 className="timeline-lane"
+                data-tool={tool}
+                data-locked={tracks.locked.includes(id)}
                 data-testid={`track-${id}`}
                 onDoubleClick={(event) => {
                   const rect = event.currentTarget.getBoundingClientRect();
@@ -237,7 +294,15 @@ export function Timeline({
                         className={`timeline-clip ${selected === clip.id ? 'selected' : ''}`}
                         aria-label={`${asset?.name ?? 'Missing media'} at ${(clip.start / FPS).toFixed(1)} seconds`}
                         aria-pressed={selected === clip.id}
-                        onClick={() => onSelect(clip.id)}
+                        onPointerDown={(event) => (pressX.current = event.clientX)}
+                        onClick={(event) => {
+                          const at =
+                            tool === 'razor'
+                              ? razorFrame(event, pressX.current, snapTargets, duration)
+                              : null;
+                          if (at === null) onSelect(clip.id);
+                          else onRazor(clip.id, at);
+                        }}
                         style={{
                           left: `${(clip.start / duration) * 100}%`,
                           width: `${(clip.duration / duration) * 100}%`,
@@ -269,65 +334,67 @@ export function Timeline({
                             )}
                           </div>
                         )}
-                        {(['left', 'right'] as const).map((edge) => (
-                          <span
-                            key={edge}
-                            className={`clip-grip ${edge}`}
-                            role="slider"
-                            tabIndex={0}
-                            aria-label={`Trim ${edge} edge`}
-                            aria-valuemin={0}
-                            aria-valuemax={clip.start + clip.duration}
-                            aria-valuenow={
-                              edge === 'left' ? clip.start : clip.start + clip.duration
-                            }
-                            onKeyDown={(event) => {
-                              if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-                              event.preventDefault();
-                              event.stopPropagation();
-                              commitTrim(
-                                onTrim,
-                                clip,
-                                edge,
-                                (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 10 : 1),
-                              );
-                            }}
-                            onPointerDown={(event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              event.currentTarget.setPointerCapture(event.pointerId);
-                              const lane = event.currentTarget.closest('.timeline-lane');
-                              if (lane)
-                                setDrag({
-                                  clipId: clip.id,
+                        {!tracks.locked.includes(id) &&
+                          (['left', 'right'] as const).map((edge) => (
+                            <span
+                              key={edge}
+                              inert={tool === 'razor'}
+                              className={`clip-grip ${edge}`}
+                              role="slider"
+                              tabIndex={0}
+                              aria-label={`Trim ${edge} edge`}
+                              aria-valuemin={0}
+                              aria-valuemax={clip.start + clip.duration}
+                              aria-valuenow={
+                                edge === 'left' ? clip.start : clip.start + clip.duration
+                              }
+                              onKeyDown={(event) => {
+                                if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+                                event.preventDefault();
+                                event.stopPropagation();
+                                commitTrim(
+                                  onTrim,
+                                  clip,
                                   edge,
-                                  x: event.clientX,
-                                  width: lane.getBoundingClientRect().width,
-                                  delta: 0,
-                                });
-                              onSelect(clip.id);
-                            }}
-                            onPointerMove={(event) => {
-                              if (drag)
-                                setDrag({
-                                  ...drag,
-                                  delta: ((event.clientX - drag.x) / drag.width) * duration,
-                                });
-                            }}
-                            onPointerUp={(event) => {
-                              if (!drag) return;
-                              setDrag(undefined);
-                              // Pointer capture means this grip is the one the drag started on.
-                              commitTrim(
-                                onTrim,
-                                originalClip,
-                                drag.edge,
-                                ((event.clientX - drag.x) / drag.width) * duration,
-                              );
-                            }}
-                            onPointerCancel={() => setDrag(undefined)}
-                          />
-                        ))}
+                                  (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 10 : 1),
+                                );
+                              }}
+                              onPointerDown={(event) => {
+                                event.preventDefault();
+                                event.stopPropagation();
+                                event.currentTarget.setPointerCapture(event.pointerId);
+                                const lane = event.currentTarget.closest('.timeline-lane');
+                                if (lane)
+                                  setDrag({
+                                    clipId: clip.id,
+                                    edge,
+                                    x: event.clientX,
+                                    width: lane.getBoundingClientRect().width,
+                                    delta: 0,
+                                  });
+                                onSelect(clip.id);
+                              }}
+                              onPointerMove={(event) => {
+                                if (drag)
+                                  setDrag({
+                                    ...drag,
+                                    delta: ((event.clientX - drag.x) / drag.width) * duration,
+                                  });
+                              }}
+                              onPointerUp={(event) => {
+                                if (!drag) return;
+                                setDrag(undefined);
+                                // Pointer capture means this grip is the one the drag started on.
+                                commitTrim(
+                                  onTrim,
+                                  originalClip,
+                                  drag.edge,
+                                  ((event.clientX - drag.x) / drag.width) * duration,
+                                );
+                              }}
+                              onPointerCancel={() => setDrag(undefined)}
+                            />
+                          ))}
                       </button>
                     );
                   })}

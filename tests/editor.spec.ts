@@ -787,7 +787,7 @@ test('leaves modified keys to the browser instead of editing the timeline', asyn
     await expect(clips).toHaveCount(2);
     await expect(page.getByTestId('timecode')).toHaveText('00:01:15');
   }
-  await page.keyboard.press('s');
+  await page.keyboard.press('Alt+KeyK');
   await expect(clips).toHaveCount(3);
   // There is no redo, so the redo chord must not undo a second time.
   await page.keyboard.press('Control+Shift+z');

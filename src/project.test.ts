@@ -114,7 +114,19 @@ describe('portable project parsing', () => {
   });
 
   it('reopens edit settings and embedded bytes without treating them as decoded media', () => {
-    expect(parseProject(JSON.stringify(project()))).toEqual({ edit, media, muted: ['music'] });
+    // A file from before track locks and selection has neither key; both default to empty.
+    expect(parseProject(JSON.stringify(project()))).toEqual({
+      edit,
+      media,
+      muted: ['music'],
+      locked: [],
+      selectedTracks: [],
+    });
+    const toggled = { ...project(), locked: ['voice'], selectedTracks: ['screen', 'camera'] };
+    expect(parseProject(JSON.stringify(toggled))).toMatchObject({
+      locked: ['voice'],
+      selectedTracks: ['screen', 'camera'],
+    });
     const swapped = project();
     swapped.layout.swapped = true;
     expect(parseProject(JSON.stringify(swapped)).edit.layout.swapped).toBe(true);
@@ -141,6 +153,12 @@ describe('portable project parsing', () => {
     [JSON.stringify({ ...project(), media: undefined }), /media/i],
     [JSON.stringify({ ...project(), muted: ['other'] }), /track/i],
     [JSON.stringify({ ...project(), muted: ['music', 'music'] }), /duplicate/i],
+    [JSON.stringify({ ...project(), locked: 'voice' }), /locked/i],
+    [JSON.stringify({ ...project(), locked: ['V1'] }), /track/i],
+    [JSON.stringify({ ...project(), locked: ['voice', 'voice'] }), /duplicate/i],
+    [JSON.stringify({ ...project(), selectedTracks: {} }), /selectedTracks/i],
+    [JSON.stringify({ ...project(), selectedTracks: ['other'] }), /track/i],
+    [JSON.stringify({ ...project(), selectedTracks: ['camera', 'camera'] }), /duplicate/i],
   ])('rejects malformed or incompatible input: %s', (text, message) => {
     expect(() => parseProject(text)).toThrow(message);
   });
@@ -435,16 +453,35 @@ describe('portable project serialization', () => {
     );
     let saved: Blob;
     try {
-      saved = (await serializeProject(edit, [{ ...asset, url }], ['music'])).file;
+      saved = (
+        await serializeProject(edit, [{ ...asset, url }], ['music'], {
+          locked: ['voice', 'screen'],
+          selectedTracks: ['camera'],
+        })
+      ).file;
     } finally {
       URL.revokeObjectURL(url);
     }
     expect(saved.type).toBe('application/json');
     const text = await saved.text();
     expect(text).not.toContain('blob:');
-    expect(JSON.parse(text)).toMatchObject({ version: 2, fps: 30, ...edit, muted: ['music'] });
+    // Saved toggles stay in version 2: an older reader ignores the unknown keys and opens the edit.
+    expect(JSON.parse(text)).toMatchObject({
+      version: 2,
+      fps: 30,
+      ...edit,
+      muted: ['music'],
+      locked: ['voice', 'screen'],
+      selectedTracks: ['camera'],
+    });
     const reopened = parseProject(text);
-    expect(reopened).toEqual({ edit, media, muted: ['music'] });
+    expect(reopened).toEqual({
+      edit,
+      media,
+      muted: ['music'],
+      locked: ['voice', 'screen'],
+      selectedTracks: ['camera'],
+    });
     const blob = await (await fetch(reopened.media[0].data)).blob();
     expect(Array.from(new Uint8Array(await blob.arrayBuffer()))).toEqual([0, 1, 2, 255]);
   });

@@ -284,8 +284,10 @@ function LibraryRecord({ view, worst = false }: { view: string; worst?: boolean 
           selected={selected}
           onSelect={setSelected}
           onSeek={setFrame}
-          muted={[]}
-          onMute={() => {}}
+          tracks={{ muted: [], locked: [], selected: [] }}
+          onToggleTrack={() => {}}
+          tool="select"
+          onRazor={() => {}}
           onZoomSelect={setSelected}
           onTrim={(clip) =>
             setClips((previous) => previous.map((c) => (c.id === clip.id ? clip : c)))

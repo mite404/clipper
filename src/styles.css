@@ -821,14 +821,35 @@ p {
   padding-right: 10px;
   min-width: 0;
 }
-.track-label > span:not(.track-code) {
+.track-label > span:not(.track-code, .track-toggles) {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.track-label > .icon-button {
-  margin-left: auto;
+/* Toggles sit under the name so adding them never truncates it. */
+.track-label:has(> .track-toggles) {
+  display: grid;
+  grid-template-columns: 17px 14px minmax(0, 1fr);
+  align-content: center;
+  row-gap: 3px;
+}
+.track-toggles {
+  grid-column: 2 / -1;
+  display: flex;
+  gap: 2px;
+  margin-left: -3px;
+}
+.track-toggles > .icon-button {
   width: 20px;
+  height: 20px;
+}
+.tool-toggles {
+  display: flex;
+  gap: 2px;
+}
+:is(.track-toggles, .tool-toggles) > .icon-button[aria-pressed='true'] {
+  color: var(--green);
+  background: #ffffff0a;
 }
 .track-code {
   font-size: 8px;
@@ -982,6 +1003,16 @@ p {
 }
 .timeline-clip.selected .clip-grip {
   opacity: 1;
+}
+/* The blade's tip is the hotspot, so the cut lands exactly under it. */
+.timeline-lane[data-tool='razor'] .timeline-clip {
+  cursor:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cg stroke='%23101112' stroke-width='4'%3E%3Cpath d='m8 14-6 6h9v-3'/%3E%3Cpath d='M18.37 3.63 8 14l3 3L21.37 6.63a2.12 2.12 0 1 0-3-3Z'/%3E%3C/g%3E%3Cg stroke='%23fff' stroke-width='1.6'%3E%3Cpath d='m8 14-6 6h9v-3'/%3E%3Cpath d='M18.37 3.63 8 14l3 3L21.37 6.63a2.12 2.12 0 1 0-3-3Z'/%3E%3C/g%3E%3C/svg%3E")
+      2 20,
+    crosshair;
+}
+.timeline-lane[data-tool='razor'][data-locked='true'] .timeline-clip {
+  cursor: not-allowed;
 }
 .playhead-area {
   position: absolute;

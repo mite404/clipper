@@ -88,6 +88,8 @@ export function parseProject(text: string): {
   edit: Edit;
   media: { id: string; name: string; data: string; kind?: 'image'; cursor?: CursorTrack }[];
   muted: Track[];
+  locked: Track[];
+  selectedTracks: Track[];
 } {
   let value: unknown;
   try {
@@ -199,9 +201,19 @@ export function parseProject(text: string): {
     if (typeof settings.swapped !== 'boolean') throw new Error('layout.swapped must be boolean.');
     layout.swapped = settings.swapped;
   }
-  const muted = array(root.muted, 'muted').map(track);
-  unique(muted, 'muted track');
-  return { edit: { clips, zooms, layout }, media, muted };
+  // Track toggles validate like muted. Files saved before locks and track selection omit them.
+  const tracks = (field: 'muted' | 'locked' | 'selectedTracks', fallback?: unknown[]) => {
+    const list = array(root[field] ?? fallback, field).map(track);
+    unique(list, `${field} track`);
+    return list;
+  };
+  return {
+    edit: { clips, zooms, layout },
+    media,
+    muted: tracks('muted'),
+    locked: tracks('locked', []),
+    selectedTracks: tracks('selectedTracks', []),
+  };
 }
 
 /** Run after readMedia has decoded every embedded asset, before replacing the open project. */
@@ -289,9 +301,10 @@ export async function serializeProject(
   edit: Edit,
   assets: Asset[],
   muted: Track[],
+  toggles: { locked: Track[]; selectedTracks: Track[] } = { locked: [], selectedTracks: [] },
 ): Promise<{ file: Blob; omitted: string[] }> {
   const snapshot = structuredClone(edit);
-  const mutedSnapshot = [...muted];
+  const trackSnapshot = { muted: [...muted], ...structuredClone(toggles) };
   validateSources(snapshot, assets);
   const usedIds = new Set(snapshot.clips.map((clip) => clip.assetId));
   let spare = spareBytes(assets, usedIds); // bytes left for media no clip uses
@@ -317,7 +330,7 @@ export async function serializeProject(
   }
   const version = media.some((item) => item.kind === 'image') ? 3 : 2;
   const parsed = parseProject(
-    JSON.stringify({ version, fps: FPS, ...snapshot, media, muted: mutedSnapshot }),
+    JSON.stringify({ version, fps: FPS, ...snapshot, media, ...trackSnapshot }),
   );
   const file = new Blob(
     [
@@ -327,6 +340,8 @@ export async function serializeProject(
         ...parsed.edit,
         media: parsed.media,
         muted: parsed.muted,
+        locked: parsed.locked,
+        selectedTracks: parsed.selectedTracks,
       }),
     ],
     { type: 'application/json' },

@@ -19,6 +19,7 @@ import {
   Copy,
   Crop,
   Maximize2,
+  MousePointer2,
   PanelLeftClose,
   PanelLeftOpen,
   PanelBottomClose,
@@ -29,6 +30,7 @@ import {
   Plus,
   Scissors,
   SkipBack,
+  Slice,
   Trash2,
   ZoomIn,
 } from 'lucide-react';
@@ -42,7 +44,9 @@ import {
   type Track,
   type Zoom,
   insertClip,
+  lockedChange,
   splitClip,
+  splitWhere,
   ZOOM_LIMITS,
   zoomsOverlap,
 } from './timeline-model';
@@ -61,6 +65,14 @@ import { maskRect, STAGE, type Layout } from './stage';
 import { useMediaDrawer } from './useMediaDrawer';
 import { PanelResizeHandle, usePanelLayout } from './PanelResizeHandle';
 import './styles.css';
+
+// Cmd+K cuts every unlocked track on a Mac; Alt+K does elsewhere, leaving Ctrl+K to the browser.
+const MAC = /Mac|iP(hone|ad|od)/.test(navigator.platform);
+
+// Saved track toggles compared as sets: their order carries no meaning.
+const toggleTrack = (tracks: Track[], track: Track) =>
+  tracks.includes(track) ? tracks.filter((t) => t !== track) : [...tracks, track];
+const sameTracks = (a: Track[], b: Track[]) => [...a].sort().join() === [...b].sort().join();
 
 export const INITIAL_EDIT: Edit = {
   clips: [
@@ -660,6 +672,11 @@ export function App() {
   const [frame, setFrame] = useState(0);
   const [speed, setSpeed] = useState(0);
   const [muted, setMuted] = useState<Track[]>([]);
+  // Locks and Split's track targets are saved with the project but are never undo steps.
+  const [locked, setLocked] = useState<Track[]>([]);
+  const [selectedTracks, setSelectedTracks] = useState<Track[]>([]);
+  const [savedTracks, setSavedTracks] = useState({ locked, selectedTracks });
+  const [tool, setTool] = useState<'select' | 'razor'>('select');
   const [message, setMessage] = useState('Ready for your next story.');
   const [help, setHelp] = useState(false);
   const [markingZoomId, setMarkingZoomId] = useState<string | null>(null);
@@ -749,23 +766,35 @@ export function App() {
 
   // The undo step still open: a drag or a held key folds into it instead of adding steps.
   const gesture = useRef<Gesture | null>(null);
+  // Returns false when a lock refused the edit, so callers report nothing else. Locks guard new
+  // clip edits only, so zoom and layout edits always succeed: undo, open and demo loading
+  // replace the edit without passing through here.
   const change = useCallback(
-    (proposed: Edit) => {
+    (proposed: Edit): boolean => {
+      const refused = lockedChange(edit.clips, proposed.clips, locked); // → Track | undefined
+      if (refused) {
+        setMessage(`${TRACKS.find((t) => t.id === refused)!.label} is locked.`);
+        return false;
+      }
       const next = {
         ...proposed,
         zooms: resolveZooms(proposed.zooms, proposed.clips, assets, proposed.layout),
       }; // → Edit
       const step = classifyChange(edit, next, gesture.current, performance.now()); // → HistoryStep
-      if (step.kind === 'none') return;
+      if (step.kind === 'none') return true;
       gesture.current = step.gesture;
       if (step.kind === 'push') setHistory((previous) => [...previous.slice(-49), edit]);
       setEdit(next);
+      return true;
     },
-    [edit, assets],
+    [edit, assets, locked],
   );
   // ponytail: history keeps 50 steps, so undoing all of a longer session reads as saved.
   // Add a saved marker to the edit itself if that ever costs someone work.
-  const unsaved = history.length > 0 && edit !== savedEdit;
+  const unsaved =
+    (history.length > 0 && edit !== savedEdit) ||
+    !sameTracks(locked, savedTracks.locked) ||
+    !sameTracks(selectedTracks, savedTracks.selectedTracks);
   const working = unsaved || exportProgress !== null;
   useEffect(() => {
     if (!working) return;
@@ -793,15 +822,37 @@ export function App() {
     },
     [duration],
   );
-  const split = useCallback(() => {
-    const next = splitClip(edit.clips, selected, frameRef.current);
-    if (next.length === edit.clips.length) {
-      setMessage('Place the playhead inside a selected clip to split it.');
-      return;
-    }
-    change({ ...edit, clips: next });
-    setMessage('Split clip. Source timing preserved.');
-  }, [edit, selected, change]);
+  // Cut every unlocked clip `target` accepts at the playhead as one undo step; none is no step.
+  const cutAt = useCallback(
+    (target: (clip: Clip) => boolean) => {
+      const next = splitWhere(
+        edit.clips,
+        frameRef.current,
+        (c) => !locked.includes(c.track) && target(c),
+      );
+      if (next === edit.clips) {
+        setMessage('No unlocked clip crosses the playhead there. Nothing was split.');
+        return;
+      }
+      const cuts = next.length - edit.clips.length;
+      if (change({ ...edit, clips: next }))
+        setMessage(`Split ${cuts} clip${cuts === 1 ? '' : 's'}. Source timing preserved.`);
+    },
+    [edit, locked, change],
+  );
+  const split = useCallback(
+    () => cutAt((c) => c.id === selected || selectedTracks.includes(c.track)),
+    [cutAt, selected, selectedTracks],
+  );
+  const splitAll = useCallback(() => cutAt(() => true), [cutAt]);
+  const razor = useCallback(
+    (id: string, at: number) => {
+      const next = splitClip(edit.clips, id, at);
+      if (next.length === edit.clips.length) return; // a clip edge or a gap is no cut
+      if (change({ ...edit, clips: next })) setMessage('Razor cut. Source timing preserved.');
+    },
+    [edit, change],
+  );
   const removeSelected = useCallback(() => {
     if (selectedZoom) change({ ...edit, zooms: edit.zooms.filter((z) => z.id !== selected) });
     else if (selectedClip) change({ ...edit, clips: edit.clips.filter((c) => c.id !== selected) });
@@ -941,6 +992,17 @@ export function App() {
         }
         if (key !== ' ') return;
       } else if (target?.tagName === 'TEXTAREA' || target?.isContentEditable) return;
+      // Physical K, so Option+K's dead key still matches; only the platform's one modifier.
+      if (
+        event.code === 'KeyK' &&
+        !event.shiftKey &&
+        !event.ctrlKey &&
+        (MAC ? event.metaKey && !event.altKey : event.altKey && !event.metaKey)
+      ) {
+        event.preventDefault();
+        if (!event.repeat) splitAll();
+        return;
+      }
       if (event.metaKey || event.ctrlKey || event.altKey) {
         // Chords belong to the browser. Undo is the only one the editor takes; there is no redo.
         if (key === 'z' && !event.altKey && !event.shiftKey) {
@@ -955,7 +1017,7 @@ export function App() {
         addZoom();
         return;
       }
-      if (['j', 'k', 'l', ' ', 'arrowleft', 'arrowright', 's', 'delete', 'backspace'].includes(key))
+      if (['j', 'k', 'l', ' ', 'arrowleft', 'arrowright', 'delete', 'backspace'].includes(key))
         event.preventDefault();
       if (key === 'j') setSpeed((s) => (s < 0 ? Math.max(-4, s * 2) : -1));
       if (key === 'k') setSpeed(0);
@@ -966,7 +1028,8 @@ export function App() {
       if (key === ' ' && !event.repeat) setSpeed((s) => (s ? 0 : 1));
       if (key === 'arrowleft') seek(frameRef.current - 1);
       if (key === 'arrowright') seek(frameRef.current + 1);
-      if (key === 's') split();
+      if (key === 'c') setTool('razor');
+      if (key === 'v') setTool('select');
       if (key === 'delete' || key === 'backspace') removeSelected();
     };
     window.addEventListener('keydown', keydown);
@@ -974,7 +1037,7 @@ export function App() {
   }, [
     duration,
     seek,
-    split,
+    splitAll,
     removeSelected,
     undo,
     help,
@@ -1034,9 +1097,9 @@ export function App() {
         setMessage(failure);
         return;
       }
-      change(next);
+      if (!change(next)) return;
       setSelected(clip.id);
-      setMessage(`Inserted ${asset.name} onto ${TRACKS.find((t) => t.id === track)?.label}.`);
+      setMessage(`Inserted ${asset.name} onto ${TRACKS.find((t) => t.id === track)!.label}.`);
     },
     [asset, assets, edit, change],
   );
@@ -1052,9 +1115,11 @@ export function App() {
     setBusy(true);
     setSpeed(0);
     try {
-      const { file, omitted } = await serializeProject(edit, assets, muted);
+      const tracks = { locked, selectedTracks };
+      const { file, omitted } = await serializeProject(edit, assets, muted, tracks);
       downloadBlob(file, 'developer-walkthrough.clipper.json');
       setSavedEdit(edit);
+      setSavedTracks(tracks);
       // The next change starts a new step, so Undo can return to exactly what was saved.
       gesture.current = null;
       setMessage(
@@ -1095,6 +1160,9 @@ export function App() {
         zooms: resolveZooms(project.edit.zooms, project.edit.clips, imported, project.edit.layout),
       });
       setMuted(project.muted);
+      setLocked(project.locked);
+      setSelectedTracks(project.selectedTracks);
+      setSavedTracks({ locked: project.locked, selectedTracks: project.selectedTracks });
       setHistory([]);
       setSelected(project.edit.clips[0]?.id ?? '');
       setSourceId(imported[0]?.id ?? '');
@@ -1509,13 +1577,32 @@ export function App() {
                 <CornerUpLeft size={15} />
               </IconButton>
               <span className="divider" />
+              <span className="tool-toggles" role="group" aria-label="Timeline tool">
+                <IconButton
+                  label="Selection tool"
+                  aria-pressed={tool === 'select'}
+                  aria-keyshortcuts="V"
+                  onClick={() => setTool('select')}
+                >
+                  <MousePointer2 size={14} />
+                </IconButton>
+                <IconButton
+                  label="Razor tool"
+                  aria-pressed={tool === 'razor'}
+                  aria-keyshortcuts="C"
+                  onClick={() => setTool('razor')}
+                >
+                  <Slice size={14} />
+                </IconButton>
+              </span>
               <button
                 className="text-button"
                 aria-label="Split selected clip"
+                title="Cut the selected clip and selected tracks at the playhead"
                 onClick={split}
-                disabled={!selectedClip}
+                disabled={!selectedClip && !selectedTracks.length}
               >
-                <Scissors size={15} /> Split <kbd>S</kbd>
+                <Scissors size={15} /> Split
               </button>
               <IconButton
                 label="Delete selected clip or zoom"
@@ -1548,12 +1635,10 @@ export function App() {
               setMarkingZoomId(null);
             }}
             onSeek={seek}
-            muted={muted}
-            onMute={(track) =>
-              setMuted((previous) =>
-                previous.includes(track)
-                  ? previous.filter((t) => t !== track)
-                  : [...previous, track],
+            tracks={{ muted, locked, selected: selectedTracks }}
+            onToggleTrack={(list, track) =>
+              ({ muted: setMuted, locked: setLocked, selected: setSelectedTracks })[list](
+                (previous) => toggleTrack(previous, track),
               )
             }
             onZoomSelect={(id) => {
@@ -1564,6 +1649,8 @@ export function App() {
               setSpeed(0);
               change({ ...edit, clips: edit.clips.map((c) => (c.id === clip.id ? clip : c)) });
             }}
+            tool={tool}
+            onRazor={razor}
           />
           <div className="sequence-footer">
             <span>
@@ -1605,7 +1692,8 @@ export function App() {
                 label="Selected still duration seconds"
                 onCommit={(duration) => {
                   try {
-                    change(resizeStill(edit, selectedClip, duration));
+                    if (!change(resizeStill(edit, selectedClip, duration)))
+                      return 'This track is locked. Unlock it to change the duration.';
                   } catch (error) {
                     return error instanceof Error ? error.message : String(error);
                   }
@@ -1729,7 +1817,8 @@ export function App() {
           ['Space', 'Play / pause · also from sliders, menus and checkboxes'],
           ['Enter', 'Toggle a focused checkbox or open a focused menu'],
           ['← / →', 'Step one frame'],
-          ['S', 'Split selected clip at playhead'],
+          ['V / C', 'Selection tool / Razor tool (click a clip to cut it)'],
+          [MAC ? '⌘ K' : 'Alt K', 'Cut every unlocked track at the playhead'],
           ['B', 'Create zoom at playhead (4 seconds)'],
           ['Delete', 'Remove selected clip or zoom'],
           ['⌘ / Ctrl Z', 'Undo last edit'],

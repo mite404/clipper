@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   covers,
   insertClip,
+  lockedChange,
+  snapFrame,
+  splitWhere,
   sourceFrame,
   splitClip,
   trimClip,
@@ -136,5 +139,42 @@ describe('editing a timeline in frames', () => {
     const camera = zoomCamera([zoom], 90);
     expect((25 - 50) * camera.scale + 50 + camera.x).toBe(50);
     expect((65 - 50) * camera.scale + 50 + camera.y).toBe(50);
+  });
+
+  it('cuts only targeted clips that strictly cross the frame, with unique right IDs', () => {
+    const lanes: Clip[] = [
+      { ...clip, id: 'a', start: 0, duration: 60 },
+      { ...clip, id: 'a-30', start: 60, duration: 30 },
+      { ...clip, id: 'v', track: 'voice', start: 10, duration: 50 },
+      { ...clip, id: 'm', track: 'music', start: 30, duration: 30 },
+    ];
+    const cut = splitWhere(lanes, 30, (c) => c.track !== 'voice');
+    expect(cut.map((c) => [c.id, c.start, c.duration, c.offset])).toEqual([
+      ['a', 0, 30, 60],
+      ['a-30.2', 30, 30, 90],
+      ['a-30', 60, 30, 60],
+      ['v', 10, 50, 60],
+      ['m', 30, 30, 60],
+    ]);
+    expect(new Set(cut.map((c) => c.id)).size).toBe(cut.length);
+    expect(splitWhere(lanes, 60, () => true)).toBe(lanes);
+    expect(splitWhere(lanes, 95, () => true)).toBe(lanes);
+  });
+
+  it('names the first locked track whose clips changed, ignoring order and other tracks', () => {
+    const v: Clip = { ...clip, id: 'v', track: 'voice' };
+    expect(lockedChange([clip, v], [v, clip], ['voice'])).toBeUndefined();
+    expect(lockedChange([clip, v], splitClip([clip, v], 'screen', 90), ['voice'])).toBeUndefined();
+    expect(lockedChange([clip, v], [clip, trimClip(v, 'left', 5)], ['music', 'voice'])).toBe(
+      'voice',
+    );
+    expect(lockedChange([clip, v], [clip], ['voice'])).toBe('voice');
+  });
+
+  it('snaps to the nearest target inside the radius and prefers the first on a tie', () => {
+    expect(snapFrame(50, [40, 57], 8)).toBe(57);
+    expect(snapFrame(50, [42, 58], 8)).toBe(42);
+    expect(snapFrame(50, [41, 59], 8)).toBe(50);
+    expect(snapFrame(50, [], 8)).toBe(50);
   });
 });
