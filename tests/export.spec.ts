@@ -911,3 +911,259 @@ test('mixes long compressed audio in time proportional to its length', async ({ 
   // One audio node per decoded packet took 13 s for these 40 s; one per clip takes under a second.
   expect(mixMs).toBeLessThan(5000);
 });
+
+// Source frame s of the ramp is pure red at 6·s, so one margin pixel names the source frame.
+const RAMP = "nullsrc=s=320x180:r=30:d=3,geq=r='min(255\\,6*N)':g=0:b=0,format=yuv420p";
+// A transparent still above the ramp, and the swapped pair zoomed 2x above both.
+const BACKGROUND_PROBES: [number, number][] = [
+  [640, 4], // top margin
+  [4, 360], // left margin
+  [381, 360], // centre gap of the swapped pair
+  [190, 360], // camera mask
+  [830, 360], // screen mask
+];
+
+for (const width of [1920, 3840])
+  test(`a full-frame Background video plays under the swapped, zoomed pair at ${width}px`, async ({
+    page,
+  }, info) => {
+    test.setTimeout(180000);
+    const ramp = info.outputPath('ramp.mp4');
+    execFileSync('ffmpeg', [
+      '-v',
+      'error',
+      '-y',
+      '-f',
+      'lavfi',
+      '-i',
+      RAMP,
+      '-c:v',
+      'libx264',
+      ramp,
+    ]);
+    await page.route('**/media/ramp.mp4', (route) => route.fulfill({ path: ramp }));
+    await page.goto('/');
+    const frames = [10, 20, 40, 50];
+    const result = await page.evaluate(
+      async ({ width, frames, points }) => {
+        const mediaModule = '/src/media.ts',
+          exportModule = '/src/export.ts',
+          modelModule = '/src/timeline-model.ts';
+        const { readMedia } = await import(mediaModule);
+        const { renderFrameImage, renderVideo } = await import(exportModule);
+        const { DEFAULT_TRACKS } = await import(modelModule);
+        const canvas = document.createElement('canvas');
+        const g = canvas.getContext('2d')!;
+        const still = async (name: string, fill?: string) => {
+          canvas.width = 320;
+          canvas.height = 180;
+          g.clearRect(0, 0, 320, 180);
+          if (fill) {
+            g.fillStyle = fill;
+            g.fillRect(0, 0, 320, 180);
+          }
+          return readMedia(
+            await new Promise<Blob>((r) => canvas.toBlob((b) => r(b!), 'image/png')),
+            name,
+          );
+        };
+        const video = await readMedia(await (await fetch('/media/ramp.mp4')).blob(), 'ramp.mp4');
+        const clear = await still('clear.png');
+        const green = await still('green.png', '#00ff00');
+        const blue = await still('blue.png', '#0000ff');
+        const assets = [video, clear, green, blue];
+        const edit = {
+          tracks: [
+            { id: 'bg', label: 'Background · Full frame', kind: 'visual', role: 'background' },
+            { id: 'clear', label: 'Background 2 · Full frame', kind: 'visual', role: 'background' },
+            ...DEFAULT_TRACKS,
+          ],
+          clips: [
+            { id: 'r', assetId: video.id, track: 'bg', start: 15, duration: 30, offset: 10 },
+            { id: 't', assetId: clear.id, track: 'clear', start: 0, duration: 60, offset: 0 },
+            { id: 's', assetId: green.id, track: 'screen', start: 0, duration: 60, offset: 0 },
+            { id: 'c', assetId: blue.id, track: 'camera', start: 0, duration: 60, offset: 0 },
+          ],
+          zooms: [{ id: 'z', start: 0, duration: 60, scale: 2, x: 50, y: 50 }],
+          layout: { radius: 22, swapped: true, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
+        };
+        const copies = [];
+        for (const frame of frames) {
+          const bitmap = await createImageBitmap(
+            await renderFrameImage({ ...edit, assets, width, frame }),
+          );
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
+          g.drawImage(bitmap, 0, 0);
+          const k = bitmap.width / 1280;
+          copies.push({
+            size: [bitmap.width, bitmap.height],
+            px: points.map(([x, y]) =>
+              Array.from(g.getImageData(Math.round(x * k), Math.round(y * k), 1, 1).data).slice(
+                0,
+                3,
+              ),
+            ),
+          });
+          bitmap.close();
+        }
+        const encoded = await renderVideo({
+          ...edit,
+          assets,
+          muted: [],
+          width,
+          format: 'mp4',
+          onProgress: () => {},
+        });
+        return { copies, video: Array.from(new Uint8Array(await encoded.arrayBuffer())) };
+      },
+      { width, frames, points: BACKGROUND_PROBES },
+    );
+    const file = info.outputPath('background.mp4');
+    writeFileSync(file, Buffer.from(result.video));
+    const probe = execFileSync('ffprobe', ['-v', 'error', '-show_streams', '-of', 'json', file], {
+      encoding: 'utf8',
+    });
+    expect(JSON.parse(probe).streams[0]).toMatchObject({ width, height: (width * 9) / 16 });
+    const exported = frames.map((frame) =>
+      BACKGROUND_PROBES.map(([x, y]) =>
+        Array.from(
+          execFileSync('ffmpeg', [
+            '-v',
+            'error',
+            '-ss',
+            String((frame + 0.5) / 30),
+            '-i',
+            file,
+            '-frames:v',
+            '1',
+            '-vf',
+            `format=rgb24,crop=1:1:${Math.round((x * width) / 1280)}:${Math.round((y * width) / 1280)}`,
+            '-f',
+            'rawvideo',
+            '-',
+          ]),
+        ),
+      ),
+    );
+    console.log(`background ${width} ${JSON.stringify({ copies: result.copies, exported })}`);
+    const near = (a: number[], b: number[], tol: number) =>
+      b.every((v, i) => Math.abs(a[i] - v) <= tol);
+    // The ramp's own red at a source frame, decoded by ffmpeg independently of the editor.
+    const rampRed = (source: number) =>
+      execFileSync('ffmpeg', [
+        '-v',
+        'error',
+        '-i',
+        ramp,
+        '-vf',
+        `select=eq(n\\,${source}),format=rgb24,crop=1:1:160:90`,
+        '-frames:v',
+        '1',
+        '-f',
+        'rawvideo',
+        '-',
+      ])[0];
+    // Browser and ffmpeg decoders convert colour slightly differently, but both scale red alike,
+    // so the ratio between frames 40 and 20 names the source frames: 35 and 15 with the offset.
+    // A dropped offset (25 and 5) gives about 5; a frozen frame gives 1.
+    const ratio = (red: (i: number) => number) => red(2) / red(1);
+    const expected = rampRed(35) / rampRed(15);
+    // Re-encoding moves the export's ratio a few hundredths; per-frame exactness is the job of
+    // 'exports the exact source frame for every frame of both video tracks'.
+    for (const actual of [ratio((i) => result.copies[i].px[0][0]), ratio((i) => exported[i][0][0])])
+      expect(Math.abs(actual - expected), `ratio ${actual} vs ${expected}`).toBeLessThan(0.15);
+    frames.forEach((frame, i) => {
+      const copy = result.copies[i];
+      expect(copy.size).toEqual([width, (width * 9) / 16]);
+      const during = frame >= 15 && frame < 45;
+      // Zoom and the swapped pair never move the Background: every margin and the gap carry it.
+      // Outside its interval the transparent still above it leaves the dark backdrop showing.
+      for (const j of [0, 1, 2])
+        if (during) expect(copy.px[j][0], `margin ${j} @${frame}`).toBeGreaterThan(60);
+        else expect(copy.px[j][0], `margin ${j} @${frame}`).toBeLessThan(30);
+      if (!during)
+        expect(near(copy.px[0], [21, 33, 34], 6), `backdrop @${frame}: ${copy.px[0].join()}`).toBe(
+          true,
+        );
+      expect(near(copy.px[3], [0, 0, 255], 8), 'camera above the Background').toBe(true);
+      expect(near(copy.px[4], [0, 255, 0], 8), 'screen above the Background').toBe(true);
+      BACKGROUND_PROBES.forEach((point, j) =>
+        expect(
+          near(exported[i][j], copy.px[j], 14),
+          `export vs copy ${point.join()} @${frame}`,
+        ).toBe(true),
+      );
+    });
+  });
+
+for (const muted of [[], ['a3']])
+  test(`mixes a new audio track at gain 1 beside music at 0.22, muting ${muted.join() || 'nothing'}`, async ({
+    page,
+  }, info) => {
+    test.setTimeout(120000);
+    await page.goto('/');
+    const result = await page.evaluate(async (muted) => {
+      const mediaModule = '/src/media.ts',
+        exportModule = '/src/export.ts',
+        modelModule = '/src/timeline-model.ts';
+      const { readMedia } = await import(mediaModule);
+      const { renderVideo } = await import(exportModule);
+      const { DEFAULT_TRACKS } = await import(modelModule);
+      const read = async (name: string) =>
+        readMedia(await (await fetch(`/media/${name}`)).blob(), name);
+      const voice = await read('voice.wav');
+      const music = await read('music.wav');
+      const blob = await renderVideo({
+        assets: [voice, music],
+        tracks: [...DEFAULT_TRACKS, { id: 'a3', label: 'Audio 3', kind: 'audio', gain: 1 }],
+        clips: [
+          { id: 'v', assetId: voice.id, track: 'a3', start: 6, duration: 24, offset: 15 },
+          { id: 'm', assetId: music.id, track: 'music', start: 0, duration: 30, offset: 30 },
+        ],
+        zooms: [],
+        layout: { radius: 22, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
+        muted,
+        width: 1920,
+        format: 'mov',
+        onProgress: () => {},
+      });
+      return Array.from(new Uint8Array(await blob.arrayBuffer()));
+    }, muted);
+    const file = info.outputPath('mix.mov');
+    writeFileSync(file, Buffer.from(result));
+    inspectExport(file, 1920, 'mov', true);
+    const pcm = (args: string[]) =>
+      execFileSync('ffmpeg', [
+        '-v',
+        'error',
+        ...args,
+        '-f',
+        'f32le',
+        '-ac',
+        '2',
+        '-ar',
+        '48000',
+        '-',
+      ]);
+    const audio = pcm(['-i', file]);
+    const reference = pcm([
+      '-i',
+      info.outputPath('voice.wav'),
+      '-i',
+      info.outputPath('music.wav'),
+      '-filter_complex',
+      `[0:a]atrim=start=0.5:end=1.3,asetpts=PTS-STARTPTS,adelay=200:all=1,volume=${muted.length ? 0 : 1}[v];` +
+        '[1:a]atrim=start=1:end=2,asetpts=PTS-STARTPTS,volume=0.22[m];' +
+        '[v][m]amix=inputs=2:normalize=0:duration=longest',
+    ]);
+    let squaredError = 0,
+      energy = 0;
+    for (let i = 0; i + 4 <= Math.min(audio.length, reference.length); i += 4) {
+      const expected = reference.readFloatLE(i);
+      squaredError += (audio.readFloatLE(i) - expected) ** 2;
+      energy += expected ** 2;
+    }
+    console.log(`new-track audio error ${Math.sqrt(squaredError / energy)}`);
+    expect(Math.sqrt(squaredError / energy)).toBeLessThan(0.12);
+  });
