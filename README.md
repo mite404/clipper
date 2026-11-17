@@ -15,7 +15,8 @@ portal URLs it prints rather than sharing localhost URLs.
 
 ## What works
 
-- Source preview, local video/audio import, in/out points, and target-track ripple insertion.
+- Source preview, local video/audio, PNG/JPEG still and MP4/MOV import, in/out points or a still
+  duration, and target-track ripple insertion.
 - Two video tracks, two audio tracks, waveform display, timeline scrubbing, split/delete/undo.
 - Remotion-synchronized video/audio, J/K/L shuttle, Space play/pause, and track mute.
 - Landscape-left and portrait-right cover crops with shared 22px masks by default.
@@ -23,7 +24,8 @@ portal URLs it prints rather than sharing localhost URLs.
   scroll/scale the timeline.
 - Timed screen zooms with editable scale, manually marked mouse focus, and smooth in/hold/out.
 - Portable project save/reopen with embedded original media and no relinking requirement.
-- Local rendered video export at 1920×1080 or 3840×2160, with progress and cancellation.
+- Local rendered video export at 1920×1080 or 3840×2160 as MP4, MOV or WebM, chosen in the export
+  dialog, with the exact filename shown, progress and cancellation.
 - Shared Storybook records, including mouse-marking mode, and realistic stress-data toggles.
 
 The layout follows the supplied desktop-plus-talking-head example and the source/compose workflow in
@@ -81,13 +83,16 @@ codec, decoded-pixel, audio, framing, auto-zoom, and cursor checks. Node-side fi
 require a development browser target. New specs default to production unless explicitly classified
 as source-import fixtures. Storybook and uninstrumented performance have separate projects.
 
-Outside CI, `npm run test:ui` expects servers already running. `BASE_URL` selects development Vite
-(default `http://localhost:5173`), `PERF_URL` selects the production editor (default
-`http://127.0.0.1:4173`), and `STORYBOOK_URL` selects Storybook (default `http://127.0.0.1:6006`).
-CI starts all three servers and requires a successful fresh production build before preview starts,
-even if `dist` already exists. A failed build cannot fall back to an old bundle.
+Outside CI, `npm run test:ui` needs a dev server on `BASE_URL` (default :5173) and a production
+preview on `PERF_URL` (default :4173). The orb editor service on :5173 is a production preview, so
+use `verify.mjs`, or set `BASE_URL` and `PERF_URL` to ports you started yourself. `BASE_URL` selects
+development Vite (default `http://localhost:5173`), `PERF_URL` selects the production editor
+(default `http://127.0.0.1:4173`), and `STORYBOOK_URL` selects Storybook (default
+`http://127.0.0.1:6006`). CI starts all three servers and requires a successful fresh production
+build before preview starts, even if `dist` already exists. A failed build cannot fall back to an
+old bundle.
 
-For fresh test-owned builds and servers, run the isolated CLI:
+Run browser checks through `verify.mjs`, which owns fresh servers and loopback ports:
 
 ```bash
 node --test .agents/skills/verify-clipper/scripts/verify.test.mjs
@@ -113,8 +118,12 @@ the user-facing preview. Restart the editor service after source changes to rebu
   JSON file; Open project restores them locally. There is no automatic disk persistence or agent
   motion cards.
 - Reverse shuttle is silent. Forward playback uses the browser's supported audio/video codecs.
-- MP4 AVC/AAC is preferred when the browser can encode it; otherwise export uses WebM VP9/Opus.
-  Unsupported encoders show an error rather than downloading a mislabeled file.
+- MP4 is H.264 with AAC, MOV is H.264 with uncompressed PCM audio and WebM is VP9 with Opus. A
+  browser that cannot encode the chosen format shows an error rather than downloading a mislabeled
+  file. Only H.264 and AAC MP4/MOV imports are qualified; other codecs, EXIF-rotated JPEGs and real
+  screen recordings are not.
+- Stills are PNG and JPEG only, placed on a visual track with a duration. There are no still
+  backgrounds or motion.
 - Ordinary recordings contain no reliable cursor-position track. Mark mouse position is manual and
   uses one fixed focus point per zoom, not automatic cursor tracking. Edge focus can reveal
   background.

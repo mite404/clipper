@@ -17,7 +17,8 @@ server.
 
 Run `npm ci` if dependencies are absent. Install the lockfile's browser with
 `npx playwright install chromium` if doctor requests it. FFmpeg and ffprobe must be on PATH for
-export inspection. Orb bootstrap supplies these dependencies.
+export inspection and the MP4/MOV import test in `media` and `editor`. Orb bootstrap supplies these
+dependencies.
 
 Use the executable CLI from any working directory. From the repository root:
 
@@ -115,10 +116,10 @@ playback, and Mediabunny decoding. No media APIs are mocked.
 select feature specs or titles in `scripts/verify.mjs`. `all` discovers every spec, preserving the
 root configuration's separate editor/4K projects. These specs run only under `all`: `controls`,
 `cursor`, `cursor-render`, `cursor-rotation`, `cursor-shapes`, `cursor-speeds`, `auto-zoom`,
-`framing`, `frame-image` and `icon-button`. There are no narrower journeys for them on purpose;
-features/README.md lists what each named journey selects. All runs use one worker, no retries, and
-fail on skipped, flaky, or zero tests. New journeys belong in the same table, not a second browser
-implementation.
+`framing`, `frame-image`, `icon-button`, `workspace-layout`, `cursor-inspector` and `zoom-creation`.
+There are no narrower journeys for them on purpose; features/README.md lists what each named journey
+selects. All runs use one worker, no retries, and fail on skipped, flaky, or zero tests. New
+journeys belong in the same table, not a second browser implementation.
 
 `performance` runs five repetitions against a fresh production build with tracing and video disabled
 and the original 1x device scale. Do not run other browser/build jobs alongside that measurement.
