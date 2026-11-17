@@ -161,6 +161,9 @@ test('shortcut guards, JKL shuttle and repeated arrow stepping stay intact', asy
   const state = page.getByTestId('transport-state');
   await playhead.fill('150');
   await playhead.focus();
+  // REF-38: a focused native slider gives Space to transport instead of swallowing it.
+  await page.keyboard.press('Space');
+  await expect(state).toHaveText('Playing · 1×');
   await page.keyboard.press('Space');
   await expect(state).toHaveText('Paused');
   await page.locator('.app-header').click({ position: { x: 4, y: 4 } });

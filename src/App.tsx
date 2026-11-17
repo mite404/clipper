@@ -921,13 +921,26 @@ export function App() {
     const keydown = (event: KeyboardEvent) => {
       if (help || busy || exportProgress !== null || markingMouse || exportDialog.current?.open)
         return;
-      if (
-        event.target instanceof HTMLElement &&
-        (['INPUT', 'TEXTAREA', 'SELECT'].includes(event.target.tagName) ||
-          event.target.isContentEditable)
-      )
-        return;
+      const target = event.target instanceof HTMLElement ? event.target : null;
       const key = event.key.toLowerCase();
+      // Sliders, checkboxes and menus keep their own keys but give Space to transport. Enter
+      // replaces their Space action: it toggles a checkbox and opens a menu, whose arrow keys
+      // still work where showPicker is unavailable. Text and number entry keep every key.
+      if (target instanceof HTMLInputElement && !['range', 'checkbox'].includes(target.type))
+        return;
+      if (target instanceof HTMLSelectElement || target instanceof HTMLInputElement) {
+        if (key === 'enter' && target.type !== 'range') {
+          event.preventDefault();
+          if (target instanceof HTMLSelectElement) {
+            try {
+              target.showPicker();
+            } catch {
+              // Arrow keys still change a closed select.
+            }
+          } else target.click();
+        }
+        if (key !== ' ') return;
+      } else if (target?.tagName === 'TEXTAREA' || target?.isContentEditable) return;
       if (event.metaKey || event.ctrlKey || event.altKey) {
         // Chords belong to the browser. Undo is the only one the editor takes; there is no redo.
         if (key === 'z' && !event.altKey && !event.shiftKey) {
@@ -1742,7 +1755,8 @@ export function App() {
           ['J', 'Rewind · repeat for 2× / 4× (silent)'],
           ['K', 'Pause'],
           ['L', 'Play · repeat for 2× / 4×'],
-          ['Space', 'Play / pause'],
+          ['Space', 'Play / pause · also from sliders, menus and checkboxes'],
+          ['Enter', 'Toggle a focused checkbox or open a focused menu'],
           ['← / →', 'Step one frame'],
           ['S', 'Split selected clip at playhead'],
           ['B', 'Create zoom at playhead (4 seconds)'],

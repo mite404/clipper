@@ -58,3 +58,24 @@ shortcut guard with this contract rather than introducing contradictory predicat
 The Space relayed Mite's request from `M-034yrCdljjk3AmKs7rNeRr`. The scoping owner returned the
 final checkbox, text-entry and dropdown decisions. This brief grants no source implementation; the
 master owns any subsequent exact-path grant. REF-32 is accepted independently.
+
+## Evidence
+
+Candidate evidence from the Opus implementation lane, based on `ba64daf`. Receipts stay in that
+thread's orb under `.amp/in/artifacts/verification/`.
+
+- Red on unchanged `ba64daf`: `tests/focused-controls.spec.ts` failed 0/2. Space on a Tab-focused
+  Timeline scale slider and on the focused track select left transport `Paused` (`red-ref38-PY8g`).
+- Green after the keydown change: 2/2 (`green-ref38-UVBx`). The spec covers Tab-acquired and
+  pointer-acquired focus on timeline scale, playhead, source position and corner-radius sliders,
+  plus the Media button, a trim slider and the timeline resize separator. It holds Space on a
+  focused playhead for REF-31's repeat rule, checks checkbox Enter and Space, select Space and Enter
+  with `showPicker` and with a throwing `showPicker` (arrow keys still work), and number entry.
+- Mutations: removing the checkbox Enter toggle failed the checkbox step (`mutation-ref38-dhAT`).
+  Removing the text/number exemption failed the number-entry step (`mutation2-ref38-tJ18`).
+- REF-31's focused-playhead expectation in `tests/transport-lifecycle.spec.ts` now expects one play
+  and one pause.
+- `verify.mjs editor`: 43/43 (`editor-bHhkBD`). An earlier run was interrupted by an orb pause after
+  36 tests, with one busy-audio failure. That test passed 12/12 when rerun alone.
+- A keyboard recording and screenshots were inspected: focus rings stay visible, slider values do
+  not change, the checkbox stays checked, and transport follows Space.
