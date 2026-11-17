@@ -97,9 +97,9 @@ exact-SHA green CI before releasing the slot.
 
 ### Publish dialog
 
-| Ticket ID                         | Scope                                                                                     | State                                                 | Needs                                                                                                    |
-| --------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
-| <a id="pub-1"></a>[PUB-1](#pub-1) | Publish dialog with live Preview tweet panel, API cost estimate and xeet-rendered preview | Dependency-held; prototype preservation/research only | REF-27 acceptance, transferred candidate, font/payload qualification and exact-path implementation grant |
+| Ticket ID                         | Scope                                                                                     | State                                                 | Needs                                                                                                          |
+| --------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| <a id="pub-1"></a>[PUB-1](#pub-1) | Publish dialog with live Preview tweet panel, API cost estimate and xeet-rendered preview | Dependency-held; prototype preservation/research only | REF-27 acceptance, transferred candidate, private-use asset/payload checks and exact-path implementation grant |
 
 Mite requested the existing mockup design without the endpoint list, using the installed UI
 framework, a live Preview tweet panel, developer-app cost estimates and xeet as the preview
@@ -109,6 +109,20 @@ preserves the six-file prototype and brief on local `feat/publish-dialog-prototy
 commit/bundle preservation is allowed, not a push or integration. Reported local checks are not
 accepted feature verification. No implementation source paths are reserved. Future implementation
 must use GPT-6.1 Sol medium after REF-27; App/export ownership remains with REF-27 until release.
+Mite approved the feature direction and explicitly requires Opus 5.5 medium code review of the exact
+integrated candidate before landing; do not start that review on the unintegrated prototype.
+
+Prototype `12d8ef6` on base `18d3089` is transferred by verified Git bundle and preserved locally as
+`preserve/pub1-prototype`, without applying it to the delivery tree. Bundle SHA-256 is
+`bd0c1ff9237b32cb59e96f57d8130da16fe20c2a602407fa2f71dfa51133ab84`; bundle verification and the
+exact six-file scope pass. Sonnet 5.5 produced this prototype; no implementation exception is
+granted. No source code, dependency or font has been adopted or pushed by the coordinator.
+
+The separate xeet research candidate `0705fb8`, parent `12d8ef6`, is also transferred and preserved
+as local `preserve/pub1-xeet`. Its verified 24,485-byte bundle SHA-256 is
+`d171811fea15f2591cd1c30d368a38393dda83da65008e7ddd2ab32aa7c91759`. No candidate files are applied.
+It contains the npm/Vite browser adapter research and known counting, real-TLD, SVG and font-payload
+limits. Preserve it as research, not delivered implementation or font-distribution qualification.
 
 Candidate paths are `src/PublishDialog.tsx`, `src/publish-dialog.css`, `src/post-preview.ts`,
 `src/post-preview.test.ts`, `src/PublishDialog.stories.tsx` and `docs/tickets/PUB-1.md`. Transfer
@@ -119,11 +133,15 @@ describe a possible API route, not a charge incurred by opening the intent compo
 rates and disclose unpriced upload costs before release. Do not present bitrate estimates as exact
 downloaded-file size.
 
-Qualify xeet font redistribution rights, media inputs, lazy-loaded payload and current counting
-behavior before adoption. The HTML prototype is not an exact xeet preview or delivery. Real X API
-posting, credentials, a server relay and other destinations are outside PUB-1; relay approval must
-not block this local-only scope. Verify current browser/API restrictions before making categorical
-CORS claims. No production service or media upload is authorized.
+Mite clarified personal workflow use and explicitly authorized proceeding with xeet integration
+without holding for the font question. This is not permission to publish font assets or deploy. Keep
+vendored fonts out of Git and inspect emitted WASM/assets before any public distribution; an npm
+install alone does not establish redistribution rights. Qualify private/local serving, media inputs,
+lazy-loaded payload and counting behavior without asking for a licence purchase. The HTML prototype
+is not an exact xeet preview or delivery. Real X API posting, credentials, a server relay and other
+destinations are outside PUB-1; relay approval must not block this local-only scope. Verify current
+browser/API restrictions before making categorical CORS claims. No production service or media
+upload is authorized.
 
 ## Owners
 
@@ -578,22 +596,23 @@ images were hosted, see [Known limits](#known-limits)).
 
 ### Current path reservations
 
-| Owner                    | Paths                                                                                                                                                         |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                                |
-| Cursor inspector         | No active implementation reservation after green inspector delivery                                                                                           |
-| Workspace layout         | UI-5 delivered at accepted 601ba78 with green exact-main CI; resize/layout/ruler reservation released                                                         |
-| Source-preview lifecycle | REF-32 delivered at 4b49623 with green exact-SHA CI; SourceMonitor/test reservation released; UI-8 remains research-only pending a new exact-path grant       |
-| Export integration       | REF-27 to T-66b606e9: actual-root geometry, MP4-default modal and bounded local AAC fallback active; exact paths below; no worker push; shared consumers held |
-| Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                                |
-| Media drawer follow-up   | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                                   |
-| Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5, accepted UI-7 successor and exact-path grant before edits                                          |
-| Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                          |
-| Transport lifecycle      | No active reservation after green REF-31 delivery; preserve accepted REF-20/31 transport behavior                                                             |
-| Zoom regions             | CLIP-9b narrow App creation/B/hints, AutoZoomControls deletion, zoom-generation removal and listed test/story consumers; no Timeline/model/ramp/style edits   |
-| Oxc tooling              | No active reservation after green VERIFY-5 delivery; VERIFY-6 follow-up needs a separate exact-path grant                                                     |
-| Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                                                                |
-| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                              |
+| Owner                    | Paths                                                                                                                                                       |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Cursor implementation    | No active reservation after the speed-style delivery; further work requires a new scoped grant                                                              |
+| Cursor inspector         | No active implementation reservation after green inspector delivery                                                                                         |
+| Workspace layout         | UI-5 delivered at accepted 601ba78 with green exact-main CI; resize/layout/ruler reservation released                                                       |
+| Source-preview lifecycle | REF-32 delivered at 4b49623 with green exact-SHA CI; SourceMonitor/test reservation released; UI-8 remains research-only pending a new exact-path grant     |
+| Export integration       | REF-27 delivered at 27099dc with green exact-SHA CI44001648378; reservation released to bounded CLIP-20b image integration                                  |
+| Still timeline media     | CLIP-20b to T-01a1e2f2: exact image import/duration/render/export/parser/test hunks in its brief; no worker push or unrelated shared edits                  |
+| Header cleanup           | No active implementation reservation after green UI-3 delivery                                                                                              |
+| Media drawer follow-up   | UI-7 delivered at b9c2e83 with green exact-main CI; no remaining implementation reservation                                                                 |
+| Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5, accepted UI-7 successor and exact-path grant before edits                                        |
+| Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                        |
+| Transport lifecycle      | No active reservation after green REF-31 delivery; preserve accepted REF-20/31 transport behavior                                                           |
+| Zoom regions             | CLIP-9b narrow App creation/B/hints, AutoZoomControls deletion, zoom-generation removal and listed test/story consumers; no Timeline/model/ramp/style edits |
+| Oxc tooling              | No active reservation after green VERIFY-5 delivery; VERIFY-6 follow-up needs a separate exact-path grant                                                   |
+| Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                                                              |
+| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                            |
 
 ### Preservation branches
 
@@ -1037,7 +1056,7 @@ original note for every row.
 | Ticket ID                                            | Title                                                            | Risk   | Status                                                                                                                                                                                        | Needs                                                                                                   |
 | ---------------------------------------------------- | ---------------------------------------------------------------- | ------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
 | <a id="doc-2"></a>[DOC-2](#doc-2)                    | Audit ticket coverage, IDs and delivery evidence                 | Small  | Delivered at [a8078ff](https://github.com/mite404/clipper/commit/a8078ffb4d737bf028bd0b864f31125dbd510263), [green CI](https://github.com/mite404/clipper/actions/runs/43789649834)           | nothing                                                                                                 |
-| <a id="ref-27"></a>[REF-27](#ref-27)                 | Select real MP4/MOV/WebM exports and qualify codecs              | Medium | Actual-root geometry, MP4-default modal and bounded local AAC fallback integration active for existing Sol medium T-66b606e9                                                                  | Preserve exporter candidate; exact hunks below; no worker push or early review                          |
+| <a id="ref-27"></a>[REF-27](#ref-27)                 | Select real MP4/MOV/WebM exports and qualify codecs              | Medium | Delivered at [27099dc](https://github.com/mite404/clipper/commit/27099dcf976a1d6eae6b39d431e33afae7659f9a); [green exact-SHA CI](https://github.com/mite404/clipper/actions/runs/44001648378) | Reservation released                                                                                    |
 | <a id="ref-28"></a>[REF-28](#ref-28)                 | Define missing decoded-frame behavior                            | Medium | Proposal                                                                                                                                                                                      | reproduce null and early-end decoder cases                                                              |
 | <a id="ref-29"></a>[REF-29](#ref-29)                 | Assess complexity-score baseline blind spots                     | Small  | Deferred proposal                                                                                                                                                                             | only if count-only baseline permits real growth                                                         |
 | <a id="ref-30"></a>[REF-30](#ref-30)                 | Progress and cancellation for import, Open and Save              | Large  | Proposal                                                                                                                                                                                      | define bounded-memory and cancellation behavior with REF-22                                             |
@@ -1213,7 +1232,7 @@ imply the entire recommendation is done. The full source wording stays in the hi
 | Ticket mapping                                          | Source | Recommendation                                       | Disposition and delta evidence                                                            |
 | ------------------------------------------------------- | ------ | ---------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | [CLIP-8](#clip-8), [REF-37](#ref-37)                    | R1     | Indexed pointer lookup and large-fixture time budget | Binary lookup delivered in `1195cda`; explicit 200k-sample budget still open              |
-| [REF-27](#ref-27)                                       | R2     | MP4 AVC and AAC qualification                        | Open; only WebM is proven                                                                 |
+| [REF-27](#ref-27)                                       | R2     | MP4 AVC and AAC qualification                        | Delivered 27099dc; HD/4K output qualified and exact-SHA CI44001648378 green               |
 | [REF-25](#ref-25)                                       | R3     | Case-insensitive timeline filenames                  | Delivered `90cf4b4`; actual Mac rerun still unverified                                    |
 | [REF-19](#ref-19), [REF-35](#ref-35), [REF-23](#ref-23) | R4     | Playhead and zoom bounds after shortening            | Explicit seek clamps delivered; edit-induced clamp and stranded zoom cases remain open    |
 | [REF-28](#ref-28)                                       | R5     | Missing or early-ended decoded frames                | Open; exporter still omits missing samples                                                |
@@ -1500,9 +1519,21 @@ Use a native export dialog with H.264 MP4 initial-session default and current ap
 shown read-only. Offer MOV H.264/PCM with size disclosure and WebM VP9/Opus alternatives. Export
 video opens the dialog; Render video starts the existing export lifecycle. Verify Close, Escape and
 focus return. Keep the sole resolution selector in the header, with no header format selector.
-Worker reports of positive AAC output and passing local gates remain provisional until integrated
-evidence and the complete isolated suite are accepted; no delivery or compatibility claim follows
-yet.
+
+REF-27 source is pushed at
+[`27099dc`](https://github.com/mite404/clipper/commit/27099dcf976a1d6eae6b39d431e33afae7659f9a).
+[Exact-SHA CI44001648378](https://github.com/mite404/clipper/actions/runs/44001648378) passed;
+REF-27 is delivered and its reservation released. The verified transferred patch reproduces reviewed
+tree `7bbb71d201c8ac126c6dd173525dcd10fdbf5431`, and staged source matches it exactly. Opus 5.5
+medium and the existing Fable supplemental reviewer both returned LAND. Coordinator strict gates,
+134 units, seven harness tests, full browser 105/105 and isolated performance 20/20 pass without
+skips, retries or relaxed assertions. Actual HD/4K MP4 AAC, MOV PCM and WebM Opus output passed
+decoded pixel/audio comparisons. Production DOM checks cover root dimensions, Escape, Cancel/focus
+return, lazy AAC loading and byte-identical notice delivery. All inspected media is synthetic or
+public; native AAC, Safari/macOS, physical speakers, universal MOV playback and real recording
+compatibility remain unclaimed. See the
+[acceptance evidence](https://ampcode.com/artifacts/ref-27-acceptance-evidence-1c4d6327-5fb4-4334-862f-e575e5279762).
+No deployment or preview promotion is claimed.
 
 For reported whole-app multi-second stalls, the
 [inspector owner](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) is the sole
@@ -1556,12 +1587,12 @@ Use the owner's terms "media pool pane" or "source media panel" in future UI/doc
 The later completed drag-insertion requirement is CLIP-2c below; it is distinct from same-track
 movement.
 
-| Ticket ID                                  | Scope                                                                     | Owner                                                                                 | State and dependency                                                                    |
-| ------------------------------------------ | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| <a id="clip-2b"></a>[CLIP-2b](#clip-2b)    | Reposition clips with associated-audio link toggle                        | [Sol medium](https://ampcode.com/threads/T-e625cc4d-8431-4df9-b146-0869cf28ac8b)      | Research/path-held; explicit association contract and CLIP-9b successor before grant    |
-| <a id="clip-20b"></a>[CLIP-20b](#clip-20b) | Import still timeline media and qualify MOV/MP4 paths                     | [Sol medium](https://ampcode.com/threads/T-01a1e2f2-99be-775a-be34-43cbce070c38)      | Reproduce/scope only; coordinate model/parser/render paths after preceding shared work  |
-| <a id="clip-2c"></a>[CLIP-2c](#clip-2c)    | Media-pool drag insertion and dynamic track creation                      | [Sol medium](https://ampcode.com/threads/T-7a47f0bf-09c2-4891-92ec-aaf7ec41bd52)      | Research only; model/render/persistence design after existing shared/media predecessors |
-| <a id="clip-2e"></a>[CLIP-2e](#clip-2e)    | Selection/Razor tools, selected-target Split and unlocked-track shortcuts | [Opus 5.5 medium](https://ampcode.com/threads/T-b99a528d-0528-4004-be79-2b65721b96ca) | Saved-state/no-link contract scoped; source held after accepted timeline predecessors   |
+| Ticket ID                                            | Scope                                                                     | Owner                                                                                 | State and dependency                                                                     |
+| ---------------------------------------------------- | ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| <a id="clip-2b"></a>[CLIP-2b](#clip-2b)              | Reposition clips with associated-audio link toggle                        | [Sol medium](https://ampcode.com/threads/T-e625cc4d-8431-4df9-b146-0869cf28ac8b)      | Research/path-held; explicit association contract and CLIP-9b successor before grant     |
+| <a id="clip-20b"></a>[CLIP-20b](tickets/CLIP-20b.md) | Import still timeline media and qualify MOV/MP4 paths                     | [Sol medium](https://ampcode.com/threads/T-01a1e2f2-99be-775a-be34-43cbce070c38)      | Bounded implementation grant on accepted 27099dc; exact brief paths only; no worker push |
+| <a id="clip-2c"></a>[CLIP-2c](#clip-2c)              | Media-pool drag insertion and dynamic track creation                      | [Sol medium](https://ampcode.com/threads/T-7a47f0bf-09c2-4891-92ec-aaf7ec41bd52)      | Research only; model/render/persistence design after existing shared/media predecessors  |
+| <a id="clip-2e"></a>[CLIP-2e](#clip-2e)              | Selection/Razor tools, selected-target Split and unlocked-track shortcuts | [Opus 5.5 medium](https://ampcode.com/threads/T-b99a528d-0528-4004-be79-2b65721b96ca) | Saved-state/no-link contract scoped; source held after accepted timeline predecessors    |
 
 CLIP-2b reproduced unchanged video and audio positions after real body drags into trimmed empty
 space. Accept same-track, frame-rounded nonnegative moves preserving duration and source fields.
@@ -1617,6 +1648,15 @@ Serialize REF-27 container selection before CLIP-20b image export changes on its
 successor. CLIP-20b's accepted still contract uses a five-second editable default, screen/camera
 tracks only, and clip-owned duration, with legacy reopen and decoded alpha/aspect parity required.
 Every unit retains strict, full browser and isolated performance gates plus exact-head CI.
+
+The [CLIP-20b brief](tickets/CLIP-20b.md) records the refreshed bounded paths on `27099dc`. Its
+owner confirms there is no untransferred source candidate, only preserved research. The coordinator
+accepts v3 for embedded-image envelopes with v2 retained for video/audio-only saves, and atomic
+rejection of duration growth into a following same-track clip without ripple. These are
+implementation decisions to verify. With REF-27 accepted, the existing GPT-6.1 Sol medium owner
+receives the brief's bounded source hunks on `27099dc` and its docs-only successor. No worker push,
+new dependency, config/baseline change, unrelated source edit or concurrent acceptance run is
+granted.
 
 CLIP-2c is explicitly authorized dynamic track creation, not a four-fixed-lane workaround. Drop from
 the media pool onto a compatible track inserts at mouse-up timeline time. Audio belongs only on
