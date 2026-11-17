@@ -229,9 +229,9 @@ test('the keyboard places on existing and new tracks, reorders, and v4 files reo
   );
   await expect(page.locator('.timeline-clip')).toHaveCount(clips);
   await expect(undo(page)).toBeDisabled();
-  await page.getByLabel('Place at seconds').fill('1');
+  await page.getByLabel('Place at seconds').fill('6.12');
   await page.getByRole('button', { name: 'Place on timeline' }).press('Enter');
-  expect(await starts(lane(page, 'Background · Full frame'))).toEqual(['1.0 seconds']);
+  expect(await starts(lane(page, 'Background · Full frame'))).toEqual(['6.1 seconds']);
   await expect(target.locator('option')).toContainText(['V1 · Background · Full frame']);
 
   // Raise the background in front of the screen, then lock it by its stable identity.
@@ -270,5 +270,25 @@ test('the keyboard places on existing and new tracks, reorders, and v4 files reo
   await expect(
     page.getByRole('button', { name: 'Lock Background · Full frame', exact: true }),
   ).toHaveAttribute('aria-pressed', 'true');
-  expect(await starts(lane(page, 'Background · Full frame'))).toEqual(['1.0 seconds']);
+  expect(await starts(lane(page, 'Background · Full frame'))).toEqual(['6.1 seconds']);
+});
+
+test('Insert and Place start on the same track and fall back when Undo removes the chosen one', async ({
+  page,
+}) => {
+  await open(page);
+  await pool(page, 'Flower study').click();
+  const insertOnto = page.getByLabel('Insert onto track');
+  await expect(page.getByLabel('Place onto')).toHaveValue('screen');
+  await expect(insertOnto).toHaveValue('screen');
+  await page.getByLabel('Place onto').selectOption({ label: 'New screen track · Masked' });
+  await page.getByRole('button', { name: 'Place on timeline' }).click();
+  await expect(status(page)).toContainText('Placed Flower study on Screen 2 · Masked');
+  await insertOnto.selectOption({ label: 'V3 · Screen 2 · Masked' });
+  await undo(page).click();
+  // The chosen track is gone, so Insert targets the default track the select now shows.
+  await expect(insertOnto).toHaveValue('screen');
+  await page.getByRole('button', { name: 'Insert source at playhead' }).click();
+  await expect(status(page)).toContainText('Inserted Flower study onto Screen recording.');
+  expect(await headers(page)).toHaveLength(4);
 });

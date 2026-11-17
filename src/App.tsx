@@ -279,7 +279,10 @@ function PlaceOnTimeline({
   const [seconds, setSeconds] = useState('');
   if (!asset) return null;
   const options = placeOptions(asset.kind === 'audio', tracks);
-  const value = options.some((o) => o.value === choice) ? choice : options[0].value;
+  // Same default target as Insert onto track, then the first option.
+  const value =
+    [choice, defaultTrack(tracks, asset.kind)].find((v) => options.some((o) => o.value === v)) ??
+    options[0].value;
   return (
     <form
       className="place-control"
@@ -302,7 +305,7 @@ function PlaceOnTimeline({
         aria-label="Place at seconds"
         type="number"
         min={0}
-        step={1 / FPS}
+        step="any"
         placeholder="Playhead"
         value={seconds}
         onChange={(e) => setSeconds(e.target.value)}
@@ -337,7 +340,10 @@ export function SourceMonitor({
   blocked?: boolean;
 }) {
   const [sourceUrl, setSourceUrl] = useState(() => asset?.url);
-  const [track, setTrack] = useState<Track>(() => defaultTrack(tracks, asset?.kind));
+  const [choice, setChoice] = useState<Track>(() => defaultTrack(tracks, asset?.kind));
+  // A choice the registry no longer has, after an undo or a move, falls back to the default.
+  const targets = sourceTracks(tracks, asset?.kind);
+  const track = targets.some((t) => t.id === choice) ? choice : defaultTrack(tracks, asset?.kind);
   const [range, setRange] = useState(() => ({ start: 0, end: sourceRangeEnd(asset) }));
   const [preview, setPreview] = useState({ playing: false, time: 0, error: '' });
   const video = useRef<HTMLVideoElement>(null);
@@ -363,7 +369,7 @@ export function SourceMonitor({
   if (asset?.url !== sourceUrl) {
     setSourceUrl(asset?.url);
     setRange({ start: 0, end: sourceRangeEnd(asset) });
-    setTrack(defaultTrack(tracks, asset?.kind));
+    setChoice(defaultTrack(tracks, asset?.kind));
     setPreview({ playing: false, time: 0, error: '' });
   }
   return (
@@ -504,9 +510,9 @@ export function SourceMonitor({
         <select
           aria-label="Insert onto track"
           value={track}
-          onChange={(e) => setTrack(e.target.value)}
+          onChange={(e) => setChoice(e.target.value)}
         >
-          {sourceTracks(tracks, asset?.kind).map((t) => (
+          {targets.map((t) => (
             <option key={t.id} value={t.id}>
               {trackNumber(tracks, t.id)} · {t.label}
             </option>
@@ -514,7 +520,7 @@ export function SourceMonitor({
         </select>
         <IconButton
           label="Insert source at playhead"
-          disabled={!asset || range.end <= range.start}
+          disabled={!asset || !track || range.end <= range.start}
           onClick={() => onInsert(track, range.start, range.end - range.start)}
         >
           <Plus size={15} />
