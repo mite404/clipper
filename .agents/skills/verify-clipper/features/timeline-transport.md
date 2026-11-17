@@ -50,6 +50,13 @@ working. The hidden-tab test spawns Chromium, so it launches `CHROME_PATH` when 
 installed Chromium otherwise. Its test budget is sixty seconds, including a thirty-second wait for
 the DevTools port.
 
+REF-38 makes a focused playhead give Space to transport. Only `all` runs
+`tests/focused-controls.spec.ts`. It proves one play/pause per Space from Tab- and pointer-focused
+sliders, buttons, trim sliders and the resize separator without changing their values. It checks
+that a focused checkbox toggles once on Enter, even when Enter is held, and never on Ctrl+Enter or
+Space. It checks that a focused select opens its picker on Enter, keeps arrow keys when `showPicker`
+throws, and plays on Space. It also checks that number entry never drives transport.
+
 REF-20 adds an independent held-rewind check in `editor`. At 1×, 2× and 4× it pauses between readout
 paints, compares the held playhead with camera media time, steps forward once and returns with
 Previous frame. It also rewinds to zero and steps to frame 1. `performance` observes readout

@@ -77,5 +77,10 @@ thread's orb under `.amp/in/artifacts/verification/`.
   and one pause.
 - `verify.mjs editor`: 43/43 (`editor-bHhkBD`). An earlier run was interrupted by an orb pause after
   36 tests, with one busy-audio failure. That test passed 12/12 when rerun alone.
+- Fable P2 correction on `0d81c22`: a held checkbox Enter toggled once per auto-repeat, and
+  Ctrl+Enter toggled. The spec's four-repeat hold failed first (`red2-ref38-87dr`). Checkbox Enter
+  now ignores repeats and Meta, Ctrl and Alt chords, and the spec passes 5/5 together with
+  transport-lifecycle (`green2-ref38-hiBl`). Removing only the chord guard fails at Ctrl+Enter
+  (`mutation3-ref38-z3ie`).
 - A keyboard recording and screenshots were inspected: focus rings stay visible, slider values do
   not change, the checkbox stays checked, and transport follows Space.

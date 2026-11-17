@@ -937,7 +937,10 @@ export function App() {
             } catch {
               // Arrow keys still change a closed select.
             }
-          } else target.click();
+          } else if (!event.repeat && !event.metaKey && !event.ctrlKey && !event.altKey) {
+            // One toggle (and one undo step) per press, never per auto-repeat or browser chord.
+            target.click();
+          }
         }
         if (key !== ' ') return;
       } else if (target?.tagName === 'TEXTAREA' || target?.isContentEditable) return;

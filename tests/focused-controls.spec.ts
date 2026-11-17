@@ -106,6 +106,14 @@ test('checkbox Enter toggles, select Enter opens its picker, and Space stays tra
   await expect(state).toHaveText('Paused');
   await page.keyboard.press('Enter');
   await expect(instant).not.toBeChecked();
+  // A held Enter is one toggle, not one undo step per auto-repeat; a chord is not a toggle.
+  for (let repeat = 0; repeat < 4; repeat++) await page.keyboard.down('Enter');
+  await page.keyboard.up('Enter');
+  await expect(instant).toBeChecked();
+  await page.keyboard.press('Control+Enter');
+  await expect(instant).toBeChecked();
+  await page.keyboard.press('Enter');
+  await expect(instant).not.toBeChecked();
   await spaceToggles(page, instant, false);
   await expect(instant).not.toBeChecked();
   await instant.click();
