@@ -95,6 +95,36 @@ This audit grants no additional source paths, experiment landing, deployment or 
 coordinator remains the only main writer, rebases each tested ticket onto latest main and waits for
 exact-SHA green CI before releasing the slot.
 
+### Publish dialog
+
+| Ticket ID                         | Scope                                                                                     | State                                                 | Needs                                                                                                    |
+| --------------------------------- | ----------------------------------------------------------------------------------------- | ----------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| <a id="pub-1"></a>[PUB-1](#pub-1) | Publish dialog with live Preview tweet panel, API cost estimate and xeet-rendered preview | Dependency-held; prototype preservation/research only | REF-27 acceptance, transferred candidate, font/payload qualification and exact-path implementation grant |
+
+Mite requested the existing mockup design without the endpoint list, using the installed UI
+framework, a live Preview tweet panel, developer-app cost estimates and xeet as the preview
+direction.
+[Research/prototype owner](https://ampcode.com/threads/T-e5b236cc-34e7-47bc-a102-0d3fa017ca69)
+preserves the six-file prototype and brief on local `feat/publish-dialog-prototype`; local WIP
+commit/bundle preservation is allowed, not a push or integration. Reported local checks are not
+accepted feature verification. No implementation source paths are reserved. Future implementation
+must use GPT-6.1 Sol medium after REF-27; App/export ownership remains with REF-27 until release.
+
+Candidate paths are `src/PublishDialog.tsx`, `src/publish-dialog.css`, `src/post-preview.ts`,
+`src/post-preview.test.ts`, `src/PublishDialog.stories.tsx` and `docs/tickets/PUB-1.md`. Transfer
+and inspect the exact candidate before adopting these files; do not overlay them from stale main.
+The App trigger/state hunk requires a later explicit grant. Keep the scope local-only: preview,
+export metadata and an X intent link with clear manual media-attachment instructions. Estimates
+describe a possible API route, not a charge incurred by opening the intent composer. Verify current
+rates and disclose unpriced upload costs before release. Do not present bitrate estimates as exact
+downloaded-file size.
+
+Qualify xeet font redistribution rights, media inputs, lazy-loaded payload and current counting
+behavior before adoption. The HTML prototype is not an exact xeet preview or delivery. Real X API
+posting, credentials, a server relay and other destinations are outside PUB-1; relay approval must
+not block this local-only scope. Verify current browser/API restrictions before making categorical
+CORS claims. No production service or media upload is authorized.
+
 ## Owners
 
 | Lane                     | Thread                                                                           | Owns                                                          |
@@ -1447,7 +1477,9 @@ expectation corrections only, preserving temporal/shape/angle assertions. Additi
 `public/licenses/mediabunny-aac-encoder.txt`. `tests/editor.spec.ts` permits only inserting Render
 video clicks after the three existing Export video activations in the source-blocking and
 progress/cancel/retry cases, plus three radius expectations from 22px to 33px for the actual HD root
-in composition playback and slider undo; preserve every assertion. No schema, FPS, ramp, PiP,
+in composition playback and slider undo; preserve every assertion. `tests/workspace-layout.spec.ts`
+permits one Render video click after Export video in the export-cancellation resize-recovery case,
+retaining every compact-layout, resize and cancellation assertion. No schema, FPS, ramp, PiP,
 still-image, fit or attachment changes. Keep SourceMonitor/sourceBlocked, Save, drawer and Inspector
 untouched. The only transport-listener exception suppresses editor shortcuts while the export modal
 is open. Use a fresh exact-base worktree and apply the preserved patch, not old `b9596c6` files in
