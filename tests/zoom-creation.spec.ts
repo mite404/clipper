@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -114,7 +115,7 @@ test('B creates once per press, ignores editable targets and modifier chords, an
   await expect(regions).toHaveCount(1);
 });
 
-test('dragging a zoom moves it in time within its free gap, as one undo step, and keys nudge it', async ({
+test('dragging a zoom draws it over its neighbours and overwrites them on release, and keys nudge it', async ({
   page,
 }) => {
   const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
@@ -132,8 +133,10 @@ test('dragging a zoom moves it in time within its free gap, as one undo step, an
   // The lane is measured on every read: the Inspector's content can change the timeline width.
   const lane = async () => (await page.locator('.zoom-lane').boundingBox())!;
   // The block's start frame, read from its left offset: a pressed block scales about its centre.
-  const frameOf = async () =>
-    Math.round((parseFloat(await a.evaluate((e) => (e as HTMLElement).style.left)) / 100) * 360);
+  const frameOf = async (block = a) =>
+    Math.round(
+      (parseFloat(await block.evaluate((e) => (e as HTMLElement).style.left)) / 100) * 360,
+    );
   const drag = async (frames: number, before?: () => Promise<void>) => {
     const perFrame = (await lane()).width / 360;
     const box = (await a.boundingBox())!;
@@ -149,7 +152,7 @@ test('dragging a zoom moves it in time within its free gap, as one undo step, an
   // 2.5 px at the current lane scale.
   await drag((2.5 * 360) / (await lane()).width);
   await expect(start).toHaveValue('0');
-  await expect.poll(frameOf).toBe(0);
+  await expect.poll(() => frameOf()).toBe(0);
   await expect(a).toHaveClass(/selected/);
 
   // Dragged 2 s right, A keeps its 4 s duration; one Undo puts it back.
@@ -159,23 +162,36 @@ test('dragging a zoom moves it in time within its free gap, as one undo step, an
   await undo.click();
   await expect(start).toHaveValue('0');
 
-  // Dragging an unselected zoom selects it, even when it stops at A's edge and leaves the pointer.
+  // Dragging an unselected zoom selects it, even when the pointer leaves it. Released over A's
+  // tail, B overwrites it: A keeps 0..2 s, and one Undo restores both.
   const b = regions.nth(1);
   const bBox = (await b.boundingBox())!;
   await page.mouse.move(bBox.x + 20, bBox.y + bBox.height / 2);
   await page.mouse.down();
-  await page.mouse.move(bBox.x + 20 - (200 * (await lane()).width) / 360, bBox.y + 5, { steps: 6 });
+  await page.mouse.move(bBox.x + 20 - (180 * (await lane()).width) / 360, bBox.y + 5, { steps: 6 });
   await page.mouse.up();
   await expect(b).toHaveClass(/selected/);
-  await expect(start).toHaveValue('4');
-  await undo.click();
-  await expect(start).toHaveValue('8');
+  await expect(start).toHaveValue('2');
   await a.click();
+  await expect(page.getByLabel('Zoom duration seconds', { exact: true })).toHaveValue('2');
+  await undo.click();
+  await expect(regions).toHaveCount(2);
+  await expect(page.getByLabel('Zoom duration seconds', { exact: true })).toHaveValue('4');
 
-  // Dragged far past B, A stops at B's edge instead of overlapping or jumping it.
-  await drag(300);
+  // Held over B, A draws on top and B stays whole; released, A overwrites B's head.
+  await drag(180, async () => {
+    await expect.poll(() => frameOf()).toBe(180);
+    await expect.poll(() => frameOf(b)).toBe(240);
+  });
+  await expect(start).toHaveValue('6');
+  await expect.poll(() => frameOf(b)).toBe(300);
+  await undo.click();
+  await expect(start).toHaveValue('0');
+  // Dragged up to B's edge, A touches it and B is left whole.
+  await drag(120);
   await expect(start).toHaveValue('4');
-  await expect.poll(frameOf).toBe(120);
+  await expect.poll(() => frameOf()).toBe(120);
+  await expect.poll(() => frameOf(b)).toBe(240);
 
   // Only the primary button drags: a right-button drag leaves A where it is.
   const held = (await a.boundingBox())!;
@@ -183,32 +199,91 @@ test('dragging a zoom moves it in time within its free gap, as one undo step, an
   await page.mouse.down({ button: 'right' });
   await page.mouse.move(held.x - 100, held.y + held.height / 2, { steps: 6 });
   await page.mouse.up({ button: 'right' });
-  await expect.poll(frameOf).toBe(120);
+  await expect.poll(() => frameOf()).toBe(120);
   await expect(start).toHaveValue('4');
 
   // Escape mid-drag cancels the move.
   await drag(-60, async () => {
-    await expect.poll(frameOf).toBe(60);
+    await expect.poll(() => frameOf()).toBe(60);
     await page.keyboard.press('Escape');
   });
   await expect(start).toHaveValue('4');
-  await expect.poll(frameOf).toBe(120);
+  await expect.poll(() => frameOf()).toBe(120);
 
   // With the block focused, arrows nudge it a frame, or ten with Shift, and the playhead stays.
   await playhead.fill('30');
   await a.focus();
   await page.keyboard.press('ArrowLeft');
-  await expect.poll(frameOf).toBe(119);
+  await expect.poll(() => frameOf()).toBe(119);
   await page.keyboard.press('Shift+ArrowLeft');
-  await expect.poll(frameOf).toBe(109);
+  await expect.poll(() => frameOf()).toBe(109);
   await expect(playhead).toHaveValue('30');
   await page.keyboard.press('ArrowRight');
-  await expect.poll(frameOf).toBe(110);
+  await expect.poll(() => frameOf()).toBe(110);
   await expect(playhead).toHaveValue('30');
   // Arrows with Alt, Ctrl or Meta are left to the editor and never move the zoom.
   for (const chord of ['Alt+ArrowRight', 'Control+ArrowRight', 'Meta+ArrowLeft']) {
     await a.focus();
     await page.keyboard.press(chord);
-    await expect.poll(frameOf).toBe(110);
+    await expect.poll(() => frameOf()).toBe(110);
   }
+});
+
+test('a zoom dropped inside another splits it, and the right piece keeps its look through Open', async ({
+  page,
+}, testInfo) => {
+  const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
+  const add = page.getByRole('button', { name: 'Add zoom', exact: true });
+  const regions = page.getByRole('button', { name: 'Select zoom', exact: true });
+  const field = (label: string) => page.getByLabel(label, { exact: true });
+  // A: 0..8 s at 2.5× on 30%, 70% with smooth follow. B: 8..12 s at the default look.
+  await playhead.fill('0');
+  await add.click();
+  await field('Zoom duration seconds').fill('8');
+  await field('Zoom level').fill('2.5');
+  await field('Zoom focus X').fill('30');
+  await field('Zoom focus Y').fill('70');
+  await field('Camera follow').selectOption('smooth');
+  await playhead.fill('240');
+  await add.click();
+  await expect(regions).toHaveCount(2);
+  // B dragged to 2 s lands inside A, leaving A at 0..2 s and a piece of it at 6..8 s.
+  const lane = (await page.locator('.zoom-lane').boundingBox())!;
+  const b = (await regions.nth(1).boundingBox())!;
+  await page.mouse.move(b.x + 20, b.y + b.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(b.x + 20 - (180 * lane.width) / 360, b.y + b.height / 2, { steps: 8 });
+  await page.mouse.up();
+  await expect(regions).toHaveCount(3);
+  const look = async (index: number) => {
+    await regions.nth(index).click();
+    return Promise.all(
+      [
+        'Zoom start seconds',
+        'Zoom duration seconds',
+        'Zoom level',
+        'Zoom focus X',
+        'Zoom focus Y',
+        'Camera follow',
+      ].map((label) => field(label).inputValue()),
+    );
+  };
+  const left = ['0', '2', '2.5', '30', '70', 'smooth'];
+  const right = ['6', '2', '2.5', '30', '70', 'smooth'];
+  expect(await look(0)).toEqual(left);
+  expect(await look(1)).toEqual(right);
+
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const saved = testInfo.outputPath('split.clipper.json');
+  await (await downloaded).saveAs(saved);
+  await page.reload();
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await page.getByLabel('Open local project').setInputFiles(saved);
+  await expect(regions).toHaveCount(3);
+  expect(await look(0)).toEqual(left);
+  expect(await look(1)).toEqual(right);
+  // Every zoom, the right piece included, has its own ID.
+  const { zooms } = JSON.parse(await readFile(saved, 'utf8')) as { zooms: { id: string }[] };
+  expect(new Set(zooms.map((z) => z.id)).size).toBe(3);
 });

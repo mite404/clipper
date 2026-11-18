@@ -273,8 +273,8 @@ test('a trim grip commits only real trims, on the clip as it is at release', asy
   await page.mouse.move(at.x, at.y);
   await page.mouse.down();
   await page.mouse.up();
-  await grip.focus();
-  await page.keyboard.press('ArrowRight');
+  await clips.first().getByRole('slider', { name: 'Trim left edge' }).focus();
+  await page.keyboard.press('ArrowLeft');
   await expect(undo).toBeDisabled();
   // Split under a held grip: releasing must trim the shortened clip, not restore the old one.
   await page.getByRole('slider', { name: 'Timeline playhead' }).fill('45');
@@ -291,7 +291,7 @@ test('a trim grip commits only real trims, on the clip as it is at release', asy
   expect(first.x + first.width).toBeLessThanOrEqual(second.x + 0.5);
 });
 
-test('trim grips extend as well as shorten, up to the first limit, one undo step each', async ({
+test('trim grips extend over a neighbour, overwriting it on release, one undo step each', async ({
   page,
 }) => {
   await page.goto('/');
@@ -323,11 +323,11 @@ test('trim grips extend as well as shorten, up to the first limit, one undo step
     180, 180, 360,
   ]);
 
-  // Touching a neighbour blocks an outward arrow, and a blocked arrow is not an edit.
+  // An outward arrow at a touching neighbour overwrites one frame of it.
   await grip(0, 'right').focus();
   await page.keyboard.press('ArrowRight');
-  await grip(1, 'left').focus();
-  await page.keyboard.press('ArrowLeft');
+  expect([await frame(0, 'right'), await frame(1, 'left')]).toEqual([181, 181]);
+  await undo.click();
   await expect(undo).toBeDisabled();
 
   // Shorten then extend by dragging the same edge restores it; each gesture is one undo step.
@@ -341,15 +341,17 @@ test('trim grips extend as well as shorten, up to the first limit, one undo step
   expect(await frame(0, 'right')).toBe(180);
   await expect(undo).toBeDisabled();
 
-  // The gap case: shorten s1, then pull s2's left edge outward. It stops at s1's end, and the
-  // preview already shows that clamp before release.
+  // Shorten s1, then pull s2's left edge 100 frames out over it. While held, s2 overlaps s1 and
+  // s1 is whole; released, s1 loses what s2 now covers.
   await drag(0, 'right', -60);
   await drag(1, 'left', -100, false);
-  expect(await frame(1, 'left')).toBe(120);
+  expect([await frame(1, 'left'), await frame(0, 'right')]).toEqual([80, 120]);
   await page.mouse.up();
-  expect([await frame(1, 'left'), await frame(1, 'right')]).toEqual([120, 360]);
+  expect([await frame(0, 'right'), await frame(1, 'left'), await frame(1, 'right')]).toEqual([
+    80, 80, 360,
+  ]);
   await undo.click();
-  expect(await frame(1, 'left')).toBe(180);
+  expect([await frame(0, 'right'), await frame(1, 'left')]).toEqual([120, 180]);
 
   // Right edge stops at the source tail (390 of 420 would end at 390), left arrows go both ways.
   await drag(1, 'right', 100);
@@ -371,7 +373,131 @@ test('trim grips extend as well as shorten, up to the first limit, one undo step
   await expect(undo).toBeDisabled();
 });
 
-test('a still extends its left edge to a neighbour or frame 0, and the extension survives reopening', async ({
+test('a clip body drag draws over its neighbours, overwrites on release and changes only same-kind lanes', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const undo = page.getByRole('button', { name: 'Undo', exact: true });
+  const lane = (id: string) => page.getByTestId(`track-${id}`);
+  // Clip start times per lane in timeline order, from the clips' accessible names.
+  const starts = async (id: string) =>
+    (
+      await lane(id)
+        .locator('.timeline-clip')
+        .evaluateAll((clips) => clips.map((c) => c.getAttribute('aria-label')!.split(' at ')[1]))
+    ).sort((a, b) => parseFloat(a) - parseFloat(b));
+  // A press on a lane's clip at a timeline frame.
+  const press = async (from: string, frame: number) => {
+    const box = (await lane(from).boundingBox())!;
+    const point = { x: box.x + ((frame + 0.5) / 360) * box.width, y: box.y + box.height / 2 };
+    await page.mouse.move(point.x, point.y);
+    await page.mouse.down();
+    return { ...point, perFrame: box.width / 360 };
+  };
+  // A press moved `frames` along and onto `to`'s lane, then released unless told to hold.
+  const drag = async (from: string, frame: number, frames: number, to = from, release = true) => {
+    // Changes to the same values within 800 ms fold into one undo step, so pause between gestures.
+    await page.waitForTimeout(1200);
+    const start = await press(from, frame);
+    const target = (await lane(to).boundingBox())!;
+    await page.mouse.move(start.x + frames * start.perFrame, target.y + target.height / 2, {
+      steps: 8,
+    });
+    if (release) await page.mouse.up();
+  };
+  // s1 0..6 s and s2 6..12 s on the screen lane; c1 0..12 s on the camera lane.
+  expect([await starts('screen'), await starts('camera')]).toEqual([
+    ['0.0 seconds', '6.0 seconds'],
+    ['0.0 seconds'],
+  ]);
+
+  // A press that moves under 4 px is a click: it selects, edits nothing and leaves playback going.
+  await page.keyboard.press('l');
+  await expect(page.getByTestId('transport-state')).not.toHaveText('Paused');
+  const click = await press('screen', 240);
+  await page.mouse.move(click.x + 3, click.y, { steps: 3 });
+  await page.mouse.up();
+  await expect(lane('screen').locator('.timeline-clip').nth(1)).toHaveClass(/selected/);
+  await expect(page.getByTestId('transport-state')).not.toHaveText('Paused');
+  await page.keyboard.press('k');
+  await expect(page.getByTestId('transport-state')).toHaveText('Paused');
+  await expect(undo).toBeDisabled();
+  // Razor still cuts on a click.
+  await page.keyboard.press('c');
+  await press('screen', 90);
+  await page.mouse.up();
+  expect(await starts('screen')).toEqual(['0.0 seconds', '3.0 seconds', '6.0 seconds']);
+  await undo.click();
+  await page.keyboard.press('v');
+
+  // Held 2 s right, s1 draws over s2 and s2 stays whole; released, s2 loses its first 2 s.
+  await drag('screen', 90, 60, 'screen', false);
+  expect(await starts('screen')).toEqual(['2.0 seconds', '6.0 seconds']);
+  const [held, under] = await lane('screen').locator('.timeline-clip').all();
+  expect((await held.boundingBox())!.x + (await held.boundingBox())!.width).toBeGreaterThan(
+    (await under.boundingBox())!.x + 1,
+  );
+  await page.mouse.up();
+  expect(await starts('screen')).toEqual(['2.0 seconds', '8.0 seconds']);
+  // s2 still shows the source frames it showed there, so its tail still ends at 13 s (390).
+  const tail = lane('screen').locator('.timeline-clip').nth(1).getByRole('slider', {
+    name: 'Trim right edge',
+  });
+  await page.waitForTimeout(1200);
+  await tail.focus();
+  for (let i = 0; i < 10; i++) await page.keyboard.press('Shift+ArrowRight');
+  await expect(tail).toHaveAttribute('aria-valuenow', '390');
+  await undo.click();
+  await undo.click();
+  expect(await starts('screen')).toEqual(['0.0 seconds', '6.0 seconds']);
+
+  // Escape mid-drag puts the clip back and edits nothing.
+  await drag('screen', 90, 60, 'screen', false);
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  expect(await starts('screen')).toEqual(['0.0 seconds', '6.0 seconds']);
+  await expect(undo).toBeDisabled();
+
+  // A cut under a held clip: the release moves s1 as it is then (0..1.5 s, to 2 s), so the piece the
+  // cut made keeps 1.5..2 s and 3.5..6 s, and s2 stays whole. A copy taken at the press would land
+  // 0..6 s at 2 s, over that piece and s2's head.
+  await page.getByRole('slider', { name: 'Timeline playhead' }).fill('45');
+  await drag('screen', 90, 60, 'screen', false);
+  await page.keyboard.press('Alt+KeyK');
+  await page.mouse.up();
+  expect(await starts('screen')).toEqual([
+    '1.5 seconds',
+    '2.0 seconds',
+    '3.5 seconds',
+    '6.0 seconds',
+  ]);
+  while (await undo.isEnabled()) await undo.click();
+
+  // Dragged down onto the camera lane, s2 overwrites c1's second half and leaves the screen lane.
+  await drag('screen', 270, 0, 'camera');
+  expect([await starts('screen'), await starts('camera')]).toEqual([
+    ['0.0 seconds'],
+    ['0.0 seconds', '6.0 seconds'],
+  ]);
+  await undo.click();
+  // An audio lane never takes a video clip, and a locked lane takes none: s1 only moves in time,
+  // over s2's first second.
+  await drag('screen', 90, 30, 'voice');
+  expect([await starts('screen'), await starts('voice')]).toEqual([
+    ['1.0 seconds', '7.0 seconds'],
+    ['0.0 seconds'],
+  ]);
+  await undo.click();
+  await page.getByRole('button', { name: 'Lock Talking head', exact: true }).click();
+  await drag('screen', 90, 30, 'camera');
+  expect([await starts('screen'), await starts('camera')]).toEqual([
+    ['1.0 seconds', '7.0 seconds'],
+    ['0.0 seconds'],
+  ]);
+});
+
+test('a still extends its left edge over a neighbour to frame 0, and the extension survives reopening', async ({
   page,
 }) => {
   await page.goto('/');
@@ -405,15 +531,16 @@ test('a still extends its left edge to a neighbour or frame 0, and the extension
   const left = still.getByRole('slider', { name: 'Trim left edge' });
   await left.focus();
   for (let i = 0; i < 20; i++) await page.keyboard.press('Shift+ArrowLeft');
-  // The still has offset 0 and no source length, so only its neighbour stops it.
-  await expect(left).toHaveAttribute('aria-valuenow', '180');
-  await page.waitForTimeout(1200);
-
-  // With the neighbour gone, nothing but frame 0 stops it.
-  await remove(0);
-  await left.focus();
-  for (let i = 0; i < 20; i++) await page.keyboard.press('Shift+ArrowLeft');
+  // The still has offset 0 and no source length, so it runs over its neighbour, which ends where
+  // the still now starts, and on to frame 0, which removes the neighbour.
+  await expect(left).toHaveAttribute('aria-valuenow', '100');
+  await expect(screen.getByRole('button')).toHaveCount(2);
+  await expect(
+    screen.getByRole('button').first().getByRole('slider', { name: 'Trim right edge' }),
+  ).toHaveAttribute('aria-valuenow', '100');
+  for (let i = 0; i < 10; i++) await page.keyboard.press('Shift+ArrowLeft');
   await expect(left).toHaveAttribute('aria-valuenow', '0');
+  await expect(screen.getByRole('button')).toHaveCount(1);
   await expect(still.getByRole('slider', { name: 'Trim right edge' })).toHaveAttribute(
     'aria-valuenow',
     '330',

@@ -14,6 +14,7 @@ import {
   VolumeX,
   ZoomIn,
 } from 'lucide-react';
+import { bindDrag } from '@ui-sdk/core';
 import {
   createElement,
   memo,
@@ -30,6 +31,7 @@ import type { Asset } from './media';
 import { moveZoom } from './zoom-generation';
 import {
   FPS,
+  MAX_FRAMES,
   moveTrack,
   placeMedia,
   rulerMarks,
@@ -165,6 +167,7 @@ const TrackHeader = memo(function TrackHeader({
 // What a lane says while a pool item is over it: why it would refuse, or where it would land.
 function dropHint(
   result: ReturnType<typeof placeMedia>,
+  clips: Clip[],
   target: DropTarget,
   locked: boolean,
   at: number,
@@ -175,13 +178,24 @@ function dropHint(
       text: result.refused,
     };
   if (locked) return { state: 'locked', text: 'Locked' };
-  return { state: 'ok', text: placeText(result, target, at) };
+  return { state: 'ok', text: placeText(result, clips, target, at) };
 }
 
+// overwrite() keeps every untouched clip as it was and appends the new one, so any other change
+// means the placement hit a clip.
+const overwrites = (before: Clip[], after: Clip[]) =>
+  after.length !== before.length + 1 || before.some((c, i) => c !== after[i]);
+
 // A creation row names the track it would make, since a video on the audio row makes a screen.
-function placeText(result: { tracks: TrackDef[]; clip: Clip }, target: DropTarget, at: number) {
+function placeText(
+  result: { tracks: TrackDef[]; clips: Clip[]; clip: Clip },
+  clips: Clip[],
+  target: DropTarget,
+  at: number,
+) {
   const where = `at ${(at / FPS).toFixed(1)} s`;
-  if (!('create' in target)) return `Place ${where}`;
+  if (!('create' in target))
+    return `${overwrites(clips, result.clips) ? 'Overwrite' : 'Place'} ${where}`;
   const made = result.tracks.find((t) => t.id === result.clip.track)!;
   return `New ${made.kind === 'audio' ? 'audio' : made.role} track ${where}`;
 }
@@ -216,7 +230,8 @@ function DropZone({
     event.dataTransfer.dropEffect = 'copy';
     const at = dropFrame(event, duration);
     const refuse = 'track' in target && locked.includes(target.track);
-    const next = dropHint(placeMedia(registry, clips, drop.media, target, at), target, refuse, at);
+    const placed = placeMedia(registry, clips, drop.media, target, at); // → placement or refusal
+    const next = dropHint(placed, clips, target, refuse, at);
     setHint((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
   };
   return (
@@ -313,6 +328,71 @@ function hoverCut(
   return (event) => {
     if (onHover && !locked) reportHoverCut(onHover, event, clip, targets, duration);
   };
+}
+
+// A clip body press: under DRAG_THRESHOLD it stays a click, which selects; past it, the clip
+// follows in time and across the lanes `on.lane` finds, and Escape puts it back. A release where it
+// started changes nothing, so it adds no undo step.
+function dragClip(
+  event: PointerEvent<HTMLElement>,
+  clip: Clip,
+  duration: number,
+  on: {
+    // False while Razor is armed or the clip's lane is locked: the press only clicks.
+    held: boolean;
+    lane: (x: number, y: number) => Track | undefined;
+    select: () => void;
+    preview: (clip?: Clip) => void;
+    commit: (clip: Clip) => void;
+  },
+) {
+  if (!on.held || event.button !== 0) return;
+  const from = { x: event.clientX, width: event.currentTarget.parentElement!.clientWidth };
+  let to = clip; // → Clip where a release would put it
+  bindDrag(event.currentTarget, event.nativeEvent, {
+    threshold: DRAG_THRESHOLD,
+    cancelOnEscape: true,
+    onStart: on.select,
+    onMove: ({ x, y }) => {
+      const at = Math.round(clip.start + ((x - from.x) / from.width) * duration); // → frame
+      const start = Math.max(0, Math.min(MAX_FRAMES - clip.duration, at));
+      to = { ...clip, start, track: on.lane(x, y) ?? to.track };
+      on.preview(to);
+    },
+    onEnd: (_event, canceled) => {
+      on.preview(undefined);
+      // bindDrag ends a plain click too; only a drag that moved has a place to commit.
+      if (!canceled && to !== clip) on.commit(to);
+    },
+  });
+}
+
+// What a press on a clip body tracks: where the pointer went down, since a Razor drag is not a
+// click and never cuts; where a drag would land the clip, which draws there over what it
+// overwrites; and a commit through the latest `onTrim` with the clip as it is at release, so a
+// split, undo or delete made while the clip is held is never overwritten by a copy taken at the
+// press.
+function useClipPress(clips: Clip[], onTrim?: (clip: Clip) => void) {
+  const pressX = useRef(0);
+  const [move, preview] = useState<Clip>();
+  const latest = useRef({ clips, onTrim });
+  useLayoutEffect(() => {
+    latest.current = { clips, onTrim };
+  });
+  const commit = ({ id, start, track }: Clip) => {
+    const now = latest.current.clips.find((c) => c.id === id); // → Clip | undefined
+    if (now) latest.current.onTrim?.({ ...now, start, track });
+  };
+  return { pressX, move, preview, commit };
+}
+
+// The clips with a dragged one swapped for where it would land.
+const previewed = (clips: Clip[], move?: Clip) => clips.map((c) => (c.id === move?.id ? move : c));
+
+// The unlocked lane of `kind` under a point, if any.
+function laneAt(registry: TrackDef[], locked: Track[], x: number, y: number, kind: string) {
+  const id = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-track]')?.dataset.track;
+  return registry.find((t) => t.id === id && t.kind === kind && !locked.includes(t.id))?.id;
 }
 
 // Report a trim only when it moved the edge: a plain click on a grip, or an arrow key into a limit,
@@ -436,7 +516,8 @@ function ZoomBlock({
       style={{
         left: `${((preview ?? zoom.start) / duration) * 100}%`,
         width: `${(zoom.duration / duration) * 100}%`,
-        cursor: preview === undefined ? 'grab' : 'grabbing',
+        // A dragged zoom draws over the zooms it will overwrite on release.
+        ...(preview === undefined ? { cursor: 'grab' } : { cursor: 'grabbing', zIndex: 1 }),
         touchAction: 'none',
       }}
       onClick={() => onSelect(zoom.id)}
@@ -571,8 +652,8 @@ export function Timeline({
     width: number;
     delta: number;
   }>();
-  // Where the pointer last went down: a Razor drag is not a click, so it never cuts.
-  const pressX = useRef(0);
+  const { pressX, move, preview, commit } = useClipPress(clips, onTrim);
+  const shown = previewed(clips, move); // → Clip[] with a dragged clip where it would land
   const snapTargets = clips.flatMap((c) => [c.start, c.start + c.duration]);
   const zone = { drop, registry, clips, locked: tracks.locked, duration };
   const createRow = (kind: NewTrack) => (
@@ -610,6 +691,7 @@ export function Timeline({
           data-tool={onRazor ? 'razor' : 'select'}
           data-locked={tracks.locked.includes(id)}
           data-testid={`track-${id}`}
+          data-track={id}
           onDoubleClick={(event) => {
             const rect = event.currentTarget.getBoundingClientRect();
             onSeek(
@@ -620,7 +702,7 @@ export function Timeline({
             );
           }}
         >
-          {clips
+          {shown
             .filter((c) => c.track === id)
             .map((originalClip) => {
               const asset = assets.find((a) => a.id === originalClip.assetId);
@@ -636,7 +718,16 @@ export function Timeline({
                   className={`timeline-clip ${selected === clip.id ? 'selected' : ''}`}
                   aria-label={`${asset?.name ?? 'Missing media'} at ${(clip.start / FPS).toFixed(1)} seconds`}
                   aria-pressed={selected === clip.id}
-                  onPointerDown={(event) => (pressX.current = event.clientX)}
+                  onPointerDown={(event) => {
+                    pressX.current = event.clientX;
+                    dragClip(event, clip, duration, {
+                      held: !onRazor && !tracks.locked.includes(id),
+                      lane: (x, y) => laneAt(registry, tracks.locked, x, y, track.kind),
+                      select: () => onSelect(clip.id),
+                      preview,
+                      commit,
+                    });
+                  }}
                   onPointerMove={hoverCut(
                     onRazorHover,
                     tracks.locked.includes(id),

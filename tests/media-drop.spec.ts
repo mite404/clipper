@@ -112,28 +112,32 @@ test('a pool drop lands at the release frame on a scrolled, rescaled lane, and a
   expect(await starts(screen)).toEqual(['0.0 seconds', '10.0 seconds']);
 });
 
-test('drops refuse occupied spans, the wrong media kind, Escape, the outside and outside files', async ({
+test('drops overwrite occupied spans and refuse the wrong media kind, Escape, the outside and outside files', async ({
   page,
 }) => {
   await open(page);
   const camera = lane(page, 'Talking head');
   const voice = lane(page, 'Voiceover');
+  // Over a clip, a drop overwrites what it covers: the camera clip keeps only 0..3.3 s.
   await drag(page, 'Flower study', camera, 100);
-  await expect(status(page)).toContainText('Talking head already has a clip there');
+  await expect(status(page)).toContainText('Placed Flower study on Talking head at 3.3 seconds');
+  expect(await starts(camera)).toEqual(['0.0 seconds', '3.3 seconds']);
+  await undo(page).click();
+  expect(await starts(camera)).toEqual(['0.0 seconds']);
   await drag(page, 'Voiceover', camera, 359);
   await expect(status(page)).toContainText('Talking head takes video or still media');
   await drag(page, 'Flower study', voice, 359);
   await expect(status(page)).toContainText('Voiceover takes audio media');
   await expect(undo(page)).toBeDisabled();
 
-  // While dragging, the lane names why it would refuse.
+  // While dragging, the lane says the drop would overwrite.
   const { from, to } = await aim(page, 'Flower study', camera, 100);
   await page.mouse.move(from.x, from.y);
   await page.mouse.down();
   await page.mouse.move(to.x - 30, to.y - 20, { steps: 6 });
   await page.mouse.move(to.x, to.y, { steps: 4 });
-  await expect(camera).toHaveAttribute('data-drop', 'occupied');
-  await expect(camera.locator('.drop-hint')).toHaveText('Talking head already has a clip there.');
+  await expect(camera).toHaveAttribute('data-drop', 'ok');
+  await expect(camera.locator('.drop-hint')).toHaveText('Overwrite at 3.3 s');
   // Escape over a row that would take the drop cancels it.
   const create = page.getByTestId('create-background');
   // Same frame as the camera aim, so it is never under the sticky labels.
