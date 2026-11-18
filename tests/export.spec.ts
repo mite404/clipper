@@ -1401,3 +1401,114 @@ test('hands the rendered video over from a Save video click, with fresh user act
   await page.waitForTimeout(1000);
   expect(downloads).toEqual(['developer-walkthrough-1080p.mp4', 'developer-walkthrough-1080p.mp4']);
 });
+
+// REF-28 pins today's contract when the decoder has no frame for a requested time. Source frame n
+// is a grey field with a white full-width bar 6 px high at y = n * 6, so the picture says which
+// source frame it is.
+test.describe('decoder frame gaps', () => {
+  const bars = (file: string, frames: number, setpts?: string) =>
+    execFileSync('ffmpeg', [
+      ...['-v', 'error', '-y', '-f', 'lavfi', '-i'],
+      `color=c=0x404040:s=640x360:r=30:d=${frames / 30}`,
+      ...['-f', 'lavfi', '-i', `color=c=white:s=640x6:r=30:d=${frames / 30}`],
+      ...[
+        '-filter_complex',
+        `[0:v][1:v]overlay=x=0:y='(n-1)*6':shortest=1,format=yuv420p${setpts ?? ''}`,
+      ],
+      ...['-c:v', 'libvpx-vp9', '-g', '15', file],
+    ]);
+
+  // The stage column at x = 450 through the screen mask, for each frame of an image or video file.
+  const columns = (file: string) =>
+    execFileSync(
+      'ffmpeg',
+      [
+        '-v',
+        'error',
+        '-i',
+        file,
+        '-vf',
+        'scale=1280:720,format=gray,crop=1:720:450:0',
+        '-f',
+        'rawvideo',
+        '-',
+      ],
+      { maxBuffer: 1 << 28 },
+    );
+  // The source frame whose bar a column shows (the mask is 700 px tall from y = 10 for 360 source
+  // rows), or "empty" when no bar is drawn: the mask then holds only its dark placeholder fill.
+  const shown = (column: Buffer, frame: number) => {
+    const rows = [...column.subarray(frame * 720 + 10, frame * 720 + 710).entries()].filter(
+      ([, value]) => value > 200,
+    );
+    if (rows.length < 4) return 'empty';
+    const centre = rows.reduce((sum, [y]) => sum + y, 0) / rows.length + 0.5;
+    return Math.round(((centre * 360) / 700 - 3) / 6);
+  };
+
+  for (const [name, frames, setpts, probes, expected] of [
+    // A 1 s stream under a 60-frame clip: after its last frame every path holds that frame.
+    ['past the end of the stream', 30, undefined, [30, 45, 59], [29, 29, 29]],
+    // The first sample is at 0.5 s: before it there is no frame, so nothing is drawn.
+    ['before the first sample', 60, ',setpts=PTS+0.5/TB', [0, 14, 16], ['empty', 'empty', 1]],
+  ] as const)
+    test(`Copy frame and export ${name === 'past the end of the stream' ? 'hold the last frame' : 'draw nothing'} ${name}`, async ({
+      page,
+    }, info) => {
+      test.setTimeout(120000);
+      const fixture = info.outputPath('gap.webm');
+      bars(fixture, frames, setpts);
+      await page.route('**/gap-fixture', (route) =>
+        route.fulfill({ contentType: 'text/html', body: '<html><body>Gap fixture</body></html>' }),
+      );
+      await page.route('**/gap-media', (route) => route.fulfill({ path: fixture }));
+      await page.goto('/gap-fixture');
+      const rendered = await page.evaluate(
+        async ({ probes, length }) => {
+          const mediaModule = '/src/media.ts',
+            exportModule = '/src/export.ts';
+          const { readMedia } = await import(mediaModule);
+          const { renderFrameImage, renderVideo } = await import(exportModule);
+          const asset = await readMedia(await (await fetch('/gap-media')).blob(), 'gap', 'gap');
+          const options = {
+            assets: [asset],
+            // The clip is longer than the stream, as a stale stored duration would make it.
+            clips: [
+              { id: 'c', assetId: 'gap', track: 'screen', start: 0, duration: length, offset: 0 },
+            ],
+            zooms: [],
+            layout: { radius: 0, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
+            width: 1920,
+          };
+          const copies = [];
+          for (const frame of probes)
+            copies.push(
+              Array.from(
+                new Uint8Array(await (await renderFrameImage({ ...options, frame })).arrayBuffer()),
+              ),
+            );
+          const video = await renderVideo({
+            ...options,
+            muted: [],
+            format: 'webm',
+            onProgress: () => {},
+          });
+          return { copies, video: Array.from(new Uint8Array(await video.arrayBuffer())) };
+        },
+        { probes: [...probes], length: Math.max(60, frames) },
+      );
+      const exported = info.outputPath('gap-export.webm');
+      writeFileSync(exported, Buffer.from(rendered.video));
+      const video = columns(exported);
+      const copies = rendered.copies.map((bytes, i) => {
+        const png = info.outputPath(`gap-copy-${i}.png`);
+        writeFileSync(png, Buffer.from(bytes));
+        return shown(columns(png), 0);
+      });
+      expect(copies, `Copy frame at ${probes.join()}`).toEqual([...expected]);
+      expect(
+        probes.map((frame) => shown(video, frame)),
+        `export at ${probes.join()}`,
+      ).toEqual([...expected]);
+    });
+});
