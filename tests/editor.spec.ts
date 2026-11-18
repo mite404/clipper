@@ -1149,3 +1149,32 @@ test('loads with no request beyond its own origin and with both fonts self-hoste
   expect((await faces()).filter((face) => face.endsWith(':error'))).toEqual([]);
   expect(outside).toEqual([]);
 });
+
+test('a clip waveform keeps its source bins at any timeline scale, spreading them as it zooms', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const scale = page.getByRole('slider', { name: 'Timeline scale' });
+  const wave = page.getByTestId('track-voice').locator('svg[data-waveform]').first();
+  // The drawn bins, their rate per source second and their on-screen width in px.
+  const read = () =>
+    wave.evaluate((svg: SVGSVGElement) => ({
+      path: svg.querySelector('path')!.getAttribute('d'),
+      rate: svg.dataset.binsPerSecond,
+      binWidth: svg.getBoundingClientRect().width / svg.viewBox.baseVal.width,
+    }));
+  const max = Number(await scale.getAttribute('max'));
+  await scale.fill(String(max / 2));
+  await expect(wave).toHaveAttribute('data-bins-per-second', '1000');
+  const half = await read();
+  await scale.fill(String(max));
+  await expect.poll(async () => (await read()).binWidth).toBeCloseTo(half.binWidth * 2, 1);
+  const full = await read();
+  // The same 1000 bins per source second, drawn twice as wide: zoom adds no detail.
+  expect(full.path).toBe(half.path);
+  expect(full.rate).toBe('1000');
+  // At fit, whole bins merge, so the rate divides 1000.
+  await scale.fill((await scale.getAttribute('min'))!);
+  await expect.poll(async () => 1000 % Number((await read()).rate)).toBe(0);
+});

@@ -11,7 +11,9 @@ export type Asset = {
   size: number;
   width: number;
   height: number;
-  peaks: number[];
+  // The absolute peak of every channel, one per 1/WAVE_RATE s of source, for the waveform. Decoded
+  // media holds a Float32Array; it is rebuilt on Open, never saved.
+  peaks: ArrayLike<number>;
   thumbnail: string;
   cursor?: CursorTrack;
   transcript?: Transcript;
@@ -21,6 +23,11 @@ export type Asset = {
 );
 
 const DEMO_DEADLINE_MS = 15000;
+/**
+ * Waveform bins per source second: fixed, so detail stays tied to source time at any zoom, and
+ * fine enough (1 ms) that a zoomed-in clip still shows syllables and pitch periods.
+ */
+export const WAVE_RATE = 1000;
 /** Initial timeline duration for a still, not a limit on its source pixels. */
 export const DEFAULT_STILL_FRAMES = 5 * FPS;
 
@@ -48,7 +55,7 @@ async function readImage(file: Blob, name: string, id: string, mime: string): Pr
       size: file.size,
       width: bitmap.width,
       height: bitmap.height,
-      peaks: [],
+      peaks: new Float32Array(0),
       hasAudio: false,
       thumbnail,
     };
@@ -86,15 +93,15 @@ export async function readMedia(
     if (!Number.isFinite(durationSeconds) || durationSeconds <= 0 || (!video && !audio)) {
       throw new Error('This file has no playable media.');
     }
-    const peaks = Array.from({ length: Math.max(1, Math.ceil(durationSeconds * FPS)) }, () => 0);
+    const peaks = new Float32Array(Math.max(1, Math.ceil(durationSeconds * WAVE_RATE)));
     if (audio) {
       if (!(await audio.canDecode()))
         throw new Error('The audio codec is not supported in this browser.');
       for await (const { buffer, timestamp } of new AudioBufferSink(audio).buffers()) {
         for (let channel = 0; channel < buffer.numberOfChannels; channel++) {
           const samples = buffer.getChannelData(channel);
-          for (let i = 0; i < samples.length; i += 32) {
-            const bin = Math.floor((timestamp + i / buffer.sampleRate) * FPS);
+          for (let i = 0; i < samples.length; i++) {
+            const bin = Math.floor((timestamp + i / buffer.sampleRate) * WAVE_RATE);
             if (bin >= 0 && bin < peaks.length)
               peaks[bin] = Math.max(peaks[bin], Math.abs(samples[i]));
           }

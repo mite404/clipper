@@ -1,7 +1,15 @@
-import { useMemo, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import {
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ButtonHTMLAttributes,
+  type ReactNode,
+} from 'react';
 import { Film, Image, Music2, Plus, Upload } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui-sdk/react/tooltip';
-import type { Asset } from './media';
+import { WAVE_RATE, type Asset } from './media';
 import type { Transcript } from './transcribe';
 import { FPS, clock } from './timeline-model';
 
@@ -32,39 +40,94 @@ export function IconButton({
   );
 }
 
+// Each source's loudest bin, scanned once per peaks array.
+const loudestOf = new WeakMap<ArrayLike<number>, number>();
+
+/**
+ * The waveform's shape over source bins [from, to): one column per `step` whole bins, each the
+ * loudest of its bins against the asset's loudest, joined through column centres. Columns never
+ * split a bin: zoomed past the bin rate the line spreads the same bins wider, and below it bins
+ * merge by their peak.
+ * @param pixels The drawn width in device pixels.
+ * @returns The step and an SVG path in column units, mirrored about y = 24.
+ */
+export function waveShape(peaks: ArrayLike<number>, from: number, to: number, pixels: number) {
+  const step = Math.max(1, Math.ceil((to - from) / Math.max(1, pixels)));
+  // The loudest of bins [start, end), 0 past the source's end.
+  const loudest = (start: number, end: number) => {
+    let max = 0;
+    for (let i = start; i < Math.min(end, peaks.length); i++) max = Math.max(max, peaks[i]);
+    return max;
+  };
+  // ponytail: one cached scan per source; every clip of it and every resize reuses it.
+  let maximum = loudestOf.get(peaks);
+  if (maximum === undefined)
+    loudestOf.set(peaks, (maximum = Math.max(0.01, loudest(0, peaks.length))));
+  const first = Math.floor(from / step);
+  const amplitudes = Array.from({ length: Math.ceil(to / step) - first }, (_, i) =>
+    Math.max(0.5, (loudest((first + i) * step, (first + i + 1) * step) / maximum) * 21),
+  );
+  const end = first + amplitudes.length;
+  const top = amplitudes.map((a, i) => `L${first + i + 0.5},${24 - a}`).join('');
+  const bottom = amplitudes
+    .map((a, i) => `L${first + i + 0.5},${24 + a}`)
+    .reverse()
+    .join('');
+  const [head, tail] = [amplitudes[0], amplitudes.at(-1)!];
+  return {
+    step,
+    path: `M${first},${24 - head}${top}L${end},${24 - tail}L${end},${24 + tail}${bottom}L${first},${24 + head}Z`,
+  };
+}
+
 /** Decoded waveform with the played region highlighted by the current timeline position. */
 export function Waveform({
   peaks,
   progress = 0,
   offset = 0,
-  duration = peaks.length,
+  duration,
 }: {
-  peaks: number[];
+  peaks: ArrayLike<number>;
   progress?: number;
+  /** Source frames before the first drawn one. */
   offset?: number;
+  /** Source frames drawn; the whole source by default. */
   duration?: number;
 }) {
-  const bars = useMemo(() => {
-    const maximum = peaks.reduce((max, peak) => Math.max(max, peak), 0.01);
-    return Array.from({ length: 120 }, (_, index) => {
-      const from = Math.floor(offset + (index / 120) * duration);
-      const to = Math.max(from + 1, Math.floor(offset + ((index + 1) / 120) * duration));
-      const peak = peaks.slice(from, to).reduce((max, value) => Math.max(max, value), 0);
-      const amplitude = Math.max(0.5, (peak / maximum) * 21);
-      return `M${index * 4 + 2},${24 - amplitude}v${amplitude * 2}`;
-    }).join(' ');
-  }, [peaks, offset, duration]);
+  const svg = useRef<SVGSVGElement>(null);
+  const clip = `wave${useId().replace(/\W/g, '')}`;
+  const [pixels, setPixels] = useState(0);
+  useLayoutEffect(() => {
+    const element = svg.current!;
+    const measure = () =>
+      setPixels(element.getBoundingClientRect().width * window.devicePixelRatio);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  const from = (offset / FPS) * WAVE_RATE; // → bin
+  const to = duration === undefined ? peaks.length : from + (duration / FPS) * WAVE_RATE;
+  const { step, path } = useMemo(
+    () => waveShape(peaks, from, to, pixels),
+    [peaks, from, to, pixels],
+  );
+  const x = from / step; // → column
+  const width = (to - from) / step;
   return (
     <svg
+      ref={svg}
       data-waveform="true"
-      viewBox="0 0 480 48"
+      data-bins-per-second={WAVE_RATE / step}
+      viewBox={`${x} 0 ${width} 48`}
       preserveAspectRatio="none"
       aria-label="Decoded audio waveform"
     >
-      <path d={bars} fill="none" stroke="currentColor" strokeWidth="2" opacity=".5" />
-      <svg width={`${Math.max(0, Math.min(1, progress)) * 100}%`} overflow="hidden">
-        <path d={bars} fill="none" stroke="currentColor" strokeWidth="2" />
-      </svg>
+      <clipPath id={clip}>
+        <rect x={x} width={Math.max(0, Math.min(1, progress)) * width} height="48" />
+      </clipPath>
+      <path d={path} fill="currentColor" opacity=".5" />
+      <path d={path} fill="currentColor" clipPath={`url(#${clip})`} />
     </svg>
   );
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Timeline, type TrackToggles } from './Timeline';
-import type { Asset } from './media';
+import { WAVE_RATE, type Asset } from './media';
 import { DEFAULT_TRACKS as TRACKS, FPS, type Clip, type Track } from './timeline-model';
 import './styles.css';
 
@@ -19,6 +19,10 @@ const NAMES = [
   'Ambient bed',
 ];
 const THUMBNAIL = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="160" height="90"><rect width="160" height="90" fill="#40576c"/></svg>')}`;
+// An hour of speech-like waveform bins: syllables under a slower phrase envelope.
+const PEAKS = Float32Array.from({ length: 3600 * WAVE_RATE }, (_, bin) =>
+  Math.abs(Math.sin(bin * 0.09) * Math.sin(bin * 0.0013) * (0.6 + 0.4 * Math.sin(bin * 1.7))),
+);
 const ASSETS: Asset[] = TRACKS.map(({ id }, index) => ({
   id,
   name: NAMES[index],
@@ -28,7 +32,7 @@ const ASSETS: Asset[] = TRACKS.map(({ id }, index) => ({
   duration: 3600 * FPS,
   width: 1920,
   height: 1080,
-  peaks: Array.from({ length: 120 }, (_, sample) => Math.abs(Math.sin(sample * 0.7))),
+  peaks: PEAKS,
   hasAudio: index > 1,
   thumbnail: THUMBNAIL,
 }));
