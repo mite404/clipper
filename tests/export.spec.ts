@@ -1318,3 +1318,86 @@ test.describe('no mask shadow', () => {
       );
   });
 });
+
+// Chrome blocks repeat downloads and Safari asks first unless the user has just acted, so the
+// rendered video must download from the user's own click, never from code after a long render.
+test('hands the rendered video over from a Save video click, with fresh user activation', async ({
+  page,
+}) => {
+  test.setTimeout(150000);
+  await page.addInitScript(() => {
+    const clicks: { name: string; active: boolean }[] = [];
+    Object.assign(window, { downloadClicks: clicks });
+    const record = (anchor: HTMLAnchorElement) =>
+      anchor.download &&
+      clicks.push({ name: anchor.download, active: navigator.userActivation.isActive });
+    const click = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'click')!.value as (
+      this: HTMLElement,
+    ) => void;
+    HTMLAnchorElement.prototype.click = function () {
+      record(this);
+      click.call(this);
+    };
+    // A real click on a download link activates the page before the link follows.
+    document.addEventListener('click', (event) => {
+      const anchor = event.target instanceof Element && event.target.closest('a');
+      if (anchor && event.isTrusted) record(anchor);
+    });
+  });
+  const downloads: string[] = [];
+  page.on('download', (download) => downloads.push(download.suggestedFilename()));
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const status = page.locator('.app-footer [role="status"]');
+  const save = page.getByRole('link', { name: 'Save video', exact: true });
+  const render = async () => {
+    await page.getByRole('button', { name: 'Export video', exact: true }).click();
+    await page.getByRole('button', { name: 'Render video', exact: true }).click();
+    await expect(status).toContainText('Video exported at 1920', { timeout: 120000 });
+  };
+
+  await render();
+  // Nothing downloads until the user asks, and the ready state hands the next key press to Save.
+  await page.waitForTimeout(1500);
+  expect(downloads).toEqual([]);
+  await expect(save).toBeFocused();
+  await expect(page.getByRole('status').filter({ hasText: 'Video ready' })).toContainText(
+    'developer-walkthrough-1080p.mp4',
+  );
+  const downloaded = page.waitForEvent('download');
+  await save.click();
+  const download = await downloaded;
+  expect(download.suggestedFilename()).toBe('developer-walkthrough-1080p.mp4');
+  // The blob URL outlives the click, so the browser can still read the whole file.
+  expect(
+    execFileSync('ffprobe', ['-v', 'error', '-show_format', (await download.path())!]).length,
+  ).toBeGreaterThan(0);
+  // The render stays after Save, since a cancelled save dialog or a download prompt still needs it.
+  const again = page.getByRole('link', { name: 'Save again', exact: true });
+  await expect(again).toBeFocused();
+  await expect(page.getByRole('status').filter({ hasText: 'Saved ·' })).toContainText(
+    'developer-walkthrough-1080p.mp4',
+  );
+  await page.waitForTimeout(500);
+  const redownloaded = page.waitForEvent('download');
+  await again.click();
+  const second = await redownloaded;
+  expect(
+    execFileSync('ffprobe', ['-v', 'error', '-show_format', (await second.path())!]).length,
+  ).toBeGreaterThan(0);
+  expect(await page.evaluate(() => Reflect.get(window, 'downloadClicks'))).toEqual([
+    { name: 'developer-walkthrough-1080p.mp4', active: true },
+    { name: 'developer-walkthrough-1080p.mp4', active: true },
+  ]);
+  // Discard releases it and hands focus back to Export video.
+  await page.getByRole('button', { name: 'Discard video', exact: true }).click();
+  await expect(again).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Export video', exact: true })).toBeFocused();
+
+  // Discarding an unsaved render downloads nothing.
+  await render();
+  await page.getByRole('button', { name: 'Discard video', exact: true }).click();
+  await expect(save).toHaveCount(0);
+  await page.waitForTimeout(1000);
+  expect(downloads).toEqual(['developer-walkthrough-1080p.mp4', 'developer-walkthrough-1080p.mp4']);
+});

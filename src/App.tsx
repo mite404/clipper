@@ -899,6 +899,17 @@ export function App() {
   const [exportWidth, setExportWidth] = useState<1920 | 3840>(1920);
   const [exportFormat, setExportFormat] = useState<'mp4' | 'mov' | 'webm'>('mp4');
   const [exportProgress, setExportProgress] = useState<number | null>(null);
+  // A finished render waits for the user's own click to download: Chrome blocks and Safari asks
+  // about a download that code starts long after the click that began the render.
+  // It stays after Save, since a cancelled save dialog or a download prompt still needs the file.
+  const [readyVideo, setReadyVideo] = useState<{
+    url: string;
+    name: string;
+    size: number;
+    saved: boolean;
+  } | null>(null);
+  const saveVideo = useRef<HTMLAnchorElement>(null);
+  const exportButton = useRef<HTMLButtonElement>(null);
   const sourceBlocked = busy || exportProgress !== null;
   const {
     mode: mediaMode,
@@ -1012,7 +1023,14 @@ export function App() {
     !sameTracks(selectedTracks, savedTracks.selectedTracks) ||
     assets.some((a) => a.transcript && !savedTranscripts.includes(a.transcript)) ||
     transcription.running;
-  const working = unsaved || exportProgress !== null;
+  const working = unsaved || exportProgress !== null || (readyVideo !== null && !readyVideo.saved);
+  const readyUrl = readyVideo?.url;
+  useEffect(() => {
+    if (!readyUrl) return;
+    saveVideo.current?.focus();
+    // Released only on Discard, a new export or unmount, a task later than the bar closing.
+    return () => void setTimeout(() => URL.revokeObjectURL(readyUrl), 0);
+  }, [readyUrl]);
   useEffect(() => {
     if (!working) return;
     // The browser shows its own "leave site?" prompt; the text cannot be customised.
@@ -1470,6 +1488,7 @@ export function App() {
     setSpeed(0);
     setMarkingZoomId(null);
     setExportProgress(0);
+    setReadyVideo(null);
     const controller = new AbortController();
     exportAbort.current = controller;
     let progress = 0;
@@ -1489,10 +1508,12 @@ export function App() {
         },
         signal: controller.signal,
       });
-      downloadBlob(
-        blob,
-        `${exportBasename}.${blob.type.slice('video/'.length).replace('quicktime', 'mov')}`,
-      );
+      setReadyVideo({
+        url: URL.createObjectURL(blob),
+        name: `${exportBasename}.${blob.type.slice('video/'.length).replace('quicktime', 'mov')}`,
+        size: blob.size,
+        saved: false,
+      });
       setMessage(`Video exported at ${exportWidth} × ${(exportWidth * 9) / 16}. Rendered locally.`);
     } catch (error) {
       setMessage(
@@ -1667,6 +1688,7 @@ export function App() {
               <Copy size={14} /> Copy frame
             </button>
             <button
+              ref={exportButton}
               className="secondary-button"
               disabled={busy || !edit.clips.length || exportProgress !== null}
               onClick={() => {
@@ -1696,6 +1718,34 @@ export function App() {
           <progress aria-label="Video export progress" max="1" value={exportProgress} />
           <button className="text-button" onClick={() => exportAbort.current?.abort()}>
             Cancel export
+          </button>
+        </div>
+      )}
+      {readyVideo && (
+        <div className="export-progress export-ready" role="status">
+          <Check size={14} className="export-ready-check" />
+          <span className="export-ready-label">
+            {readyVideo.saved ? 'Saved' : 'Video ready'} · {readyVideo.name} ·{' '}
+            {(readyVideo.size / 1e6).toFixed(1)} MB
+          </span>
+          <a
+            ref={saveVideo}
+            className={readyVideo.saved ? 'secondary-button' : 'save-button'}
+            href={readyVideo.url}
+            download={readyVideo.name}
+            onClick={() => setReadyVideo({ ...readyVideo, saved: true })}
+          >
+            <ArrowDownToLine size={14} /> {readyVideo.saved ? 'Save again' : 'Save video'}
+          </a>
+          <button
+            className="text-button"
+            aria-label="Discard video"
+            onClick={() => {
+              setReadyVideo(null);
+              exportButton.current?.focus();
+            }}
+          >
+            Discard
           </button>
         </div>
       )}

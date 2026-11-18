@@ -636,6 +636,7 @@ for (const { width, format } of [1920, 3840].flatMap((width) =>
       .innerText();
     expect(displayed).toBe(filename);
     await page.getByRole('button', { name: 'Render video', exact: true }).click();
+    await page.getByRole('link', { name: 'Save video', exact: true }).click({ timeout: 150000 });
     const download = await rendered;
     expect(download.suggestedFilename()).toBe(displayed);
     const file = info.outputPath(download.suggestedFilename());

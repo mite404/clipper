@@ -294,6 +294,7 @@ test('imports qualified H264 and AAC MP4/MOV, rejects ProRes and reopens exporte
   const rendered = page.waitForEvent('download', { timeout: 90000 });
   await page.getByRole('button', { name: 'Export video', exact: true }).click();
   await page.getByRole('button', { name: 'Render video', exact: true }).click();
+  await page.getByRole('link', { name: 'Save video', exact: true }).click({ timeout: 150000 });
   const output = info.outputPath('qualified.mp4');
   await (await rendered).saveAs(output);
   const probe = JSON.parse(
@@ -1098,6 +1099,7 @@ test('reports export progress, cancels cleanly and downloads on retry', async ({
   const downloaded = page.waitForEvent('download', { timeout: 150000 });
   await exportButton.click();
   await page.getByRole('button', { name: 'Render video', exact: true }).click();
+  await page.getByRole('link', { name: 'Save video', exact: true }).click({ timeout: 150000 });
   const download = await downloaded;
   await expect(status).toContainText('Video exported at 1920');
   await expect(progress).toHaveCount(0);

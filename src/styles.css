@@ -2282,6 +2282,24 @@ p {
   padding: 8px 22px;
   font-size: 11px;
 }
+.export-ready a {
+  width: auto;
+  padding: 6px 12px;
+  font-size: 11px;
+}
+.export-ready a:active {
+  transform: scale(0.97);
+}
+.export-ready-check {
+  color: var(--green);
+}
+.export-ready-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 @media (min-width: 961px) {
   .monitors {
     min-height: 310px;
