@@ -46,10 +46,8 @@ async function hoverLane(page: Page, lane: string, frame: number, nudge = 0) {
   await page.mouse.move(box.x + (frame / 360) * box.width + nudge, box.y + box.height / 2);
 }
 
-// A key pressed right after "assets ready" appears is dropped: the shortcut handler's effect has
-// not yet re-registered with busy=false (same on base). The header click gives it that time.
+// Razor armed from the keyboard, as the first thing a user does after the media loads.
 async function armRazor(page: Page) {
-  await page.locator('.app-header').click({ position: { x: 4, y: 4 } });
   await page.keyboard.press('c');
   await expect(page.getByRole('button', { name: 'Razor tool', exact: true })).toHaveAttribute(
     'aria-pressed',
@@ -494,4 +492,20 @@ test.describe('Razor hover seeks the real playhead to the frame a click would cu
     await expect(undo(page)).toBeDisabled();
     await expect(playhead(page)).toHaveValue('100');
   });
+});
+
+test('a shortcut pressed in the commit that shows "ready" still takes effect', async ({ page }) => {
+  // Presses C in the same commit that renders "4 assets ready", before any passive effect has run.
+  await page.addInitScript(() => {
+    new MutationObserver((_, observer) => {
+      const status = document.querySelector('[data-testid="media-status"]');
+      if (status?.textContent !== '4 assets ready') return;
+      observer.disconnect();
+      document.body.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'c', code: 'KeyC', bubbles: true }),
+      );
+    }).observe(document, { childList: true, subtree: true, characterData: true });
+  });
+  await open(page);
+  await expect(toggle(page, 'Razor tool')).toHaveAttribute('aria-pressed', 'true');
 });

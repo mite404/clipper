@@ -1143,7 +1143,7 @@ export function App() {
     };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (help || busy || exportProgress !== null || markingMouse || exportDialog.current?.open)
         return;
