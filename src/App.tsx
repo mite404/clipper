@@ -92,6 +92,8 @@ import {
 } from './timeline-model';
 import { classifyChange, type Gesture } from './history';
 import { PREVIEW_DIVISORS, savePreviewQuality, savedPreviewQuality } from './preview-quality';
+import type { StepRange } from '@ui-sdk/core/number';
+import { scrub } from './scrub';
 import {
   librarySizeWarning,
   serializeProject,
@@ -789,6 +791,9 @@ function LayoutChoice({
   );
 }
 
+// Bounds of the 0 to 100 percent fields, which a label drag stays inside.
+const PERCENT = { min: 0, max: 100, step: 1 };
+
 /** Editing controls for a selected zoom and the two composition masks. */
 export function Inspector({
   zoom,
@@ -798,6 +803,8 @@ export function Inspector({
   onRemoveZoom,
   onAddZoom,
   duration,
+  onScrubStart,
+  onScrubEnd,
   children,
 }: {
   zoom?: Zoom;
@@ -807,8 +814,14 @@ export function Inspector({
   onRemoveZoom: () => void;
   onAddZoom: () => void;
   duration: number;
+  /** A label drag starts and ends: its edits apply live and the app records them as one undo step. */
+  onScrubStart?: () => void;
+  onScrubEnd?: (canceled: boolean) => void;
   children?: ReactNode;
 }) {
+  // Props that make a field's label draggable, from the field's value, bounds and setter.
+  const drag = (value: number, range: StepRange, onScrub: (value: number) => void) =>
+    scrub({ ...range, value, onScrub, onStart: onScrubStart, onEnd: onScrubEnd });
   return (
     <aside id="inspector-pane" className="inspector">
       <div className="section-title">
@@ -831,7 +844,12 @@ export function Inspector({
           Composition <span>16:9</span>
         </h3>
         <LayoutChoice layout={layout} onLayout={onLayout} />
-        <label className="slider-label">
+        <label
+          className="slider-label"
+          {...drag(layout.radius, { min: 0, max: 60, step: 1 }, (radius) =>
+            onLayout({ ...layout, radius }),
+          )}
+        >
           Corner radius <output>{layout.radius}px</output>
           <input
             aria-label="Corner radius"
@@ -846,7 +864,11 @@ export function Inspector({
         {(['screen', 'camera'] as const).map((track) => (
           <div key={track} className="crop-controls">
             <span>{track === 'screen' ? 'Landscape' : 'Talking head'}</span>
-            <label>
+            <label
+              {...drag(layout[`${track}X`], PERCENT, (value) =>
+                onLayout({ ...layout, [`${track}X`]: value }),
+              )}
+            >
               X
               <input
                 aria-label={`${track} horizontal crop`}
@@ -862,7 +884,11 @@ export function Inspector({
                 }
               />
             </label>
-            <label>
+            <label
+              {...drag(layout[`${track}Y`], PERCENT, (value) =>
+                onLayout({ ...layout, [`${track}Y`]: value }),
+              )}
+            >
               Y
               <input
                 aria-label={`${track} vertical crop`}
@@ -895,7 +921,14 @@ export function Inspector({
               makes it manual.
             </p>
             <ZoomMotionControls zoom={zoom} onChange={onZoom} />
-            <label className="slider-label">
+            <label
+              className="slider-label"
+              {...drag(
+                zoom.scale,
+                { min: ZOOM_LIMITS.minScale, max: ZOOM_LIMITS.maxScale, step: 0.1 },
+                (scale) => onZoom({ ...zoom, scale }),
+              )}
+            >
               Zoom level <output>{zoom.scale.toFixed(1)}×</output>
               <input
                 aria-label="Zoom level"
@@ -908,7 +941,13 @@ export function Inspector({
               />
             </label>
             <div className="numeric-pair">
-              <label>
+              <label
+                {...drag(
+                  Number((zoom.start / FPS).toFixed(2)),
+                  { min: 0, max: (duration - zoom.duration) / FPS, step: 0.1 },
+                  (seconds) => onZoom({ ...zoom, start: Math.round(seconds * FPS) }),
+                )}
+              >
                 Start (s)
                 <input
                   aria-label="Zoom start seconds"
@@ -931,7 +970,17 @@ export function Inspector({
                   }
                 />
               </label>
-              <label>
+              <label
+                {...drag(
+                  Number((zoom.duration / FPS).toFixed(2)),
+                  {
+                    min: ZOOM_LIMITS.minFrames / FPS,
+                    max: (duration - zoom.start) / FPS,
+                    step: 0.1,
+                  },
+                  (seconds) => onZoom({ ...zoom, duration: Math.round(seconds * FPS) }),
+                )}
+              >
                 Length (s)
                 <input
                   aria-label="Zoom duration seconds"
@@ -953,7 +1002,7 @@ export function Inspector({
               </label>
             </div>
             <div className="numeric-pair">
-              <label>
+              <label {...drag(zoom.x, PERCENT, (x) => onZoom({ ...zoom, x }))}>
                 Focus X (%)
                 <input
                   aria-label="Zoom focus X"
@@ -966,7 +1015,7 @@ export function Inspector({
                   }
                 />
               </label>
-              <label>
+              <label {...drag(zoom.y, PERCENT, (y) => onZoom({ ...zoom, y }))}>
                 Focus Y (%)
                 <input
                   aria-label="Zoom focus Y"
@@ -1176,6 +1225,26 @@ export function App() {
     },
     [edit, locked],
   );
+  // A label drag edits live from the edit it started on: no history until it ends, then one step,
+  // or the start edit back when it is cancelled. `latest` is the last edit it made.
+  const scrubbing = useRef<{ from: Edit; latest: Edit } | null>(null);
+  const scrubStart = () => (scrubbing.current = { from: edit, latest: edit });
+  const scrubEnd = (canceled: boolean) => {
+    const drag = scrubbing.current;
+    scrubbing.current = null;
+    if (!drag) return;
+    if (canceled) return setEdit(drag.from);
+    if (classifyChange(drag.from, drag.latest, null, 0).kind === 'none') return;
+    gesture.current = null;
+    setHistory((previous) => [...previous.slice(-49), drag.from]);
+  };
+  // Inspector edits go live during a drag and through history otherwise.
+  const inspect = (proposed: Edit) => {
+    const drag = scrubbing.current;
+    if (!drag) return change(proposed);
+    drag.latest = proposed;
+    setEdit(proposed);
+  };
   // ponytail: history keeps 50 steps, so undoing all of a longer session reads as saved.
   // Add a saved marker to the edit itself if that ever costs someone work.
   const unsaved =
@@ -1472,6 +1541,9 @@ export function App() {
     const keydown = (event: KeyboardEvent) => {
       if (help || busy || exportProgress !== null || markingMouse || exportDialog.current?.open)
         return;
+      // A label drag owns the edit until it ends: a shortcut now would be overwritten by the next
+      // move or leave a stray undo step. Escape still cancels it, through bindDrag.
+      if (scrubbing.current) return;
       const target = event.target instanceof HTMLElement ? event.target : null;
       const key = event.key.toLowerCase();
       // Checkboxes and menus keep their own keys but give Space to transport. Enter replaces
@@ -2305,15 +2377,18 @@ export function App() {
           zoom={selectedZoom}
           layout={edit.layout}
           duration={duration}
-          onLayout={(layout) => change({ ...edit, layout })}
+          onLayout={(layout) => inspect({ ...edit, layout })}
+          onScrubStart={scrubStart}
+          onScrubEnd={scrubEnd}
           onAddZoom={addZoom}
           onRemoveZoom={removeSelected}
           onZoom={(zoom) => {
             if (zoomsOverlap(edit.zooms, zoom)) {
+              // The same text again, so a drag against a neighbour announces it once.
               setMessage('Zooms cannot overlap.');
               return;
             }
-            change({
+            inspect({
               ...edit,
               zooms: edit.zooms.map((z) => (z.id === zoom.id ? zoom : z)),
             });

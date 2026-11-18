@@ -8,6 +8,10 @@ masks and screen-only zoom animations.
 - Matching 22px masks by default; adjustable shared radius and independent X/Y crops.
 - Add, select, edit, and remove timed zooms with level, start, length, and focus X/Y fields. The
   fields stop at the timeline end and at a six-frame minimum length.
+- Dragging a field's label sideways changes its value: corner radius, crop X/Y, zoom level, start,
+  length and focus X/Y. It moves one step per 2 px, ten steps with Shift and a tenth of a step with
+  Alt. Escape puts the value back. One drag is one undo step, however long it pauses. Shift with
+  ArrowUp or ArrowDown steps an input ten times as far.
 - Ease in, hold, and ease out, driven by the same composition frame as video.
 - The Inspector's composition preview swaps frame sides without changing the mask dimensions.
 - The Inspector's Clip gain sets a voice or music clip from -24 to +12 dB in 0.5 dB steps. The
@@ -41,6 +45,13 @@ to 2.5 (frames 120 to 194), requires the screen to be unzoomed at frames 90, 119
 centre. Start 99 must clamp to 9.5, length 0.1 to 0.2 and length 5 to 2.5. The `mouse-centered-zoom`
 Storybook story opens marking mode automatically.
 
+`all` also runs `tests/scrub.spec.ts`. It drags the Corner radius label with the real mouse (22 to
+42 for 40 px, bounds at 60), then with Shift and Alt held. It requires one Undo per drag, a pause
+inside a drag not to split it, Escape to leave no undo entry, a drag that returns to its start to
+leave none, a click or a 3 px wobble on a label to focus its input and change nothing, a press on
+the input itself not to scrub, and a zoom start scrubbed into its neighbour to stop short of it and
+say "Zooms cannot overlap." once.
+
 ## Gotchas
 
 The composition uses cover crops, so wide screen imports can lose edge content at this side-by-side
@@ -50,4 +61,6 @@ metadata, so its zoom focus is one authored point; recorded clicks and follow ar
 edits. The zoom ramp is fixed at 24 frames or half the zoom, whichever is shorter, with smoothstep
 easing. There is no ramp control, no B shortcut and no timeline edge handle on a zoom (CLIP-9b is a
 proposal); those are pending, so do not report them as verified. Padding, backgrounds, aspect ratios
-and camera layout options (CLIP-19 to CLIP-23) are not delivered.
+and camera layout options (CLIP-19 to CLIP-23) are not delivered. Label dragging covers only these
+Inspector fields: the source in/out, still duration, cursor size and cursor offset fields are not
+yet scrubbable (UI-4c), and a touch drag on a label does not scrub.

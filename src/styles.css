@@ -3164,3 +3164,12 @@ input[type='number'],
   border-radius: 4px;
   font-size: inherit;
 }
+/* A label that scrubs its value when dragged sideways; the input inside stays selectable. */
+[data-scrub] {
+  cursor: ew-resize;
+  user-select: none;
+}
+[data-scrub] input {
+  cursor: auto;
+  user-select: text;
+}
