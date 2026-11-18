@@ -10,6 +10,7 @@ import {
   type Track,
   type TrackDef,
   type Zoom,
+  type ZoomCurve,
 } from './timeline-model';
 import { parseCursorTrack, type CursorTrack } from './cursor';
 import { screenTracks } from './cursor-render';
@@ -242,6 +243,14 @@ export function parseProject(text: string): {
     'clip',
   );
 
+  // An optional ramp curve, as a spread: four numbers from 0 to 1.
+  const zoomCurve = (curve: unknown): { curve?: ZoomCurve } => {
+    if (curve === undefined) return {};
+    const four = Array.isArray(curve) && curve.length === 4;
+    if (four && curve.every((v) => typeof v === 'number' && v >= 0 && v <= 1))
+      return { curve: curve as ZoomCurve };
+    throw new Error('Zoom curve must be four numbers from 0 to 1.');
+  };
   const zooms: AnchoredZoom[] = array(root.zooms, 'zooms').map((entry, i) => {
     const item = object(entry, `zooms[${i}]`);
     const id = string(item.id, `zooms[${i}].id`);
@@ -261,6 +270,7 @@ export function parseProject(text: string): {
       y: number(item.y, `zooms[${i}].y`, 0, 100),
       ...(item.follow === undefined ? {} : { follow: item.follow }),
       ...(item.instant === undefined ? {} : { instant: item.instant }),
+      ...zoomCurve(item.curve),
       ...(item.source === undefined
         ? {}
         : { source: zoomSource(item.source, clips, tracks, duration) }),

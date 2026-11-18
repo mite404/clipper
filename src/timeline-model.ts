@@ -24,7 +24,19 @@ export type Zoom = {
   y: number;
   follow?: 'focused' | 'smooth';
   instant?: boolean;
+  /** How the ramp eases; without one it eases on the Smooth curve. */
+  curve?: ZoomCurve;
 };
+/** A ramp's cubic-bezier control points `[x1, y1, x2, y2]`, each 0..1, like CSS `cubic-bezier()`. */
+export type ZoomCurve = [number, number, number, number];
+/** The Inspector's named ramp curves. Smooth is exactly the smoothstep every zoom had before. */
+export const ZOOM_CURVES = {
+  Smooth: [1 / 3, 0, 2 / 3, 1],
+  'Ease in': [0.42, 0, 1, 1],
+  'Ease out': [0, 0, 0.58, 1],
+  'S-curve': [0.65, 0, 0.35, 1],
+  'Fast then settle': [0.16, 1, 0.3, 1],
+} satisfies Record<string, ZoomCurve>;
 export const FPS = 30;
 /** No clip or zoom may end later than this: 24 hours of timeline. */
 export const MAX_FRAMES = 24 * 60 * 60 * FPS;
@@ -153,14 +165,29 @@ export function zoomsOverlap(
   );
 }
 
-/** Evaluate the eased zoom scale at an absolute composition frame. */
+// A cubic-bezier curve's progress at `x`, 0..1; its x(u) only rises, so bisection finds u.
+function curveAt([x1, y1, x2, y2]: ZoomCurve, x: number): number {
+  if (x <= 0 || x >= 1) return x <= 0 ? 0 : 1;
+  const at = (a: number, b: number, u: number) =>
+    3 * a * u * (1 - u) ** 2 + 3 * b * u * u * (1 - u) + u ** 3;
+  let [lo, hi] = [0, 1];
+  for (let i = 0; i < 40; i++)
+    [lo, hi] = at(x1, x2, (lo + hi) / 2) < x ? [(lo + hi) / 2, hi] : [lo, (lo + hi) / 2];
+  return at(y1, y2, (lo + hi) / 2);
+}
+
+/**
+ * Evaluate the eased zoom scale at an absolute composition frame. The ramp out is the ramp in
+ * played backwards.
+ */
 export function zoomAt(zooms: Zoom[], frame: number): number {
   const zoom = zooms.find((z) => covers(z, frame));
   if (!zoom) return 1;
   if (zoom.instant) return zoom.scale;
   const ramp = Math.min(24, zoom.duration / 2);
   const t = Math.min(1, (frame - zoom.start) / ramp, (zoom.start + zoom.duration - frame) / ramp);
-  const eased = t * t * (3 - 2 * t);
+  // A zoom without a curve keeps the exact smoothstep it always had.
+  const eased = zoom.curve ? curveAt(zoom.curve, t) : t * t * (3 - 2 * t);
   return 1 + (zoom.scale - 1) * eased;
 }
 

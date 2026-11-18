@@ -456,3 +456,95 @@ test('dragging either edge of a zoom draws over its neighbours and overwrites th
   expect(await framesOf(a)).toEqual([20, 231]);
   expect(await framesOf(b)).toEqual([251, 109]);
 });
+
+test('the ramp curve edits by preset and handle drag, one undo step each, and reopens', async ({
+  page,
+}, testInfo) => {
+  const preset = page.getByLabel('Zoom ramp curve', { exact: true });
+  const undo = page.getByRole('button', { name: 'Undo', exact: true });
+  const handles = page.locator('.ramp-curve circle');
+  const handle = handles.nth(1);
+  // Each handle carries its point as "x y": the curve's four numbers, in order.
+  const points = async () =>
+    (await handles.evaluateAll((circles) => circles.map((c) => c.dataset.point)))
+      .join(' ')
+      .split(' ');
+  // A press on the end handle moved 40 px left and 30 px down, released unless Escape comes first.
+  const drag = async (escape = false) => {
+    await handle.scrollIntoViewIfNeeded();
+    const box = (await handle.boundingBox())!;
+    const centre = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+    await page.mouse.move(centre.x, centre.y);
+    await page.mouse.down();
+    await page.mouse.move(centre.x - 40, centre.y + 30, { steps: 6 });
+    if (escape) {
+      await expect.poll(async () => (await points())[2]).not.toBe('0.58');
+      await page.keyboard.press('Escape');
+    }
+    await page.mouse.up();
+  };
+  await page.getByRole('slider', { name: 'Timeline playhead' }).fill('0');
+  await page.getByRole('button', { name: 'Add zoom', exact: true }).click();
+  // A new zoom has no curve, which is Smooth: today's ease. The graphic names it; the mouse-only
+  // handles are hidden from assistive tech and out of the tab order.
+  await expect(preset).toHaveValue('Smooth');
+  expect(await points()).toEqual(['0.33', '0', '0.67', '1']);
+  await expect(page.getByRole('img', { name: 'Zoom ramp: Smooth', exact: true })).toBeVisible();
+  for (const circle of await handles.all()) {
+    await expect(circle).toHaveAttribute('aria-hidden', 'true');
+    await expect(circle).not.toHaveAttribute('tabindex');
+  }
+  await expect(preset.locator('option')).toHaveText([
+    'Smooth',
+    'Ease in',
+    'Ease out',
+    'S-curve',
+    'Fast then settle',
+  ]);
+
+  await preset.selectOption('Ease out');
+  expect(await points()).toEqual(['0', '0', '0.58', '1']);
+  await expect(page.getByRole('img', { name: 'Zoom ramp: Ease out', exact: true })).toBeVisible();
+
+  // A drag shows the curve while held; Escape puts it back and adds no step.
+  await page.waitForTimeout(1200);
+  await drag(true);
+  expect(await points()).toEqual(['0', '0', '0.58', '1']);
+  await undo.click();
+  await expect(preset).toHaveValue('Smooth');
+  await page.waitForTimeout(1200);
+  await preset.selectOption('Ease out');
+  // A released drag commits once, and the curve becomes Custom.
+  await page.waitForTimeout(1200);
+  await drag();
+  await expect(preset).toHaveValue('Custom');
+  const dragged = await points();
+  expect(dragged.slice(0, 2)).toEqual(['0', '0']);
+  expect(Number(dragged[2])).toBeLessThan(0.58);
+  expect(Number(dragged[3])).toBeLessThan(1);
+  await undo.click();
+  expect(await points()).toEqual(['0', '0', '0.58', '1']);
+  await page.waitForTimeout(1200);
+  await drag();
+  expect(await points()).toEqual(dragged);
+
+  // Save and Open keep the curve; the file holds the four numbers.
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const saved = testInfo.outputPath('curve.clipper.json');
+  await (await downloaded).saveAs(saved);
+  const { zooms } = JSON.parse(await readFile(saved, 'utf8')) as { zooms: { curve?: number[] }[] };
+  expect(zooms[0].curve).toEqual(dragged.map(Number));
+  await page.reload();
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await page.getByLabel('Open local project').setInputFiles(saved);
+  await page.getByRole('button', { name: 'Select zoom', exact: true }).click();
+  await expect(preset).toHaveValue('Custom');
+  expect(await points()).toEqual(dragged);
+
+  // Choosing Smooth again drops the curve, and an instant zoom has no ramp to edit.
+  await preset.selectOption('Smooth');
+  await expect(preset.locator('option')).toHaveCount(5);
+  await page.getByRole('checkbox', { name: 'Instant zoom' }).check();
+  await expect(preset).toHaveCount(0);
+});

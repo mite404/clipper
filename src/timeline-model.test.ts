@@ -23,6 +23,8 @@ import {
   trimClip,
   zoomAt,
   zoomCamera,
+  ZOOM_CURVES,
+  type ZoomCurve,
   zoomsOverlap,
   type Clip,
   type TrackDef,
@@ -196,6 +198,30 @@ describe('editing a timeline in frames', () => {
     expect(zoomAt([zoom], 126)).toBe(2);
     expect(zoomAt([zoom], 138)).toBe(1.5);
     expect(zoomAt([zoom], 149)).toBeCloseTo(1.00506, 4);
+  });
+
+  it('eases a zoom with a curve by that cubic-bezier, mirrored on the way out', () => {
+    const zoom = { id: 'z', start: 30, duration: 120, scale: 2, x: 25, y: 60 };
+    const at = (curve: ZoomCurve, frame: number) => zoomAt([{ ...zoom, curve }], frame);
+    // Control points on the diagonal make the bezier a straight line: a quarter ramp is a quarter.
+    expect(at([0.2, 0.2, 0.8, 0.8], 36)).toBeCloseTo(1.25, 8);
+    expect(at([0.2, 0.2, 0.8, 0.8], 144)).toBeCloseTo(1.25, 8);
+    // The Smooth preset is today's smoothstep, so a zoom without a curve looks the same.
+    for (const frame of [31, 36, 42, 47, 53, 140])
+      expect(at(ZOOM_CURVES.Smooth, frame)).toBeCloseTo(zoomAt([zoom], frame), 8);
+    // Ease in starts slow and Ease out starts fast, each the other turned end over end.
+    expect(at(ZOOM_CURVES['Ease in'], 36)).toBeLessThan(1.25);
+    expect(at(ZOOM_CURVES['Ease out'], 36)).toBeGreaterThan(1.25);
+    expect(at(ZOOM_CURVES['Ease in'], 36) - 1).toBeCloseTo(2 - at(ZOOM_CURVES['Ease out'], 48), 8);
+    // S-curve is symmetric about mid-ramp; Fast then settle covers most of the way early.
+    expect(at(ZOOM_CURVES['S-curve'], 42)).toBeCloseTo(1.5, 8);
+    expect(at(ZOOM_CURVES['Fast then settle'], 36)).toBeGreaterThan(1.6);
+    // Ends and the hold are exact, so a curve never leaves a sliver of zoom outside the region.
+    for (const curve of Object.values(ZOOM_CURVES)) {
+      expect([at(curve, 30), at(curve, 54), at(curve, 90), at(curve, 150)]).toEqual([1, 2, 2, 1]);
+    }
+    // An instant zoom ignores its curve.
+    expect(zoomAt([{ ...zoom, instant: true, curve: ZOOM_CURVES['Ease in'] }], 31)).toBe(2);
   });
 
   it('gives a short zoom half its length to ramp, so it peaks only at its midpoint', () => {

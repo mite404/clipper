@@ -837,12 +837,6 @@ export function Inspector({
                 />
               </label>
             </div>
-            <div className="ease-curve">
-              <svg viewBox="0 0 160 34">
-                <path d="M2 30 C30 30 24 4 55 4 H108 C138 4 128 30 158 30" />
-              </svg>
-              <span>Automatic ease in & out · optional instant</span>
-            </div>
             <button className="text-button danger" onClick={onRemoveZoom}>
               <Trash2 size={13} /> Remove zoom
             </button>

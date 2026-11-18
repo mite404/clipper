@@ -1515,27 +1515,37 @@ p {
   display: block;
   margin-top: 7px;
 }
-.ease-curve {
-  height: 65px;
-  background: #b9a1de08;
-  border: 1px solid #b9a1de0f;
-  border-radius: 5px;
-  display: flex;
-  align-items: center;
-  flex-direction: column;
+.ramp-curve {
   margin-bottom: 11px;
 }
-.ease-curve svg {
-  width: 80%;
-  height: 38px;
-  fill: none;
-  stroke: #a995cb;
-  stroke-width: 1.5;
-  margin-top: 5px;
+.ramp-curve .slider-label {
+  margin-bottom: 7px;
 }
-.ease-curve span {
-  font-size: 7px;
-  color: #8a7c9f;
+.ramp-curve svg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 216 / 116;
+  fill: none;
+  stroke: #8a7c9f;
+  stroke-width: 1;
+  overflow: visible;
+}
+.ramp-curve .ramp-plot {
+  fill: #b9a1de08;
+  stroke: #b9a1de0f;
+}
+.ramp-curve .ramp-path {
+  stroke: #a995cb;
+  stroke-width: 2;
+}
+.ramp-curve circle {
+  fill: #a995cb;
+  stroke: none;
+  cursor: grab;
+  touch-action: none;
+}
+.ramp-curve circle:active {
+  cursor: grabbing;
 }
 .danger {
   color: #a38b8e;

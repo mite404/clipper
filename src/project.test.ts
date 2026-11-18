@@ -30,14 +30,15 @@ const project = () => ({
 });
 
 describe('portable project parsing', () => {
-  it('round trips optional follow and instant settings without changing version 2 defaults', async () => {
+  it('round trips optional follow, instant and curve settings without changing version 2 defaults', async () => {
     const url = URL.createObjectURL(
       new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),
     );
     try {
       for (const follow of ['focused', 'smooth'] as const) {
         for (const instant of [true, false]) {
-          const next: Edit = { ...edit, zooms: [{ ...edit.zooms[0], follow, instant }] };
+          const curve = [0.16, 1, 0.3, 1] as [number, number, number, number];
+          const next: Edit = { ...edit, zooms: [{ ...edit.zooms[0], follow, instant, curve }] };
           const saved = (await serializeProject(next, [{ ...asset, url }], [])).file;
           expect(JSON.parse(await saved.text()).version).toBe(2);
           expect(parseProject(await saved.text()).edit).toEqual(next);
@@ -49,9 +50,17 @@ describe('portable project parsing', () => {
         { follow: true },
         { instant: 1 },
         { instant: null },
+        { curve: [0.2, 0.1, 0.8] },
+        { curve: [0.2, 0.1, 0.8, 0.9, 1] },
+        { curve: [-0.1, 0, 0.5, 1] },
+        { curve: [0, 0, 1.01, 1] },
+        { curve: [0, 1.5, 0.5, 1] },
+        { curve: [0, '0', 0.5, 1] },
+        { curve: [0, null, 0.5, 1] },
+        { curve: 'ease-in' },
       ]) {
         const invalid = { ...project(), zooms: [{ ...edit.zooms[0], ...fields }] };
-        expect(() => parseProject(JSON.stringify(invalid))).toThrow(/follow|instant/i);
+        expect(() => parseProject(JSON.stringify(invalid))).toThrow(/follow|instant|curve/i);
       }
     } finally {
       URL.revokeObjectURL(url);
