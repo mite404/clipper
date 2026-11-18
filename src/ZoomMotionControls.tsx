@@ -127,21 +127,18 @@ export function ZoomMotionControls({
     <>
       <label className="slider-label">
         Camera follow
-        <select
-          aria-label="Camera follow"
+        <Choice
+          label="Camera follow"
           value={zoom.follow ?? 'fixed'}
-          onChange={(event) => {
-            const value = event.currentTarget.value;
-            onChange({
-              ...zoom,
-              follow: value === 'focused' || value === 'smooth' ? value : undefined,
-            });
-          }}
-        >
-          <option value="fixed">Fixed focus</option>
-          <option value="focused">Focused · quick reading holds</option>
-          <option value="smooth">Smooth · fluid follow</option>
-        </select>
+          options={[
+            { value: 'fixed', label: 'Fixed focus' },
+            { value: 'focused', label: 'Focused · quick reading holds' },
+            { value: 'smooth', label: 'Smooth · fluid follow' },
+          ]}
+          onChange={(follow) =>
+            onChange({ ...zoom, follow: follow === 'fixed' ? undefined : follow })
+          }
+        />
       </label>
       <label className="slider-label">
         <span>

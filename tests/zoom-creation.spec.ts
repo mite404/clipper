@@ -24,7 +24,7 @@ test('Add zoom creates a four-second playhead region without cursor metadata and
   await expect(regions).toHaveCount(1);
   await expect(page.getByLabel('Zoom start seconds', { exact: true })).toHaveValue('1.5');
   await expect(page.getByLabel('Zoom duration seconds', { exact: true })).toHaveValue('4');
-  await expect(page.getByLabel('Camera follow', { exact: true })).toHaveValue('focused');
+  await expectChoice(page.getByLabel('Camera follow', { exact: true }), 'focused');
   await expect(page.getByLabel('Zoom level', { exact: true })).toHaveValue('1.8');
   await playhead.fill('90');
   await expect(page.getByTestId('screen-content')).toHaveCSS('transform', /matrix\(1\.8,/);
@@ -46,7 +46,7 @@ test('Add zoom creates a four-second playhead region without cursor metadata and
   await regions.click();
   await expect(page.getByLabel('Zoom start seconds', { exact: true })).toHaveValue('1.5');
   await expect(page.getByLabel('Zoom duration seconds', { exact: true })).toHaveValue('4');
-  await expect(page.getByLabel('Camera follow', { exact: true })).toHaveValue('focused');
+  await expectChoice(page.getByLabel('Camera follow', { exact: true }), 'focused');
   await expect(page.getByLabel('Zoom level', { exact: true })).toHaveValue('1.8');
 });
 
@@ -95,7 +95,7 @@ test('B creates once per press, ignores editable targets and modifier chords, an
   await expect(regions).toHaveCount(1);
   await expect(page.getByLabel('Zoom start seconds', { exact: true })).toHaveValue('1');
   await expect(page.getByLabel('Zoom duration seconds', { exact: true })).toHaveValue('4');
-  await expect(page.getByLabel('Camera follow', { exact: true })).toHaveValue('focused');
+  await expectChoice(page.getByLabel('Camera follow', { exact: true }), 'focused');
   await playhead.fill('210');
   await add.focus();
   await page.keyboard.down('b');
@@ -251,7 +251,7 @@ test('a zoom dropped inside another splits it, and the right piece keeps its loo
   await field('Zoom level').fill('2.5');
   await field('Zoom focus X').fill('30');
   await field('Zoom focus Y').fill('70');
-  await field('Camera follow').selectOption('smooth');
+  await choose(field('Camera follow'), 'smooth');
   await playhead.fill('240');
   await add.click();
   await expect(regions).toHaveCount(2);
@@ -266,14 +266,9 @@ test('a zoom dropped inside another splits it, and the right piece keeps its loo
   const look = async (index: number) => {
     await regions.nth(index).click();
     return Promise.all(
-      [
-        'Zoom start seconds',
-        'Zoom duration seconds',
-        'Zoom level',
-        'Zoom focus X',
-        'Zoom focus Y',
-        'Camera follow',
-      ].map((label) => field(label).inputValue()),
+      ['Zoom start seconds', 'Zoom duration seconds', 'Zoom level', 'Zoom focus X', 'Zoom focus Y']
+        .map((label) => field(label).inputValue())
+        .concat(field('Camera follow').getAttribute('data-value') as Promise<string>),
     );
   };
   const left = ['0', '2', '2.5', '30', '70', 'smooth'];
@@ -366,7 +361,7 @@ test('dragging either edge of a zoom draws over its neighbours and overwrites th
   await dragEdge(a, 'right', 30);
   await expect(start).toHaveValue('0');
   await expect(length).toHaveValue('5');
-  await expect(page.getByLabel('Camera follow', { exact: true })).toHaveValue('focused');
+  await expectChoice(page.getByLabel('Camera follow', { exact: true }), 'focused');
   await undo.click();
   await expect(length).toHaveValue('4');
 
@@ -506,6 +501,26 @@ test('the ramp curve edits by preset and handle drag, one undo step each, and re
     await expect(circle).toHaveAttribute('aria-hidden', 'true');
     await expect(circle).not.toHaveAttribute('tabindex');
   }
+  // Camera follow works from the keyboard too, and Fixed focus stores no follow.
+  const follow = page.getByRole('combobox', { name: 'Camera follow', exact: true });
+  await expectChoice(follow, 'focused');
+  await follow.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(presets).toHaveText([
+    'Fixed focus',
+    'Focused · quick reading holds',
+    'Smooth · fluid follow',
+  ]);
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expectChoice(follow, 'smooth');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('Enter');
+  await expectChoice(follow, 'fixed');
+  await expect(follow).toBeFocused();
+
   // The handles are mouse-only, so the preset list is the keyboard path: open, move and commit.
   await preset.focus();
   await page.keyboard.press('ArrowDown');

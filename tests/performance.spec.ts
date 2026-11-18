@@ -115,7 +115,7 @@ for (const follow of [false, true]) {
       });
       await expect(page.getByRole('button', { name: 'Select zoom', exact: true })).toHaveCount(2);
       await page.getByRole('button', { name: 'Select zoom', exact: true }).first().click();
-      await expect(page.getByLabel('Camera follow')).toHaveValue('focused');
+      await expectChoice(page.getByLabel('Camera follow'), 'focused');
     }
     // Sampling is armed before the click, so a stall inside the click itself is measured too.
     const sample = async (attempt: number) => {
