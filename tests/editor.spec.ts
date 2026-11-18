@@ -1118,3 +1118,32 @@ test('reports export progress, cancels cleanly and downloads on retry', async ({
   expect(errors).toEqual([]);
   expect(writes).toEqual([]);
 });
+
+test('loads with no request beyond its own origin and with both fonts self-hosted', async ({
+  page,
+  baseURL,
+}) => {
+  const origin = new URL(baseURL!).origin;
+  const outside: string[] = [];
+  page.on('request', (request) => {
+    const url = new URL(request.url());
+    if (url.protocol.startsWith('http') && url.origin !== origin) outside.push(request.url());
+  });
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  // Faces download only when text needs them, so wait for the browser to settle them.
+  const faces = () =>
+    page.evaluate(async () => {
+      await document.fonts.ready;
+      return [...document.fonts].map(
+        (face) => `${face.family.replace(/['"]/g, '')}:${face.status}`,
+      );
+    });
+  await expect
+    .poll(async () =>
+      [...new Set((await faces()).filter((face) => face.endsWith(':loaded')))].sort(),
+    )
+    .toEqual(['DM Sans:loaded', 'IBM Plex Mono:loaded']);
+  expect((await faces()).filter((face) => face.endsWith(':error'))).toEqual([]);
+  expect(outside).toEqual([]);
+});
