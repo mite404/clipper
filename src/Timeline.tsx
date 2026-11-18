@@ -14,7 +14,6 @@ import {
   VolumeX,
   ZoomIn,
 } from 'lucide-react';
-import { bindDrag } from '@ui-sdk/core';
 import {
   createElement,
   memo,
@@ -29,6 +28,7 @@ import {
   type PointerEvent,
   type ReactNode,
 } from 'react';
+import { bindDrag, createAutoScroll } from '@ui-sdk/core';
 import type { Asset } from './media';
 import { moveZoom, resizeZoom } from './zoom-generation';
 import {
@@ -596,6 +596,124 @@ function ZoomGrip({
   );
 }
 
+// Trims the clip with this id, if it still exists, within its current bounds.
+function trimById(
+  {
+    onTrim,
+    clips,
+    assets,
+  }: { onTrim: ((clip: Clip) => void) | undefined; clips: Clip[]; assets: Asset[] },
+  clipId: string,
+  edge: 'left' | 'right',
+  delta: number,
+) {
+  const clip = clips.find((c) => c.id === clipId);
+  if (!clip) return;
+  const asset = assets.find((a) => a.id === clip.assetId);
+  commitTrim(onTrim, clip, edge, delta, trimBounds(clip, asset?.duration));
+}
+
+// Follows one primary-button press on a trim grip in frames, lane-relative so an edge scroll keeps
+// the math. It previews each move, auto-scrolls near the viewport edges and commits on release;
+// Escape and pointercancel commit nothing.
+function followTrim(
+  event: PointerEvent<HTMLElement>,
+  duration: number,
+  on: {
+    start: () => void;
+    preview: (delta: number) => void;
+    clear: () => void;
+    commit: (delta: number) => void;
+  },
+) {
+  const lane = event.currentTarget.closest('.timeline-lane');
+  if (event.button !== 0 || !lane) return;
+  event.preventDefault();
+  event.stopPropagation();
+  on.start();
+  const at = (x: number) => {
+    const rect = lane.getBoundingClientRect();
+    return ((x - rect.left) / rect.width) * duration;
+  };
+  const from = at(event.clientX);
+  let x = event.clientX;
+  const follow = () => on.preview(at(x) - from);
+  const scroll = createAutoScroll({ edge: 40, speed: 14, onScroll: follow });
+  on.preview(0);
+  bindDrag(event.currentTarget, event.nativeEvent, {
+    cancelOnEscape: true,
+    onMove: (sample) => {
+      x = sample.x;
+      scroll.update(sample.x, sample.y);
+      follow();
+    },
+    onEnd: (up, canceled) => {
+      scroll.stop();
+      on.clear();
+      if (!canceled) on.commit(at(up.clientX) - from);
+    },
+  });
+}
+
+// One trim grip: arrows nudge its edge a frame, or ten with Shift, and a drag trims it.
+function TrimGrip({
+  clip,
+  edge,
+  bounds,
+  duration,
+  disabled,
+  clips,
+  assets,
+  onTrim,
+  onSelect,
+  onPreview,
+}: {
+  clip: Clip;
+  edge: 'left' | 'right';
+  bounds: TrimBounds;
+  duration: number;
+  disabled: boolean;
+  clips: Clip[];
+  assets: Asset[];
+  onTrim?: (clip: Clip) => void;
+  onSelect: (id: string) => void;
+  onPreview: (drag: { clipId: string; edge: 'left' | 'right'; delta: number } | undefined) => void;
+}) {
+  // A release trims the clip as the newest render has it, so a split, undo or delete made while
+  // the grip is held is never overwritten by a copy taken at pointerdown.
+  const latest = useRef({ onTrim, clips, assets });
+  useLayoutEffect(() => {
+    latest.current = { onTrim, clips, assets };
+  });
+  return (
+    <span
+      inert={disabled}
+      className={`clip-grip ${edge}`}
+      role="slider"
+      tabIndex={0}
+      aria-label={`Trim ${edge} edge`}
+      aria-valuemin={0}
+      aria-valuemax={clip.start + clip.duration}
+      aria-valuenow={edge === 'left' ? clip.start : clip.start + clip.duration}
+      onKeyDown={(event) => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+        event.preventDefault();
+        event.stopPropagation();
+        const step = (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 10 : 1);
+        commitTrim(onTrim, clip, edge, step, bounds);
+      }}
+      onPointerDown={(event) =>
+        followTrim(event, duration, {
+          start: () => onSelect(clip.id),
+          preview: (delta) => onPreview({ clipId: clip.id, edge, delta }),
+          clear: () => onPreview(undefined),
+          commit: (delta) => trimById(latest.current, clip.id, edge, delta),
+        })
+      }
+    />
+  );
+}
+
 // One zoom region: a click selects it, and a drag past the threshold or an arrow key moves it.
 function ZoomBlock({
   zoom,
@@ -614,14 +732,10 @@ function ZoomBlock({
   onMove?: (id: string, start: number) => void;
   onResize?: (id: string, edge: 'left' | 'right', frame: number) => void;
 }) {
-  // Where the press began and the lane width it maps over; null when no press is held.
-  const press = useRef<{ x: number; width: number } | null>(null);
-  // The previewed start once a drag passes the threshold, already kept in its free gap.
+  // The previewed start once a drag passes the threshold; release overwrites the zooms it covers.
   const [preview, setPreview] = useState<number>();
-  const cancel = () => {
-    press.current = null;
-    setPreview(undefined);
-  };
+  // Ends the live drag without committing, for a lost pointer capture.
+  const stopDrag = useRef<(() => void) | null>(null);
   const { sized, dragEdge } = useEdgeDrag(zoom, zooms, duration, onResize);
   return (
     <button
@@ -630,7 +744,6 @@ function ZoomBlock({
       style={zoomStyle(zoom, duration, dragSpan(zoom, preview, sized))}
       onClick={() => onSelect(zoom.id)}
       onKeyDown={(event) => {
-        if (event.key === 'Escape') return cancel();
         const step = arrowStep(event);
         if (!step) return;
         event.preventDefault();
@@ -639,27 +752,35 @@ function ZoomBlock({
       }}
       onPointerDown={(event) => {
         if (event.button !== 0) return;
-        // Safari does not focus a clicked button, and Escape needs the block focused.
+        // Safari does not focus a clicked button; keyboard moves continue from the dragged block.
         event.currentTarget.focus({ preventScroll: true });
-        const lane = event.currentTarget.parentElement!.getBoundingClientRect();
-        press.current = { x: event.clientX, width: lane.width };
-        event.currentTarget.setPointerCapture(event.pointerId);
+        const x = event.clientX;
+        const width = event.currentTarget.parentElement!.getBoundingClientRect().width;
+        let moved: number | undefined;
+        stopDrag.current = bindDrag(event.currentTarget, event.nativeEvent, {
+          threshold: DRAG_THRESHOLD,
+          cancelOnEscape: true,
+          onMove: (sample) => {
+            const wanted = zoom.start + ((sample.x - x) / width) * duration; // → frame
+            const kept = moveZoom(zooms, zoom.id, wanted, duration); // → zooms with this one moved
+            moved = kept.find((z) => z.id === zoom.id)!.start;
+            setPreview(moved);
+          },
+          // A drag swallows its click, so it selects the block itself, as the click did.
+          onEnd: (_up, canceled) => {
+            stopDrag.current = null;
+            setPreview(undefined);
+            if (moved === undefined) return;
+            if (!canceled) onMove?.(zoom.id, moved);
+            onSelect(zoom.id);
+          },
+        });
       }}
-      onPointerMove={(event) => {
-        const held = press.current;
-        if (!held) return;
-        const dx = event.clientX - held.x;
-        if (preview === undefined && Math.abs(dx) < DRAG_THRESHOLD) return;
-        const wanted = zoom.start + (dx / held.width) * duration; // → frame
-        const kept = moveZoom(zooms, zoom.id, wanted, duration); // → gap-clamped zooms
-        setPreview(kept.find((z) => z.id === zoom.id)!.start);
+      onLostPointerCapture={() => {
+        stopDrag.current?.();
+        stopDrag.current = null;
+        setPreview(undefined);
       }}
-      onPointerUp={() => {
-        const moved = preview;
-        cancel();
-        if (moved !== undefined) onMove?.(zoom.id, moved);
-      }}
-      onLostPointerCapture={cancel}
     >
       <ZoomIn size={12} />
       <span>{zoom.scale.toFixed(1)}× zoom</span>
@@ -807,13 +928,7 @@ export function Timeline({
   });
   // A drag names its clip by ID and trims the clip as it is now, so a split, undo or delete made
   // while a grip is held is never overwritten by a copy taken at pointerdown.
-  const [drag, setDrag] = useState<{
-    clipId: string;
-    edge: 'left' | 'right';
-    x: number;
-    width: number;
-    delta: number;
-  }>();
+  const [drag, setDrag] = useState<{ clipId: string; edge: 'left' | 'right'; delta: number }>();
   const { pressX, move, preview, commit } = useClipPress(clips, onTrim);
   const shown = previewed(clips, move); // → Clip[] with a dragged clip where it would land
   const snapTargets = clips.flatMap((c) => [c.start, c.start + c.duration]);
@@ -934,63 +1049,18 @@ export function Timeline({
                   )}
                   {!tracks.locked.includes(id) &&
                     (['left', 'right'] as const).map((edge) => (
-                      <span
+                      <TrimGrip
                         key={edge}
-                        inert={!!onRazor}
-                        className={`clip-grip ${edge}`}
-                        role="slider"
-                        tabIndex={0}
-                        aria-label={`Trim ${edge} edge`}
-                        aria-valuemin={0}
-                        aria-valuemax={clip.start + clip.duration}
-                        aria-valuenow={edge === 'left' ? clip.start : clip.start + clip.duration}
-                        onKeyDown={(event) => {
-                          if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-                          event.preventDefault();
-                          event.stopPropagation();
-                          commitTrim(
-                            onTrim,
-                            clip,
-                            edge,
-                            (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 10 : 1),
-                            bounds,
-                          );
-                        }}
-                        onPointerDown={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          event.currentTarget.setPointerCapture(event.pointerId);
-                          const lane = event.currentTarget.closest('.timeline-lane');
-                          if (lane)
-                            setDrag({
-                              clipId: clip.id,
-                              edge,
-                              x: event.clientX,
-                              width: lane.getBoundingClientRect().width,
-                              delta: 0,
-                            });
-                          onSelect(clip.id);
-                        }}
-                        onPointerMove={(event) => {
-                          if (drag)
-                            setDrag({
-                              ...drag,
-                              delta: ((event.clientX - drag.x) / drag.width) * duration,
-                            });
-                        }}
-                        onPointerUp={(event) => {
-                          if (!drag) return;
-                          setDrag(undefined);
-                          // Pointer capture means this grip is the one the drag started on.
-                          commitTrim(
-                            onTrim,
-                            originalClip,
-                            drag.edge,
-                            ((event.clientX - drag.x) / drag.width) * duration,
-                            bounds,
-                          );
-                        }}
-                        onPointerCancel={() => setDrag(undefined)}
+                        clip={clip}
+                        edge={edge}
+                        bounds={bounds}
+                        duration={duration}
+                        disabled={!!onRazor}
+                        clips={clips}
+                        assets={assets}
+                        onTrim={onTrim}
+                        onSelect={onSelect}
+                        onPreview={setDrag}
                       />
                     ))}
                 </button>

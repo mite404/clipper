@@ -209,6 +209,13 @@ test('dragging a zoom draws it over its neighbours and overwrites them on releas
   });
   await expect(start).toHaveValue('4');
   await expect.poll(() => frameOf()).toBe(120);
+  // So does a lost pointer capture.
+  await drag(-60, async () => {
+    await expect.poll(() => frameOf()).toBe(60);
+    await a.evaluate((block) => block.releasePointerCapture(1));
+  });
+  await expect(start).toHaveValue('4');
+  await expect.poll(() => frameOf()).toBe(120);
 
   // With the block focused, arrows nudge it a frame, or ten with Shift, and the playhead stays.
   await playhead.fill('30');

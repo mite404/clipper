@@ -1,8 +1,9 @@
+import { bindDrag } from '@ui-sdk/core';
 import { useLayoutEffect, useRef, useState, type PointerEvent } from 'react';
 
 // Adapted with the owner's permission from mite404/yaklabs at
 // 1ccdae55a5f26e96c042a322f980db9e226b3c41, apps/web/src/shell/sidebar-resize.tsx.
-// Keep direct CSS movement and pointer capture; cancellation restores rather than commits.
+// Keep direct CSS movement; ui-sdk's bindDrag follows the pointer. Cancellation restores.
 type Range = { min: number; max: number; value: number };
 type Panel = 'left' | 'right' | 'timeline';
 type TimelineHeight = { mode: 'default' | 'custom'; remembered: number | null };
@@ -50,22 +51,17 @@ const PANELS = {
   },
 } as const;
 type Drag = {
-  pointer: number;
-  start: number;
   from: number;
   reached: number;
   handle: HTMLHRElement;
+  // Ends bindDrag's gesture without its onEnd.
+  stop: () => void;
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 function mainPress(event: PointerEvent<HTMLHRElement>) {
   return event.button === 0 && event.isPrimary && !document.documentElement.dataset.panelDrag;
-}
-
-function releaseDrag(done: Drag) {
-  delete document.documentElement.dataset.panelDrag;
-  if (done.handle.hasPointerCapture(done.pointer)) done.handle.releasePointerCapture(done.pointer);
 }
 
 function sizeForKey(
@@ -137,7 +133,8 @@ export function PanelResizeHandle({
     const done = drag.current;
     if (!done) return;
     drag.current = null;
-    releaseDrag(done);
+    done.stop();
+    delete document.documentElement.dataset.panelDrag;
     onPreview(null);
     done.handle.setAttribute('aria-valuenow', String(range.value));
     done.handle.setAttribute('aria-valuetext', `${range.value} pixels ${axis.unit}`);
@@ -151,20 +148,12 @@ export function PanelResizeHandle({
   useLayoutEffect(() => {
     if (disabled) finishRef.current(false);
     const cancel = () => finishRef.current(false);
-    const key = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape' || drag.current === null) return;
-      event.preventDefault();
-      event.stopPropagation();
-      cancel();
-    };
     window.addEventListener('blur', cancel);
     window.addEventListener('resize', cancel);
-    document.addEventListener('keydown', key, true);
     return () => {
       cancel();
       window.removeEventListener('blur', cancel);
       window.removeEventListener('resize', cancel);
-      document.removeEventListener('keydown', key, true);
     };
   }, [disabled]);
   return (
@@ -184,16 +173,30 @@ export function PanelResizeHandle({
         if (disabled || drag.current || !mainPress(event)) return;
         event.preventDefault();
         event.currentTarget.focus();
-        event.currentTarget.setPointerCapture(event.pointerId);
-        drag.current = {
-          pointer: event.pointerId,
-          start: event[axis.coordinate],
-          from: range.value,
-          reached: range.value,
-          handle: event.currentTarget,
-        };
+        const handle = event.currentTarget;
+        const start = event[axis.coordinate];
+        const now: Drag = { from: range.value, reached: range.value, handle, stop: () => {} };
+        drag.current = now;
         document.documentElement.dataset.panelDrag = axis.cursor;
         setDragging(true);
+        now.stop = bindDrag(handle, event.nativeEvent, {
+          cancelOnEscape: true,
+          onMove: (sample) => {
+            if (drag.current !== now) return;
+            const at = orientation === 'horizontal' ? sample.y : sample.x;
+            now.reached = clamp(
+              Math.round(now.from + direction * (at - start)),
+              range.min,
+              range.max,
+            );
+            onPreview(now.reached);
+            handle.setAttribute('aria-valuenow', String(now.reached));
+            handle.setAttribute('aria-valuetext', `${now.reached} pixels ${axis.unit}`);
+          },
+          onEnd: (_up, canceled) => {
+            if (drag.current === now) finish(!canceled);
+          },
+        });
       }}
       onPointerMove={(event) => {
         const rect = event.currentTarget.getBoundingClientRect();
@@ -201,26 +204,15 @@ export function PanelResizeHandle({
           '--hint-position',
           `${event[axis.hint] - rect[axis.origin]}px`,
         );
-        const now = drag.current;
-        if (!now || now.pointer !== event.pointerId) return;
-        now.reached = clamp(
-          Math.round(now.from + direction * (event[axis.coordinate] - now.start)),
-          range.min,
-          range.max,
-        );
-        onPreview(now.reached);
-        event.currentTarget.setAttribute('aria-valuenow', String(now.reached));
-        event.currentTarget.setAttribute('aria-valuetext', `${now.reached} pixels ${axis.unit}`);
       }}
-      onPointerUp={(event) => {
-        if (drag.current?.pointer === event.pointerId) finish(true);
-      }}
-      onPointerCancel={(event) => {
-        if (drag.current?.pointer === event.pointerId) finish(false);
-      }}
-      onLostPointerCapture={(event) => {
-        if (drag.current?.pointer === event.pointerId) finish(false);
-      }}
+      // bindDrag ends on pointercancel and Escape, not a lost capture; that restores too. Its stop()
+      // releases capture just before onEnd commits, so the check waits for onEnd in case a browser
+      // fires lostpointercapture synchronously.
+      onLostPointerCapture={() =>
+        queueMicrotask(() => {
+          if (drag.current) finishRef.current(false);
+        })
+      }
       onDoubleClick={() => {
         if (!disabled) onReset();
       }}
