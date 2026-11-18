@@ -75,3 +75,51 @@ export function resolveZooms(
     clips,
   );
 }
+
+/**
+ * Move one zoom to a timeline frame, keeping its duration. It stays in the free gap it sits in,
+ * so it stops at a neighbour's edge or the sequence end and never overlaps or jumps a zoom. A
+ * generated shot's anchor moves in step while the shot stays in its clip; otherwise the shot
+ * becomes a manual zoom, as when its start is edited.
+ * @param total the sequence length in frames
+ */
+export function moveZoom(
+  zooms: Zoom[],
+  id: string,
+  start: number,
+  total: number,
+  clips: Clip[],
+  tracks: TrackDef[],
+): Zoom[] {
+  const zoom = zooms.find((z) => z.id === id);
+  if (!zoom) return zooms;
+  const end = zoom.start + zoom.duration;
+  const others = zooms.filter((z) => z.id !== id);
+  const low = Math.max(
+    0,
+    ...others.flatMap((z) => (z.start < zoom.start ? [z.start + z.duration] : [])),
+  );
+  // A zoom the sequence already ends inside keeps its end as the bound, so no move pulls it left.
+  const high = Math.min(
+    Math.max(total, end),
+    ...others.flatMap((z) => (z.start >= end ? [z.start] : [])),
+  );
+  const next = Math.max(low, Math.min(high - zoom.duration, Math.round(start))); // → frame
+  const { source, ...manual } = zoom;
+  const shifted = source && { ...source, start: source.start + next - zoom.start };
+  const screens = screenTracks(tracks);
+  // The shot resolves to `next` only through a clip whose source range holds all of it.
+  const anchored =
+    shifted &&
+    clips.some(
+      (clip) =>
+        screens.includes(clip.track) &&
+        clip.assetId === shifted.assetId &&
+        (clip.originId ?? clip.id) === shifted.clipId &&
+        shifted.start >= clip.offset &&
+        shifted.start + zoom.duration <= clip.offset + clip.duration &&
+        clip.start + shifted.start - clip.offset === next,
+    );
+  const moved = anchored ? { ...manual, start: next, source: shifted } : { ...manual, start: next };
+  return zooms.map((z) => (z.id === id ? moved : z));
+}

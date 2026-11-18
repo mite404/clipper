@@ -2,7 +2,7 @@ import { expect, it } from 'vitest';
 import type { Asset } from './media';
 import { DEFAULT_TRACKS, moveTrack, type Clip, type TrackDef, type Zoom } from './timeline-model';
 import { splitClip, insertClip } from './timeline-model';
-import { resolveZooms } from './zoom-generation';
+import { moveZoom, resolveZooms } from './zoom-generation';
 
 const layout = { radius: 22, screenX: 25, screenY: 80, cameraX: 50, cameraY: 50 };
 const asset: Asset = {
@@ -164,4 +164,50 @@ it('keeps a V3-anchored shot through Move down past V1 and back up', () => {
     expect(zooms).toEqual(start);
   }
   expect(order).toEqual(screen2);
+});
+
+it('moves a zoom within its free gap, keeping its duration and never jumping a neighbour', () => {
+  const a: Zoom = { id: 'a', start: 0, duration: 30, scale: 2, x: 50, y: 50 };
+  const b: Zoom = { ...a, id: 'b', start: 100 };
+  const c: Zoom = { ...a, id: 'c', start: 200 };
+  const zooms = [a, b, c];
+  const startOf = (moved: Zoom[], id: string) => moved.find((z) => z.id === id)!.start;
+  const move = (id: string, start: number) =>
+    moveZoom(zooms, id, start, 300, clips, DEFAULT_TRACKS);
+  expect(move('b', 150)).toEqual([a, { ...b, start: 150 }, c]);
+  expect(startOf(move('b', 150.6), 'b')).toBe(151);
+  // Between two neighbours, a request far past the next one stops at the near neighbour's edge.
+  expect(startOf(move('b', 400), 'b')).toBe(170);
+  expect(startOf(move('b', -50), 'b')).toBe(30);
+  // The sequence bounds hold at both ends.
+  expect(startOf(move('c', 999), 'c')).toBe(270);
+  expect(startOf(move('a', -5), 'a')).toBe(0);
+  expect(move('missing', 10)).toBe(zooms);
+  // A zoom ending past a sequence that shrank under it stays put on a move right, not pulled left.
+  const late = [{ ...a, id: 'late', start: 300, duration: 120 }];
+  const nudge = (start: number) =>
+    moveZoom(late, 'late', start, 360, clips, DEFAULT_TRACKS)[0].start;
+  expect(nudge(301)).toBe(300);
+  expect(nudge(290)).toBe(290);
+});
+
+it('moves a generated shot with its source anchor, and drops the anchor once it leaves its clip', () => {
+  const resolved = resolveZooms(anchored, clips, [asset], layout, DEFAULT_TRACKS);
+  const moved = moveZoom(resolved, 'auto-take-21', 76, 400, clips, DEFAULT_TRACKS);
+  expect(moved[0]).toEqual({
+    ...anchored[0],
+    start: 76,
+    source: { ...anchored[0].source, start: 31 },
+  });
+  // resolveZooms keeps the moved shot where it was dropped instead of snapping it back.
+  expect(resolveZooms(moved, clips, [asset], layout, DEFAULT_TRACKS)).toEqual(moved);
+  // Dragged into the next shot, it stops at that shot's edge and the anchor follows.
+  const stopped = moveZoom(resolved, 'auto-take-21', 200, 400, clips, DEFAULT_TRACKS);
+  expect(stopped[0]).toMatchObject({ start: 114, source: { start: 69 } });
+  expect(resolveZooms(stopped, clips, [asset], layout, DEFAULT_TRACKS)).toEqual(stopped);
+  // Before the take begins, the shot no longer lies inside its clip: it becomes a manual zoom.
+  const outside = moveZoom(resolved, 'auto-take-21', 0, 400, clips, DEFAULT_TRACKS);
+  const { source: _anchor, ...manualShot } = anchored[0];
+  expect(outside[0]).toEqual({ ...manualShot, start: 0 });
+  expect(resolveZooms(outside, clips, [asset], layout, DEFAULT_TRACKS)).toEqual(outside);
 });

@@ -27,6 +27,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { Asset } from './media';
+import { moveZoom } from './zoom-generation';
 import {
   FPS,
   moveTrack,
@@ -362,34 +363,122 @@ function useTimelineScale(seconds: number) {
   };
 }
 
+// Pixels a press may travel and still be a click that only selects.
+const DRAG_THRESHOLD = 4;
+const ARROWS: Record<string, number> = { ArrowLeft: -1, ArrowRight: 1 };
+
+// Frames an arrow key moves a zoom: one, or ten with Shift. Any other key, or an arrow with Alt,
+// Ctrl or Meta held, gives zero and is left to the editor's shortcuts.
+const arrowStep = (event: {
+  key: string;
+  shiftKey: boolean;
+  altKey: boolean;
+  ctrlKey: boolean;
+  metaKey: boolean;
+}) =>
+  (ARROWS[event.key] ?? 0) *
+  (event.shiftKey ? 10 : 1) *
+  Number(![event.altKey, event.ctrlKey, event.metaKey].some(Boolean));
+
+// One zoom region: a click selects it, and a drag past the threshold or an arrow key moves it.
+function ZoomBlock({
+  zoom,
+  zooms,
+  duration,
+  selected,
+  onSelect,
+  onMove,
+}: {
+  zoom: Zoom;
+  zooms: Zoom[];
+  duration: number;
+  selected: boolean;
+  onSelect: (id: string) => void;
+  onMove?: (id: string, start: number) => void;
+}) {
+  // Where the press began and the lane width it maps over; null when no press is held.
+  const press = useRef<{ x: number; width: number } | null>(null);
+  // The previewed start once a drag passes the threshold, already kept in its free gap.
+  const [preview, setPreview] = useState<number>();
+  const cancel = () => {
+    press.current = null;
+    setPreview(undefined);
+  };
+  return (
+    <button
+      aria-label="Select zoom"
+      className={`zoom-block ${selected ? 'selected' : ''}`}
+      style={{
+        left: `${((preview ?? zoom.start) / duration) * 100}%`,
+        width: `${(zoom.duration / duration) * 100}%`,
+        cursor: preview === undefined ? 'grab' : 'grabbing',
+        touchAction: 'none',
+      }}
+      onClick={() => onSelect(zoom.id)}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') return cancel();
+        const step = arrowStep(event);
+        if (!step) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onMove?.(zoom.id, zoom.start + step);
+      }}
+      onPointerDown={(event) => {
+        if (event.button !== 0) return;
+        // Safari does not focus a clicked button, and Escape needs the block focused.
+        event.currentTarget.focus({ preventScroll: true });
+        const lane = event.currentTarget.parentElement!.getBoundingClientRect();
+        press.current = { x: event.clientX, width: lane.width };
+        event.currentTarget.setPointerCapture(event.pointerId);
+      }}
+      onPointerMove={(event) => {
+        const held = press.current;
+        if (!held) return;
+        const dx = event.clientX - held.x;
+        if (preview === undefined && Math.abs(dx) < DRAG_THRESHOLD) return;
+        const wanted = zoom.start + (dx / held.width) * duration; // → frame
+        const kept = moveZoom(zooms, zoom.id, wanted, duration, [], []); // → gap-clamped zooms
+        setPreview(kept.find((z) => z.id === zoom.id)!.start);
+      }}
+      onPointerUp={() => {
+        const moved = preview;
+        cancel();
+        if (moved !== undefined) onMove?.(zoom.id, moved);
+      }}
+      onLostPointerCapture={cancel}
+    >
+      <ZoomIn size={12} />
+      <span>{zoom.scale.toFixed(1)}× zoom</span>
+    </button>
+  );
+}
+
 // The zoom row's lane: one block per zoom, or a hint while there are none.
 function ZoomLane({
   zooms,
   duration,
   selected,
   onSelect,
+  onMove,
 }: {
   zooms: Zoom[];
   duration: number;
   selected: string;
   onSelect: (id: string) => void;
+  onMove?: (id: string, start: number) => void;
 }) {
   return (
     <div className="zoom-lane timeline-lane">
       {zooms.map((zoom) => (
-        <button
+        <ZoomBlock
           key={zoom.id}
-          aria-label="Select zoom"
-          className={`zoom-block ${selected === zoom.id ? 'selected' : ''}`}
-          style={{
-            left: `${(zoom.start / duration) * 100}%`,
-            width: `${(zoom.duration / duration) * 100}%`,
-          }}
-          onClick={() => onSelect(zoom.id)}
-        >
-          <ZoomIn size={12} />
-          <span>{zoom.scale.toFixed(1)}× zoom</span>
-        </button>
+          zoom={zoom}
+          zooms={zooms}
+          duration={duration}
+          selected={selected === zoom.id}
+          onSelect={onSelect}
+          onMove={onMove}
+        />
       ))}
       {!zooms.length && <span className="lane-hint">Add a zoom to bring the details closer</span>}
     </div>
@@ -411,6 +500,7 @@ export function Timeline({
   onRazor,
   onRazorHover,
   drop,
+  onMoveZoom,
 }: {
   clips: Clip[];
   assets: Asset[];
@@ -429,6 +519,8 @@ export function Timeline({
   onRazorHover?: (frame: number) => void;
   /** The pool drag in progress, so lanes can say whether they would take it. */
   drop?: PoolDrag;
+  /** Move a zoom to a timeline frame; the editor keeps it in its free gap. */
+  onMoveZoom?: (id: string, start: number) => void;
 }) {
   const { registry, tracks, onToggleTrack, onMoveTrack } = headers;
   const seconds = duration / FPS;
@@ -691,7 +783,13 @@ export function Timeline({
             <ZoomIn size={14} />
             <span>Zooms</span>
           </div>
-          <ZoomLane zooms={zooms} duration={duration} selected={selected} onSelect={onSelect} />
+          <ZoomLane
+            zooms={zooms}
+            duration={duration}
+            selected={selected}
+            onSelect={onSelect}
+            onMove={onMoveZoom}
+          />
           {createRow('screen')}
           {visualRows(registry).map(laneRow)}
           {createRow('background')}

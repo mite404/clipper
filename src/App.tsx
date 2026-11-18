@@ -68,7 +68,7 @@ import {
 } from './project';
 import { CursorControls } from './CursorControls';
 import { ZoomMotionControls } from './ZoomMotionControls';
-import { resolveZooms } from './zoom-generation';
+import { moveZoom, resolveZooms } from './zoom-generation';
 import { screenTracks } from './cursor-render';
 import { maskRect, STAGE, type Layout } from './stage';
 import { useMediaDrawer } from './useMediaDrawer';
@@ -1873,6 +1873,12 @@ export function App() {
             }}
             onRazor={tool === 'razor' ? razor : undefined}
             onRazorHover={tool === 'razor' ? razorHover : undefined}
+            onMoveZoom={(id, start) =>
+              change({
+                ...edit,
+                zooms: moveZoom(edit.zooms, id, start, duration, edit.clips, edit.tracks),
+              })
+            }
           />
           <div className="sequence-footer">
             <span>
