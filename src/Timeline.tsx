@@ -38,6 +38,8 @@ import {
   placeMedia,
   rulerMarks,
   snapFrame,
+  clock,
+  timecode,
   trackNumber,
   trimBounds,
   trimClip,
@@ -49,7 +51,7 @@ import {
   type TrackDef,
   type Zoom,
 } from './timeline-model';
-import { ASSET_DRAG, IconButton, Waveform, clock, timecode } from './components';
+import { ASSET_DRAG, IconButton, Waveform } from './components';
 
 /** Per-track toggle lists a project saves. */
 export type TrackToggles = Record<'muted' | 'locked' | 'selected', Track[]>;

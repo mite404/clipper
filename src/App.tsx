@@ -44,8 +44,6 @@ import {
   MediaLibrary,
   TranscriptPanel,
   Waveform,
-  clock,
-  timecode,
   type TranscriptProps,
 } from './components';
 import { type Asset, DEFAULT_STILL_FRAMES, loadDemo, readMedia, unreadableNamesake } from './media';
@@ -68,6 +66,8 @@ import {
   placeMedia,
   splitClip,
   splitWhere,
+  clock,
+  timecode,
   trackNumber,
   ZOOM_LIMITS,
   zoomsOverlap,

@@ -3,29 +3,7 @@ import { Film, Image, Music2, Plus, Upload } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui-sdk/react/tooltip';
 import type { Asset } from './media';
 import type { Transcript } from './transcribe';
-import { FPS } from './timeline-model';
-
-const two = (n: number) => String(n).padStart(2, '0');
-
-// Minutes and seconds, then frames when asked. From one hour up the hours lead, unpadded, so a
-// reading never carries more than two minute digits and a long sequence cannot be misread.
-function format(frame: number, withFrames: boolean): string {
-  const seconds = Math.floor(frame / FPS);
-  const hours = Math.floor(seconds / 3600);
-  const fields = [Math.floor(seconds / 60) % 60, seconds % 60];
-  if (withFrames) fields.push(Math.floor(frame) % FPS);
-  return [...(hours ? [String(hours)] : []), ...fields.map(two)].join(':');
-}
-
-/** A composition frame as mm:ss:ff at 30fps, or h:mm:ss:ff from one hour up. */
-export function timecode(frame: number): string {
-  return format(frame, true);
-}
-
-/** The same frame to the second: mm:ss, or h:mm:ss from one hour up. */
-export function clock(frame: number): string {
-  return format(frame, false);
-}
+import { FPS, clock } from './timeline-model';
 
 /** Native icon button with the same label visible on hover and keyboard focus. */
 export function IconButton({

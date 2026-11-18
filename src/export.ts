@@ -23,6 +23,7 @@ import {
   covers,
   paintOrder,
   sourceFrame,
+  timecode,
   type Clip,
   type Track,
   type TrackDef,
@@ -232,17 +233,6 @@ async function videoSink(inputs: Map<string, Input>, clip: Clip, poolSize?: numb
 }
 
 type Frames = AsyncGenerator<Awaited<ReturnType<CanvasSink['getCanvas']>>, void, unknown>;
-
-// mm:ss:ff, with unpadded hours from one hour up, as the editor's timecode reads. It is not
-// imported from components.tsx: React cannot load there outside the app, as in the export fixtures.
-// ponytail: duplicates components.tsx `timecode`; move that into timeline-model.ts to share it.
-const timecode = (frame: number) => {
-  const seconds = Math.floor(frame / FPS);
-  const fields = [Math.floor(seconds / 60) % 60, seconds % 60, Math.floor(frame) % FPS];
-  return [...(seconds >= 3600 ? [Math.floor(seconds / 3600)] : []), ...fields]
-    .map((n, i) => (i === 0 && seconds >= 3600 ? String(n) : String(n).padStart(2, '0')))
-    .join(':');
-};
 
 // A frame the decoder cannot produce fails the render, never a held or blank picture that would
 // hide the corruption. The message names the media and the timeline time to find it.

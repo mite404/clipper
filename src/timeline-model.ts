@@ -28,6 +28,29 @@ export type Zoom = {
 export const FPS = 30;
 /** No clip or zoom may end later than this: 24 hours of timeline. */
 export const MAX_FRAMES = 24 * 60 * 60 * FPS;
+
+const two = (n: number) => String(n).padStart(2, '0');
+
+// Minutes and seconds, then frames when asked. From one hour up the hours lead, unpadded, so a
+// reading never carries more than two minute digits and a long sequence cannot be misread.
+function format(frame: number, withFrames: boolean): string {
+  const seconds = Math.floor(frame / FPS);
+  const hours = Math.floor(seconds / 3600);
+  const fields = [Math.floor(seconds / 60) % 60, seconds % 60];
+  if (withFrames) fields.push(Math.floor(frame) % FPS);
+  return [...(hours ? [String(hours)] : []), ...fields.map(two)].join(':');
+}
+
+/** A composition frame as mm:ss:ff at 30fps, or h:mm:ss:ff from one hour up. */
+export function timecode(frame: number): string {
+  return format(frame, true);
+}
+
+/** The same frame to the second: mm:ss, or h:mm:ss from one hour up. */
+export function clock(frame: number): string {
+  return format(frame, false);
+}
+
 // Music's linear amplitude in playback and export.
 const MUSIC_GAIN = 0.22;
 /** The four lanes every project had before the registry, and every version 2 or 3 file opens with. */

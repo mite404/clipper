@@ -1,26 +1,48 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, expect, it } from 'vitest';
-import { clock, timecode } from './components';
+import { MediaLibrary } from './components';
+import type { Asset } from './media';
 
-describe('timecodes at any length', () => {
-  // [frame, timecode, clock], derived by hand at 30 fps.
-  const cases: [number, string, string][] = [
-    [0, '00:00:00', '00:00'],
-    [1, '00:00:01', '00:00'],
-    [29 * 30 + 29, '00:29:29', '00:29'],
-    [(59 * 60 + 59) * 30 + 29, '59:59:29', '59:59'],
-    [60 * 60 * 30, '1:00:00:00', '1:00:00'],
-    [(99 * 60 + 59) * 30, '1:39:59:00', '1:39:59'],
-    [105 * 60 * 30, '1:45:00:00', '1:45:00'],
-    [24 * 60 * 60 * 30, '24:00:00:00', '24:00:00'],
-  ];
+const asset = (id: string, over: Partial<Asset>): Asset =>
+  ({
+    id,
+    name: id,
+    url: `blob:${id}`,
+    size: 1,
+    width: 640,
+    height: 360,
+    peaks: [],
+    thumbnail: '',
+    kind: 'video',
+    duration: 30,
+    hasAudio: false,
+    ...over,
+  }) as Asset;
 
-  it.each(cases)('reads frame %i as %s, and to the second as %s', (frame, full, short) => {
-    expect(timecode(frame)).toBe(full);
-    expect(clock(frame)).toBe(short);
-  });
+// The library's duration chip reads the shared clock: to the second, floored, hours from one hour.
+describe('media library duration chips', () => {
+  const chips = (assets: Asset[]) =>
+    [
+      ...renderToStaticMarkup(
+        createElement(MediaLibrary, {
+          assets,
+          selected: '',
+          onSelect: () => undefined,
+          onImport: () => undefined,
+          busy: false,
+        }),
+      ).matchAll(/class="asset-duration">([^<]*)</g),
+    ].map((match) => match[1]);
 
-  it('floors a fractional frame', () => {
-    expect(timecode(30.9)).toBe('00:01:00');
-    expect(clock(59.9)).toBe('00:01');
+  it('floors each source length to whole seconds and marks a still', () => {
+    expect(
+      chips([
+        asset('a', { duration: 59 }),
+        asset('b', { duration: 61 }),
+        asset('c', { duration: 60 * 60 * 30 }),
+        asset('d', { kind: 'image', duration: undefined, hasAudio: false }),
+      ]),
+    ).toEqual(['00:01', '00:02', '1:00:00', 'STILL']);
   });
 });

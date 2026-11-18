@@ -1561,7 +1561,8 @@ test.describe('decoder frame gaps', () => {
         ),
       };
     });
-    // Frame 40 is 00:01:10; the export names the frame where the decoder's read-ahead surfaced the bad packet 35 (00:01:05).
+    // Copy frame names the requested frame 40 (00:01:10). The export names the frame where the
+    // decoder's read-ahead surfaced the bad packet, somewhere in 00:01:0x.
     expect(messages.copy).toBe('"Flower study" could not be decoded at 00:01:10.');
     expect(messages.video).toMatch(
       /^Video export failed: "Flower study" could not be decoded at 00:01:0\d\.$/,
