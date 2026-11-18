@@ -221,12 +221,63 @@ export type RenderFrameImageOptions = Pick<
   'clips' | 'assets' | 'zooms' | 'layout' | 'tracks' | 'width' | 'signal'
 > & { frame: number };
 
-// Validate a timed visual once before asking its decoder for frames.
+// Validate a timed visual once before asking its decoder for frames. `first` is where its first
+// sample starts: asked for anything earlier, the decoder returns nothing, so requests clamp to it
+// and the first frame is held, as the preview shows.
 async function videoSink(inputs: Map<string, Input>, clip: Clip, poolSize?: number) {
   const track = await inputs.get(clip.assetId)!.getPrimaryVideoTrack();
   if (!track || !(await track.canDecode()))
     throw new Error(`Cannot decode video in clip ${clip.id}.`);
-  return new CanvasSink(track, { poolSize });
+  return { sink: new CanvasSink(track, { poolSize }), first: await track.getFirstTimestamp() };
+}
+
+type Frames = AsyncGenerator<Awaited<ReturnType<CanvasSink['getCanvas']>>, void, unknown>;
+
+// mm:ss:ff, with unpadded hours from one hour up, as the editor's timecode reads. It is not
+// imported from components.tsx: React cannot load there outside the app, as in the export fixtures.
+// ponytail: duplicates components.tsx `timecode`; move that into timeline-model.ts to share it.
+const timecode = (frame: number) => {
+  const seconds = Math.floor(frame / FPS);
+  const fields = [Math.floor(seconds / 60) % 60, seconds % 60, Math.floor(frame) % FPS];
+  return [...(seconds >= 3600 ? [Math.floor(seconds / 3600)] : []), ...fields]
+    .map((n, i) => (i === 0 && seconds >= 3600 ? String(n) : String(n).padStart(2, '0')))
+    .join(':');
+};
+
+// A frame the decoder cannot produce fails the render, never a held or blank picture that would
+// hide the corruption. The message names the media and the timeline time to find it.
+const undecodable = (assets: Asset[], clip: Clip, frame: number, cause: unknown) =>
+  new Error(
+    `"${assets.find((asset) => asset.id === clip.assetId)?.name}" could not be decoded at ${timecode(frame)}.`,
+    { cause },
+  );
+
+// The picture a clip shows at a composition frame: a still, or the decoded video frame at or
+// before its source time (the last one past the stream's end, the first one before its start).
+async function clipImage(
+  inputs: Map<string, Input>,
+  images: Map<string, ImageBitmap>,
+  assets: Asset[],
+  clip: Clip,
+  frame: number,
+): Promise<Layer['image'] | undefined> {
+  const still = images.get(clip.assetId);
+  if (still) return still;
+  const { sink, first } = await videoSink(inputs, clip);
+  try {
+    return (await sink.getCanvas(Math.max(first, sourceFrame(clip, frame) / FPS)))?.canvas;
+  } catch (error) {
+    throw undecodable(assets, clip, frame, error);
+  }
+}
+
+// The next decoded canvas of a clip's frame iterator, drawn at timeline `frame`.
+async function nextCanvas(frames: Frames, assets: Asset[], clip: Clip, frame: number) {
+  try {
+    return (await frames.next()).value; // → decoded canvas, reused two frames later
+  } catch (error) {
+    throw undecodable(assets, clip, frame, error);
+  }
 }
 
 /**
@@ -264,12 +315,9 @@ export async function renderFrameImage({
     await openInputs(inputs, images, visible, assets, check, signal);
     const layers: Layer[] = [];
     for (const clip of visible) {
-      const image = images.get(clip.assetId);
-      const sample = image
-        ? { canvas: image }
-        : await (await videoSink(inputs, clip)).getCanvas(sourceFrame(clip, frame) / FPS);
+      const image = await clipImage(inputs, images, assets, clip, frame);
       check();
-      if (sample) layers.push({ track: clip.track, image: sample.canvas });
+      if (image) layers.push({ track: clip.track, image });
     }
     context.setTransform(width / STAGE.width, 0, 0, height / STAGE.height, 0, 0);
     const paths = prepareFraming(zooms, clips, assets, layout, tracks);
@@ -373,8 +421,7 @@ export async function renderVideo({
   if (audio) output.addAudioTrack(audio);
   const inputs = new Map<string, Input>();
   const images = new Map<string, ImageBitmap>();
-  const iterators: AsyncGenerator<Awaited<ReturnType<CanvasSink['getCanvas']>>, void, unknown>[] =
-    [];
+  const iterators: Frames[] = [];
   try {
     const cursorImages = await decodeCursorImages(assets);
     await openInputs(inputs, images, clips, assets, check, signal);
@@ -387,10 +434,9 @@ export async function renderVideo({
         visuals.push({ kind: 'image' as const, clip, image });
         continue;
       }
-      const sink = await videoSink(inputs, clip, 2);
-      const times = Array.from(
-        { length: clip.duration },
-        (_, index) => sourceFrame(clip, clip.start + index) / FPS,
+      const { sink, first } = await videoSink(inputs, clip, 2);
+      const times = Array.from({ length: clip.duration }, (_, index) =>
+        Math.max(first, sourceFrame(clip, clip.start + index) / FPS),
       );
       // Each canvas is drawn before the next is requested, so two pooled canvases never collide.
       const iterator = sink.canvasesAtTimestamps(times);
@@ -415,7 +461,7 @@ export async function renderVideo({
           layers.push({ track: clip.track, image: visual.image });
           continue;
         }
-        const sample = (await visual.iterator.next()).value; // → decoded canvas, reused two frames later
+        const sample = await nextCanvas(visual.iterator, assets, clip, frame);
         check();
         if (sample) layers.push({ track: clip.track, image: sample.canvas });
       }

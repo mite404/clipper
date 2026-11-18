@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
-import { writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 
 function inspectExport(file: string, width: number, format: string | undefined, audible: boolean) {
   const probe = JSON.parse(
@@ -1402,7 +1402,9 @@ test('hands the rendered video over from a Save video click, with fresh user act
   expect(downloads).toEqual(['developer-walkthrough-1080p.mp4', 'developer-walkthrough-1080p.mp4']);
 });
 
-// REF-28 pins today's contract when the decoder has no frame for a requested time. Source frame n
+// REF-28: when the decoder has no frame for a requested time, Copy frame and export hold the
+// nearest decoded frame (the last past the end, the first before the start); a frame that cannot be
+// decoded fails loudly and names the clip and time. Source frame n
 // is a grey field with a white full-width bar 6 px high at y = n * 6, so the picture says which
 // source frame it is.
 test.describe('decoder frame gaps', () => {
@@ -1443,16 +1445,16 @@ test.describe('decoder frame gaps', () => {
     );
     if (rows.length < 4) return 'empty';
     const centre = rows.reduce((sum, [y]) => sum + y, 0) / rows.length + 0.5;
-    return Math.round(((centre * 360) / 700 - 3) / 6);
+    return Math.max(0, Math.round(((centre * 360) / 700 - 3) / 6));
   };
 
   for (const [name, frames, setpts, probes, expected] of [
     // A 1 s stream under a 60-frame clip: after its last frame every path holds that frame.
     ['past the end of the stream', 30, undefined, [30, 45, 59], [29, 29, 29]],
-    // The first sample is at 0.5 s: before it there is no frame, so nothing is drawn.
-    ['before the first sample', 60, ',setpts=PTS+0.5/TB', [0, 14, 16], ['empty', 'empty', 1]],
+    // The first sample is at 0.5 s: before it the first frame is held, as the preview shows.
+    ['before the first sample', 60, ',setpts=PTS+0.5/TB', [0, 14, 16], [0, 0, 1]],
   ] as const)
-    test(`Copy frame and export ${name === 'past the end of the stream' ? 'hold the last frame' : 'draw nothing'} ${name}`, async ({
+    test(`Copy frame and export hold the ${name === 'past the end of the stream' ? 'last' : 'first'} frame ${name}`, async ({
       page,
     }, info) => {
       test.setTimeout(120000);
@@ -1511,4 +1513,58 @@ test.describe('decoder frame gaps', () => {
         `export at ${probes.join()}`,
       ).toEqual([...expected]);
     });
+
+  test('Copy frame and export name the clip and time of a frame that cannot be decoded', async ({
+    page,
+  }, info) => {
+    test.setTimeout(120000);
+    const fixture = info.outputPath('corrupt.webm');
+    bars(fixture, 60);
+    // Overwrite the payload of packet 35 and leave the container intact.
+    const { packets } = JSON.parse(
+      execFileSync('ffprobe', [
+        ...['-v', 'error', '-show_packets', '-select_streams', 'v'],
+        ...['-show_entries', 'packet=pos,size', '-of', 'json', fixture],
+      ]).toString(),
+    ) as { packets: { pos: string; size: string }[] };
+    const bytes = readFileSync(fixture);
+    const { pos, size } = packets[35];
+    bytes.fill(0xff, Number(pos) + 4, Number(pos) + Number(size));
+    writeFileSync(fixture, bytes);
+    await page.route('**/gap-fixture', (route) =>
+      route.fulfill({ contentType: 'text/html', body: '<html><body>Gap fixture</body></html>' }),
+    );
+    await page.route('**/gap-media', (route) => route.fulfill({ path: fixture }));
+    await page.goto('/gap-fixture');
+    const messages = await page.evaluate(async () => {
+      const mediaModule = '/src/media.ts',
+        exportModule = '/src/export.ts';
+      const { readMedia } = await import(mediaModule);
+      const { renderFrameImage, renderVideo } = await import(exportModule);
+      const asset = await readMedia(await (await fetch('/gap-media')).blob(), 'Flower study', 'f');
+      const options = {
+        assets: [asset],
+        clips: [{ id: 'c', assetId: 'f', track: 'screen', start: 0, duration: 60, offset: 0 }],
+        zooms: [],
+        layout: { radius: 0, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
+        width: 1920,
+      };
+      const failure = (run: Promise<unknown>) =>
+        run.then(
+          () => 'rendered',
+          (error: Error) => error.message,
+        );
+      return {
+        copy: await failure(renderFrameImage({ ...options, frame: 40 })),
+        video: await failure(
+          renderVideo({ ...options, muted: [], format: 'webm', onProgress: () => {} }),
+        ),
+      };
+    });
+    // Frame 40 is 00:01:10; the export names the frame where the decoder's read-ahead surfaced the bad packet 35 (00:01:05).
+    expect(messages.copy).toBe('"Flower study" could not be decoded at 00:01:10.');
+    expect(messages.video).toMatch(
+      /^Video export failed: "Flower study" could not be decoded at 00:01:0\d\.$/,
+    );
+  });
 });
