@@ -124,7 +124,12 @@ for (const width of [1920, 3840]) {
         buffer: Buffer.from(fixture.project),
       });
       await choose(page.getByRole('combobox', { name: 'Export resolution' }), String(width));
-      await expect(page.getByTestId('screen-mask')).toHaveCSS('width', `${(width * 880) / 1280}px`);
+      // The preview lays out at most 1920 wide, even for a 4K export.
+      const layout = Math.min(width, 1920);
+      await expect(page.getByTestId('screen-mask')).toHaveCSS(
+        'width',
+        `${(layout * 880) / 1280}px`,
+      );
       const scrub = page.getByLabel('Timeline playhead', { exact: true });
       await scrub.fill(String(target.frame));
       const mask = await page.getByTestId('screen-mask').boundingBox();

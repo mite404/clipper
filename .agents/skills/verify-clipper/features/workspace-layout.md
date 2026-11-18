@@ -18,6 +18,10 @@ spec on this page runs only under `all`: no named journey selects them.
 - A timeline Hide and Show button, a custom height that the default-height button and its restore
   button swap between, and a Timeline scale slider with bounds that follow the sequence.
 - Two-axis timeline scrolling that reaches every video and audio lane.
+- Preview quality in the footer: Full, Half or Quarter lays the preview out at that fraction of 1920
+  wide, remembered on the device and never saved in a project. A 4K export still previews at 1920;
+  Copy frame and export always render the full output. `all` runs `tests/preview-quality.spec.ts`,
+  including one real 3840 WebM render. Playback already pauses when the tab is hidden.
 - The Inspector's Source cursor data region, which scrolls inside the Inspector and edits a
   recording once for every use of it (see [Cursor and zoom creation](cursor.md) for the data
   itself).

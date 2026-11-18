@@ -79,8 +79,10 @@ test('renders at selected HD and 4K dimensions while preserving fitted framing a
         const style = getComputedStyle(element.parentElement!);
         return { width: parseFloat(style.width), height: parseFloat(style.height) };
       });
-      expect(root).toEqual({ width, height: (width * 9) / 16 });
-      const scale = width / 1280;
+      // The preview is laid out at the output size up to 1920 wide: a 4K export previews at 1920.
+      const layout = Math.min(width, 1920);
+      expect(root).toEqual({ width: layout, height: (layout * 9) / 16 });
+      const scale = layout / 1280;
       await expect(page.getByTestId('screen-mask')).toHaveCSS('width', `${880 * scale}px`);
       await expect(page.getByTestId('screen-mask')).toHaveCSS('height', `${700 * scale}px`);
       await expect(page.getByTestId('screen-mask')).toHaveCSS('border-radius', `${38 * scale}px`);

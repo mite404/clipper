@@ -84,6 +84,7 @@ import {
   zoomsOverlap,
 } from './timeline-model';
 import { classifyChange, type Gesture } from './history';
+import { PREVIEW_DIVISORS, savePreviewQuality, savedPreviewQuality } from './preview-quality';
 import {
   librarySizeWarning,
   serializeProject,
@@ -952,6 +953,7 @@ export function App() {
   // The mouse focus being dragged on the screen video, committed to its zoom on release.
   const [mark, setMark] = useState<{ id: string; x: number; y: number } | null>(null);
   const [exportWidth, setExportWidth] = useState<1920 | 3840>(1920);
+  const [previewQuality, setPreviewQuality] = useState(savedPreviewQuality);
   const [exportFormat, setExportFormat] = useState<'mp4' | 'mov' | 'webm'>('mp4');
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   // A finished render waits for the user's own click to download: Chrome blocks and Safari asks
@@ -1769,6 +1771,9 @@ export function App() {
     ),
     [asset, edit.tracks, insert, sourceBlocked, transcription.row],
   );
+  // The preview is laid out at most 1920 wide, and at a fraction of that, then scaled to the pane:
+  // a 4K export must not make it a 3840 layout. Copy frame and export always render the full output.
+  const previewWidth = Math.min(exportWidth, 1920) / PREVIEW_DIVISORS[previewQuality];
   const playerView = useMemo(
     () => (
       <Player
@@ -1776,8 +1781,8 @@ export function App() {
         component={Composition}
         inputProps={compositionProps}
         durationInFrames={duration}
-        compositionWidth={exportWidth}
-        compositionHeight={(exportWidth * 9) / 16}
+        compositionWidth={previewWidth}
+        compositionHeight={(previewWidth * 9) / 16}
         fps={FPS}
         playbackRate={Math.max(1, speed)}
         controls={false}
@@ -1787,7 +1792,7 @@ export function App() {
         style={{ width: '100%', aspectRatio: '16 / 9' }}
       />
     ),
-    [compositionProps, duration, speed, exportWidth],
+    [compositionProps, duration, speed, previewWidth],
   );
 
   return (
@@ -2277,6 +2282,25 @@ export function App() {
         )}
         <span role="status">
           <span className="status-dot" /> {message}
+        </span>
+        <span
+          className="preview-quality"
+          title="Lays the preview out smaller so it plays lighter. Copy frame and export are unaffected."
+        >
+          Preview
+          <Choice
+            label="Preview quality"
+            value={previewQuality}
+            options={[
+              { value: 'full', label: 'Full' },
+              { value: 'half', label: 'Half' },
+              { value: 'quarter', label: 'Quarter' },
+            ]}
+            onChange={(quality) => {
+              setPreviewQuality(quality);
+              savePreviewQuality(quality);
+            }}
+          />
         </span>
         <span>
           REMOTION × MEDIABUNNY <span className="footer-version">STEEL THREAD 0.1</span>

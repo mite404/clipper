@@ -31,6 +31,10 @@ service holds 5173, so beside it run `npm run dev -- --port <free port>`.
   scroll/scale the timeline, with `-` and `=` zooming it out and in.
 - `Up` and `Down` move the playhead to the previous and next edit point, from the timeline.
 - `X` selects the clip under the playhead; `[` and `]` trim the selected clip's start or end to it.
+- Preview quality (footer): Full, Half or Quarter lays the preview out smaller so it plays lighter,
+  and is remembered on the device. Full is at most 1920 wide even for a 4K export; Copy frame and
+  export always render the full output. Quarter is the power-saving choice; playback already pauses
+  when the tab is hidden.
 - Chapter markers: `M` marks one at the playhead, shown as ruler flags you can click, rename in the
   Inspector, delete, save with the project and copy as a YouTube-style list.
 - Timed screen zooms with editable scale, manually marked mouse focus, and smooth in/hold/out.

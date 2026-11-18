@@ -3142,3 +3142,22 @@ input[type='number'],
 .pip-corners button[aria-pressed='true'] {
   cursor: default;
 }
+
+/* The footer's preview quality: a small select between the status and the version. */
+.preview-quality {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+.preview-quality :is(select, .select) {
+  width: auto;
+  max-width: none;
+  background: #2b2d2c;
+  color: inherit;
+  padding: 2px 4px;
+  border: 1px solid #484b43;
+  border-radius: 4px;
+  font-size: inherit;
+}
