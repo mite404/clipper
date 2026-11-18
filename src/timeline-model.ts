@@ -190,6 +190,29 @@ export function trimClip(
   };
 }
 
+/** Round gaps, in seconds, a ruler mark may sit apart. */
+const RULER_STEPS = [
+  1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 14400, 43200, 86400,
+];
+/** Closest two ruler marks may sit, and most a ruler carries. */
+const RULER_GAP_PIXELS = 64;
+const RULER_MAX_MARKS = 9;
+
+/**
+ * The frames a ruler labels: whole seconds from frame 0 at the smallest round step that keeps the
+ * marks `RULER_GAP_PIXELS` apart and at most `RULER_MAX_MARKS` of them, so no two labels read alike.
+ * @param duration Sequence length in frames.
+ * @param scale Timeline pixels per second.
+ */
+export function rulerMarks(duration: number, scale: number): number[] {
+  const step =
+    RULER_STEPS.find(
+      (seconds) =>
+        seconds * scale >= RULER_GAP_PIXELS && duration / (seconds * FPS) < RULER_MAX_MARKS,
+    ) ?? RULER_STEPS.at(-1)!; // → seconds between marks
+  return Array.from({ length: Math.floor(duration / (step * FPS)) + 1 }, (_, i) => i * step * FPS);
+}
+
 /** Camera translation percentages center a manually marked mouse position during the zoom hold. */
 export function zoomCamera(zooms: Zoom[], frame: number): { scale: number; x: number; y: number } {
   const zoom = zooms.find((z) => covers(z, frame));

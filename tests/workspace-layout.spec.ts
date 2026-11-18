@@ -351,7 +351,31 @@ test('fit scale follows the viewport and stays finite for empty and one-frame se
     const lane = (await page.getByTestId('track-screen').boundingBox())!;
     expect(lane.width / 12).toBeCloseTo(min, 1);
     const ticks = page.locator('.ruler > span');
-    await expect(ticks.last()).toHaveText('00:12');
+    // Marks sit on whole seconds: no two labels read alike, each sits at its own time, and the
+    // last is the largest step at or before the 12 s end.
+    const rulerBox = (await page.locator('.ruler').boundingBox())!;
+    const marks = await ticks.evaluateAll((elements) =>
+      elements.map((el) => {
+        const box = el.getBoundingClientRect();
+        const [minutes, seconds] = el.textContent!.split(':').map(Number);
+        return {
+          text: el.textContent!,
+          at: minutes * 60 + seconds,
+          left: box.left,
+          right: box.right,
+        };
+      }),
+    );
+    expect(new Set(marks.map((mark) => mark.text)).size).toBe(marks.length);
+    for (const mark of marks) {
+      const anchor =
+        mark.at === 0 ? mark.left : mark.at === 12 ? mark.right : (mark.left + mark.right) / 2;
+      expect(
+        Math.abs(anchor - (rulerBox.x + (mark.at / 12) * rulerBox.width)),
+        mark.text,
+      ).toBeLessThan(1.5);
+    }
+    expect(marks.at(-1)!.at).toBeGreaterThan(12 - (marks[1].at - marks[0].at));
     const labels = await ticks.evaluateAll((elements) =>
       elements.map((el) => ({
         left: el.getBoundingClientRect().left,

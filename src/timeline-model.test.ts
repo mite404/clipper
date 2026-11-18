@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  FPS,
   covers,
   createTrack,
   paintOrder,
@@ -9,6 +10,7 @@ import {
   lockedChange,
   moveTrack,
   placeClip,
+  rulerMarks,
   snapFrame,
   splitWhere,
   sourceFrame,
@@ -130,6 +132,37 @@ describe('editing a timeline in frames', () => {
     expect(zoomsOverlap(zooms, { id: 'b', start: 89, duration: 30 })).toBe(true);
     expect(zoomsOverlap(zooms, { id: 'b', start: 40, duration: 6 })).toBe(true);
     expect(zoomsOverlap(zooms, { id: 'a', start: 40, duration: 60 })).toBe(false);
+  });
+
+  it('puts one ruler label on each whole second of a 6 s sequence, once each', () => {
+    // 180 frames at 150 px/s: every second fits, so each reads once and sits at its own time.
+    expect(rulerMarks(180, 150)).toEqual([0, 30, 60, 90, 120, 150, 180]);
+  });
+
+  it('keeps ruler marks whole, distinct, at most 9 and 64 px apart at any length and scale', () => {
+    const faults: string[] = [];
+    for (const duration of [1, 29, 30, 31, 180, 360, 3600, 108000, 2592000])
+      for (const scale of [1, 5, 20.5, 66, 103.67, 400, 3000]) {
+        const marks = rulerMarks(duration, scale);
+        const gaps = marks.slice(1).map((mark, i) => ((mark - marks[i]) / FPS) * scale);
+        const problems = [
+          marks[0] !== 0 && 'does not start at 0',
+          marks.length > 9 && 'has more than 9 marks',
+          marks.at(-1)! > duration && 'passes the end',
+          marks.some((mark) => mark % FPS !== 0) && 'has a fractional second',
+          gaps.some((gap) => gap < 64) && 'has marks under 64 px apart',
+          marks.some((mark, i) => i && mark <= marks[i - 1]) && 'does not increase',
+        ].filter(Boolean);
+        faults.push(...problems.map((problem) => `${duration} frames at ${scale} px/s ${problem}`));
+      }
+    expect(faults).toEqual([]);
+    expect(rulerMarks(1, 3000)).toEqual([0]);
+  });
+
+  it('steps a ruler by round seconds and ends on the largest step at or before the end', () => {
+    // The 12 s demo: 2 s steps at fit scale on a wide window, 5 s steps on a narrow one.
+    expect(rulerMarks(360, 103.67)).toEqual([0, 60, 120, 180, 240, 300, 360]);
+    expect(rulerMarks(360, 20.5)).toEqual([0, 150, 300]);
   });
 
   it('moves either edge in both directions without changing source timing', () => {

@@ -32,6 +32,7 @@ import {
   FPS,
   moveTrack,
   placeMedia,
+  rulerMarks,
   snapFrame,
   trackNumber,
   trimBounds,
@@ -525,7 +526,6 @@ export function Timeline({
   const { registry, tracks, onToggleTrack, onMoveTrack } = headers;
   const seconds = duration / FPS;
   const { viewport, label, minScale, maxScale, scale, setScale, width } = useTimelineScale(seconds);
-  const ticks = Math.max(2, Math.min(9, Math.floor((seconds * scale) / 64) + 1));
   // A drag names its clip by ID and trims the clip as it is now, so a split, undo or delete made
   // while a grip is held is never overwritten by a copy taken at pointerdown.
   const [drag, setDrag] = useState<{
@@ -758,9 +758,13 @@ export function Timeline({
             <span>30 FPS</span>
           </div>
           <div className="ruler">
-            {Array.from({ length: ticks }, (_, i) => (
-              <span key={i} style={{ left: `${(i / (ticks - 1)) * 100}%` }}>
-                {timecode(Math.round((i / (ticks - 1)) * duration)).slice(0, 5)}
+            {rulerMarks(duration, scale).map((mark) => (
+              <span
+                key={mark}
+                data-end={mark === duration || undefined}
+                style={{ left: `${(mark / duration) * 100}%` }}
+              >
+                {timecode(mark).slice(0, 5)}
               </span>
             ))}
             <div
