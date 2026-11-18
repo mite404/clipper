@@ -36,7 +36,7 @@ import {
   ZoomIn,
 } from 'lucide-react';
 import { Composition } from './Composition';
-import { IconButton, MediaLibrary, Waveform, timecode } from './components';
+import { IconButton, MediaLibrary, Waveform, clock, timecode } from './components';
 import { type Asset, DEFAULT_STILL_FRAMES, loadDemo, readMedia, unreadableNamesake } from './media';
 import { CREATE, Timeline } from './Timeline';
 import {
@@ -429,7 +429,7 @@ export function SourceMonitor({
                   if (video.current) video.current.currentTime = time;
                 }}
               />
-              <span>{timecode(Math.round(preview.time * FPS)).slice(0, 5)}</span>
+              <span>{clock(Math.round(preview.time * FPS))}</span>
             </div>
             {preview.error && (
               <span className="source-error" role="status">

@@ -4,11 +4,26 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@ui-sdk/react/tooltip';
 import type { Asset } from './media';
 import { FPS } from './timeline-model';
 
-/** Format a composition frame as minutes, seconds, and frames at 30fps. */
+const two = (n: number) => String(n).padStart(2, '0');
+
+// Minutes and seconds, then frames when asked. From one hour up the hours lead, unpadded, so a
+// reading never carries more than two minute digits and a long sequence cannot be misread.
+function format(frame: number, withFrames: boolean): string {
+  const seconds = Math.floor(frame / FPS);
+  const hours = Math.floor(seconds / 3600);
+  const fields = [Math.floor(seconds / 60) % 60, seconds % 60];
+  if (withFrames) fields.push(Math.floor(frame) % FPS);
+  return [...(hours ? [String(hours)] : []), ...fields.map(two)].join(':');
+}
+
+/** A composition frame as mm:ss:ff at 30fps, or h:mm:ss:ff from one hour up. */
 export function timecode(frame: number): string {
-  return [Math.floor(frame / FPS / 60), Math.floor(frame / FPS) % 60, Math.floor(frame) % FPS]
-    .map((n) => String(n).padStart(2, '0'))
-    .join(':');
+  return format(frame, true);
+}
+
+/** The same frame to the second: mm:ss, or h:mm:ss from one hour up. */
+export function clock(frame: number): string {
+  return format(frame, false);
 }
 
 /** Native icon button with the same label visible on hover and keyboard focus. */
@@ -147,7 +162,7 @@ export function MediaLibrary({
                 <Waveform peaks={asset.peaks} />
               )}
               <span className="asset-duration">
-                {asset.kind === 'image' ? 'STILL' : timecode(asset.duration).slice(0, 5)}
+                {asset.kind === 'image' ? 'STILL' : clock(asset.duration)}
               </span>
               <span className="asset-number">{String(index + 1).padStart(2, '0')}</span>
             </div>

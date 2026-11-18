@@ -159,6 +159,16 @@ describe('editing a timeline in frames', () => {
     expect(rulerMarks(1, 3000)).toEqual([0]);
   });
 
+  it('drops a last mark that is not the end and sits within 20 px of it', () => {
+    // 3610 s at 3 px/s: the 3600 s mark is 30 px from the end, so it stays...
+    expect(rulerMarks(3610 * FPS, 3).at(-1)).toBe(3600 * FPS);
+    // ...and at 1 px/s it is 10 px away, so its wide label would overhang the padding.
+    expect(rulerMarks(3610 * FPS, 1).at(-1)).toBe(3000 * FPS);
+    // A mark exactly at the end always stays, and so does frame 0.
+    expect(rulerMarks(3600 * FPS, 1).at(-1)).toBe(3600 * FPS);
+    expect(rulerMarks(1, 0.5)).toEqual([0]);
+  });
+
   it('steps a ruler by round seconds and ends on the largest step at or before the end', () => {
     // The 12 s demo: 2 s steps at fit scale on a wide window, 5 s steps on a narrow one.
     expect(rulerMarks(360, 103.67)).toEqual([0, 60, 120, 180, 240, 300, 360]);

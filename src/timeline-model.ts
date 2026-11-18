@@ -197,6 +197,8 @@ const RULER_STEPS = [
 /** Closest two ruler marks may sit, and most a ruler carries. */
 const RULER_GAP_PIXELS = 64;
 const RULER_MAX_MARKS = 9;
+/** A last mark nearer the end than this is dropped: its label would overhang the ruler padding. */
+const RULER_END_PIXELS = 20;
 
 /**
  * The frames a ruler labels: whole seconds from frame 0 at the smallest round step that keeps the
@@ -210,7 +212,15 @@ export function rulerMarks(duration: number, scale: number): number[] {
       (seconds) =>
         seconds * scale >= RULER_GAP_PIXELS && duration / (seconds * FPS) < RULER_MAX_MARKS,
     ) ?? RULER_STEPS.at(-1)!; // → seconds between marks
-  return Array.from({ length: Math.floor(duration / (step * FPS)) + 1 }, (_, i) => i * step * FPS);
+  const marks = Array.from(
+    { length: Math.floor(duration / (step * FPS)) + 1 },
+    (_, i) => i * step * FPS,
+  );
+  // The wider h:mm:ss labels overhang the ruler padding at fit scale and make the timeline
+  // scroll, so a last mark that is not the end and sits close to it is left out.
+  return marks.filter(
+    (mark, i) => !i || mark === duration || ((duration - mark) / FPS) * scale >= RULER_END_PIXELS,
+  );
 }
 
 /** Camera translation percentages center a manually marked mouse position during the zoom hold. */

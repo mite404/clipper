@@ -443,6 +443,67 @@ test('fit scale follows the viewport and stays finite for empty and one-frame se
     .toBeGreaterThan(20);
 });
 
+test('the ruler and readouts stay readable at 105 minutes and at the 24-hour cap', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const png = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 40;
+    canvas.height = 20;
+    canvas.getContext('2d')!.fillRect(0, 0, 40, 20);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  await page.getByLabel('Import local media').setInputFiles({
+    name: 'still.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(png, 'base64'),
+  });
+  await expect(page.getByTestId('media-status')).toHaveText('5 assets ready', { timeout: 30000 });
+  const screen = page.getByTestId('track-screen').locator('.timeline-clip');
+  while (await screen.count()) {
+    await screen.first().click();
+    await page.getByRole('button', { name: 'Delete selected clip or zoom' }).click();
+  }
+  await page.getByRole('button', { name: 'Select still.png', exact: true }).click();
+  const seconds = (label: string) =>
+    label.split(':').reduce((total, part) => total * 60 + Number(part), 0);
+  for (const [length, readout, end] of [
+    [6300, '1:45:00:00', '1:45:00'],
+    [86400, '24:00:00:00', '24:00:00'],
+  ]) {
+    const field = page.getByLabel('Still duration seconds', { exact: true });
+    await field.fill(String(length));
+    await field.press('Enter');
+    await page.getByRole('button', { name: 'Insert source at playhead', exact: true }).click();
+    await expect(page.locator('.transport-readout')).toContainText(`/ ${readout}`);
+    const labels = await page.locator('.ruler > span').allInnerTexts();
+    // Whole mm:ss or h:mm:ss times, strictly increasing from 00:00 to the end.
+    expect(labels.every((label) => /^(\d{2}:\d{2}|\d{1,2}:\d{2}:\d{2})$/.test(label))).toBe(true);
+    expect(labels[0]).toBe('00:00');
+    expect(labels.at(-1)).toBe(end);
+    expect(labels.map(seconds)).toEqual([...labels.map(seconds)].sort((a, b) => a - b));
+    expect(new Set(labels).size).toBe(labels.length);
+    await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  }
+  // A last label just short of the end is wider with hours, and must not make a narrow timeline
+  // scroll at fit scale.
+  const field = page.getByLabel('Still duration seconds', { exact: true });
+  await field.fill('3610');
+  await field.press('Enter');
+  await page.getByRole('button', { name: 'Insert source at playhead', exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 800 });
+  const scale = page.getByRole('slider', { name: 'Timeline scale' });
+  const scroll = page.getByTestId('timeline-scroll');
+  await expect
+    .poll(async () => {
+      await scale.fill((await scale.getAttribute('min'))!);
+      return scroll.evaluate((el) => el.scrollWidth - el.clientWidth);
+    })
+    .toBeLessThanOrEqual(1);
+});
+
 test('timeline resizing remembers custom height across default, hide and viewport clamps', async ({
   page,
 }) => {

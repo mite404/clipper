@@ -45,7 +45,7 @@ import {
   type TrackDef,
   type Zoom,
 } from './timeline-model';
-import { ASSET_DRAG, IconButton, Waveform, timecode } from './components';
+import { ASSET_DRAG, IconButton, Waveform, clock } from './components';
 
 /** Per-track toggle lists a project saves. */
 export type TrackToggles = Record<'muted' | 'locked' | 'selected', Track[]>;
@@ -764,7 +764,7 @@ export function Timeline({
                 data-end={mark === duration || undefined}
                 style={{ left: `${(mark / duration) * 100}%` }}
               >
-                {timecode(mark).slice(0, 5)}
+                {clock(mark)}
               </span>
             ))}
             <div
