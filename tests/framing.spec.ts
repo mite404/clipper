@@ -153,3 +153,171 @@ for (const width of [1920, 3840]) {
     });
   }
 }
+
+test('a 1.4x zoom focused at 83%, 87% stops at the source edge in preview, Copy frame and export', async ({
+  page,
+}) => {
+  test.setTimeout(90000);
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready');
+  // Mask-local probes near each corner and the centre, as fractions of the 880x700 screen mask.
+  const probes = [
+    [0.05, 0.05],
+    [0.95, 0.05],
+    [0.05, 0.95],
+    [0.95, 0.95],
+    [0.5, 0.5],
+  ];
+  const fixture = await page.evaluate(async (probes) => {
+    const exportModule = '/src/export.ts';
+    const modelModule = '/src/timeline-model.ts';
+    const bunnyModule = '/node_modules/mediabunny/dist/bundles/mediabunny.mjs';
+    const { renderVideo, renderFrameImage } = await import(exportModule);
+    const { DEFAULT_TRACKS } = await import(modelModule);
+    const {
+      Output,
+      WebMOutputFormat,
+      BufferTarget,
+      CanvasSource,
+      Input,
+      BlobSource,
+      ALL_FORMATS,
+      CanvasSink,
+    } = await import(bunnyModule);
+    // Same aspect as the mask, so cover equals the mask: red follows source x, blue source y.
+    const canvas = document.createElement('canvas');
+    canvas.width = 880;
+    canvas.height = 700;
+    const paint = canvas.getContext('2d')!;
+    for (let x = 0; x < 880; x += 4)
+      for (let y = 0; y < 700; y += 4) {
+        paint.fillStyle = `rgb(${Math.round((x / 880) * 255)}, 128, ${Math.round((y / 700) * 255)})`;
+        paint.fillRect(x, y, 4, 4);
+      }
+    const target = new BufferTarget();
+    const output = new Output({ format: new WebMOutputFormat(), target });
+    const video = new CanvasSource(canvas, { codec: 'vp9', bitrate: 4000000 });
+    output.addVideoTrack(video, { frameRate: 30 });
+    await output.start();
+    for (let frame = 0; frame < 12; frame++) await video.add(frame / 30, 1 / 30);
+    video.close();
+    await output.finalize();
+    const source = new Blob([target.buffer], { type: 'video/webm' });
+    const asset = {
+      id: 'gradient',
+      name: 'Synthetic gradient',
+      kind: 'video',
+      width: 880,
+      height: 700,
+      duration: 12,
+      peaks: [],
+      hasAudio: false,
+      thumbnail: '',
+      url: URL.createObjectURL(source),
+    };
+    const clips = [
+      { id: 'take', assetId: 'gradient', track: 'screen', start: 0, duration: 12, offset: 0 },
+    ];
+    const layout = { radius: 22, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 };
+    const zooms = [{ id: 'z', start: 0, duration: 12, scale: 1.4, x: 83, y: 87, instant: true }];
+    const edit = { assets: [asset], clips, layout, zooms, tracks: DEFAULT_TRACKS };
+    // Stage probe for a mask-local fraction: the screen mask is 880x700 at (10, 10).
+    const read = (context: CanvasRenderingContext2D) =>
+      probes.map(([u, v]) =>
+        Array.from(
+          context.getImageData(Math.round(10 + u * 880), Math.round(10 + v * 700), 1, 1).data,
+        ),
+      );
+    let copy, exported;
+    try {
+      const image = await createImageBitmap(
+        await renderFrameImage({ ...edit, frame: 6, width: 1920 }),
+      );
+      const stage = document.createElement('canvas');
+      stage.width = 1280;
+      stage.height = 720;
+      const context = stage.getContext('2d')!;
+      context.drawImage(image, 0, 0, 1280, 720);
+      copy = read(context);
+      const encoded = await renderVideo({ ...edit, muted: [], width: 1920, onProgress: () => {} });
+      const input = new Input({ source: new BlobSource(encoded), formats: ALL_FORMATS });
+      try {
+        const sink = new CanvasSink(await input.getPrimaryVideoTrack(), { width: 1280 });
+        exported = read((await sink.getCanvas(6.01 / 30)).canvas.getContext('2d'));
+      } finally {
+        input.dispose();
+      }
+    } finally {
+      URL.revokeObjectURL(asset.url);
+    }
+    const data = await new Promise<string>((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.readAsDataURL(source);
+    });
+    return {
+      copy,
+      exported,
+      project: JSON.stringify({
+        version: 2,
+        fps: 30,
+        clips,
+        zooms,
+        layout,
+        muted: [],
+        media: [{ id: asset.id, name: asset.name, data }],
+      }),
+    };
+  }, probes);
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'edge-zoom.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(fixture.project),
+  });
+  await page.getByLabel('Timeline playhead', { exact: true }).fill('6');
+  const mask = page.getByTestId('screen-mask');
+  await expect(mask.locator('video')).toHaveCount(1);
+  await page.waitForTimeout(500);
+  const box = (await mask.boundingBox())!;
+  const shot = await mask.screenshot();
+  const preview = await page.evaluate(
+    async ({ png, probes }) => {
+      const image = await createImageBitmap(
+        await (await fetch(`data:image/png;base64,${png}`)).blob(),
+      );
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width;
+      canvas.height = image.height;
+      const context = canvas.getContext('2d')!;
+      context.drawImage(image, 0, 0);
+      return probes.map(([u, v]) =>
+        Array.from(
+          context.getImageData(Math.round(u * image.width), Math.round(v * image.height), 1, 1)
+            .data,
+        ),
+      );
+    },
+    { png: shot.toString('base64'), probes },
+  );
+  expect(box.width).toBeGreaterThan(0);
+  // Clamped at the bottom-right edge, mask fraction u shows source fraction (u + 0.4) / 1.4.
+  const expected = probes.map(([u, v]) => [((u + 0.4) / 1.4) * 255, 128, ((v + 0.4) / 1.4) * 255]);
+  const worst = { preview: 0, copy: 0, export: 0 };
+  for (const [name, pixels] of [
+    ['preview', preview],
+    ['copy', fixture.copy],
+    ['export', fixture.exported],
+  ] as const)
+    pixels.forEach((pixel, i) => {
+      for (let channel = 0; channel < 3; channel++)
+        worst[name] = Math.max(worst[name], Math.abs(pixel[channel] - expected[i][channel]));
+    });
+  test
+    .info()
+    .annotations.push({ type: 'worst channel difference', description: JSON.stringify(worst) });
+  console.log(`worst channel difference ${JSON.stringify(worst)}`);
+  // Empty mask is #10181b: any probe on it misses the source green by over 100.
+  expect(worst.copy).toBeLessThan(24);
+  expect(worst.export).toBeLessThan(24);
+  expect(worst.preview).toBeLessThan(24);
+});

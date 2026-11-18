@@ -1,5 +1,6 @@
 import { expect, it } from 'vitest';
 import { prepareFraming, framingAt } from './framing';
+import { cameraTransform, coverRect, cropPosition, maskRect, sourceToStage } from './stage';
 import { cursorFixture } from './cursor.fixture';
 import type { Asset } from './media';
 import { DEFAULT_TRACKS, zoomCamera, type Clip, type TrackDef, type Zoom } from './timeline-model';
@@ -114,4 +115,90 @@ it('follows the front screen-role clip where V1 and V3 overlap, and V1 elsewhere
   for (const frame of [0, 36, 39])
     expect(framingAt([zoom], both, frame)).toEqual(framingAt([zoom], back, frame));
   expect(framingAt([zoom], both, 80).x).toBe(0);
+});
+
+// The scaled source must cover its mask on every frame: no empty mask at any edge.
+function coversMask(camera: { scale: number; x: number; y: number }, source: Asset) {
+  const mask = maskRect('screen', layout);
+  const cover = coverRect(mask, source, cropPosition('screen', layout));
+  const view = cameraTransform(mask, camera);
+  const left = view.x + cover.x * view.scale;
+  const top = view.y + cover.y * view.scale;
+  return (
+    left <= mask.x + 1e-6 &&
+    top <= mask.y + 1e-6 &&
+    left + cover.width * view.scale >= mask.x + mask.width - 1e-6 &&
+    top + cover.height * view.scale >= mask.y + mask.height - 1e-6
+  );
+}
+
+it('stops a fixed or follow zoom at the source edge instead of revealing empty mask', () => {
+  // The owner's recording: 1.4x focused at 83%, 87% would leave about a quarter of the mask empty.
+  const edge: Zoom = { id: 'e', start: 0, duration: 120, scale: 1.4, x: 83, y: 87 };
+  const wide: Asset = { ...asset, id: 'w', width: 960, height: 540, cursor: undefined };
+  for (const source of [asset, wide])
+    for (const shot of [edge, { ...edge, follow: 'focused' as const }]) {
+      const clips = [{ ...clip, assetId: source.id }];
+      const paths = prepareFraming([shot], clips, [source], layout, DEFAULT_TRACKS);
+      let previous = framingAt([shot], paths, 0);
+      for (let frame = 0; frame <= 120; frame++) {
+        const camera = framingAt([shot], paths, frame);
+        expect(coversMask(camera, source)).toBe(true);
+        // Ramps stay smooth: the clamp never makes the camera jump between frames.
+        expect(Math.abs(camera.x - previous.x)).toBeLessThan(6);
+        expect(Math.abs(camera.y - previous.y)).toBeLessThan(6);
+        previous = camera;
+      }
+    }
+  const hold = (source: Asset) =>
+    framingAt(
+      [edge],
+      prepareFraming([edge], [{ ...clip, assetId: source.id }], [source], layout, DEFAULT_TRACKS),
+      60,
+    );
+  // Cover equals the mask: the zoom stops at both mask edges, 20% for a 1.4x zoom.
+  expect(hold({ ...asset, cursor: undefined })).toEqual({ scale: 1.4, x: -20, y: -20 });
+  // A wide source overflows the mask sideways, so the zoom may pan into that overflow and centre x.
+  const wideHold = hold(wide);
+  expect(wideHold.x).toBeCloseTo(-46.2);
+  expect(wideHold.y).toBeCloseTo(-20);
+});
+
+it('moves the clamp only where the owning clip changes between sources of different aspect', () => {
+  const edge: Zoom = { id: 'e', start: 0, duration: 120, scale: 1.4, x: 83, y: 87 };
+  const square: Asset = { ...asset, cursor: undefined };
+  const wide: Asset = { ...asset, id: 'w', width: 960, height: 540, cursor: undefined };
+  const clips: Clip[] = [
+    { ...clip, duration: 60 },
+    { ...clip, id: 'next', assetId: 'w', start: 60, duration: 60 },
+  ];
+  const paths = prepareFraming([edge], clips, [square, wide], layout, DEFAULT_TRACKS);
+  const cameras = Array.from({ length: 120 }, (_, frame) => framingAt([edge], paths, frame));
+  for (let frame = 1; frame < 120; frame++) {
+    if (frame === 60) continue;
+    expect(Math.abs(cameras[frame].x - cameras[frame - 1].x)).toBeLessThan(6);
+    expect(Math.abs(cameras[frame].y - cameras[frame - 1].y)).toBeLessThan(6);
+  }
+  // At the cut the wide source's sideways overflow lets the hold pan further: the only jump.
+  expect(cameras[59]).toEqual({ scale: 1.4, x: -20, y: -20 });
+  expect(cameras[60].x).toBeCloseTo(-46.2);
+  expect(cameras[60].y).toBeCloseTo(-20);
+});
+
+it('leaves Mark mouse position unzoomed, so a click maps straight to the source under it', () => {
+  // Marking renders with no zooms; the click's percent of the mask is the stored focus.
+  const edge: Zoom = { id: 'e', start: 0, duration: 120, scale: 1.4, x: 83, y: 87 };
+  const paths = prepareFraming([edge], [clip], [asset], layout, DEFAULT_TRACKS);
+  for (const frame of [0, 60, 119])
+    expect(framingAt([], paths, frame)).toEqual(zoomCamera([], frame));
+  const mask = maskRect('screen', layout);
+  const cover = coverRect(mask, asset, cropPosition('screen', layout));
+  const click = { x: mask.x + 0.83 * mask.width, y: mask.y + 0.87 * mask.height };
+  const source = {
+    x: (0.83 * mask.width - cover.x) / cover.width,
+    y: (0.87 * mask.height - cover.y) / cover.height,
+  };
+  const point = sourceToStage(source, mask, cover, framingAt([], paths, 60));
+  expect(point.x).toBeCloseTo(click.x);
+  expect(point.y).toBeCloseTo(click.y);
 });

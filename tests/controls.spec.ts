@@ -166,7 +166,8 @@ test('zoom start, length and focus fields place the zoom in time and pan the scr
   const panned = await held(0.2, 0.8);
   expect(panned.scale).toBeCloseTo(2, 2);
   expect(panned.x).toBeCloseTo(0.5, 2);
-  expect(panned.y).toBeCloseTo(0.5, 2);
+  // The source fills the mask height, so the pan stops at its bottom edge: (1 - 2) + 2 * 0.8.
+  expect(panned.y).toBeCloseTo(0.6, 2);
 
   // The fields stop at what the timeline can hold: 360 frames, and a zoom of at least 6 frames.
   await start.fill('99');
