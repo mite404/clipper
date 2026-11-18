@@ -39,16 +39,15 @@ primary repository since 2026-11-16; the Amp-hosted scaffold is gone. See
 ## Two-lane staffing audit, 2026-11-17
 
 Audited against fetched `b44e7c9a71473e1be0bf1159e9130c4528429afe` and the preserved candidates,
-then reconciled after accepted `4bc0f24` and on 2026-11-18 against main `c30c509`. There are 150
-canonical IDs: 72 delivered rows, nine owner-decision rows and 69 remaining queue entries. The 69
-comprise 64 implementation/qualification candidates below, four conditional or parked entries and
-one umbrella. These are ticket counts, not a claim that 64 source changes are approved or
-immediately runnable.
+then reconciled after accepted `cc12bb5` on 2026-11-18. There are 150 canonical IDs: 73 delivered
+rows, nine owner-decision rows and 68 remaining queue entries. The 68 comprise 63
+implementation/qualification candidates below, four conditional or parked entries and one umbrella.
+These are ticket counts, not a claim that 63 source changes are approved or immediately runnable.
 
-The Sonnet queue has three candidates: REF-51 granted, REF-52 ready and CLIP-45 held. The Opus queue
-has 61: 22 ready, granted or to scope/assign and 39 dependency-, contract- or owner-gated. Across
-both lanes that is 24 ready or granted and 40 held. Ready means recorded technical predecessors are
-satisfied, not permission to edit shared paths or skip acceptance scoping. A held ticket can have an
+The Sonnet queue has two candidates: REF-52 granted and CLIP-45 held. The Opus queue has 61: 22
+ready, granted or to scope/assign and 39 dependency-, contract- or owner-gated. Across both lanes
+that is 23 ready or granted and 40 held. Ready means recorded technical predecessors are satisfied,
+not permission to edit shared paths or skip acceptance scoping. A held ticket can have an
 independently useful subpart, but its entire remaining scope is not ready; UI-8's view/scrubbing
 part is the one subpart counted as ready to scope. Follow [Order of work](#order-of-work) over
 numeric order and optional cleanup. Reassess a classification when a bounded contract changes its
@@ -60,11 +59,10 @@ These are bounded follow-ups using established behavior, not new timing, persist
 models. The small lane must escalate newly discovered cross-module behavior rather than silently
 expand its grant.
 
-| Candidate           | Readiness                    | Why this lane; remaining gate                                                                                                  |
-| ------------------- | ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| [REF-51](#ref-51)   | Granted; candidate in review | Razor hover seeks the real playhead to the cut frame; it stays until moved.                                                    |
-| [REF-52](#ref-52)   | Ready after REF-51           | First shortcut right after media loads is dropped; shares App.tsx keydown and `tests/split-tools.spec.ts` with REF-51.         |
-| [CLIP-45](#clip-45) | Dependency-held              | Existing-action widget and defaults only, after CLIP-40; reclassify if its scoped contract adds a new sharing/export pipeline. |
+| Candidate           | Readiness       | Why this lane; remaining gate                                                                                                  |
+| ------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| [REF-52](#ref-52)   | Granted         | First shortcut right after media loads is dropped; shares App.tsx keydown and `tests/split-tools.spec.ts` with REF-51.         |
+| [CLIP-45](#clip-45) | Dependency-held | Existing-action widget and defaults only, after CLIP-40; reclassify if its scoped contract adds a new sharing/export pipeline. |
 
 ### Opus candidate queue
 
@@ -130,24 +128,24 @@ pushes and full/performance acceptance remain coordinator-serialized; no review 
 
 ### Active two-worker grants
 
-| Lane            | Worker                                                                           | Current grant                                                                                                   |
-| --------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| Opus 5.5 medium | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | REF-50 delivered at `4bc0f24`, exact-SHA CI44229120203 green; REF-48 granted, implementation in progress.       |
-| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | REF-49 delivered at `063bc31`, exact-SHA CI44223873248 green; REF-51 granted, candidate in review; REF-52 next. |
+| Lane            | Worker                                                                           | Current grant                                                                                             |
+| --------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Opus 5.5 medium | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | REF-50 delivered at `4bc0f24`, exact-SHA CI44229120203 green; REF-48 granted, implementation in progress. |
+| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | REF-51 delivered at `cc12bb5`, exact-SHA CI44236114469 green; REF-52 granted.                             |
 
 ### Current state, 2026-11-18
 
-- Main is `c30c509` with green CI44230442710. The canonical preview editor
-  ([T-6dd30293](https://ampcode.com/threads/T-6dd30293-c740-418a-8174-5d2a1b69da89)) serves REF-50
-  at `4bc0f24` (exact-SHA CI44229120203), checked publicly by the preview owner.
-- REF-51 is granted to Sonnet T-01a1e78d and its candidate is in review. A v3 is being prepared that
-  first folds Timeline's four track-header props into one `headers` prop, because Fallow's cognitive
-  score for `Timeline()` tracks its prop count and sits at the 15 limit.
-- REF-48 is granted to Opus T-0e774456; implementation is in progress. REF-48 and REF-51 both touch
-  `src/Timeline.tsx` and `src/App.tsx` in separate regions; whichever lands second rebases onto the
-  first before acceptance.
-- REF-52 is ready for Sonnet after REF-51 lands, because both touch the App.tsx keydown handler and
-  `tests/split-tools.spec.ts`.
+- REF-51 is delivered on main at `cc12bb5` with green exact-SHA CI44236114469. The canonical preview
+  editor ([T-6dd30293](https://ampcode.com/threads/T-6dd30293-c740-418a-8174-5d2a1b69da89)) serves
+  REF-50 at `4bc0f24` (exact-SHA CI44229120203), checked publicly by the preview owner.
+- REF-51 landed as two commits: `9ef5ca8` folds Timeline's four track-header props into one
+  `headers` prop, because Fallow's cognitive score for `Timeline()` tracks its prop count and sat at
+  the 15 limit; `cc12bb5` adds Razor hover seek through a separate `onRazorHover` prop. Both reviews
+  returned LAND; `all` passed 177/177 and isolated `performance` 20/20.
+- REF-48 is granted to Opus T-0e774456. Both reviews returned LAND on its first candidate; it is
+  rebasing onto `cc12bb5` with four small fixes (out-of-range zooms, primary button only, modifier
+  arrows, focus on pointerdown) before acceptance.
+- REF-52 is granted to Sonnet T-01a1e78d on `cc12bb5`; its plan is approved.
 - Review gates: independent
   [T-f987a229](https://ampcode.com/threads/T-f987a229-4e36-414e-8f45-105461c86dce) and
   source/tooling [T-9f34d223](https://ampcode.com/threads/T-9f34d223-cd32-4c23-a11f-8bca3ae61271).
@@ -174,19 +172,19 @@ The owner's recording in Space `M-034zScKmht0Y3aFONzRRhS` (2026-11-17) reports f
 covered by a ready ticket; CLIP-9b's contract-held ramps do not include moving a region. REF-49 and
 REF-50 are delivered (see history); the two open items follow.
 
-- REF-48, granted to Opus and in progress; it rebases if REF-51's Timeline hunks land first: drag a
-  zoom region's body to move it, keeping its duration, refusing overlap and sequence bounds, one
-  undo step, keyboard equivalent, and click still selects. A generated source-anchored shot must
-  keep its anchor in step so `resolveZooms` does not move it back.
-- REF-51, granted to Sonnet; candidate in review. Owner decision (2026-11-18, this coordinator
-  thread): option A, a real seek. "They would stay there until the playhead is moved again. Cutting
-  a clip region doesn't move the playhead anywhere else but to the frame that's being cut." With
-  Razor active, hovering a cuttable clip seeks the playhead and preview to the frame a click would
-  cut, and they stay there after the pointer leaves until something else moves the playhead. A click
-  cuts at that frame and leaves the playhead on it. This supersedes any stationary-playhead reading
-  of CLIP-2e. Snapping to the playhead becomes circular, so Razor snaps to clip edges only. Hover
-  seeks add no undo steps. Locked lanes and gaps do not seek. Coordinator default, open to the
-  owner: while playing, hover does not seek, so playback is not fought.
+- REF-48, granted to Opus; rebasing onto REF-51: drag a zoom region's body to move it, keeping its
+  duration, refusing overlap and sequence bounds, one undo step, keyboard equivalent, and click
+  still selects. A generated source-anchored shot must keep its anchor in step so `resolveZooms`
+  does not move it back.
+- REF-51, delivered at `cc12bb5`. Owner decision (2026-11-18, this coordinator thread): option A, a
+  real seek. "They would stay there until the playhead is moved again. Cutting a clip region doesn't
+  move the playhead anywhere else but to the frame that's being cut." With Razor active, hovering a
+  cuttable clip seeks the playhead and preview to the frame a click would cut, and they stay there
+  after the pointer leaves until something else moves the playhead. A click cuts at that frame and
+  leaves the playhead on it. This supersedes any stationary-playhead reading of CLIP-2e. Snapping to
+  the playhead becomes circular, so Razor snaps to clip edges only. Hover seeks add no undo steps.
+  Locked lanes and gaps do not seek. Coordinator default, open to the owner: while playing, hover
+  does not seek, so playback is not fought.
 
 Moved to [history](master-tickets-history.md#ref-49-ref-50-clip-2c-and-ref-46-delivery).
 
@@ -222,8 +220,7 @@ Done from that audit's steps 1-3 and 8:
 
 Remaining, in this order:
 
-1. The current lane grants: REF-51 (Sonnet, candidate in review) and REF-48 (Opus, in progress);
-   whichever lands second rebases onto the first. REF-52 follows REF-51 in the Sonnet lane.
+1. The current lane grants: REF-52 (Sonnet) and REF-48 (Opus, rebasing onto REF-51).
 2. Settle explicit source-audio membership/component mapping in CLIP-2b with UI-9, then implement
    association creation/persistence and linked movement before UI-9 consumes them. Do not duplicate
    the primary audio mix across selected lanes. UI-9 validates header-targeted insertion atomically.
@@ -315,22 +312,22 @@ upload is authorized.
 
 ## Owners
 
-| Lane                      | Thread                                                                           | Owns                                                                     |
-| ------------------------- | -------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
-| Queue and delivery        | [T-136752bf](https://ampcode.com/threads/T-136752bf-6ed3-4930-b791-1cd134662797) | This file, acceptance and exclusive main push slot                       |
-| Non-simple implementation | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Opus medium; REF-50 delivered, REF-48 granted and in progress            |
-| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; REF-49 delivered, REF-51 granted and in review, REF-52 next |
-| Independent review        | [T-f987a229](https://ampcode.com/threads/T-f987a229-4e36-414e-8f45-105461c86dce) | Opus medium; independent exact-tree review gate                          |
-| Source and tooling review | [T-9f34d223](https://ampcode.com/threads/T-9f34d223-cd32-4c23-a11f-8bca3ae61271) | Opus 5.5 medium; took over from Fable T-2d1e888a at the owner's request  |
-| Cursor implementation     | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant               |
-| Cursor inspector          | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) | Inspector delivered; no active implementation grant                      |
-| Workspace layout          | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | UI-2 delivered; no active implementation grant                           |
-| Transport lifecycle       | [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59) | REF-31 delivered; no active implementation grant                         |
-| Zoom preservation         | [T-46d4a5ee](https://ampcode.com/threads/T-46d4a5ee-39f1-46ae-bde0-eced0da19a5a) | Quiescent historical candidate/evidence only; no implementation grant    |
-| Cursor preservation       | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94) | Frozen original CLIP-11 work, no implementation or push                  |
-| Editor and bootstrap      | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da) | `.agents/setup`, `.agents/resume`                                        |
-| Verification tools        | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc) | Archived after delivery; no active path reservation                      |
-| Canonical preview         | [T-6dd30293](https://ampcode.com/threads/T-6dd30293-c740-418a-8174-5d2a1b69da89) | Accepted-main promotion and revision/check receipts                      |
+| Lane                      | Thread                                                                           | Owns                                                                    |
+| ------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+| Queue and delivery        | [T-136752bf](https://ampcode.com/threads/T-136752bf-6ed3-4930-b791-1cd134662797) | This file, acceptance and exclusive main push slot                      |
+| Non-simple implementation | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Opus medium; REF-50 delivered, REF-48 granted and in progress           |
+| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; REF-51 delivered, REF-52 granted                           |
+| Independent review        | [T-f987a229](https://ampcode.com/threads/T-f987a229-4e36-414e-8f45-105461c86dce) | Opus medium; independent exact-tree review gate                         |
+| Source and tooling review | [T-9f34d223](https://ampcode.com/threads/T-9f34d223-cd32-4c23-a11f-8bca3ae61271) | Opus 5.5 medium; took over from Fable T-2d1e888a at the owner's request |
+| Cursor implementation     | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant              |
+| Cursor inspector          | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214) | Inspector delivered; no active implementation grant                     |
+| Workspace layout          | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea) | UI-2 delivered; no active implementation grant                          |
+| Transport lifecycle       | [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59) | REF-31 delivered; no active implementation grant                        |
+| Zoom preservation         | [T-46d4a5ee](https://ampcode.com/threads/T-46d4a5ee-39f1-46ae-bde0-eced0da19a5a) | Quiescent historical candidate/evidence only; no implementation grant   |
+| Cursor preservation       | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94) | Frozen original CLIP-11 work, no implementation or push                 |
+| Editor and bootstrap      | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da) | `.agents/setup`, `.agents/resume`                                       |
+| Verification tools        | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc) | Archived after delivery; no active path reservation                     |
+| Canonical preview         | [T-6dd30293](https://ampcode.com/threads/T-6dd30293-c740-418a-8174-5d2a1b69da89) | Accepted-main promotion and revision/check receipts                     |
 
 The archival audit has coordinator ownership clearance for the completed UI-3 worker/reviewer,
 REF-18/20/31 transport worker, tooltip pilot/repair, VERIFY-5, fresh-orb qualifier and OpenScreen
@@ -518,14 +515,14 @@ images were hosted, see [Known limits](#known-limits)).
 
 ### Current path reservations
 
-| Owner                    | Paths                                                                                                                                                                                       |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Razor hover seek         | REF-51 granted to Sonnet T-01a1e78d, candidate in review: Razor hover/click in Timeline.tsx, App.tsx razor handlers and help line, split-tools spec; v3 adds Timeline's `headers` prop fold |
-| Zoom region drag         | REF-48 granted to Opus T-0e774456: zoom lane in Timeline.tsx, its App.tsx handler and call site, a pure move helper and test, one spec                                                      |
-| Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5; exact-path grant before edits (UI-7 delivered)                                                                                   |
-| Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                                                        |
-| Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                                                                                              |
-| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                                            |
+| Owner                     | Paths                                                                                                                                  |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| First shortcut after load | REF-52 granted to Sonnet T-01a1e78d: the App.tsx keydown effect, split-tools spec                                                      |
+| Zoom region drag          | REF-48 granted to Opus T-0e774456: zoom lane in Timeline.tsx, its App.tsx handler and call site, a pure move helper and test, one spec |
+| Media-pool views          | UI-8 reference/source research only; canonical T-fd12a7e5; exact-path grant before edits (UI-7 delivered)                              |
+| Track targets/visibility  | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                   |
+| Queue implementation      | Queue/docs and acceptance; sole main push slot                                                                                         |
+| Shared, keep edits small  | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                       |
 
 Moved to [history](master-tickets-history.md#released-path-reservations).
 
@@ -861,8 +858,8 @@ original note for every row.
 | <a id="ref-48"></a>[REF-48](#ref-48)                 | Drag a zoom region to reposition it                                     | Medium | Granted to Opus [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85); implementation in progress                                                                             | Owner recording; subpart of CLIP-9b regions                                                                                                                                         |
 | <a id="ref-49"></a>[REF-49](#ref-49)                 | Extend clip edges as well as shorten them                               | Small  | Delivered at [063bc31](https://github.com/mite404/clipper/commit/063bc314860750472368cdc8246ab917839f15fe); green exact-SHA [CI44223873248](https://github.com/mite404/clipper/actions/runs/44223873248) | Owner recording; `trimClip` never adds frames                                                                                                                                       |
 | <a id="ref-50"></a>[REF-50](#ref-50)                 | Keep a zoom inside its source mask                                      | Medium | Delivered at [4bc0f24](https://github.com/mite404/clipper/commit/4bc0f24a5ec87059ad7b28f5dc34c0365678f05f); green exact-SHA [CI44229120203](https://github.com/mite404/clipper/actions/runs/44229120203) | Owner recording; unclamped `cameraTransform`                                                                                                                                        |
-| <a id="ref-51"></a>[REF-51](#ref-51)                 | Razor hover shows the prospective cut frame                             | Small  | Granted to Sonnet [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7); candidate in review; owner chose a real seek                                                         | Owner recording; supersedes stationary playhead; v3 first folds Timeline's four track-header props into one `headers` prop (Fallow `Timeline()` cognitive score is at the 15 limit) |
-| <a id="ref-52"></a>[REF-52](#ref-52)                 | Keyboard shortcut pressed right after media finishes loading is dropped | Small  | Ready after REF-51 (Sonnet lane)                                                                                                                                                                         | Reproduce end to end first; the first shortcut after the ready text must take effect; then remove the `armRazor` header-click workaround from `tests/split-tools.spec.ts`           |
+| <a id="ref-51"></a>[REF-51](#ref-51)                 | Razor hover shows the prospective cut frame                             | Small  | Delivered at [cc12bb5](https://github.com/mite404/clipper/commit/cc12bb53cb492a53e00d987107597c14a0b4bc97); green exact-SHA [CI44236114469](https://github.com/mite404/clipper/actions/runs/44236114469) | Owner recording; supersedes stationary playhead; v3 first folds Timeline's four track-header props into one `headers` prop (Fallow `Timeline()` cognitive score is at the 15 limit) |
+| <a id="ref-52"></a>[REF-52](#ref-52)                 | Keyboard shortcut pressed right after media finishes loading is dropped | Small  | Granted to Sonnet [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7)                                                                                                       | Reproduce end to end first; the first shortcut after the ready text must take effect; then remove the `armRazor` header-click workaround from `tests/split-tools.spec.ts`           |
 | <a id="ref-32"></a>[REF-32](#ref-32)                 | Correct source-preview playback error and busy lifecycle                | Medium | Delivered at [4b49623](https://github.com/mite404/clipper/commit/4b4962397e4ac237ab774b8d4a2f2a44280514b2); [green exact-SHA CI](https://github.com/mite404/clipper/actions/runs/43986804408)            | Reservation released; canonical previews promoted and verified                                                                                                                      |
 | <a id="ref-33"></a>[REF-33](#ref-33)                 | Qualify download URL lifetime outside Chromium                          | Medium | Blocked                                                                                                                                                                                                  | another supported WebCodecs browser                                                                                                                                                 |
 | <a id="ref-34"></a>[REF-34](#ref-34)                 | Remove Player listener lifetime assumptions                             | Small  | Deferred proposal                                                                                                                                                                                        | reproduce a listener lifecycle defect first                                                                                                                                         |
@@ -873,12 +870,12 @@ original note for every row.
 | <a id="clip-9b"></a>[CLIP-9b](#clip-9b)              | Visible zoom regions, editable ramps and numeric equivalents            | Medium | Creation accepted at ad40248; Add zoom label/map follow-up accepted at acb62f7 with green CI43938067635; full ramps open                                                                                 | UI-7 released; full ramps follow [Order of work](#order-of-work); preserve CLIP-9/10                                                                                                |
 
 REF-52 evidence: on main `c30c509`, a fresh browser that presses C as soon as `media-status` shows
-"4 assets ready" drops the key 10 of 10 times; the next press about 200 ms later works. Cause by
-code reading, not yet proven: the App.tsx keydown handler (about line 1146) returns while `busy` is
-true, and the effect that re-registers it with `busy` false runs after the ready text renders.
-Contract: the first shortcut after the ready text must take effect. Reproduce end to end first; once
-fixed, remove the header-click workaround (`armRazor`) from `tests/split-tools.spec.ts`. It starts
-after REF-51 lands because both touch that handler and spec.
+"4 assets ready" drops the key 10 of 10 times; the next press about 200 ms later works. Cause,
+confirmed on `cc12bb5` with a deterministic repro: the window keydown handler is registered in a
+passive effect whose closure reads `busy`, so for a moment after the ready text is painted the old
+handler still returns early. The approved fix registers it in a layout effect. Contract: the first
+shortcut after the ready text must take effect. Reproduce end to end first; once fixed, remove the
+header-click workaround (`armRazor`) from `tests/split-tools.spec.ts`. Granted after REF-51 landed.
 
 Moved to [history](master-tickets-history.md#ref-32-acceptance).
 
@@ -1414,7 +1411,7 @@ Work continues on the stated default until the owner says otherwise.
 | <a id="d-5"></a>[D-5](#d-5) | Check the Remotion license before commercial or team use                                                                                                                                                                               | Not checked                                                                                                                                                                                                           |
 | <a id="d-7"></a>[D-7](#d-7) | CLIP-7 to CLIP-10 are on `main`: import a real OpenScreen recording into Clipper on the Mac, generate zooms, and check that the cursor, the zooms and the follow framing line up with the video                                        | Compatibility with real recordings stays unclaimed; work continues on synthetic fixtures                                                                                                                              |
 | <a id="d-8"></a>[D-8](#d-8) | Three commits on public `main` carry a personal email address instead of the noreply address: `2bb8263` and `de27f06` (author and committer) and `e9f99fc` (committer). Rewrite `main` from `2bb8263` with a force-push to replace it? | Not rewritten: a force-push changes every later commit ID and needs the owner's approval. The old commits would stay fetchable on GitHub by ID until GitHub Support purges them. Both workers have fixed their config |
-| <a id="d-9"></a>[D-9](#d-9) | CLIP-31a and CLIP-31c need someone to import files into a real Premiere Pro and report what it shows. Is Premiere installed on the Mac, and which version?                                                                             | CLIP-31a to CLIP-31c stay proposals; no Premiere compatibility is claimed                                                                                                                                             |
+| <a id="d-9"></a>[D-9](#d-9) | CLIP-31a and CLIP-31c need someone to import files into a real Premiere Pro and report what it shows. Is Premiere installed on the Mac, and which version?                                                                             | Answered 2026-11-18: Premiere Pro 2026 is installed on the owner's Mac. CLIP-31a to CLIP-31c stay proposals until the owner imports files; no compatibility is claimed                                                |
 
 Settled by the owner:
 
