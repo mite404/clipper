@@ -1232,6 +1232,7 @@ export function App() {
   // Delete follows the last panel the user pressed or focused, not document.activeElement, which
   // drops to the body whenever the app removes or disables the focused control.
   const inTimeline = useRef(false);
+  const timelineZoom = useRef<((step: 1 | -1) => void) | null>(null);
   useEffect(() => {
     const track = (event: Event) => {
       inTimeline.current =
@@ -1302,6 +1303,13 @@ export function App() {
         if (event.repeat || event.shiftKey) return;
         event.preventDefault();
         addZoom();
+        return;
+      }
+      // Display only: the scale changes how long the timeline looks, never a clip. Matched by the
+      // typed character, so the keys follow the user's layout.
+      if (key === '-' || key === '=') {
+        event.preventDefault();
+        timelineZoom.current?.(key === '=' ? 1 : -1);
         return;
       }
       // Deletion belongs to the timeline: after a press or focus anywhere else the keys are left alone.
@@ -2012,6 +2020,7 @@ export function App() {
               setMarkingZoomId(null);
             }}
             onSeek={seek}
+            zoomRef={timelineZoom}
             onTrim={(clip) => {
               setSpeed(0);
               change({ ...edit, clips: edit.clips.map((c) => (c.id === clip.id ? clip : c)) });
@@ -2193,6 +2202,7 @@ export function App() {
           ['V / C', 'Selection tool / Razor tool (hover to preview the cut frame, click to cut)'],
           [MAC ? '⌘ K' : 'Alt K', 'Cut every unlocked track at the playhead'],
           ['B', 'Create zoom at playhead (4 seconds)'],
+          ['- / =', 'Zoom the timeline out / in · changes the display only, never a clip'],
           ['Delete', 'Remove selected clip or zoom · only from the timeline'],
           ['⌘ / Ctrl Z', 'Undo last edit'],
         ].map(([key, text]) => (

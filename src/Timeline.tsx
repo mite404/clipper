@@ -337,6 +337,29 @@ function useTimelineScale(seconds: number) {
   const maxScale = minScale * 32;
   const scale = Math.max(minScale, Math.min(maxScale, chosenScale));
   if (scale !== chosenScale) setScale(scale);
+  // Where the playhead sits in the viewport, in px, which a key step keeps through the new scale.
+  const playheadAt = useRef<number | null>(null);
+  const playheadX = () =>
+    viewport.current!.querySelector('.playhead')!.getBoundingClientRect().left -
+    viewport.current!.getBoundingClientRect().left;
+  // One keyboard step of the display scale, √2 per step, clamped like the slider. The playhead
+  // stays where it is on screen, or moves to the middle of the lanes when it was out of view.
+  const zoom = (step: 1 | -1) => {
+    const next = Math.max(minScale, Math.min(maxScale, scale * Math.SQRT2 ** step));
+    if (next === scale) return;
+    const scroll = viewport.current!;
+    const lanes =
+      label.current!.getBoundingClientRect().right - scroll.getBoundingClientRect().left;
+    const at = playheadX();
+    playheadAt.current =
+      at >= lanes && at <= scroll.clientWidth ? at : (lanes + scroll.clientWidth) / 2;
+    setScale(next);
+  };
+  useLayoutEffect(() => {
+    if (playheadAt.current === null) return;
+    viewport.current!.scrollLeft += playheadX() - playheadAt.current;
+    playheadAt.current = null;
+  }, [scale]);
   useLayoutEffect(() => {
     const scroll = viewport.current!;
     const heading = label.current!;
@@ -360,6 +383,7 @@ function useTimelineScale(seconds: number) {
     maxScale,
     scale,
     setScale,
+    zoom,
     width: dimensions.label + seconds * scale,
   };
 }
@@ -502,6 +526,7 @@ export function Timeline({
   onRazorHover,
   drop,
   onMoveZoom,
+  zoomRef,
 }: {
   clips: Clip[];
   assets: Asset[];
@@ -522,10 +547,21 @@ export function Timeline({
   drop?: PoolDrag;
   /** Move a zoom to a timeline frame; the editor keeps it in its free gap. */
   onMoveZoom?: (id: string, start: number) => void;
+  /** Filled with the keyboard scale step while clips exist, for the editor's `-` and `=` keys. */
+  zoomRef?: { current: ((step: 1 | -1) => void) | null };
 }) {
   const { registry, tracks, onToggleTrack, onMoveTrack } = headers;
   const seconds = duration / FPS;
-  const { viewport, label, minScale, maxScale, scale, setScale, width } = useTimelineScale(seconds);
+  const { viewport, label, minScale, maxScale, scale, setScale, zoom, width } =
+    useTimelineScale(seconds);
+  const zoomable = clips.length > 0;
+  useLayoutEffect(() => {
+    if (!zoomRef) return;
+    zoomRef.current = zoomable ? zoom : null;
+    return () => {
+      zoomRef.current = null;
+    };
+  });
   // A drag names its clip by ID and trims the clip as it is now, so a split, undo or delete made
   // while a grip is held is never overwritten by a copy taken at pointerdown.
   const [drag, setDrag] = useState<{

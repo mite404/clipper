@@ -185,3 +185,63 @@ test('zoom start, length and focus fields place the zoom in time and pan the scr
   await length.fill('5');
   await expect(length).toHaveValue('2.5');
 });
+
+test('- and = zoom the timeline display one step at a time without editing the sequence', async ({
+  page,
+}) => {
+  await openEditor(page);
+  const scale = page.getByRole('slider', { name: 'Timeline scale' });
+  const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
+  const viewport = page.getByTestId('timeline-scroll');
+  const clip = page.getByTestId('track-screen').getByRole('button').first();
+  const undo = page.getByRole('button', { name: 'Undo', exact: true });
+  const length = page.getByText('12.0 seconds · Stereo · Local workspace');
+  const value = async () => Number(await scale.inputValue());
+  const min = Number(await scale.getAttribute('min'));
+  const max = Number(await scale.getAttribute('max'));
+  // A clip's length in seconds is its pixel width at the current scale.
+  const clipSeconds = async () => (await clip.boundingBox())!.width / (await value());
+  const seconds = await clipSeconds();
+  await expect(length).toBeVisible();
+  await expect(undo).toBeDisabled();
+
+  for (let press = 0; press < 12; press++) await page.keyboard.press('-');
+  expect(await value()).toBeCloseTo(min, 3);
+  await page.keyboard.press('=');
+  expect(await value()).toBeCloseTo(min * Math.SQRT2, 3);
+  await page.keyboard.press('-');
+  expect(await value()).toBeCloseTo(min, 3);
+  for (let press = 0; press < 12; press++) await page.keyboard.press('=');
+  expect(await value()).toBeCloseTo(max, 3);
+  expect(await clipSeconds()).toBeCloseTo(seconds, 1);
+  await expect(length).toBeVisible();
+  await expect(undo).toBeDisabled();
+
+  // Zooming in at a late frame, from a focused slider, keeps the playhead on screen.
+  for (let press = 0; press < 12; press++) await page.keyboard.press('-');
+  await playhead.fill('340');
+  for (let press = 0; press < 10; press++) await page.keyboard.press('=');
+  expect(await value()).toBeCloseTo(max, 3);
+  // The lane area starts where the sticky track labels end, so a playhead under them is hidden.
+  const port = (await viewport.boundingBox())!;
+  const labels = (await page.locator('.ruler-label').boundingBox())!;
+  const head = (await page.locator('.playhead').boundingBox())!;
+  expect(head.x).toBeGreaterThanOrEqual(labels.x + labels.width);
+  expect(head.x).toBeLessThanOrEqual(port.x + port.width);
+
+  // On layouts where = is typed with Shift (German, Spanish, Swedish), the key is still =.
+  await page.keyboard.press('-');
+  const stepped = await value();
+  await page.evaluate(() =>
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: '=', shiftKey: true })),
+  );
+  expect(await value()).toBeCloseTo(stepped * Math.SQRT2, 3);
+
+  // A modifier leaves the keys to the browser, and a text field keeps them for typing.
+  const before = await value();
+  for (const key of ['Control+=', 'Meta+-', 'Alt+=']) await page.keyboard.press(key);
+  const place = page.getByRole('spinbutton', { name: 'Place at seconds' });
+  await place.focus();
+  for (const key of ['-', '=']) await page.keyboard.press(key);
+  expect(await value()).toBe(before);
+});

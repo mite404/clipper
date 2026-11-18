@@ -28,7 +28,7 @@ service holds 5173, so beside it run `npm run dev -- --port <free port>`.
 - Remotion-synchronized video/audio, J/K/L shuttle, Space play/pause, and track mute.
 - Landscape-left and portrait-right cover crops with shared 22px masks by default.
 - Click the Inspector's composition preview to swap sides, drag either clip edge to shorten, and
-  scroll/scale the timeline.
+  scroll/scale the timeline, with `-` and `=` zooming it out and in.
 - Timed screen zooms with editable scale, manually marked mouse focus, and smooth in/hold/out.
 - Portable project save/reopen with embedded original media and no relinking requirement.
 - Local rendered video export at 1920×1080 or 3840×2160 as MP4, MOV or WebM, chosen in the export
