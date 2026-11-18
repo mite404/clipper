@@ -57,10 +57,26 @@ jobs:
       - run: npm run build
       - run: npm run build-storybook
       - name: Install browser and media inspection tools
+        # The apt mirror has hung this step for 15 of the job's 20 minutes; it normally takes about
+        # 25 seconds. Each command gets a short bound and three attempts, and the step as a whole
+        # fails in minutes instead of waiting out the job.
+        timeout-minutes: 6
         run: |
-          npx playwright install --with-deps chromium
-          sudo apt-get update
-          sudo apt-get install -y ffmpeg
+          retry() {
+            for attempt in 1 2 3; do
+              "$@" && return 0
+              echo "::warning::attempt $attempt of 3 failed or timed out: $*"
+              sleep 5
+            done
+            return 1
+          }
+          # Anything that runs apt goes through `sudo timeout`: timeout must be root to stop what apt
+          # started, and `playwright install --with-deps` would run its apt under a root sudo that an
+          # unprivileged timeout cannot stop, so install the system dependencies separately.
+          retry sudo env "PATH=$PATH" timeout -k 10 180 npx playwright install-deps chromium
+          retry timeout -k 10 180 npx playwright install chromium
+          retry sudo timeout -k 10 90 apt-get update
+          retry sudo timeout -k 10 150 apt-get install -y ffmpeg
       - run: npm run test:ui -- --workers=1
       - uses: actions/upload-artifact@v7
         if: failure()
