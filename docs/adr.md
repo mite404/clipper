@@ -59,7 +59,9 @@ from the "Decisions for the owner" table in `docs/master-tickets.md`. Commit lin
   changes meaning when the crop changes (review findings #14 and #24).
 - Commit: [f702568](https://github.com/mite404/clipper/commit/f702568) (DOC-1 records D-1) Generated
   anchors: [f3b3021](https://github.com/mite404/clipper/commit/f3b3021) (CLIP-9). Pinning generated
-  zooms: pending its ticket.
+  zooms:
+  [5d32e36](https://github.com/mite404/clipper/commit/5d32e364a6f6e0b36b2da810b447316f438f75f7)
+  (REF-54).
 
 ## D-2: Should CI run on pull requests, and should unit tests run in the pre-commit hook?
 
@@ -361,3 +363,21 @@ from the "Decisions for the owner" table in `docs/master-tickets.md`. Commit lin
 - Why: Hosting would upload media, against ADR-1. The owner wants only voice-over recording, and not
   yet.
 - Commit: pending the master update that records it
+
+## ADR-33: Fonts are served from Clipper's own origin
+
+- Date: 2026-11-18
+- Decision: REF-57 self-hosts DM Sans and IBM Plex Mono as latin and latin-ext woff2 files with
+  their OFL licences. IBM Plex's latin-ext range is shortened, so 23 rare glyphs fall back.
+- Why: Loading the editor must not contact another origin (ADR-1, local-first).
+- Commit:
+  [ced85b0](https://github.com/mite404/clipper/commit/ced85b0117934fce311c829931011f43fb9ec2bb)
+
+## ADR-34: A public post preview carries its text in the URL fragment
+
+- Date: 2026-11-18
+- Decision: PUB-2 is one static HTML page on Netlify (D-10). The post text rides in the URL
+  `#fragment`, nothing is uploaded, and the recipient posts from their own account through
+  `x.com/intent/post`. Deploying needs the owner's go-ahead.
+- Why: A fragment never reaches the server, so sharing a preview stays upload-free (ADR-1, ADR-32).
+- Commit: pending PUB-2
