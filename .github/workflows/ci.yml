@@ -70,10 +70,23 @@ jobs:
             done
             return 1
           }
+          # What was still running when the system-dependency install gave up, and who holds the dpkg
+          # and apt locks, so a red run says what stalled it. Prints only; the step still fails.
+          diagnose() {
+            set +e # the step is already failing: report whatever can be read, then exit 1 below
+            echo "::group::apt and dpkg state after the last failed attempt"
+            ps -ef | grep -E 'apt|dpkg' | grep -v grep || echo "no apt or dpkg process is running"
+            locks="/var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock"
+            if command -v fuser > /dev/null; then holders=$(sudo fuser -v $locks 2>&1); else holders=$(sudo lsof $locks 2>&1); fi
+            echo "lock holders: ${holders:-none reported}"
+            sudo tail -n 40 /var/log/apt/term.log || echo "no apt term.log"
+            echo "::endgroup::"
+          }
           # Anything that runs apt goes through `sudo timeout`: timeout must be root to stop what apt
           # started, and `playwright install --with-deps` would run its apt under a root sudo that an
           # unprivileged timeout cannot stop, so install the system dependencies separately.
-          retry sudo env "PATH=$PATH" timeout -k 10 180 npx playwright install-deps chromium
+          retry sudo env "PATH=$PATH" timeout -k 10 180 npx playwright install-deps chromium ||
+            { diagnose; exit 1; }
           retry timeout -k 10 180 npx playwright install chromium
           retry sudo timeout -k 10 90 apt-get update
           retry sudo timeout -k 10 150 apt-get install -y ffmpeg
