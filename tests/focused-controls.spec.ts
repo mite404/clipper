@@ -208,7 +208,8 @@ test('Tab reaches Open project, Enter opens one chooser and Space plays without 
       color: style.outlineColor,
     };
   });
-  expect(ring).toEqual({ width: 2, style: 'solid', color: 'rgb(194, 180, 255)' });
+  // The preset's --ring token.
+  expect(ring).toEqual({ width: 2, style: 'solid', color: 'oklch(0.552 0.016 285.938)' });
   await page.locator('.app-header').screenshot({
     path: info.outputPath('open-project-focus.png'),
   });

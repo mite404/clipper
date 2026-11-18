@@ -1,33 +1,49 @@
 @layer ui-sdk;
 
 /* Self-hosted, so loading the editor contacts no other origin. These are the woff2 files Google Fonts
-   serves, unchanged: DM Sans v17 (one variable file per subset covers weights 400-700) and IBM Plex
-   Mono v23 (static 400 and 500), latin and latin-ext only. Both are SIL OFL 1.1; the licences are in
-   /licenses. To update, fetch https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;450;500;550;
-   600;650;700&family=IBM+Plex+Mono:wght@400;500 and copy the files of those subsets.
-   DM Sans keeps Google's unicode-ranges. Plex Mono's latin file has none (it holds only latin glyphs)
-   and its latin-ext files list the Latin letter blocks, so the repeated range lists stay out of the
-   stylesheet. The latin faces come first so the ranged latin-ext faces win for their characters. */
+   serves, unchanged: Public Sans v21 and IBM Plex Sans v23 (one variable file per subset each, the
+   shadcn preset b78kBE8jT6's body and heading faces) and IBM Plex Mono v23 (static 400 and 500),
+   latin and latin-ext only. All are SIL OFL 1.1; the licences are in /licenses. To update, fetch
+   https://fonts.googleapis.com/css2?family=Public+Sans:wght@400..700&family=IBM+Plex+Sans:wght@500;600
+   &family=IBM+Plex+Mono:wght@400;500 and copy the files of those subsets.
+   Public Sans keeps Google's unicode-ranges, so a symbol outside both files goes straight to a system
+   font. The heading face, Plex Sans, carries none, so the lists appear once: its latin face comes
+   last and is tried first, and its latin-ext face loads only for a glyph latin lacks. Plex Mono's
+   latin file has none either, and its latin-ext files list the Latin letter blocks. */
 @font-face {
-  font-family: 'DM Sans';
+  font-family: 'Public Sans';
   font-style: normal;
   font-weight: 400 700;
   font-display: swap;
-  src: url('/fonts/dm-sans-latin-ext.woff2') format('woff2');
+  src: url('/fonts/public-sans-latin-ext.woff2') format('woff2');
   unicode-range:
     U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329,
     U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F,
     U+A720-A7FF;
 }
 @font-face {
-  font-family: 'DM Sans';
+  font-family: 'Public Sans';
   font-style: normal;
   font-weight: 400 700;
   font-display: swap;
-  src: url('/fonts/dm-sans-latin.woff2') format('woff2');
+  src: url('/fonts/public-sans-latin.woff2') format('woff2');
   unicode-range:
     U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
     U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 500 600;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-sans-latin-ext.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'IBM Plex Sans';
+  font-style: normal;
+  font-weight: 500 600;
+  font-display: swap;
+  src: url('/fonts/ibm-plex-sans-latin.woff2') format('woff2');
 }
 @font-face {
   font-family: 'IBM Plex Mono';
@@ -61,16 +77,31 @@
 }
 
 :root {
-  font-family: 'DM Sans', sans-serif;
-  color: #dedfe2;
-  background: #141711;
+  font-family: 'Public Sans', sans-serif;
+  color: var(--foreground);
+  background: var(--background);
   font-synthesis: none;
   font-size: 12px;
   font-weight: 450;
-  --line: #ffffff0e;
-  --muted: #8b8e96;
+  /* shadcn preset b78kBE8jT6 (base-mira), dark. Chrome reads these; timeline colours stay their own. */
+  --background: oklch(0.141 0.005 285.823);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.21 0.006 285.885);
+  --popover: oklch(0.21 0.006 285.885);
+  --primary: oklch(0.92 0.004 286.32);
+  --primary-foreground: oklch(0.21 0.006 285.885);
+  --secondary: oklch(0.274 0.006 286.033);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.274 0.006 286.033);
+  --muted-foreground: oklch(0.705 0.015 286.067);
+  --accent: oklch(0.274 0.006 286.033);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.552 0.016 285.938);
+  --radius: 0.45rem;
+  /* Clipper's timeline and stage accent; chrome uses --primary. */
+  --line: var(--border);
   --green: #d8ec4b;
-  --violet: #b2a0ed;
 }
 * {
   box-sizing: border-box;
@@ -113,7 +144,7 @@ button:focus-visible,
 a:focus-visible,
 :is(select, .select):focus-visible,
 input:focus-visible {
-  outline: 2px solid #c2b4ff;
+  outline: 2px solid var(--ring);
   outline-offset: 3px;
 }
 svg {
@@ -121,8 +152,8 @@ svg {
 }
 input,
 :is(select, .select) {
-  color: #d8dae0;
-  background: #252729;
+  color: var(--foreground);
+  background: var(--secondary);
   border: 1px solid #ffffff12;
   border-radius: 5px;
   min-width: 0;
@@ -134,7 +165,7 @@ input[type='number'] {
   font-size: 10px;
 }
 input[type='range'] {
-  accent-color: #b9acd9;
+  accent-color: var(--primary);
   cursor: ew-resize;
   width: 100%;
   height: 3px;
@@ -152,7 +183,12 @@ kbd {
   border: 1px solid #ffffff10;
   border-radius: 3px;
   padding: 2px 5px;
-  color: #a3a6af;
+  color: var(--muted-foreground);
+}
+h1,
+h2,
+h3 {
+  font-family: 'IBM Plex Sans', sans-serif;
 }
 h1,
 h2,
@@ -172,7 +208,7 @@ p {
   align-items: center;
   padding: 0 25px;
   gap: 30px;
-  background: #191a1c;
+  background: var(--card);
 }
 .header-actions {
   display: flex;
@@ -192,10 +228,10 @@ p {
   display: flex;
   align-items: center;
   gap: 8px;
-  background: var(--green);
-  color: #253321;
+  background: var(--primary);
+  color: var(--primary-foreground);
   padding: 10px 14px;
-  border: 1px solid #d3e2cb;
+  border: 1px solid var(--primary);
   border-radius: 6px;
   font-size: 11px;
   font-weight: 650;
@@ -209,9 +245,9 @@ p {
   height: 43px;
   border-bottom: 1px solid var(--line);
   font-size: 10px;
-  color: #737880;
+  color: var(--muted-foreground);
   letter-spacing: 0.1px;
-  background: #161719;
+  background: var(--card);
 }
 .workspace-bar > .text-button {
   margin-left: auto;
@@ -233,7 +269,7 @@ p {
 }
 .count {
   font-family: 'IBM Plex Mono', monospace;
-  color: #8a8d94;
+  color: var(--muted-foreground);
   font-size: 9px;
   background: #ffffff09;
   padding: 3px 6px;
@@ -241,7 +277,7 @@ p {
 }
 .library {
   border-right: 1px solid var(--line);
-  background: #1b1c1e;
+  background: var(--card);
   padding: 0 16px;
   display: flex;
   flex-direction: column;
@@ -252,7 +288,7 @@ p {
   display: flex;
   align-items: center;
   gap: 9px;
-  border: 1px dashed #74767c66;
+  border: 1px dashed color-mix(in oklch, var(--muted-foreground) 40%, transparent);
   border-radius: 6px;
   position: relative;
   padding: 0 12px;
@@ -263,7 +299,7 @@ p {
 }
 .import-button > span {
   margin-left: auto;
-  color: #757983;
+  color: var(--muted-foreground);
 }
 .import-button input {
   position: absolute;
@@ -273,12 +309,12 @@ p {
   width: 100%;
 }
 .import-button:focus-within {
-  outline: 2px solid var(--violet);
+  outline: 2px solid var(--ring);
   outline-offset: 3px;
 }
 .library-note {
   font-size: 9px;
-  color: #71757c;
+  color: var(--muted-foreground);
   margin: 9px 0 21px;
   text-align: center;
 }
@@ -300,15 +336,15 @@ p {
 }
 .asset-image {
   height: 87px;
-  background: #282b2d;
+  background: var(--secondary);
   border: 1px solid #ffffff08;
   border-radius: 5px;
   overflow: hidden;
   position: relative;
 }
 .asset.selected .asset-image {
-  border: 1px solid #c5d6bb;
-  box-shadow: 0 0 0 2px #c5d6bb15;
+  border: 1px solid var(--foreground);
+  box-shadow: 0 0 0 2px color-mix(in oklch, var(--foreground) 8%, transparent);
 }
 .asset-image img {
   height: 100%;
@@ -336,19 +372,19 @@ p {
   position: absolute;
   right: 6px;
   bottom: 5px;
-  background: #111c;
+  background: color-mix(in oklch, var(--background) 80%, transparent);
   padding: 3px 4px;
   border-radius: 3px;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 8px;
-  color: #dce0e5;
+  color: var(--foreground);
 }
 .asset-number {
   position: absolute;
   left: 6px;
   top: 6px;
-  background: #111b;
-  color: #eee;
+  background: color-mix(in oklch, var(--background) 73%, transparent);
+  color: var(--foreground);
   padding: 3px 5px;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 8px;
@@ -360,7 +396,7 @@ p {
   gap: 6px;
   font-size: 10px;
   margin-top: 8px;
-  color: #bdc0c5;
+  color: var(--muted-foreground);
 }
 .asset-name > span {
   white-space: nowrap;
@@ -370,11 +406,11 @@ p {
 }
 .asset-name > svg:last-child {
   margin-left: auto;
-  color: #6c7474;
+  color: var(--muted-foreground);
 }
 .asset-meta {
   font-size: 8px;
-  color: #73777e;
+  color: var(--muted-foreground);
   margin: 5px 0 0 19px;
 }
 /* Keyboard placement of the selected source; the same command as dragging it to a lane. */
@@ -398,9 +434,9 @@ p {
 .place-control button {
   padding: 0 10px;
   font-size: 9px;
-  color: #b9d3a9;
-  background: #383b34;
-  border: 1px solid #a4b09b22;
+  color: var(--secondary-foreground);
+  background: var(--secondary);
+  border: 1px solid var(--border);
   border-radius: 5px;
 }
 .library-footer {
@@ -409,19 +445,19 @@ p {
   gap: 6px;
   align-items: center;
   font-size: 8px;
-  color: #858d87;
+  color: var(--muted-foreground);
   padding: 20px 0;
   flex-wrap: wrap;
 }
 .library-footer a {
   margin-left: auto;
-  color: #b5b8bc;
+  color: var(--muted-foreground);
 }
 .editing-area {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  background: #17181a;
+  background: var(--card);
 }
 .monitors {
   display: grid;
@@ -431,7 +467,11 @@ p {
   min-height: 332px;
   flex: 1;
   align-items: start;
-  background: radial-gradient(ellipse at 65% 60%, #23252760, transparent);
+  background: radial-gradient(
+    ellipse at 65% 60%,
+    color-mix(in oklch, var(--secondary) 38%, transparent),
+    transparent
+  );
 }
 .monitor-title {
   height: 53px;
@@ -441,10 +481,10 @@ p {
   gap: 8px;
   font-size: 10px;
   font-weight: 500;
-  color: #c9ccd1;
+  color: var(--muted-foreground);
 }
 .muted-text {
-  color: #6d737d;
+  color: var(--muted-foreground);
   font-family: 'IBM Plex Mono', monospace;
   font-size: 8px;
   letter-spacing: 0.5px;
@@ -460,7 +500,7 @@ p {
   position: relative;
   width: 100%;
   aspect-ratio: 16/10;
-  background: #101112;
+  background: var(--background);
   border: 1px solid #ffffff0c;
   border-radius: 5px;
   overflow: hidden;
@@ -483,7 +523,7 @@ p {
   align-items: center;
   gap: 7px;
   padding: 0 6px 0 0;
-  background: #101112dd;
+  background: color-mix(in oklch, var(--background) 87%, transparent);
   border-radius: 4px;
   font:
     8px 'IBM Plex Mono',
@@ -532,7 +572,7 @@ p {
   gap: 8px;
   font-size: 9px;
   margin: 13px 0 11px;
-  color: #989da5;
+  color: var(--muted-foreground);
 }
 .source-description > span:first-child {
   overflow: hidden;
@@ -543,7 +583,7 @@ p {
 .source-description > span:last-child {
   font-size: 8px;
   font-family: 'IBM Plex Mono', monospace;
-  color: #666f76;
+  color: var(--muted-foreground);
   flex-shrink: 0;
 }
 .source-range {
@@ -555,7 +595,7 @@ p {
   border-top: 1px solid var(--line);
   padding-top: 4px;
   font-size: 9px;
-  color: #989da5;
+  color: var(--muted-foreground);
 }
 .transcript-head {
   display: flex;
@@ -584,15 +624,15 @@ p {
   background: #ffffff14;
 }
 .transcript-progress progress::-webkit-progress-value {
-  background: var(--green);
+  background: var(--primary);
   transition: width 200ms ease-out;
 }
 .transcript-progress progress::-moz-progress-bar {
-  background: var(--green);
+  background: var(--primary);
 }
 .transcript-note {
   margin: 2px 0 0;
-  color: #666f76;
+  color: var(--muted-foreground);
 }
 .transcript-segments {
   max-height: 120px;
@@ -619,7 +659,7 @@ p {
 }
 .transcript-segments time {
   flex-shrink: 0;
-  color: #666f76;
+  color: var(--muted-foreground);
   font-family: 'IBM Plex Mono', monospace;
   font-size: 8px;
   line-height: 1.8;
@@ -631,7 +671,7 @@ p {
   flex: 1;
   min-width: 0;
   font-size: 9px;
-  color: #787d86;
+  color: var(--muted-foreground);
 }
 .source-range input {
   font-size: 9px;
@@ -651,19 +691,19 @@ p {
   min-width: 0;
 }
 .source-insert > .icon-button {
-  background: #383b34;
-  color: #b9d3a9;
+  background: var(--secondary);
+  color: var(--secondary-foreground);
   width: 30px;
   height: 28px;
-  border: 1px solid #a4b09b22;
+  border: 1px solid var(--border);
 }
 .active-pill {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 7px;
   letter-spacing: 0.5px;
-  color: #b3c5a9;
-  border: 1px solid #b3c5a92c;
-  background: #91b0810b;
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  background: var(--accent);
   border-radius: 3px;
   padding: 3px 5px;
   margin-left: 7px;
@@ -674,14 +714,14 @@ p {
   border-radius: 6px;
   box-shadow: 0 13px 30px #0004;
   border: 1px solid #ffffff0a;
-  background: #111;
+  background: var(--background);
 }
 .compose-caption {
   display: flex;
   justify-content: space-between;
   margin-top: 12px;
   font-size: 8px;
-  color: #7f8982;
+  color: var(--muted-foreground);
 }
 .compose-caption > span {
   display: flex;
@@ -691,7 +731,7 @@ p {
 .loading-preview,
 .empty-preview {
   font-size: 10px;
-  color: #7f8786;
+  color: var(--muted-foreground);
   display: grid;
   place-items: center;
   height: 100%;
@@ -705,7 +745,7 @@ p {
   min-height: 63px;
   border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
-  background: #1c1d1f;
+  background: var(--card);
   gap: 16px;
 }
 .transport-readout {
@@ -713,11 +753,11 @@ p {
   gap: 9px;
   font-family: 'IBM Plex Mono', monospace;
   font-size: 11px;
-  color: #dde1e7;
+  color: var(--foreground);
   white-space: nowrap;
 }
 .transport-readout > span:last-child {
-  color: #676e78;
+  color: var(--muted-foreground);
   font-size: 9px;
 }
 .transport-buttons {
@@ -740,16 +780,16 @@ p {
   padding: 0;
   background: transparent;
   border-radius: 5px;
-  color: #949aa4;
+  color: var(--muted-foreground);
   flex-shrink: 0;
 }
 .icon-button-tooltip {
   max-width: min(280px, calc(100vw - 16px));
   padding: 6px 9px;
-  border: 1px solid #4b4e54;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #252729;
-  color: #dedfe2;
+  background: var(--secondary);
+  color: var(--foreground);
   font-size: 12px;
   line-height: 1.4;
   overflow-wrap: anywhere;
@@ -805,10 +845,10 @@ p {
   max-height: min(320px, var(--available-height));
   overflow-y: auto;
   padding: 4px;
-  border: 1px solid #4b4e54;
+  border: 1px solid var(--border);
   border-radius: 6px;
-  background: #252729;
-  color: #dedfe2;
+  background: var(--secondary);
+  color: var(--foreground);
   font-size: 11px;
   box-shadow: 0 6px 20px #0008;
   transform-origin: var(--transform-origin);
@@ -838,7 +878,7 @@ p {
 }
 .select-menu [data-slot='select-item-indicator'] {
   display: flex;
-  color: #c2b4ff;
+  color: var(--foreground);
 }
 @media (prefers-reduced-motion: reduce) {
   .select > svg,
@@ -853,8 +893,8 @@ p {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: #d3d6d6;
-  color: #242729;
+  background: var(--primary);
+  color: var(--primary-foreground);
   display: grid;
   place-items: center;
   margin: 0 4px;
@@ -864,7 +904,7 @@ p {
 }
 .playback-state {
   font-size: 8px;
-  color: #949a9f;
+  color: var(--muted-foreground);
   min-width: 70px;
   margin-left: 5px;
 }
@@ -883,13 +923,13 @@ p {
 }
 .timeline-name {
   font-size: 10px;
-  color: #c9cdd2;
+  color: var(--muted-foreground);
   font-weight: 500;
 }
 .timeline-badge {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 8px;
-  color: #77817a;
+  color: var(--muted-foreground);
   border: 1px solid #ffffff12;
   border-radius: 3px;
   margin-left: 9px;
@@ -910,7 +950,7 @@ p {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  color: #8f969e;
+  color: var(--muted-foreground);
   background: transparent;
   padding: 6px 3px;
   font-size: 10px;
@@ -926,7 +966,7 @@ p {
 }
 .timeline-toolbar-hint {
   font-size: 8px;
-  color: #626974;
+  color: var(--muted-foreground);
 }
 .timeline-scroll {
   --timeline-gutter: 22px;
@@ -949,7 +989,7 @@ p {
   align-items: start;
   gap: 14px;
   font-size: 7px;
-  color: #676e79;
+  color: var(--muted-foreground);
   letter-spacing: 1px;
   padding-top: 4px;
 }
@@ -965,8 +1005,8 @@ p {
     to right,
     transparent 0,
     transparent calc(3.125% - 1px),
-    #7a7d8522 calc(3.125% - 1px),
-    #7a7d8522 3.125%
+    color-mix(in oklch, var(--muted-foreground) 13%, transparent) calc(3.125% - 1px),
+    color-mix(in oklch, var(--muted-foreground) 13%, transparent) 3.125%
   );
   background-size: 100% 6px;
   background-repeat: no-repeat;
@@ -977,7 +1017,7 @@ p {
   transform: translateX(-50%);
   font-family: 'IBM Plex Mono', monospace;
   font-size: 8px;
-  color: #818996;
+  color: var(--muted-foreground);
   top: 16px;
   white-space: nowrap;
 }
@@ -1041,7 +1081,7 @@ p {
   z-index: 6;
 }
 .ruler:focus-within {
-  outline: 1px solid var(--violet);
+  outline: 1px solid var(--ring);
 }
 .ruler input:focus-visible {
   outline: none;
@@ -1057,7 +1097,7 @@ p {
   height: 20px;
 }
 .create-row .track-label {
-  color: #636c7b;
+  color: var(--muted-foreground);
   font-size: 8px;
   padding-left: 12px;
 }
@@ -1075,7 +1115,7 @@ p {
      enough to paint that keyboard scrolling of a long sequence stalls. */
   border: 1px solid #ffffff12;
   border-radius: 5px;
-  color: #535e68;
+  color: var(--muted-foreground);
   font-size: 8px;
 }
 .timeline-lane[data-drop='ok'] {
@@ -1109,7 +1149,7 @@ p {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #858e9b;
+  color: var(--muted-foreground);
   font-size: 9px;
   border-bottom: 1px solid #ffffff05;
   padding-right: 10px;
@@ -1143,17 +1183,17 @@ p {
   gap: 2px;
 }
 :is(.track-toggles, .tool-toggles) > .icon-button[aria-pressed='true'] {
-  color: var(--green);
+  color: var(--primary);
   background: #ffffff0a;
 }
 .track-code {
   font-size: 8px;
   font-family: 'IBM Plex Mono', monospace;
-  color: #636c7b;
+  color: var(--muted-foreground);
   width: 17px;
 }
 .track-label > svg {
-  color: #7d889b;
+  color: var(--muted-foreground);
 }
 .track-label.zoom-label {
   padding-left: 25px;
@@ -1180,7 +1220,7 @@ p {
 .lane-hint {
   display: block;
   font-size: 8px;
-  color: #55515e;
+  color: var(--muted-foreground);
   line-height: 30px;
   padding-left: 9px;
 }
@@ -1379,7 +1419,7 @@ p {
 .timeline-end {
   grid-column: 2;
   height: var(--end-height);
-  color: #535e68;
+  color: var(--muted-foreground);
   font-family: 'IBM Plex Mono', monospace;
   font-size: 7px;
   letter-spacing: 0.3px;
@@ -1391,7 +1431,7 @@ p {
   display: flex;
   justify-content: space-between;
   font-size: 8px;
-  color: #616a78;
+  color: var(--muted-foreground);
   gap: 20px;
 }
 .sequence-footer kbd {
@@ -1404,7 +1444,7 @@ p {
 }
 .inspector {
   border-left: 1px solid var(--line);
-  background: #1c1d1f;
+  background: var(--card);
   padding: 0 17px;
   min-width: 0;
 }
@@ -1412,7 +1452,7 @@ p {
   border-bottom: 1px solid var(--line);
 }
 .inspector .section-title > svg {
-  color: #7a818a;
+  color: var(--muted-foreground);
 }
 .inspector-heading {
   display: flex;
@@ -1425,10 +1465,10 @@ p {
   height: 32px;
   display: grid;
   place-items: center;
-  border: 1px solid #98a49444;
+  border: 1px solid color-mix(in oklch, var(--muted-foreground) 27%, transparent);
   border-radius: 7px;
-  background: #a7b09a08;
-  color: #b6c1ae;
+  background: var(--accent);
+  color: var(--muted-foreground);
 }
 .inspector-heading strong {
   font-size: 10px;
@@ -1437,13 +1477,13 @@ p {
 }
 .inspector-heading small {
   font-size: 8px;
-  color: #747c86;
+  color: var(--muted-foreground);
   display: block;
   margin-top: 5px;
 }
 .inspector-heading > svg {
   margin-left: auto;
-  color: #a8bf9e;
+  color: var(--muted-foreground);
 }
 .inspector-section {
   border-top: 1px solid var(--line);
@@ -1455,12 +1495,12 @@ p {
   justify-content: space-between;
   font-size: 10px;
   font-weight: 500;
-  color: #bdc3cc;
+  color: var(--muted-foreground);
   margin-bottom: 14px;
 }
 .inspector-section h3 > span:not(.zoom-heading) {
   font-size: 8px;
-  color: #707986;
+  color: var(--muted-foreground);
   font-family: 'IBM Plex Mono', monospace;
 }
 .layout-swatch {
@@ -1489,13 +1529,13 @@ p {
   flex-wrap: wrap;
   justify-content: space-between;
   font-size: 9px;
-  color: #838d99;
+  color: var(--muted-foreground);
   line-height: 15px;
   margin: 5px 0 22px;
 }
 .slider-label output {
   font-family: 'IBM Plex Mono', monospace;
-  color: #b1bac2;
+  color: var(--muted-foreground);
   font-size: 9px;
 }
 .crop-controls {
@@ -1503,7 +1543,7 @@ p {
   align-items: center;
   gap: 6px;
   font-size: 8px;
-  color: #7d8896;
+  color: var(--muted-foreground);
   margin-top: 8px;
 }
 .crop-controls > span {
@@ -1538,7 +1578,7 @@ p {
 .inspector-copy {
   font-size: 10px;
   line-height: 1.8;
-  color: #79828f;
+  color: var(--muted-foreground);
   margin-bottom: 15px;
 }
 .secondary-button {
@@ -1547,9 +1587,9 @@ p {
   justify-content: center;
   gap: 6px;
   width: 100%;
-  background: #313038;
-  border: 1px solid #82749644;
-  color: #b6a9c9;
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  color: var(--secondary-foreground);
   padding: 9px 7px;
   border-radius: 5px;
   font-size: 9px;
@@ -1560,12 +1600,12 @@ p {
   gap: 9px;
   padding-top: 18px;
   align-items: start;
-  color: #67727c;
+  color: var(--muted-foreground);
   font-size: 9px;
   line-height: 1.8;
 }
 .tip-marker {
-  border: 1px solid #67727c77;
+  border: 1px solid color-mix(in oklch, var(--muted-foreground) 47%, transparent);
   border-radius: 50%;
   height: 13px;
   width: 13px;
@@ -1584,7 +1624,7 @@ p {
   flex: 1;
   min-width: 0;
   font-size: 8px;
-  color: #838d99;
+  color: var(--muted-foreground);
 }
 .numeric-pair input {
   display: block;
@@ -1606,8 +1646,8 @@ p {
   overflow: visible;
 }
 .ramp-curve .ramp-plot {
-  fill: #b9a1de08;
-  stroke: #b9a1de0f;
+  fill: color-mix(in oklch, var(--muted) 40%, transparent);
+  stroke: var(--border);
 }
 .ramp-curve .ramp-path {
   stroke: #a995cb;
@@ -1636,9 +1676,9 @@ p {
   justify-content: space-between;
   border-top: 1px solid var(--line);
   padding: 7px 23px;
-  background: #161719;
+  background: var(--card);
   gap: 20px;
-  color: #68747b;
+  color: var(--muted-foreground);
   font-size: 8px;
 }
 .app-footer [role='status'] {
@@ -1655,14 +1695,14 @@ p {
   white-space: nowrap;
 }
 .footer-version {
-  color: #454f58;
+  color: var(--muted-foreground);
   margin-left: 15px;
 }
 .help-backdrop {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: #070a0dc9;
+  background: color-mix(in oklch, var(--background) 79%, transparent);
   display: grid;
   place-items: center;
   backdrop-filter: blur(5px);
@@ -1670,7 +1710,7 @@ p {
 .help-dialog {
   width: 440px;
   max-width: calc(100vw - 32px);
-  background: #24272a;
+  background: var(--secondary);
   border: 1px solid #ffffff18;
   border-radius: 13px;
   padding: 28px;
@@ -1683,7 +1723,7 @@ p {
 }
 .help-dialog > p {
   font-size: 11px;
-  color: #8f99a3;
+  color: var(--muted-foreground);
   margin: 9px 0 24px;
 }
 .shortcut-row {
@@ -1693,7 +1733,7 @@ p {
   padding: 9px 0;
   border-bottom: 1px solid var(--line);
   font-size: 10px;
-  color: #aab2bd;
+  color: var(--muted-foreground);
 }
 .shortcut-row kbd {
   min-width: 65px;
@@ -1707,17 +1747,17 @@ p {
 @media (hover: hover) and (pointer: fine) {
   .icon-button:hover {
     background: #ffffff08;
-    color: #e0e4e9;
+    color: var(--foreground);
   }
   .text-button:hover {
-    color: #d1d5dc;
+    color: var(--foreground);
     background: #ffffff04;
   }
   .asset:hover .asset-image {
     filter: brightness(1.1);
   }
   .save-button:hover {
-    background: #d0e0c6;
+    background: color-mix(in oklch, var(--primary) 85%, var(--background));
   }
   .timeline-clip:hover {
     filter: brightness(1.12);
@@ -1729,7 +1769,7 @@ p {
     opacity: 1;
   }
   .secondary-button:hover {
-    background: #3a3543;
+    background: color-mix(in oklch, var(--secondary), var(--foreground) 5%);
   }
   .import-button:hover {
     background: #ffffff06;
@@ -2122,15 +2162,15 @@ p {
   width: min(440px, calc(100vw - 32px));
   max-height: calc(100dvh - 32px);
   padding: 28px;
-  border: 1px solid #45494a;
+  border: 1px solid var(--border);
   border-radius: 14px;
-  background: #202223;
-  color: #eceeea;
+  background: var(--card);
+  color: var(--foreground);
   box-shadow: 0 24px 80px #0008;
 }
 
 .export-dialog::backdrop {
-  background: #070a0dc9;
+  background: color-mix(in oklch, var(--background) 79%, transparent);
 }
 
 .export-dialog h2 {
@@ -2140,7 +2180,7 @@ p {
 
 .export-dialog p {
   margin: 12px 0;
-  color: #b4b9b7;
+  color: var(--muted-foreground);
   font-size: 13px;
   line-height: 1.6;
 }
@@ -2170,7 +2210,7 @@ p {
 }
 
 .export-dialog a {
-  color: #b4b9b7;
+  color: var(--muted-foreground);
   font-size: 12px;
 }
 
@@ -2191,7 +2231,7 @@ p {
   margin: auto;
 }
 .help-dialog::backdrop {
-  background: #070a0dc9;
+  background: color-mix(in oklch, var(--background) 79%, transparent);
   backdrop-filter: blur(5px);
 }
 .app-footer [role='status'] {
@@ -2307,7 +2347,7 @@ p {
   gap: 8px;
   padding: 2px 22px 6px;
   font-size: 9px;
-  color: var(--muted);
+  color: var(--muted-foreground);
 }
 .timeline-scale input {
   width: 100px;
@@ -2383,7 +2423,7 @@ p {
   pointer-events: none;
 }
 .project-open:has(input:focus-visible) {
-  outline: 2px solid #c2b4ff;
+  outline: 2px solid var(--ring);
   outline-offset: 3px;
 }
 .export-controls {
@@ -2397,10 +2437,10 @@ p {
   width: 124px;
   max-width: none;
   flex-shrink: 0;
-  background: #2b2d2c;
+  background: var(--secondary);
   color: inherit;
   padding: 6px;
-  border: 1px solid #484b43;
+  border: 1px solid var(--border);
   border-radius: 5px;
 }
 .export-progress {
@@ -2457,7 +2497,7 @@ p {
   padding: 5px 22px;
   border-top: 1px solid var(--line);
   font-size: 11px;
-  color: var(--muted);
+  color: var(--muted-foreground);
 }
 .cursor-summary {
   min-width: 0;
@@ -2468,7 +2508,7 @@ p {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: #dedfe2;
+  color: var(--foreground);
   font-weight: 500;
 }
 .cursor-controls .text-button {
@@ -2487,8 +2527,8 @@ p {
   padding: 5px 8px;
   border: 1px solid var(--line);
   border-radius: 4px;
-  color: #dedfe2;
-  background: #171819;
+  color: var(--foreground);
+  background: var(--card);
   font: inherit;
   font-variant-numeric: tabular-nums;
 }
@@ -2519,8 +2559,8 @@ p {
   padding: 5px 8px;
   border: 1px solid var(--line);
   border-radius: 4px;
-  color: #dedfe2;
-  background: #171819;
+  color: var(--foreground);
+  background: var(--card);
   font: inherit;
 }
 .cursor-appearance input[type='number'] {
@@ -2550,7 +2590,7 @@ p {
   margin-top: 6px;
   font-size: 10px;
   line-height: 1.5;
-  color: #b6c7ad;
+  color: var(--muted-foreground);
 }
 .cursor-group {
   display: grid;
@@ -2563,7 +2603,7 @@ p {
 }
 .cursor-group legend {
   padding: 0 8px 0 0;
-  color: #dedfe2;
+  color: var(--foreground);
   font-weight: 500;
 }
 .cursor-group label {
@@ -2583,8 +2623,8 @@ p {
   padding: 5px 6px;
   border: 1px solid var(--line);
   border-radius: 4px;
-  color: #dedfe2;
-  background: #171819;
+  color: var(--foreground);
+  background: var(--card);
   font: inherit;
 }
 .cursor-group input[type='number'] {
@@ -2658,7 +2698,7 @@ p {
   max-height: 100%;
   overflow: auto;
   z-index: 10;
-  background: #1b1c1e;
+  background: var(--card);
   box-shadow: 8px 0 24px #0005;
   transition:
     transform 220ms cubic-bezier(0.17, 1.02, 0.58, 1),
@@ -2727,7 +2767,7 @@ p {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  background: #17181a;
+  background: var(--card);
   border-top: 1px solid var(--line);
 }
 .sequence-area > :not(.timeline-scroll) {
@@ -2756,7 +2796,7 @@ p {
 .timeline-scroll .ruler-label {
   position: sticky;
   left: 0;
-  background: #17181a;
+  background: var(--card);
   z-index: 4;
 }
 .timeline-scroll .track-label::before,
@@ -2773,7 +2813,7 @@ p {
   position: sticky;
   top: 0;
   z-index: 5;
-  background-color: #17181a;
+  background-color: var(--card);
 }
 .timeline-scroll .ruler-label {
   top: 0;
@@ -2959,7 +2999,9 @@ html[data-panel-drag='row'] * {
   }
 }
 
-/* A chapter flag on the ruler: a small pennant at its frame, above the playhead scrubber input (z-index 7). */
+/* A chapter flag on the ruler: a small pennant at its frame, above the playhead scrubber input (z-index 7).
+   ::before draws the pennant, so the clip-path does not hide focus. The flag sits on the scroll box's
+   top edge, which would cut an outline, so focus is a bar in the timeline accent under the pennant. */
 .chapter-flag {
   position: absolute;
   top: 0;
@@ -2968,20 +3010,100 @@ html[data-panel-drag='row'] * {
   height: 11px;
   padding: 0;
   border: 0;
-  background: #e0b341;
-  clip-path: polygon(0 0, 100% 35%, 0 70%, 0 100%);
+  border-radius: 1px;
+  background: none;
+  color: #e0b341;
   cursor: pointer;
 }
+.chapter-flag::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: currentColor;
+  clip-path: polygon(0 0, 100% 35%, 0 70%, 0 100%);
+}
 .chapter-flag[aria-pressed='true'] {
-  background: #fff;
+  color: #fff;
+}
+.chapter-flag:focus-visible {
+  outline: none;
+}
+.chapter-flag:focus-visible::after {
+  content: '';
+  position: absolute;
+  top: 13px;
+  left: -1px;
+  width: 11px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--green);
 }
 .chapter-title {
   display: flex;
+  flex: 1 1 100%;
   flex-direction: column;
   gap: 4px;
   margin-bottom: 8px;
   font-size: 9px;
-  color: #838d99;
+  color: var(--muted-foreground);
+}
+.chapter-title input {
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  background: transparent;
+  color: var(--foreground);
+  font-size: 12px;
+}
+/* Compact controls: shadcn preset b78kBE8jT6 (base-mira) sizes. Controls are 28px tall at the preset
+   radius; dialogs take its tighter padding and smaller headings. Last, so it wins over panel rules. */
+.save-button,
+.secondary-button,
+.export-controls :is(select, .select),
+.export-dialog :is(select, .select),
+.place-control button,
+.source-insert > .icon-button {
+  height: 28px;
+  min-height: 28px;
+  padding-block: 0;
+  border-radius: var(--radius);
+}
+.save-button,
+.secondary-button {
+  padding-inline: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+:is(select, .select),
+input[type='number'],
+.text-button {
+  border-radius: var(--radius);
+}
+.export-dialog,
+.help-dialog {
+  padding: 16px;
+  border-radius: calc(var(--radius) + 6px);
+}
+.export-dialog h2,
+.help-dialog h2 {
+  font-size: 14px;
+  font-weight: 500;
+}
+.export-dialog p {
+  font-size: 12px;
+}
+/* The ready bar's buttons keep one line; the file name before them ellipsizes instead. */
+.export-ready :is(a, button) {
+  flex: none;
+  white-space: nowrap;
+}
+/* Clip and zoom focus sits inside the block, so a thin lane never clips it, and in the timeline
+   accent, so it reads on every track colour and never looks like the selected border. */
+.timeline-clip:focus-visible,
+.zoom-block:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: -2px;
 }
 
 /* CLIP-22: editor-only PiP corner targets over the live preview. Free corners show on hover or

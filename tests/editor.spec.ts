@@ -1146,7 +1146,7 @@ test('loads with no request beyond its own origin and with both fonts self-hoste
     .poll(async () =>
       [...new Set((await faces()).filter((face) => face.endsWith(':loaded')))].sort(),
     )
-    .toEqual(['DM Sans:loaded', 'IBM Plex Mono:loaded']);
+    .toEqual(['IBM Plex Mono:loaded', 'IBM Plex Sans:loaded', 'Public Sans:loaded']);
   expect((await faces()).filter((face) => face.endsWith(':error'))).toEqual([]);
   expect(outside).toEqual([]);
 });

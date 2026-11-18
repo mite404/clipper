@@ -38,5 +38,6 @@ and fades out from 12 to 14 seconds.
 
 ## Other resources
 
-DM Sans and IBM Plex Mono are served by Google Fonts under the SIL Open Font License. Lucide icons
-use the ISC license. Source media licenses remain attached to derived demo files.
+Public Sans, IBM Plex Sans and IBM Plex Mono are self-hosted copies of the Google Fonts files, under
+the SIL Open Font License (texts in /licenses). Lucide icons use the ISC license. Source media
+licenses remain attached to derived demo files.

@@ -38,6 +38,16 @@ test('M marks chapters at the playhead, one per frame, as flags that seek and se
   await expect(playhead(page)).toHaveValue('61');
   await expect(flags(page).nth(1)).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByLabel('Chapter title')).toHaveValue('Chapter 1');
+
+  // Keyboard focus on a flag shows a mark, even though the pennant itself is clipped to shape.
+  const focusMark = () =>
+    flags(page)
+      .nth(0)
+      .evaluate((flag) => getComputedStyle(flag, '::after').backgroundColor);
+  await flags(page).nth(1).focus();
+  await page.keyboard.press('Shift+Tab');
+  await expect(flags(page).nth(0)).toBeFocused();
+  expect(await focusMark()).not.toBe('rgba(0, 0, 0, 0)');
 });
 
 test('a held modifier, a repeat and a text field never mark a chapter', async ({ page }) => {
