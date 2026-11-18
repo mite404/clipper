@@ -881,6 +881,15 @@ test('saves around media that changed on disk, and a re-import repairs media in 
   await expect(status).toContainText(
     'Export failed. Video export failed: Could not read local media take.mp4. Import it again',
   );
+  // The failure also reads as an error toast, which stays until dismissed.
+  const failed = page
+    .getByRole('region', { name: 'Notifications' })
+    .locator('[data-type="error"]', { hasText: 'Export failed.' });
+  await expect(failed).toBeVisible();
+  await page.waitForTimeout(6000);
+  await expect(failed).toBeVisible();
+  await failed.getByRole('button', { name: 'Dismiss' }).click();
+  await expect(failed).toHaveCount(0);
   expect(downloads).toBe(0);
 
   // A same-named file that cannot stand in for the old one is refused, not swapped in: this one
@@ -1083,6 +1092,13 @@ test('a failed or cancelled export leaves the editor ready, and a new export cle
   await expect(status).not.toContainText('cancelled');
   await settled();
   expect(await liveUrls()).toBe(baseline);
+  // The error toast stays up, yet the footer's Preview quality list, which opens upward beside it,
+  // can still be clicked.
+  await expect(page.locator('.toast[data-type="error"]')).toBeVisible();
+  const quality = page.getByRole('combobox', { name: 'Preview quality', exact: true });
+  await choose(quality, 'quarter');
+  await expectChoice(quality, 'quarter');
+  await choose(quality, 'full');
 
   await render('webm');
   await expect.poll(async () => Number(await progress.getAttribute('value'))).toBeGreaterThan(0.1);

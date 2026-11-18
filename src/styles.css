@@ -98,6 +98,7 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.552 0.016 285.938);
+  --destructive: oklch(0.704 0.191 22.216);
   --radius: 0.45rem;
   /* Clipper's timeline and stage accent; chrome uses --primary. */
   --line: var(--border);
@@ -3312,6 +3313,33 @@ input[type='number'],
   flex: none;
   margin-top: 2px;
   color: var(--green);
+}
+.toast[data-type='error'] {
+  border-color: color-mix(in oklch, var(--destructive) 55%, transparent);
+}
+.toast[data-type='error'] > svg {
+  color: var(--destructive);
+}
+.toast-close {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin: -1px -4px 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--radius) - 2px);
+  background: none;
+  color: var(--muted-foreground);
+}
+.toast-close:hover {
+  background: var(--accent);
+  color: var(--foreground);
+}
+.toast-close:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
 }
 .toast:not([data-front], [data-expanded]) {
   height: var(--toast-front-height);

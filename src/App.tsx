@@ -379,6 +379,12 @@ const unavailable = (asset: Asset, running?: string) =>
       ? 'Another source is being transcribed.'
       : undefined;
 
+// The footer status plus a toast: a success fades on its own, a failure stays until dismissed.
+const announce = (setMessage: (text: string) => void, text: string, failed = false) => {
+  setMessage(text);
+  if (failed) toast.error(text, { duration: Infinity });
+  else toast.success(text);
+};
 // The status line a finished, cancelled or failed transcription leaves.
 const failure = (name: string, aborted: boolean, error: unknown) =>
   aborted
@@ -418,10 +424,12 @@ function useTranscription(
         const transcript = await transcribe(blob, report, controller.signal);
         setAssets((all) => all.map((a) => (a.id === target.id ? { ...a, transcript } : a)));
         const done = success(target.name, transcript);
-        setMessage(done);
-        toast.success(done);
+        announce(setMessage, done);
       } catch (error) {
-        setMessage(failure(target.name, controller.signal.aborted, error));
+        const text = failure(target.name, controller.signal.aborted, error);
+        // A cancellation is status only; a failure also raises an error toast.
+        if (controller.signal.aborted) setMessage(text);
+        else announce(setMessage, text, true);
       } finally {
         setJob(null);
       }
@@ -1798,12 +1806,10 @@ export function App() {
         ? `Portable project saved. Left out unused media: ${omitted.join(', ')}. ` +
           'It could not be read or did not fit in the file.'
         : 'Portable project saved with source media included. No relinking needed.';
-      setMessage(done);
-      toast.success(done);
+      announce(setMessage, done);
     } catch (error) {
-      setMessage(
-        `Could not save project. ${error instanceof Error ? error.message : 'Unknown error.'}`,
-      );
+      const text = `Could not save project. ${error instanceof Error ? error.message : 'Unknown error.'}`;
+      announce(setMessage, text, true);
     } finally {
       setBusy(false);
     }
@@ -1856,13 +1862,11 @@ export function App() {
       seek(0);
       setTimeout(() => previous.forEach((a) => URL.revokeObjectURL(a.url)), 0);
       const done = 'Project reopened. Embedded media restored locally; no relinking or upload.';
-      setMessage(done);
-      toast.success(done);
+      announce(setMessage, done);
     } catch (error) {
       imported.forEach((a) => URL.revokeObjectURL(a.url));
-      setMessage(
-        `Could not open project. ${error instanceof Error ? error.message : 'Invalid project.'}`,
-      );
+      const text = `Could not open project. ${error instanceof Error ? error.message : 'Invalid project.'}`;
+      announce(setMessage, text, true);
     } finally {
       setBusy(false);
     }
@@ -1899,14 +1903,13 @@ export function App() {
         saved: false,
       });
       const done = `Video exported at ${exportWidth} × ${(exportWidth * 9) / 16}, ${fpsName(outputFps)}. Rendered locally.`;
-      setMessage(done);
-      toast.success(done);
+      announce(setMessage, done);
     } catch (error) {
-      setMessage(
-        controller.signal.aborted
-          ? 'Export cancelled.'
-          : `Export failed. ${error instanceof Error ? error.message : 'Unknown error.'}`,
-      );
+      if (controller.signal.aborted) setMessage('Export cancelled.');
+      else {
+        const text = `Export failed. ${error instanceof Error ? error.message : 'Unknown error.'}`;
+        announce(setMessage, text, true);
+      }
     } finally {
       setExportProgress(null);
       exportAbort.current = null;
@@ -1931,12 +1934,10 @@ export function App() {
       const png = import('./export').then(({ renderFrameImage }) => renderFrameImage(snapshot));
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
       const done = `Frame ${snapshot.frame} copied as ${snapshot.width} × ${(snapshot.width * 9) / 16} PNG. Rendered locally.`;
-      setMessage(done);
-      toast.success(done);
+      announce(setMessage, done);
     } catch (error) {
-      setMessage(
-        `Could not copy frame. ${error instanceof Error ? error.message : 'Unknown error.'}`,
-      );
+      const text = `Could not copy frame. ${error instanceof Error ? error.message : 'Unknown error.'}`;
+      announce(setMessage, text, true);
     } finally {
       setCopying(false);
     }
