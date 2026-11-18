@@ -3,6 +3,7 @@ import {
   FPS,
   addChapter,
   chapterList,
+  clipAt,
   clipPiece,
   clock,
   covers,
@@ -24,6 +25,7 @@ import {
   splitClip,
   timecode,
   trackNumber,
+  trimTo,
   trimBounds,
   trimClip,
   zoomAt,
@@ -766,5 +768,63 @@ describe('chapters', () => {
     expect(chapterList(titled, 61)).toBe('00:00 Intro\n00:01 Setup');
     expect(chapterList(titled.slice(2), 61)).toBe('');
     expect(chapterList([], 60)).toBe('');
+  });
+});
+
+describe('clipAt', () => {
+  const on = (id: string, track: string, start: number, duration: number): Clip => ({
+    ...clip,
+    id,
+    track,
+    start,
+    duration,
+  });
+  const clips = [
+    on('s', 'screen', 0, 60),
+    on('c', 'camera', 30, 60),
+    on('v', 'voice', 0, 90),
+    on('s2', 'screen', 90, 30),
+  ];
+
+  it('takes the topmost video clip under the playhead, never audio, and nothing over a gap', () => {
+    // Camera paints over screen. Screen alone at 29; both at 30; the camera clip ends before 90.
+    expect(clipAt(clips, DEFAULT_TRACKS, [], 29)?.id).toBe('s');
+    expect(clipAt(clips, DEFAULT_TRACKS, [], 30)?.id).toBe('c');
+    expect(clipAt(clips, DEFAULT_TRACKS, [], 89)?.id).toBe('c');
+    expect(clipAt(clips, DEFAULT_TRACKS, [], 90)?.id).toBe('s2');
+    // Audio alone under the playhead selects nothing; neither does a gap.
+    expect(clipAt([on('v', 'voice', 0, 90)], DEFAULT_TRACKS, [], 10)).toBeUndefined();
+    expect(clipAt(clips, DEFAULT_TRACKS, [], 120)).toBeUndefined();
+    expect(clipAt([], DEFAULT_TRACKS, [], 0)).toBeUndefined();
+  });
+
+  it('prefers a selected track that has a clip there, else falls back to the topmost video', () => {
+    expect(clipAt(clips, DEFAULT_TRACKS, ['screen'], 45)?.id).toBe('s');
+    expect(clipAt(clips, DEFAULT_TRACKS, ['voice'], 45)?.id).toBe('v');
+    // Camera is selected but has no clip at 10, so the topmost video there is screen; at 45 both
+    // are selected and the first track in the registry wins.
+    expect(clipAt(clips, DEFAULT_TRACKS, ['camera'], 10)?.id).toBe('s');
+    expect(clipAt(clips, DEFAULT_TRACKS, ['camera', 'screen'], 45)?.id).toBe('s');
+  });
+});
+
+describe('trimTo', () => {
+  // clip: timeline 30..179 shows source 60..209.
+  it('moves the start to the playhead, or the end up to it, keeping source timing', () => {
+    expect(trimTo(clip, 'left', 100)).toEqual({ ...clip, start: 100, offset: 130, duration: 80 });
+    expect(trimTo(clip, 'right', 100)).toEqual({ ...clip, duration: 70 });
+  });
+
+  it('does nothing unless the playhead is inside the clip past its first frame', () => {
+    for (const edge of ['left', 'right'] as const)
+      for (const frame of [0, 29, 30, 180, 500])
+        expect(trimTo(clip, edge, frame), `${edge} at ${frame}`).toBeUndefined();
+  });
+
+  it('keeps one frame at the extremes, on either side of the clip', () => {
+    expect(trimTo(clip, 'left', 179)).toMatchObject({ start: 179, duration: 1, offset: 209 });
+    expect(trimTo(clip, 'right', 31)).toMatchObject({ start: 30, duration: 1 });
+    expect(trimTo(clip, 'left', 31)).toMatchObject({ start: 31, duration: 149 });
+    expect(trimTo(clip, 'right', 179)).toMatchObject({ duration: 149 });
   });
 });

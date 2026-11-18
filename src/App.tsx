@@ -70,12 +70,14 @@ import {
   addChapter,
   chapterId,
   chapterList,
+  clipAt,
   clock,
   removeChapter,
   retitleChapter,
   shownChapters,
   timecode,
   trackNumber,
+  trimTo,
   ZOOM_LIMITS,
   zoomsOverlap,
 } from './timeline-model';
@@ -644,6 +646,15 @@ export function SourceMonitor({
   );
 }
 
+// Runs the clip key `key` names, once per press and not with Shift; false when it is not one.
+function runClipKey(keys: Map<string, () => void>, event: KeyboardEvent, key: string): boolean {
+  const run = keys.get(key);
+  if (!run || event.repeat || event.shiftKey) return false;
+  event.preventDefault();
+  run();
+  return true;
+}
+
 /** Editing controls for a selected zoom and the two composition masks. */
 export function Inspector({
   zoom,
@@ -1161,6 +1172,18 @@ export function App() {
       setMessage(`Chapter added at ${timecode(at)}.`);
     }
   }, [edit, setChapters]);
+  // X selects the clip under the playhead; [ and ] trim the selected clip's start or end to it.
+  const selectUnder = useCallback(() => {
+    const clip = clipAt(edit.clips, edit.tracks, selectedTracks, frameRef.current);
+    if (clip) setSelected(clip.id);
+  }, [edit, selectedTracks]);
+  const trimSelected = useCallback(
+    (side: 'left' | 'right') => {
+      const next = selectedClip && trimTo(selectedClip, side, frameRef.current);
+      if (next) putClip(next);
+    },
+    [selectedClip, putClip],
+  );
   const copyChapters = useCallback(() => {
     navigator.clipboard.writeText(chapterList(edit.chapters ?? [], duration)).then(
       () => setMessage(`Copied ${chapters.length} chapter${chapters.length === 1 ? '' : 's'}.`),
@@ -1359,6 +1382,12 @@ export function App() {
         addZoom();
         return;
       }
+      const clipKeys = new Map([
+        ['x', selectUnder],
+        ['[', () => trimSelected('left')],
+        [']', () => trimSelected('right')],
+      ]);
+      if (runClipKey(clipKeys, event, key)) return;
       if (key === 'm') {
         if (event.repeat || event.shiftKey) return;
         event.preventDefault();
@@ -1404,6 +1433,8 @@ export function App() {
     markingMouse,
     addZoom,
     markChapter,
+    selectUnder,
+    trimSelected,
   ]);
   const importFiles = async (files: FileList) => {
     setBusy(true);
@@ -2229,6 +2260,8 @@ export function App() {
           ['V / C', 'Selection tool / Razor tool (hover to preview the cut frame, click to cut)'],
           [MAC ? '⌘ K' : 'Alt K', 'Cut every unlocked track at the playhead'],
           ['B', 'Create zoom at playhead (4 seconds)'],
+          ['X', 'Select the clip under the playhead (the selected track, else the topmost video)'],
+          ['[ / ]', "Trim the selected clip's start / end to the playhead · no ripple"],
           ['M', 'Mark a chapter at the playhead · Delete removes the selected one'],
           ['- / =', 'Zoom the timeline out / in · changes the display only, never a clip'],
           ['Delete', 'Remove selected clip or zoom · only from the timeline'],

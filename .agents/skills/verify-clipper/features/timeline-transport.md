@@ -13,6 +13,10 @@ Splice video and speech, seek synchronized media, and shuttle with keyboard cont
   first and last frame.
 - Play/pause via transport and Space; J rewind, K pause, L play, repeated J/L for faster speeds.
 - Audio mute, decoded waveform progress, and silent reverse playback.
+- X selects the clip under the playhead (a selected track's first, else the topmost video; nothing
+  over a gap). `[` and `]` trim the selected clip's start or end to the playhead as one undo step,
+  with no ripple; they do nothing outside the clip, and a locked lane refuses. No modifiers, not in
+  text fields. `all` runs `tests/clip-keys.spec.ts`. Up and Down have no editor binding.
 - Chapters: M marks one at the playhead (not in a text field), shown as a flag on the ruler. A flag
   click seeks to it and selects it; Delete removes it; the Inspector edits its title; Copy chapters
   copies `mm:ss Title` lines, with `00:00 Start` first when none sits at frame 0. Each add, rename

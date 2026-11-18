@@ -324,6 +324,39 @@ export function trimClip(
   };
 }
 
+/**
+ * The clip X selects at `frame`: one on a selected track if any lies under the playhead, else the
+ * topmost video clip there. Undefined over a gap, and when only audio sits under the playhead.
+ */
+export function clipAt(
+  clips: Clip[],
+  tracks: TrackDef[],
+  selectedTracks: Track[],
+  frame: number,
+): Clip | undefined {
+  const live = clips.filter((clip) => covers(clip, frame));
+  const onTrack = (id: Track) => live.find((clip) => clip.track === id);
+  const chosen = tracks.find((t) => selectedTracks.includes(t.id) && onTrack(t.id));
+  if (chosen) return onTrack(chosen.id);
+  // Visual tracks paint back to front, so the last one with a clip is on top.
+  return paintOrder(tracks)
+    .map((t) => onTrack(t.id))
+    .reverse()
+    .find(Boolean);
+}
+
+/**
+ * The clip with its start (`[`) or end (`]`) moved to `frame`: the clip then begins at the
+ * playhead, or ends just before it, as a split there would. Undefined unless `frame` is inside the
+ * clip, so a playhead outside it, or on its first frame, changes nothing. An inward trim cannot
+ * reach the source or timeline limits, so none is passed.
+ */
+export function trimTo(clip: Clip, edge: 'left' | 'right', frame: number): Clip | undefined {
+  if (frame <= clip.start || frame >= clip.start + clip.duration) return undefined;
+  const from = edge === 'left' ? clip.start : clip.start + clip.duration;
+  return trimClip(clip, edge, frame - from, { start: 0, end: MAX_FRAMES });
+}
+
 /** Round gaps, in seconds, a ruler mark may sit apart. */
 const RULER_STEPS = [
   1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 14400, 43200, 86400,
