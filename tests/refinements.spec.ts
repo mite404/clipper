@@ -469,6 +469,37 @@ test('a still extends its left edge to a neighbour or frame 0, and the extension
   );
 });
 
+test('pressing or selecting a clip, a trim grip or a zoom block never changes its size', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await page.getByRole('button', { name: 'Add zoom at playhead' }).first().click();
+  const items = {
+    'screen clip': page.getByTestId('track-screen').locator('.timeline-clip').first(),
+    'camera clip': page.getByTestId('track-camera').locator('.timeline-clip').first(),
+    'voice clip': page.getByTestId('track-voice').locator('.timeline-clip').first(),
+    'music clip': page.getByTestId('track-music').locator('.timeline-clip').first(),
+    'zoom block': page.getByRole('button', { name: 'Select zoom', exact: true }),
+  };
+  for (const [name, item] of Object.entries(items)) {
+    const idle = (await item.boundingBox())!;
+    const center = { x: idle.x + idle.width / 2, y: idle.y + idle.height / 2 };
+    await page.mouse.move(center.x, center.y);
+    await page.mouse.down();
+    expect(await item.boundingBox(), `${name} while pressed`).toEqual(idle);
+    await page.mouse.up();
+    expect(await item.boundingBox(), `${name} after selecting`).toEqual(idle);
+    if (!name.endsWith('clip')) continue;
+    // A held trim grip presses the whole clip, since :active reaches its ancestors.
+    const grip = (await item.getByRole('slider', { name: 'Trim left edge' }).boundingBox())!;
+    await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+    await page.mouse.down();
+    expect(await item.boundingBox(), `${name} while its grip is held`).toEqual(idle);
+    await page.mouse.up();
+  }
+});
+
 test('ends mouse marking when its zoom is removed, and does not arm the next zoom', async ({
   page,
 }) => {

@@ -1127,7 +1127,7 @@ p {
 }
 .zoom-block.selected {
   border-color: #d0b5f1;
-  box-shadow: 0 0 0 1px #d0b5f133;
+  filter: brightness(1.4);
 }
 .timeline-clip {
   position: absolute;
@@ -1142,10 +1142,18 @@ p {
   text-align: left;
   overflow: hidden;
 }
+/* Selection is a colour step, never a size change: the border keeps its 1px and nothing paints
+   outside the box. Hover brightens by a smaller step, and by a larger one on a selected item. */
 .timeline-clip.selected {
   border: 1px solid #d3d7ed;
-  box-shadow: 0 0 0 1px #b8c4eb44;
+  filter: brightness(1.4);
   z-index: 1;
+}
+/* A press never scales a timeline item. :active also reaches the grips inside a clip, so without
+   this a trim drag shrinks the whole clip. */
+.timeline-clip:active:not(:disabled),
+.zoom-block:active:not(:disabled) {
+  transform: none;
 }
 .clip-title {
   position: relative;
@@ -1586,6 +1594,9 @@ p {
   }
   .timeline-clip:hover {
     filter: brightness(1.12);
+  }
+  .timeline-clip.selected:hover {
+    filter: brightness(1.52);
   }
   .secondary-button:hover {
     background: #3a3543;
