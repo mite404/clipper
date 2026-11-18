@@ -625,7 +625,7 @@ export function Timeline({
             .map((originalClip) => {
               const asset = assets.find((a) => a.id === originalClip.assetId);
               // A still has no source length to run out of; asset.duration is in frames.
-              const bounds = trimBounds(clips, originalClip, asset?.duration); // → TrimBounds
+              const bounds = trimBounds(originalClip, asset?.duration); // → TrimBounds
               const clip =
                 drag?.clipId === originalClip.id
                   ? trimClip(originalClip, drag.edge, drag.delta, bounds)

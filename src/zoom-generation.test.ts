@@ -129,21 +129,20 @@ it('resolves a shot on a second screen track exactly as on V1', () => {
   );
 });
 
-it('moves a zoom within its free gap, keeping its duration and never jumping a neighbour', () => {
+it('moves a zoom over its neighbours, keeping its duration and overwriting what it lands on', () => {
   const a: Zoom = { id: 'a', start: 0, duration: 30, scale: 2, x: 50, y: 50 };
   const b: Zoom = { ...a, id: 'b', start: 100 };
   const c: Zoom = { ...a, id: 'c', start: 200 };
   const zooms = [a, b, c];
-  const startOf = (moved: Zoom[], id: string) => moved.find((z) => z.id === id)!.start;
   const move = (id: string, start: number) => moveZoom(zooms, id, start, 300);
   expect(move('b', 150)).toEqual([a, { ...b, start: 150 }, c]);
-  expect(startOf(move('b', 150.6), 'b')).toBe(151);
-  // Between two neighbours, a request far past the next one stops at the near neighbour's edge.
-  expect(startOf(move('b', 400), 'b')).toBe(170);
-  expect(startOf(move('b', -50), 'b')).toBe(30);
-  // The sequence bounds hold at both ends.
-  expect(startOf(move('c', 999), 'c')).toBe(270);
-  expect(startOf(move('a', -5), 'a')).toBe(0);
+  expect(move('b', 150.6)[1].start).toBe(151);
+  // Over a neighbour's head it trims it; a remnant shorter than a zoom's minimum goes.
+  expect(move('b', 190)).toEqual([a, { ...b, start: 190 }, { ...c, start: 220, duration: 10 }]);
+  expect(move('b', 205)).toEqual([a, { ...b, start: 205 }]);
+  // Covering a neighbour removes it; the sequence bounds still hold at both ends.
+  expect(move('b', -50)).toEqual([{ ...b, start: 0 }, c]);
+  expect(move('b', 999)).toEqual([a, { ...b, start: 270 }, c]);
   expect(move('missing', 10)).toBe(zooms);
   // A zoom ending past a sequence that shrank under it stays put on a move right, not pulled left.
   const late = [{ ...a, id: 'late', start: 300, duration: 120 }];

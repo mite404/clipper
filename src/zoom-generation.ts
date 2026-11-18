@@ -1,7 +1,14 @@
 import type { Asset } from './media';
 import { screenTracks } from './cursor-render';
 import type { AnchoredZoom, ZoomAnchor } from './project';
-import { ZOOM_LIMITS, zoomsOverlap, type Clip, type TrackDef, type Zoom } from './timeline-model';
+import {
+  ZOOM_LIMITS,
+  overwrite,
+  zoomsOverlap,
+  type Clip,
+  type TrackDef,
+  type Zoom,
+} from './timeline-model';
 import { coverRect, cropPosition, maskRect, type Layout } from './stage';
 
 function focus(source: ZoomAnchor, asset: Asset, layout: Layout) {
@@ -80,24 +87,15 @@ export function resolveZooms(
 }
 
 /**
- * Move one zoom to a timeline frame, keeping its duration. It stays in the free gap it sits in,
- * so it stops at a neighbour's edge or the sequence end and never overlaps or jumps a zoom.
+ * Move one zoom to a timeline frame, keeping its duration and overwriting the zooms it lands on.
+ * It stops at frame 0 and the sequence end.
  * @param total the sequence length in frames
  */
 export function moveZoom(zooms: Zoom[], id: string, start: number, total: number): Zoom[] {
   const zoom = zooms.find((z) => z.id === id);
   if (!zoom) return zooms;
-  const end = zoom.start + zoom.duration;
-  const others = zooms.filter((z) => z.id !== id);
-  const low = Math.max(
-    0,
-    ...others.flatMap((z) => (z.start < zoom.start ? [z.start + z.duration] : [])),
-  );
   // A zoom the sequence already ends inside keeps its end as the bound, so no move pulls it left.
-  const high = Math.min(
-    Math.max(total, end),
-    ...others.flatMap((z) => (z.start >= end ? [z.start] : [])),
-  );
-  const next = Math.max(low, Math.min(high - zoom.duration, Math.round(start))); // → frame
-  return zooms.map((z) => (z.id === id ? { ...z, start: next } : z));
+  const high = Math.max(total, zoom.start + zoom.duration) - zoom.duration; // → latest start
+  const next = Math.max(0, Math.min(high, Math.round(start))); // → frame
+  return overwrite(zooms, { ...zoom, start: next }, () => true, ZOOM_LIMITS.minFrames);
 }

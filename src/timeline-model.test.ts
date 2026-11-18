@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   FPS,
+  clipPiece,
   covers,
   createTrack,
   paintOrder,
@@ -9,7 +10,7 @@ import {
   insertClip,
   lockedChange,
   moveTrack,
-  placeClip,
+  overwrite,
   rulerMarks,
   snapFrame,
   splitWhere,
@@ -261,88 +262,105 @@ describe('editing a timeline in frames', () => {
     expect(trimClip(clip, 'right', 20, bounds)).toEqual({ ...clip, duration: 160 });
   });
 
-  it('limits edges by neighbours, the source, frame 0 and the 24-hour cap', () => {
-    const before: Clip = { ...clip, id: 'before', start: 0, duration: 20, offset: 0 };
-    const after: Clip = { ...clip, id: 'after', start: 200, duration: 30, offset: 0 };
-    const other: Clip = { ...clip, id: 'other', track: 'camera', start: 0, duration: 400 };
-    const lane = [before, clip, after, other];
+  it('limits edges by the source, frame 0 and the 24-hour cap, never by a neighbour', () => {
     // Source 60..210 sits at timeline 30..180 from a 300-frame source: head at -30, tail at 270.
-    expect(trimBounds(lane, clip, 300)).toEqual({ start: 20, end: 200 });
-    expect(trimBounds([clip, other], clip, 300)).toEqual({ start: 0, end: 270 });
-    // A short source ends before the next neighbour; a long one is capped by it.
-    expect(trimBounds(lane, clip, 215)).toEqual({ start: 20, end: 185 });
+    expect(trimBounds(clip, 300)).toEqual({ start: 0, end: 270 });
+    expect(trimBounds(clip, 215)).toEqual({ start: 0, end: 185 });
     // The source head ends an outward left trim before frame 0 does.
     const late: Clip = { ...clip, start: 100, offset: 10 };
-    expect(trimBounds([late], late, 300)).toEqual({ start: 90, end: 390 });
-    // A still has no source limit, only its neighbours and the 24-hour cap.
-    expect(trimBounds([clip], clip, undefined).end).toBe(24 * 60 * 60 * 30);
-    expect(trimBounds(lane, clip, undefined).end).toBe(200);
-  });
-
-  it('finds the nearest neighbour by position, not by array order', () => {
-    const near: Clip = { ...clip, id: 'near', start: 190, duration: 10, offset: 0 };
-    const far: Clip = { ...clip, id: 'far', start: 400, duration: 10, offset: 0 };
-    const back: Clip = { ...clip, id: 'back', start: 0, duration: 10, offset: 0 };
-    const mid: Clip = { ...clip, id: 'mid', start: 12, duration: 8, offset: 0 };
-    const shuffled = [far, mid, clip, near, back];
-    expect(trimBounds(shuffled, clip, 1000)).toEqual({ start: 20, end: 190 });
-    expect(trimBounds([...shuffled].reverse(), clip, 1000)).toEqual({ start: 20, end: 190 });
-  });
-
-  it('lets a still extend its left edge, which has no source head to stop it', () => {
-    const still: Clip = { ...clip, id: 'still', start: 300, duration: 30, offset: 0 };
-    const before: Clip = { ...clip, id: 'before', start: 100, duration: 80, offset: 0 };
-    // An empty lane stops it only at frame 0; a neighbour stops it at that neighbour's end.
-    expect(trimBounds([still], still, undefined).start).toBe(0);
-    expect(trimBounds([before, still], still, undefined).start).toBe(180);
-    const grown = trimClip(still, 'left', -500, trimBounds([before, still], still, undefined));
-    expect(grown).toEqual({ ...still, start: 180, duration: 150 });
-    expect(grown.offset).toBe(0);
+    expect(trimBounds(late, 300)).toEqual({ start: 90, end: 390 });
+    // A still has no source limit, only frame 0 and the 24-hour cap.
+    const still: Clip = { ...clip, start: 300, duration: 30, offset: 0 };
+    expect(trimBounds(still, undefined)).toEqual({ start: 0, end: 24 * 60 * 60 * 30 });
+    const grown = trimClip(still, 'left', -500, trimBounds(still, undefined));
+    expect(grown).toEqual({ ...still, start: 0, duration: 330 });
     // A video with the same start and offset 0 keeps its source head at the clip start.
-    expect(trimBounds([still], still, 1000).start).toBe(300);
+    expect(trimBounds(still, 1000).start).toBe(300);
     // Shortening raises the offset and extending lowers it again, never below 0.
     const shorter = trimClip(grown, 'left', 100, open);
     expect(shorter.offset).toBe(100);
-    expect(trimClip(shorter, 'left', -500, trimBounds([still], still, undefined)).offset).toBe(0);
+    expect(trimClip(shorter, 'left', -500, trimBounds(shorter, undefined)).offset).toBe(0);
   });
 
-  it('stops each edge at every limit, and touching clips cannot extend into each other', () => {
-    const left: Clip = {
-      id: 'l',
-      assetId: 'a',
-      track: 'screen',
+  it('overwrites what a placed clip lands on, splitting, trimming or removing it', () => {
+    const at = (id: string, start: number, duration: number, offset = 0): Clip => ({
+      ...clip,
+      id,
+      start,
+      duration,
+      offset,
+    });
+    const [a, b, c] = [at('a', 0, 100), at('b', 100, 100, 10), at('c', 200, 100, 40)];
+    const d: Clip = { ...at('d', 0, 300), track: 'camera' };
+    const lane = [a, b, c, d];
+    const put = (placed: Clip, items = lane) =>
+      overwrite(items, placed, (x) => x.track === placed.track, 1, clipPiece);
+    // Across two edges: the left one is cut short, the covered one goes, the right one loses its
+    // head along with that much source. Another track's clip is never touched.
+    const wide = at('p', 80, 140);
+    expect(put(wide)).toEqual([
+      { ...a, duration: 80 },
+      { ...c, start: 220, duration: 80, offset: 60 },
+      d,
+      wide,
+    ]);
+    // Touching edges are left alone.
+    expect(put(at('p', 100, 100))).toEqual([a, c, d, at('p', 100, 100)]);
+    // Inside one clip: two pieces, the right one a unique ID that remembers its origin.
+    const inside = at('p', 130, 20);
+    const right = { ...b, id: 'b-150', originId: 'b', start: 150, duration: 50, offset: 60 };
+    expect(put(inside)).toEqual([a, { ...b, duration: 30 }, right, c, d, inside]);
+    expect(put(inside, [...lane, at('b-150', 900, 10)])[2].id).toBe('b-150.2');
+    // A clip already in the list moves: its old copy goes, its place in the list stays.
+    expect(put({ ...a, start: 150 })).toEqual([
+      { ...a, start: 150 },
+      { ...b, duration: 50 },
+      { ...c, start: 250, duration: 50, offset: 90 },
+      d,
+    ]);
+    // Onto another track, it overwrites that track's clips and leaves its old one free.
+    expect(put({ ...d, track: 'screen', duration: 50 })).toEqual([
+      { ...a, start: 50, duration: 50, offset: 50 },
+      b,
+      c,
+      { ...d, track: 'screen', duration: 50 },
+    ]);
+    // An extended edge overwrites the neighbour it now reaches.
+    const left = at('l', 0, 90);
+    const reached = trimClip(left, 'right', 25, trimBounds(left, 180));
+    expect(put(reached, [left, at('r', 90, 90, 90)])).toEqual([reached, at('r', 115, 65, 115)]);
+  });
+
+  it('drops a remnant shorter than the minimum and keeps the rest of an item as it was', () => {
+    const z = {
+      id: 'z',
       start: 0,
-      duration: 90,
-      offset: 0,
+      duration: 100,
+      scale: 2.5,
+      x: 30,
+      y: 70,
+      follow: 'smooth' as const,
     };
-    const right: Clip = {
-      id: 'r',
-      assetId: 'a',
-      track: 'screen',
-      start: 90,
-      duration: 90,
-      offset: 90,
-    };
-    const touching = [left, right];
-    // A zero gap leaves no room outward, and the edge between them still shortens inward.
-    expect(trimClip(left, 'right', 25, trimBounds(touching, left, 180))).toEqual(left);
-    expect(trimClip(right, 'left', -25, trimBounds(touching, right, 180))).toEqual(right);
-    expect(trimClip(left, 'right', -25, trimBounds(touching, left, 180)).duration).toBe(65);
-    expect(trimClip(right, 'left', 25, trimBounds(touching, right, 180)).start).toBe(115);
-    // Frame 0 and the source head are the same limit here: no left extension past them.
-    expect(trimClip(left, 'left', -25, trimBounds(touching, left, 180))).toEqual(left);
-    // The source tail and the 24-hour cap stop the right edge.
-    expect(trimClip(right, 'right', 25, trimBounds(touching, right, 180))).toEqual(right);
-    const day = 24 * 60 * 60 * 30;
-    const tail: Clip = { ...left, start: day - 40, duration: 30 };
-    expect(trimClip(tail, 'right', 25, trimBounds([tail], tail, undefined)).duration).toBe(40);
-    // A gap of ten frames lets an edge move ten and no more.
-    const gapped: Clip = { ...right, start: 100, offset: 100 };
-    expect(trimClip(left, 'right', 25, trimBounds([left, gapped], left, 180)).duration).toBe(100);
-    expect(trimClip(gapped, 'left', -25, trimBounds([left, gapped], gapped, 180)).start).toBe(90);
-    // A source head short of the neighbour stops a left edge first.
-    const headed: Clip = { ...right, start: 130, offset: 20 };
-    expect(trimClip(headed, 'left', -50, trimBounds([left, headed], headed, 180)).start).toBe(110);
+    const small = { ...z, id: 's', start: 3, duration: 30, scale: 2 };
+    const lane = () => true;
+    expect(overwrite([z], { ...small, start: 3, duration: 97 }, lane, 6)).toEqual([
+      { ...small, start: 3, duration: 97 },
+    ]);
+    expect(overwrite([z], { ...small, start: 3, duration: 97 }, lane, 1)).toEqual([
+      { ...z, duration: 3 },
+      { ...small, start: 3, duration: 97 },
+    ]);
+    // A remnant exactly the minimum stays.
+    expect(overwrite([z], { ...small, start: 6, duration: 94 }, lane, 6)[0]).toEqual({
+      ...z,
+      duration: 6,
+    });
+    // A split keeps scale, focus and follow mode on both pieces.
+    expect(overwrite([z], { ...small, start: 40 }, lane, 6)).toEqual([
+      { ...z, duration: 40 },
+      { ...z, id: 'z-70', start: 70, duration: 30 },
+      { ...small, start: 40 },
+    ]);
   });
 
   it('centers the marked mouse at full zoom and returns without a pan jump', () => {
@@ -405,24 +423,6 @@ describe('the track registry', () => {
     ).toEqual(['V1', 'V2', 'V3', 'A1', 'A2']);
   });
 
-  it('places a clip only where its track is free, allowing exact adjacency', () => {
-    const lane = [{ ...clip, track: 'camera', start: 30, duration: 60 }];
-    const at = (start: number, duration = 30) => ({
-      ...clip,
-      id: 'new',
-      track: 'camera',
-      start,
-      duration,
-    });
-    expect(placeClip(lane, at(0))).toEqual([...lane, at(0)]);
-    expect(placeClip(lane, at(90))).toEqual([...lane, at(90)]);
-    expect(placeClip(lane, at(1))).toBeNull();
-    expect(placeClip(lane, at(89))).toBeNull();
-    expect(placeClip(lane, at(0, 200))).toBeNull();
-    // Another track's clip at the same time never collides.
-    expect(placeClip(lane, { ...at(40), track: 'screen' })).toHaveLength(2);
-  });
-
   it('creates a background beneath, a masked screen in front, and audio last, with fresh IDs', () => {
     const background = createTrack(DEFAULT_TRACKS, 'background');
     expect(background.tracks.map((t) => t.id)).toEqual([
@@ -473,9 +473,12 @@ describe('the track registry', () => {
       tracks: DEFAULT_TRACKS,
     });
     expect(place(video, { track: 'camera' }, 89.6)).toMatchObject({ clip: { start: 90 } });
-    expect(place(video, { track: 'camera' }, 89)).toEqual({
-      refused: 'Talking head already has a clip there.',
-      reason: 'occupied',
+    // A source dropped over a clip overwrites the part it covers.
+    expect(place(video, { track: 'camera' }, 89)).toMatchObject({
+      clips: [
+        { ...lane[0], duration: 89 },
+        { track: 'camera', start: 89, duration: 60 },
+      ],
     });
     expect(place(video, { track: 'voice' }, 0)).toEqual({
       refused: 'Voiceover takes audio media.',
@@ -489,7 +492,10 @@ describe('the track registry', () => {
       refused: 'That track no longer exists.',
       reason: 'missing',
     });
-    expect(place(video, { track: 'camera' }, -40)).toMatchObject({ refused: expect.any(String) });
+    // Before frame 0 it lands at 0, and the clip it overwrites keeps its later source frames.
+    expect(place(video, { track: 'camera' }, -40)).toMatchObject({
+      clips: [{ ...lane[0], start: 60, duration: 30, offset: 120 }, { start: 0 }],
+    });
     // Ending exactly at 24 hours fits; one frame later is refused, even on a new track.
     const day = 24 * 3600 * 30;
     expect(place(video, { track: 'camera' }, day - 60)).toMatchObject({

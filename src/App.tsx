@@ -63,6 +63,8 @@ import {
   insertClip,
   lockedChange,
   moveTrack,
+  clipPiece,
+  overwrite,
   placeMedia,
   splitClip,
   splitWhere,
@@ -1129,6 +1131,17 @@ export function App() {
     },
     [assets, edit, change],
   );
+  // A trimmed or moved clip, released: it overwrites what it lands on as one undo step.
+  const putClip = useCallback(
+    (clip: Clip) => {
+      setSpeed(0);
+      change({
+        ...edit,
+        clips: overwrite(edit.clips, clip, (c) => c.track === clip.track, 1, clipPiece),
+      });
+    },
+    [edit, change],
+  );
   const removeSelected = useCallback(() => {
     if (selectedZoom) change({ ...edit, zooms: edit.zooms.filter((z) => z.id !== selected) });
     else if (selectedClip) change({ ...edit, clips: edit.clips.filter((c) => c.id !== selected) });
@@ -1999,10 +2012,7 @@ export function App() {
             }}
             onSeek={seek}
             zoomRef={timelineZoom}
-            onTrim={(clip) => {
-              setSpeed(0);
-              change({ ...edit, clips: edit.clips.map((c) => (c.id === clip.id ? clip : c)) });
-            }}
+            onTrim={putClip}
             onRazor={tool === 'razor' ? razor : undefined}
             onRazorHover={tool === 'razor' ? razorHover : undefined}
             onMoveZoom={(id, start) =>

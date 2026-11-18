@@ -145,25 +145,63 @@ export function zoomAt(zooms: Zoom[], frame: number): number {
 export type TrimBounds = { start: number; end: number };
 
 /**
- * How far a clip's edges can move: no further than the nearest clip edge on its own track, the
- * head or tail of its source, frame 0 and the 24-hour cap. A still has no `sourceFrames`.
+ * How far a clip's edges can move: the head or tail of its source, frame 0 and the 24-hour cap. A
+ * still has no `sourceFrames`. Neighbours do not stop an edge; the trim overwrites them on release.
  */
-export function trimBounds(clips: Clip[], clip: Clip, sourceFrames?: number): TrimBounds {
-  const end = clip.start + clip.duration;
-  const lane = clips.filter((c) => c.id !== clip.id && c.track === clip.track);
+export function trimBounds(clip: Clip, sourceFrames?: number): TrimBounds {
   // A still has no source time to run out of, so only a clip with a source length has a head.
   const head = sourceFrames === undefined ? 0 : clip.start - clip.offset; // → frame the source begins
   return {
-    start: Math.max(
-      0,
-      head,
-      ...lane.map((c) => c.start + c.duration).filter((edge) => edge <= clip.start),
-    ),
-    end: Math.min(
-      MAX_FRAMES,
-      head + (sourceFrames ?? Infinity),
-      ...lane.map((c) => c.start).filter((edge) => edge >= end),
-    ),
+    start: Math.max(0, head),
+    end: Math.min(MAX_FRAMES, head + (sourceFrames ?? Infinity)),
+  };
+}
+
+/**
+ * Put `placed` into `items` and overwrite what it lands on among the items `onLane` accepts: an
+ * item it covers goes, one it overlaps loses that part, and one it lands inside splits in two, the
+ * right piece under a fresh unique ID. Touching edges are untouched, and a remnant shorter than
+ * `minFrames` goes. An item with `placed`'s ID is replaced where it sits; otherwise `placed` is
+ * appended. `piece` finishes each remnant from the item it came from, like a clip's source offset.
+ */
+export function overwrite<T extends { id: string; start: number; duration: number }>(
+  items: T[],
+  placed: T,
+  onLane: (item: T) => boolean,
+  minFrames: number,
+  piece: (remnant: T, from: T) => T = (remnant) => remnant,
+): T[] {
+  const end = placed.start + placed.duration;
+  const taken = new Set(items.map((item) => item.id));
+  // A split's right piece takes `${id}-${frame}`, or the next free `.n` after it.
+  const fresh = (id: string) => {
+    let next = `${id}-${end}`;
+    for (let n = 2; taken.has(next); n++) next = `${id}-${end}.${n}`;
+    taken.add(next);
+    return next;
+  };
+  const cut = (item: T): T[] => {
+    const itemEnd = item.start + item.duration;
+    if (!onLane(item) || item.start >= end || itemEnd <= placed.start) return [item];
+    const left = { ...item, duration: placed.start - item.start }; // → T before `placed`
+    const right = { ...item, start: end, duration: itemEnd - end }; // → T after `placed`
+    const kept = [left, right].filter((p) => p.duration >= minFrames); // → T[] long enough
+    if (kept.length === 2) right.id = fresh(item.id);
+    return kept.map((p) => piece(p, item));
+  };
+  const next = items.flatMap((item) => (item.id === placed.id ? [placed] : cut(item)));
+  return items.some((item) => item.id === placed.id) ? next : [...next, placed];
+}
+
+/**
+ * Finish a clip remnant left by `overwrite`: it keeps the source frames it showed, and a split's
+ * right piece remembers the clip it came from.
+ */
+export function clipPiece(piece: Clip, from: Clip): Clip {
+  return {
+    ...piece,
+    offset: from.offset + piece.start - from.start,
+    ...(piece.id !== from.id && { originId: from.originId ?? from.id }),
   };
 }
 
@@ -253,17 +291,6 @@ export function trackNumber(tracks: TrackDef[], id: Track): string {
   return `${track.kind === 'visual' ? 'V' : 'A'}${kin.indexOf(track) + 1}`;
 }
 
-/** Add a clip only where its track has no clip overlapping it; touching edges are allowed. */
-export function placeClip(clips: Clip[], clip: Clip): Clip[] | null {
-  const occupied = clips.some(
-    (c) =>
-      c.track === clip.track &&
-      c.start < clip.start + clip.duration &&
-      clip.start < c.start + c.duration,
-  );
-  return occupied ? null : [...clips, clip];
-}
-
 /**
  * A new unlocked track with a fresh random ID: a background goes beneath every visual track, a
  * masked screen in front of them, and audio after the last audio track.
@@ -319,9 +346,9 @@ export function paintOrder(
 export type DropTarget = { track: Track } | { create: NewTrack };
 
 /**
- * Place a whole source at a frame without moving anything: an existing track must take the
- * source's kind and be free there; a creation target makes a track of the source's kind, so audio
- * always makes audio and video never makes audio. A refusal names the track and the reason.
+ * Place a whole source at a frame, overwriting what it lands on: an existing track must take the
+ * source's kind; a creation target makes a track of the source's kind, so audio always makes audio
+ * and video never makes audio. A refusal names the track and the reason.
  */
 export function placeMedia(
   tracks: TrackDef[],
@@ -357,7 +384,6 @@ export function placeMedia(
   // Save refuses an edit past the cap, so placement never reports success for one.
   if (clip.start + clip.duration > MAX_FRAMES)
     return { refused: 'That would pass the 24-hour timeline.', reason: 'occupied' };
-  const placed = placeClip(clips, clip);
-  if (!placed) return { refused: `${track.label} already has a clip there.`, reason: 'occupied' };
+  const placed = overwrite(clips, clip, (c) => c.track === clip.track, 1, clipPiece);
   return { tracks: created.tracks, clips: placed, clip };
 }
