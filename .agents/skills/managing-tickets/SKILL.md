@@ -57,14 +57,10 @@ repository root. This skill owns the workflow policy, not ticket status or curre
 
 ## Review the exact candidate
 
-- Require an actual independent exact-diff review for implementation tickets and fix accepted
-  findings before delivery. Newly created review threads follow the general new-worker rule above,
-  superseding older Sol-review wording in ticket briefs. Retain completed verdicts; do not repeat an
-  accepted review solely for this model change or mutate a review thread's locked model.
-- Source and tooling tickets additionally require the existing Fable reviewer's pre-landing verdict
-  on the exact candidate or correction delta, one ticket at a time. Use Fable sparingly for review,
-  not implementation or coordination. Do not repeat the completed baseline review. Docs-only
-  delivery does not require Fable review.
+- Each implementation ticket gets one exact-diff review, by the code reviewer named in the master's
+  Owners table, using the `ce-code-review` skill (owner decision, 2026-11-18). Fix accepted findings
+  before delivery. Do not add a second reviewer or panel, and do not repeat a completed review.
+  Docs-only delivery needs no review.
 - A verdict applies only to its reviewed diff/tree. Preserve frozen candidates; qualify later deltas
   explicitly rather than silently extending an old verdict. A review PASS alone is not verification
   or delivered-main acceptance.
