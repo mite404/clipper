@@ -39,14 +39,14 @@ primary repository since 2026-11-16; the Amp-hosted scaffold is gone. See
 ## Two-lane staffing audit, 2026-11-17
 
 Audited against fetched `b44e7c9a71473e1be0bf1159e9130c4528429afe` and the preserved candidates,
-then reconciled after accepted `729b72d`. There are 149 canonical IDs: 69 delivered rows, nine
-owner-decision rows and 71 remaining queue entries. The 71 comprise 66 implementation/qualification
+then reconciled after accepted `aae6f84`. There are 149 canonical IDs: 70 delivered rows, nine
+owner-decision rows and 70 remaining queue entries. The 70 comprise 65 implementation/qualification
 candidates below, four conditional or parked entries and one umbrella. These are ticket counts, not
-a claim that 66 source changes are approved or immediately runnable.
+a claim that 65 source changes are approved or immediately runnable.
 
 The Sonnet queue has three candidates: REF-49 granted, REF-51 owner-gated and CLIP-45 held. The Opus
-queue has 63: 21 ready to scope/assign and 42 dependency-, contract- or owner-gated. Across both
-lanes that is 22 ready or granted and 44 held. Ready means recorded technical predecessors are
+queue has 62: 20 ready to scope/assign and 42 dependency-, contract- or owner-gated. Across both
+lanes that is 21 ready or granted and 44 held. Ready means recorded technical predecessors are
 satisfied, not permission to edit shared paths or skip acceptance scoping. A held ticket can have an
 independently useful subpart, but its entire remaining scope is not ready. Preserve the delivery
 order above numeric order and optional cleanup. Reassess a classification when a bounded contract
@@ -90,8 +90,7 @@ their old Medium/test-only labels do not make either whole ticket a small mechan
 | [REF-36](#ref-36)                                                                                       | Dependency-held                     | Recovery/mute qualification after still-media integration; retain existing focused corrupt-open evidence and avoid duplicate work.               |
 | [REF-37](#ref-37)                                                                                       | Evidence/owner-held                 | Existing qualification remains open; no renewed broad stall investigation without the recorded standalone recurrence or new Amp-view request.    |
 | [CLIP-9b](#clip-9b)                                                                                     | Contract-held                       | Creation is delivered; full ramps need the referenced curve technology/API and coordinated gesture/numeric consumers.                            |
-| [REF-47](#ref-47)                                                                                       | Granted                             | Cursor overlay for a clip on a second screen-role track; cursor telemetry ownership first.                                                       |
-| [REF-50](#ref-50)                                                                                       | Ready to scope                      | Zoom pans stay inside the source; one camera clamp for preview, Copy frame and export.                                                           |
+| [REF-50](#ref-50)                                                                                       | Granted                             | Zoom pans stay inside the source; one camera clamp for preview, Copy frame and export.                                                           |
 | [REF-48](#ref-48)                                                                                       | Dependency-held                     | Drag a zoom region; after REF-50 and Sonnet's Timeline work (REF-49, REF-51).                                                                    |
 | [CLIP-2b](#clip-2b)                                                                                     | Dependency/contract-held            | CLIP-2c accepted registry, then partial-cut membership on CLIP-2e's successor; explicit association semantics first.                             |
 | [CLIP-21b](#clip-21b), [CLIP-19b](#clip-19b)                                                            | Dependency-held                     | Image/parser and accepted PiP/fit geometry successors before timing/scale migration.                                                             |
@@ -126,10 +125,10 @@ coordinator-serialized; no review gate changes.
 
 ### Active two-worker grants
 
-| Lane            | Worker                                                                           | Current grant                                                                      |
-| --------------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Opus 5.5 medium | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | CLIP-2c delivered at `1de89b5`, exact-SHA CI44185392612 green; now granted REF-47. |
-| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | REF-46 delivered at `729b72d`, exact-SHA CI44198295097 green; now granted REF-49.  |
+| Lane            | Worker                                                                           | Current grant                                                                     |
+| --------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| Opus 5.5 medium | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | REF-47 delivered at `aae6f84`, exact-SHA CI44217820183 green; now granted REF-50. |
+| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | REF-46 delivered at `729b72d`, exact-SHA CI44198295097 green; now granted REF-49. |
 
 CLIP-20b is delivered at `6156fb4`, a cherry-pick of the reviewed tree onto `f6b77aa` with all
 eleven source blobs unchanged. Coordinator gates on that exact tree passed 136 units, strict
@@ -272,15 +271,20 @@ the cursor-follow bound twice in five repeats, as unchanged `0ab5552` did in the
 main, not scheduled: a sub-200 ms "Play source" tooltip during very fast Tabbing, and duration
 changes within about a second undo as one step. The Sonnet lane has no active grant.
 
-Opus now holds REF-47. Since CLIP-2c, a clip on a second screen-role track (such as V3 "Screen 2 -
-Masked") gets zoom but no cursor overlay: `cursorFrame` only reads clips on track `screen`, and
-preview and export only draw it inside that track's mask. First decide and record cursor telemetry
-ownership: which covering screen-role clip's sidecar draws, in which mask, and what happens when two
-overlap in time. Reproduce on base with synthetic media, then make preview, Copy frame and export
-agree, with framing, zoom generation and the inspector's mouse target following the same rule.
-Granted paths are `src/cursor-render.ts`, the cursor blocks in `src/Composition.tsx` and
-`src/export.ts`, the screen-track filters in `src/framing.ts`, `src/zoom-generation.ts` and
-`src/App.tsx`, `src/project.ts` only if persistence must change, and their unit and focused specs.
+REF-47 is delivered at
+[aae6f84](https://github.com/mite404/clipper/commit/aae6f8443cc1810e40ab255428158f7bf9656d32) with
+[CI44217820183](https://github.com/mite404/clipper/actions/runs/44217820183). At each frame the
+covering clip on the frontmost painted screen-role track owns the cursor; only its sidecar draws,
+inside that track's mask, and on overlap the front track wins with no fallback. Preview, Copy frame
+and export take the owner from one `cursorFrame`, and framing follows each clip only over the frames
+it owns. Zoom generation and the project parser accept a source anchor on any screen-role clip
+through one `screenTracks` predicate and still reject camera anchors; shots keep their whole clip
+range. Single-screen-track edits are unchanged. v1 (`ec05fe4`) was blocked by the independent review
+because zoom generation trimmed source shots to owned frames and wrote the trim back, so covering or
+reordering screen tracks destroyed them; v2 keeps shots clip-based, adds round-trip tests and drops
+the `tracks` defaults. Both reviews returned LAND, including a UI journey through placement, Move,
+Undo and save/reopen. Known ceiling: a transparent still or a failed export decode on a front screen
+track still owns the frame. Opus now holds REF-50.
 
 The owner's recording in Space `M-034zScKmht0Y3aFONzRRhS` (2026-11-17) reports four items, split as
 follows. None was covered by a ready ticket; CLIP-9b's contract-held ramps do not include moving a
@@ -482,7 +486,7 @@ upload is authorized.
 | Lane                      | Thread                                                                           | Owns                                                                    |
 | ------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | Queue and delivery        | [T-136752bf](https://ampcode.com/threads/T-136752bf-6ed3-4930-b791-1cd134662797) | This file, acceptance and exclusive main push slot                      |
-| Non-simple implementation | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Opus medium; CLIP-2c delivered, REF-47 granted                          |
+| Non-simple implementation | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Opus medium; REF-47 delivered, REF-50 granted                           |
 | Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; REF-46 delivered, REF-49 granted                           |
 | Independent review        | [T-f987a229](https://ampcode.com/threads/T-f987a229-4e36-414e-8f45-105461c86dce) | Opus medium; independent exact-tree review gate                         |
 | Source and tooling review | [T-9f34d223](https://ampcode.com/threads/T-9f34d223-cd32-4c23-a11f-8bca3ae61271) | Opus 5.5 medium; took over from Fable T-2d1e888a at the owner's request |
@@ -948,8 +952,9 @@ images were hosted, see [Known limits](#known-limits)).
 | Split tools and locks        | CLIP-2e delivered at `a26c7e7` with green exact-SHA CI44050988058; reservation released                                                                 |
 | Track registry and drops     | CLIP-2c delivered at `1de89b5` with green exact-SHA CI44185392612; reservation released                                                                 |
 | Default layout fit           | REF-46 delivered at `729b72d` with green exact-SHA CI44198295097; reservation released                                                                  |
-| Second-screen cursor         | REF-47 granted to Opus T-0e774456: cursor-render, Composition/export cursor blocks, screen-track filters, focused specs                                 |
+| Second-screen cursor         | REF-47 delivered at `aae6f84` with green exact-SHA CI44217820183; reservation released                                                                  |
 | Clip edge extension          | REF-49 granted to Sonnet T-01a1e78d: trimClip, grip handlers and commitTrim, onTrim limits, one spec                                                    |
+| Zoom inside source           | REF-50 granted to Opus T-0e774456: stage.ts camera clamp, framing follow paths, unit and fixture specs                                                  |
 | Obsolete UI deletion         | UI-6 delivered at `f164235` with green exact-SHA CI44041254397; reservation released                                                                    |
 | UI-6 leftovers               | UI-6b delivered at `3ec157c` with green exact-SHA CI44047934496; reservation released                                                                   |
 | Unsaved and shortcut fixes   | REF-39/40/41 delivered at `46e9dc7` with green exact-SHA CI44102354477; reservation released                                                            |
@@ -1425,10 +1430,10 @@ original note for every row.
 | <a id="ref-44"></a>[REF-44](#ref-44)                 | Delete the selection only from the timeline                         | Small  | Delivered at [b9f4bc4](https://github.com/mite404/clipper/commit/b9f4bc4f94573a28c689f39212ff508b46598b9e); green exact-SHA [CI44134842288](https://github.com/mite404/clipper/actions/runs/44134842288) | Owner request; Delete/Backspace no-op when focus is outside the Main sequence panel                                 |
 | <a id="ref-45"></a>[REF-45](#ref-45)                 | Report Still duration only when it changes                          | Small  | Delivered at [5a34428](https://github.com/mite404/clipper/commit/5a3442841d08a143ccdf3575bcd49849f8b4692a); green exact-SHA [CI44146318878](https://github.com/mite404/clipper/actions/runs/44146318878) | Preview finding after REF-44; also reproduce a tooltip that outlives keyboard focus                                 |
 | <a id="ref-46"></a>[REF-46](#ref-46)                 | Fit every lane and the preview in the default layout                | Small  | Delivered at [729b72d](https://github.com/mite404/clipper/commit/729b72d5854e13cfbf4d7af845de99f95beb579b); green exact-SHA [CI44198295097](https://github.com/mite404/clipper/actions/runs/44198295097) | CLIP-2c review follow-up; dropped +72px kept as reference                                                           |
-| <a id="ref-47"></a>[REF-47](#ref-47)                 | Cursor overlay for a second screen-role track                       | Medium | Granted to Opus [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85)                                                                                                         | CLIP-2c follow-up; zoom already applies to every screen-role track                                                  |
+| <a id="ref-47"></a>[REF-47](#ref-47)                 | Cursor overlay for a second screen-role track                       | Medium | Delivered at [aae6f84](https://github.com/mite404/clipper/commit/aae6f8443cc1810e40ab255428158f7bf9656d32); green exact-SHA [CI44217820183](https://github.com/mite404/clipper/actions/runs/44217820183) | CLIP-2c follow-up; zoom already applies to every screen-role track                                                  |
 | <a id="ref-48"></a>[REF-48](#ref-48)                 | Drag a zoom region to reposition it                                 | Medium | Dependency-held: REF-50, then Sonnet's Timeline work                                                                                                                                                     | Owner recording; subpart of CLIP-9b regions                                                                         |
 | <a id="ref-49"></a>[REF-49](#ref-49)                 | Extend clip edges as well as shorten them                           | Small  | Granted to Sonnet [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7)                                                                                                       | Owner recording; `trimClip` never adds frames                                                                       |
-| <a id="ref-50"></a>[REF-50](#ref-50)                 | Keep a zoom inside its source mask                                  | Medium | Ready to scope after REF-47                                                                                                                                                                              | Owner recording; unclamped `cameraTransform`                                                                        |
+| <a id="ref-50"></a>[REF-50](#ref-50)                 | Keep a zoom inside its source mask                                  | Medium | Granted to Opus [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85)                                                                                                         | Owner recording; unclamped `cameraTransform`                                                                        |
 | <a id="ref-51"></a>[REF-51](#ref-51)                 | Razor hover shows the prospective cut frame                         | Small  | Owner-gated: real seek or hover-only preview                                                                                                                                                             | Owner recording; supersedes stationary playhead                                                                     |
 | <a id="ref-32"></a>[REF-32](#ref-32)                 | Correct source-preview playback error and busy lifecycle            | Medium | Delivered at [4b49623](https://github.com/mite404/clipper/commit/4b4962397e4ac237ab774b8d4a2f2a44280514b2); [green exact-SHA CI](https://github.com/mite404/clipper/actions/runs/43986804408)            | Reservation released; canonical previews promoted and verified                                                      |
 | <a id="ref-33"></a>[REF-33](#ref-33)                 | Qualify download URL lifetime outside Chromium                      | Medium | Blocked                                                                                                                                                                                                  | another supported WebCodecs browser                                                                                 |
