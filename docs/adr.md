@@ -353,7 +353,8 @@ from the "Decisions for the owner" table in `docs/master-tickets.md`. Commit lin
   model files ship with Clipper, pinned to one version, and the model name lives in one place.
 - Why: Audio must stay local (ADR-1), and the owner chose to try the smallest English model first.
   Serving the files with the app avoids a runtime download from a third-party host.
-- Commit: pending CLIP-32
+- Commit:
+  [f0cca49](https://github.com/mite404/clipper/commit/f0cca49a2fb4032448385aafbc71e5b23f01b1c4)
 
 ## ADR-32: No hosted share links, and voice-over is the only recording feature
 
