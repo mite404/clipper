@@ -3,6 +3,7 @@ import { openMedia, type Asset } from './media';
 import {
   DEFAULT_TRACKS,
   FPS,
+  GAIN_LIMITS,
   MAX_CHAPTER_TITLE,
   MAX_FRAMES,
   ZOOM_LIMITS,
@@ -119,6 +120,13 @@ function layoutOf(value: unknown): Layout {
     layout.corner = settings.corner as Corner;
   }
   return layout;
+}
+
+// Clip gain in dB, optional and written only when not 0, so files without it open and save unchanged.
+function clipGain(value: unknown, field: string): { gain?: number } {
+  if (value === undefined) return {};
+  const db = number(value, field, GAIN_LIMITS.min, GAIN_LIMITS.max);
+  return db === 0 ? {} : { gain: db };
 }
 
 // Optional, so files without chapters open unchanged. Titles are trimmed; the list is put in order.
@@ -288,6 +296,7 @@ export function parseProject(text: string): {
       duration,
       offset,
       ...(item.originId === undefined ? {} : { originId: string(item.originId, 'clip.originId') }),
+      ...clipGain(item.gain, `clips[${i}].gain`),
     };
   });
   unique(

@@ -34,6 +34,7 @@ import { moveZoom, resizeZoom } from './zoom-generation';
 import {
   FPS,
   MAX_FRAMES,
+  gainFactor,
   moveTrack,
   placeMedia,
   rulerMarks,
@@ -1033,6 +1034,7 @@ export function Timeline({
                       peaks={asset?.peaks ?? []}
                       offset={clip.offset}
                       duration={clip.duration}
+                      gain={gainFactor(clip.gain)}
                       progress={(frame - clip.start) / clip.duration}
                     />
                   ) : (

@@ -117,10 +117,10 @@ select feature specs or titles in `scripts/verify.mjs`. `all` discovers every sp
 root configuration's separate editor/4K projects. These specs run only under `all`: `controls`,
 `cursor`, `cursor-render`, `cursor-rotation`, `cursor-shapes`, `cursor-speeds`, `auto-zoom`,
 `framing`, `frame-image`, `icon-button`, `workspace-layout`, `cursor-inspector`, `zoom-creation`,
-`focused-controls`, `chapters`, `clip-keys`, `preview-quality` and `split-tools`. There are no
-narrower journeys for them on purpose; features/README.md lists what each named journey selects. All
-runs use one worker, no retries, and fail on skipped, flaky, or zero tests. New journeys belong in
-the same table, not a second browser implementation.
+`focused-controls`, `chapters`, `clip-keys`, `preview-quality`, `clip-gain` and `split-tools`. There
+are no narrower journeys for them on purpose; features/README.md lists what each named journey
+selects. All runs use one worker, no retries, and fail on skipped, flaky, or zero tests. New
+journeys belong in the same table, not a second browser implementation.
 
 `performance` runs five repetitions against a fresh production build with tracing and video disabled
 and the original 1x device scale. Do not run other browser/build jobs alongside that measurement.

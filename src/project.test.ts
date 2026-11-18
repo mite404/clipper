@@ -1107,3 +1107,40 @@ describe('chapters', () => {
     }
   });
 });
+
+describe('clip gain', () => {
+  const gained = (gain: unknown) => {
+    const value = project();
+    Object.assign(value.clips[0], { gain });
+    return JSON.stringify(value);
+  };
+
+  it('reopens a gain, and accepts both limits exactly', () => {
+    for (const gain of [-24, -6, 0.5, 12])
+      expect(parseProject(gained(gain)).edit.clips[0].gain).toBe(gain);
+  });
+
+  it.each([-24.5, 12.5, 100, '6', null, true])('refuses a gain of %j', (gain) => {
+    expect(() => parseProject(gained(gain))).toThrow(/gain/);
+  });
+
+  it('leaves no gain key at 0 or when absent, so old files open and save unchanged', async () => {
+    expect('gain' in parseProject(gained(0)).edit.clips[0]).toBe(false);
+    expect('gain' in parseProject(JSON.stringify(project())).edit.clips[0]).toBe(false);
+    const url = URL.createObjectURL(new Blob([new Uint8Array([0, 1])], { type: 'video/mp4' }));
+    try {
+      const saved = await (await serializeProject(edit, [{ ...asset, url }], [])).file.text();
+      expect(saved).not.toContain('gain');
+      const next = { ...edit, clips: [{ ...edit.clips[0], gain: -6 }] };
+      const first = await (await serializeProject(next, [{ ...asset, url }], [])).file.text();
+      expect(JSON.parse(first).clips[0].gain).toBe(-6);
+      const again = parseProject(first).edit;
+      expect(again.clips[0].gain).toBe(-6);
+      expect(await (await serializeProject(again, [{ ...asset, url }], [])).file.text()).toBe(
+        first,
+      );
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+});

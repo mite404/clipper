@@ -64,4 +64,14 @@ describe('waveform bins', () => {
       path: 'M0,3L0.5,3L1.5,13.5L2,13.5L2,34.5L1.5,34.5L0.5,45L0,45Z',
     });
   });
+
+  it('scales the columns by the clip gain and stops them at the lane edges', () => {
+    // Gain 2 doubles bin 2 (0.5 -> 21) and clamps bin 1 (42 -> 24, the half height).
+    expect(waveShape(peaks, 1, 3, 1000, 2).path).toBe(
+      'M1,0L1.5,0L2.5,3L3,3L3,45L2.5,45L1.5,48L1,48Z',
+    );
+    expect(waveShape(peaks, 1, 3, 1000, 0.5).path).toBe(
+      'M1,13.5L1.5,13.5L2.5,18.75L3,18.75L3,29.25L2.5,29.25L1.5,34.5L1,34.5Z',
+    );
+  });
 });

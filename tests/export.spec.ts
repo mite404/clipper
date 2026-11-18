@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { choose } from './choice';
 
@@ -1569,4 +1569,93 @@ test.describe('decoder frame gaps', () => {
       /^Video export failed: "Flower study" could not be decoded at 00:01:0\d\.$/,
     );
   });
+});
+
+// Clip gain reaches the file: a steady tone at -20 dBFS is exported at several gains, and the level
+// read back from the decoded audio moves by the dB asked for. A muted clip leaves no audio at all.
+test('exports clip gain as decibels of the decoded audio, and a muted gained clip stays silent', async ({
+  page,
+}, info) => {
+  test.setTimeout(150000);
+  const tone = info.outputPath('gain-tone.wav');
+  execFileSync('ffmpeg', [
+    ...[
+      '-v',
+      'error',
+      '-y',
+      '-f',
+      'lavfi',
+      '-i',
+      'sine=frequency=440:sample_rate=48000:duration=1',
+    ],
+    ...['-af', 'volume=0.1', tone],
+  ]);
+  await page.route('**/gain-fixture', (route) =>
+    route.fulfill({ contentType: 'text/html', body: '<html><body>Gain fixture</body></html>' }),
+  );
+  await page.route('**/gain-media', (route) => route.fulfill({ path: tone }));
+  await page.goto('/gain-fixture');
+  const gains = [0, 6, -6, -24, 12];
+  const files = await page.evaluate(
+    async ({ gains }) => {
+      const mediaModule = '/src/media.ts',
+        exportModule = '/src/export.ts';
+      const { readMedia } = await import(mediaModule);
+      const { renderVideo } = await import(exportModule);
+      const asset = await readMedia(await (await fetch('/gain-media')).blob(), 'tone.wav', 'tone');
+      const layout = { radius: 0, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 };
+      const render = async (gain: number, muted: string[]) => {
+        const clip = {
+          id: 'v',
+          assetId: 'tone',
+          track: 'voice',
+          start: 0,
+          duration: 30,
+          offset: 0,
+        };
+        const blob = await renderVideo({
+          assets: [asset],
+          clips: [gain ? { ...clip, gain } : clip],
+          zooms: [],
+          layout,
+          muted,
+          width: 1920,
+          format: 'webm',
+          onProgress: () => {},
+        });
+        return Array.from(new Uint8Array(await blob.arrayBuffer()));
+      };
+      const levels = [];
+      for (const gain of gains) levels.push(await render(gain, []));
+      return { levels, silent: await render(12, ['voice']) };
+    },
+    { gains },
+  );
+  // The loudest sample and the mean level of the tone, in dB, read from the decoded file.
+  const level = (bytes: number[], name: string) => {
+    const file = info.outputPath(name);
+    writeFileSync(file, Buffer.from(bytes));
+    const log = spawnSync(
+      'ffmpeg',
+      ['-hide_banner', '-i', file, '-vn', '-af', 'volumedetect', '-f', 'null', '-'],
+      { encoding: 'utf8' },
+    ).stderr;
+    return Number(/mean_volume: (-?[\d.]+) dB/.exec(log)![1]);
+  };
+  const measured = gains.map((gain, i) => level(files.levels[i], `gain-${gain}.webm`));
+  // -20 dBFS peak is about -23 dB mean for a sine; what matters is each step against the 0 dB file.
+  gains.forEach((gain, i) =>
+    expect(measured[i] - measured[0], `${gain} dB, levels ${measured.join(' ')}`).toBeCloseTo(
+      gain,
+      -0.3,
+    ),
+  );
+  const silentFile = info.outputPath('gain-muted.webm');
+  writeFileSync(silentFile, Buffer.from(files.silent));
+  const streams = JSON.parse(
+    execFileSync('ffprobe', ['-v', 'error', '-show_streams', '-of', 'json', silentFile], {
+      encoding: 'utf8',
+    }),
+  ).streams.map((stream: { codec_type: string }) => stream.codec_type);
+  expect(streams).toEqual(['video']);
 });

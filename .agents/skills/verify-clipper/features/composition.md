@@ -10,6 +10,10 @@ masks and screen-only zoom animations.
   fields stop at the timeline end and at a six-frame minimum length.
 - Ease in, hold, and ease out, driven by the same composition frame as video.
 - The Inspector's composition preview swaps frame sides without changing the mask dimensions.
+- The Inspector's Clip gain sets a voice or music clip from -24 to +12 dB in 0.5 dB steps. The
+  preview, the export and a saved project all carry it, a muted track stays silent, and the timeline
+  waveform scales with it. `all` runs `tests/clip-gain.spec.ts` and the decoded-audio check in
+  `tests/export.spec.ts`.
 - Pressing on the screen video pauses and shows the unzoomed screen while held; release sets the
   focus.
 

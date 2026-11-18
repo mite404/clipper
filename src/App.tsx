@@ -76,6 +76,7 @@ import {
   editPoint,
   removeChapter,
   retitleChapter,
+  setGain,
   shownChapters,
   timecode,
   trackNumber,
@@ -93,6 +94,7 @@ import {
   type Edit,
 } from './project';
 import { ChapterControls } from './ChapterControls';
+import { ClipGain } from './ClipGain';
 import { CursorControls } from './CursorControls';
 import { ZoomMotionControls } from './ZoomMotionControls';
 import { moveZoom, resizeZoom, resolveZooms } from './zoom-generation';
@@ -1006,6 +1008,10 @@ export function App() {
   const selectedClip = edit.clips.find((c) => c.id === selected);
   // Chapters past the end of the sequence stay in the file but are neither drawn nor listed.
   const chapters = shownChapters(edit.chapters ?? [], duration);
+  // Gain applies where audio plays: a clip on an audio track whose source has sound.
+  const gainable =
+    edit.tracks.find((t) => t.id === selectedClip?.track)?.kind === 'audio' &&
+    !!assets.find((a) => a.id === selectedClip?.assetId)?.hasAudio;
   const selectedChapter = chapters.find((chapter) => chapterId(chapter) === selected);
   const cursorAsset = selectedClip
     ? screenTracks(edit.tracks).includes(selectedClip.track)
@@ -2234,6 +2240,17 @@ export function App() {
                 }}
               />
             </section>
+          )}
+          {selectedClip && gainable && (
+            <ClipGain
+              gain={selectedClip.gain ?? 0}
+              onGain={(db) =>
+                change({
+                  ...edit,
+                  clips: edit.clips.map((c) => (c.id === selectedClip.id ? setGain(c, db) : c)),
+                })
+              }
+            />
           )}
           <ChapterControls
             chapters={chapters}

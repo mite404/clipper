@@ -21,6 +21,7 @@ import {
   DEFAULT_TRACKS,
   FPS,
   covers,
+  gainFactor,
   paintOrder,
   sourceFrame,
   timecode,
@@ -128,7 +129,7 @@ async function mixAudio(
     const source = mixer.createBufferSource();
     source.buffer = joined;
     const gain = mixer.createGain();
-    gain.gain.value = gains.get(clip.track) ?? 1;
+    gain.gain.value = (gains.get(clip.track) ?? 1) * gainFactor(clip.gain);
     source.connect(gain).connect(mixer.destination);
     source.start(clip.start / FPS);
   }

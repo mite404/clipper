@@ -59,9 +59,16 @@ const loudestOf = new WeakMap<ArrayLike<number>, number>();
  * split a bin: zoomed past the bin rate the line spreads the same bins wider, and below it bins
  * merge by their peak.
  * @param pixels The drawn width in device pixels.
+ * @param gain The clip's linear gain; columns scale by it and stop at the lane's edges.
  * @returns The step and an SVG path in column units, mirrored about y = 24.
  */
-export function waveShape(peaks: ArrayLike<number>, from: number, to: number, pixels: number) {
+export function waveShape(
+  peaks: ArrayLike<number>,
+  from: number,
+  to: number,
+  pixels: number,
+  gain = 1,
+) {
   const step = Math.max(1, Math.ceil((to - from) / Math.max(1, pixels)));
   // The loudest of bins [start, end), 0 past the source's end.
   const loudest = (start: number, end: number) => {
@@ -75,7 +82,10 @@ export function waveShape(peaks: ArrayLike<number>, from: number, to: number, pi
     loudestOf.set(peaks, (maximum = Math.max(0.01, loudest(0, peaks.length))));
   const first = Math.floor(from / step);
   const amplitudes = Array.from({ length: Math.ceil(to / step) - first }, (_, i) =>
-    Math.max(0.5, (loudest((first + i) * step, (first + i + 1) * step) / maximum) * 21),
+    Math.min(
+      24,
+      Math.max(0.5, (loudest((first + i) * step, (first + i + 1) * step) / maximum) * 21 * gain),
+    ),
   );
   const end = first + amplitudes.length;
   const top = amplitudes.map((a, i) => `L${first + i + 0.5},${24 - a}`).join('');
@@ -169,6 +179,7 @@ export function Waveform({
   progress = 0,
   offset = 0,
   duration,
+  gain,
 }: {
   peaks: ArrayLike<number>;
   progress?: number;
@@ -176,6 +187,8 @@ export function Waveform({
   offset?: number;
   /** Source frames drawn; the whole source by default. */
   duration?: number;
+  /** The clip's linear gain, 1 by default. */
+  gain?: number;
 }) {
   const svg = useRef<SVGSVGElement>(null);
   const clip = `wave${useId().replace(/\W/g, '')}`;
@@ -192,8 +205,8 @@ export function Waveform({
   const from = (offset / FPS) * WAVE_RATE; // → bin
   const to = duration === undefined ? peaks.length : from + (duration / FPS) * WAVE_RATE;
   const { step, path } = useMemo(
-    () => waveShape(peaks, from, to, pixels),
-    [peaks, from, to, pixels],
+    () => waveShape(peaks, from, to, pixels, gain),
+    [peaks, from, to, pixels, gain],
   );
   const x = from / step; // → column
   const width = (to - from) / step;

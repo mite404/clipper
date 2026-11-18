@@ -35,6 +35,9 @@ service holds 5173, so beside it run `npm run dev -- --port <free port>`.
   and is remembered on the device. Full is at most 1920 wide even for a 4K export; Copy frame and
   export always render the full output. Quarter is the power-saving choice; playback already pauses
   when the tab is hidden.
+- Clip gain: the Inspector sets a voice or music clip's gain from -24 to +12 dB in 0.5 dB steps. It
+  is saved with the project, plays in the preview and renders in the export at the same level, and a
+  muted track stays silent. The timeline waveform grows and shrinks with it.
 - Chapter markers: `M` marks one at the playhead, shown as ruler flags you can click, rename in the
   Inspector, delete, save with the project and copy as a YouTube-style list.
 - Timed screen zooms with editable scale, manually marked mouse focus, and smooth in/hold/out.

@@ -14,6 +14,8 @@ export type Clip = {
   duration: number;
   offset: number;
   originId?: string;
+  /** Clip gain in dB, 0.5 dB steps within GAIN_LIMITS; absent means 0. */
+  gain?: number;
 };
 export type Zoom = {
   id: string;
@@ -61,6 +63,32 @@ export function timecode(frame: number): string {
 /** The same frame to the second: mm:ss, or h:mm:ss from one hour up. */
 export function clock(frame: number): string {
   return format(frame, false);
+}
+
+/** The clip gain range and step, in dB. */
+export const GAIN_LIMITS = { min: -24, max: 12, step: 0.5 };
+
+/** The linear amplitude factor for a gain in dB; no gain is 1. */
+export const gainFactor = (db = 0): number => 10 ** (db / 20);
+
+/** A gain snapped to 0.5 dB and held inside the limits. */
+const snapGain = (db: number): number =>
+  Math.min(
+    GAIN_LIMITS.max,
+    Math.max(GAIN_LIMITS.min, Math.round(db / GAIN_LIMITS.step) * GAIN_LIMITS.step),
+  );
+
+/** The gain a field's text names, snapped and held inside the limits; undefined if it names none. */
+export function gainFromText(text: string): number | undefined {
+  const db = text.trim() === '' ? NaN : Number(text);
+  return Number.isFinite(db) ? snapGain(db) : undefined;
+}
+
+/** The clip with its gain set to `db`, snapped and held inside the limits. 0 drops it. */
+export function setGain(clip: Clip, db: number): Clip {
+  const { gain: _previous, ...rest } = clip;
+  const snapped = snapGain(db);
+  return snapped === 0 ? rest : { ...rest, gain: snapped };
 }
 
 /** A named point on the timeline, listed in order and never two at one frame. */

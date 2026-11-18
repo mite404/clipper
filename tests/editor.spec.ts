@@ -525,6 +525,18 @@ test('pauses source video and audio while export blocks the workspace without re
 test('splice, scrub, play, rewind and animate a real media composition', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
+  // Preview audio plays through Web Audio, so a clip's level is its GainNode, not the element volume.
+  await page.addInitScript(() => {
+    const nodes: GainNode[] = [];
+    Object.assign(window, { gainNodes: nodes });
+    const Gain = window.GainNode;
+    window.GainNode = class extends Gain {
+      constructor(context: BaseAudioContext, options?: GainOptions) {
+        super(context, options);
+        nodes.push(this);
+      }
+    };
+  });
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
   await page.getByRole('button', { name: 'Play source', exact: true }).click();
@@ -619,17 +631,18 @@ test('splice, scrub, play, rewind and animate a real media composition', async (
       )
       .toBeCloseTo(expected, 1);
   }
+  const levels = () =>
+    page.evaluate(() =>
+      (window as unknown as { gainNodes: GainNode[] }).gainNodes
+        .map((node) => Math.round(node.gain.value * 100) / 100)
+        .sort((x, y) => x - y),
+    );
+  // The master node and the voice clip sit at 1; music keeps its track gain. Mute silences voice.
+  await expect.poll(levels).toEqual([0.22, 1, 1, 1, 1]);
   await page.getByRole('button', { name: 'Mute Voiceover', exact: true }).click();
-  await expect
-    .poll(() =>
-      page
-        .locator('[data-testid="compose-monitor"] audio[src^="blob:"]')
-        .evaluateAll((audio: HTMLAudioElement[]) =>
-          audio.map((a) => a.volume).sort((a, b) => a - b),
-        ),
-    )
-    .toEqual([0, 0.22]);
+  await expect.poll(levels).toEqual([0, 0.22, 1, 1, 1]);
   await page.getByRole('button', { name: 'Unmute Voiceover', exact: true }).click();
+  await expect.poll(levels).toEqual([0.22, 1, 1, 1, 1]);
   await page.locator('body').click({ position: { x: 12, y: 100 } });
   await page.keyboard.press('l');
   await expect

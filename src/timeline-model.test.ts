@@ -1,11 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   FPS,
+  GAIN_LIMITS,
   addChapter,
   chapterList,
   clipAt,
   clipPiece,
   editPoint,
+  gainFactor,
+  gainFromText,
+  setGain,
   clock,
   covers,
   createTrack,
@@ -878,5 +882,43 @@ describe('editPoint', () => {
       99,
       undefined,
     ]);
+  });
+});
+
+describe('clip gain', () => {
+  it('turns decibels into a linear factor, 10^(dB/20)', () => {
+    // Derived by hand: -6 dB is a half of the amplitude, +6 about twice, -24 a sixteenth, +12 four times.
+    expect(gainFactor()).toBe(1);
+    expect(gainFactor(0)).toBe(1);
+    expect(gainFactor(-6)).toBeCloseTo(0.501187, 5);
+    expect(gainFactor(6)).toBeCloseTo(1.995262, 5);
+    expect(gainFactor(-24)).toBeCloseTo(0.0630957, 6);
+    expect(gainFactor(12)).toBeCloseTo(3.981072, 5);
+  });
+
+  it('sets a gain snapped to 0.5 dB and held inside -24..+12, and drops it at 0', () => {
+    expect(setGain(clip, 6.2).gain).toBe(6);
+    expect(setGain(clip, 6.3).gain).toBe(6.5);
+    expect(setGain(clip, -0.3).gain).toBe(-0.5);
+    expect(setGain(clip, 40).gain).toBe(GAIN_LIMITS.max);
+    expect(setGain(clip, -99).gain).toBe(GAIN_LIMITS.min);
+    expect(setGain(clip, 11.9).gain).toBe(12);
+    // A value that rounds to 0 leaves no gain key at all, and setting it again changes nothing else.
+    expect('gain' in setGain({ ...clip, gain: 3 }, 0.2)).toBe(false);
+    expect(setGain({ ...clip, gain: 3 }, 0)).toEqual(clip);
+    expect(setGain(setGain(clip, -4), 2)).toEqual({ ...clip, gain: 2 });
+  });
+
+  it('reads a field text as a gain, or nothing', () => {
+    expect(gainFromText(' -6 ')).toBe(-6);
+    expect(gainFromText('3.3')).toBe(3.5);
+    expect(gainFromText('100')).toBe(12);
+    for (const text of ['', '   ', 'abc', '--', 'Infinity'])
+      expect(gainFromText(text)).toBeUndefined();
+  });
+
+  it('gives both halves of a split the clip gain', () => {
+    const [left, right] = splitClip([{ ...clip, gain: -6 }], 'screen', 90);
+    expect([left.gain, right.gain]).toEqual([-6, -6]);
   });
 });

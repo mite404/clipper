@@ -10,7 +10,14 @@ import {
 import { useMemo } from 'react';
 import type { Asset } from './media';
 import { cameraTransform, coverRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
-import { paintOrder, type Clip, type Track, type TrackDef, type Zoom } from './timeline-model';
+import {
+  gainFactor,
+  paintOrder,
+  type Clip,
+  type Track,
+  type TrackDef,
+  type Zoom,
+} from './timeline-model';
 import { cursorFrame } from './cursor-render';
 import { prepareFraming, framingAt } from './framing';
 
@@ -145,7 +152,12 @@ export function Composition({ clips, assets, zooms, layout, tracks, muted }: Com
                 <Audio
                   src={asset.url}
                   trimBefore={clip.offset}
-                  volume={muted.includes(clip.track) ? 0 : gains.get(clip.track)}
+                  // Amplification above 1 needs the Web Audio path; every clip takes it so a pooled
+                  // audio element never changes route.
+                  useWebAudioApi
+                  volume={
+                    muted.includes(clip.track) ? 0 : gains.get(clip.track)! * gainFactor(clip.gain)
+                  }
                 />
               </Sequence>
             )
