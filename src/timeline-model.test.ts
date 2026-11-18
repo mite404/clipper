@@ -121,6 +121,61 @@ describe('editing a timeline in frames', () => {
     expect(next.find((c) => c.id === 'voice')).toEqual(audio);
   });
 
+  it('ripples only the insert track, from the frame on, whatever the other tracks hold', () => {
+    const on = (id: string, track: string, start: number, duration: number): Clip => ({
+      ...clip,
+      id,
+      track,
+      start,
+      duration,
+      offset: 0,
+    });
+    // Around frame 90: one clip ends exactly there, one starts exactly there, one starts after it.
+    const screen = [
+      on('s-end', 'screen', 0, 90),
+      on('s-at', 'screen', 90, 30),
+      on('s-late', 'screen', 150, 20),
+    ];
+    const others = [
+      on('v-late', 'voice', 120, 30), // starts after the frame
+      on('m-at', 'music', 90, 25), // starts exactly at the frame
+      on('c-cross', 'camera', 60, 60), // crosses the frame
+    ];
+    const next = insertClip([...screen, ...others], on('new', 'screen', 0, 45), 90);
+    // The insert track ripples from the frame on: a clip that ends at 90 stays, one that starts at
+    // 90 or later moves by the 45 frames, and nothing is split.
+    expect(
+      next.filter((c) => c.track === 'screen').map((c) => [c.id, c.start, c.duration]),
+    ).toEqual([
+      ['s-end', 0, 90],
+      ['s-at', 135, 30],
+      ['s-late', 195, 20],
+      ['new', 90, 45],
+    ]);
+    // Every other track comes back as it was: later, at-the-frame and crossing clips alike.
+    expect(next.filter((c) => c.track !== 'screen')).toEqual(others);
+
+    // Inserting on camera at 90 splits only the camera clip that crosses it, and shifts only
+    // camera clips; the screen clips that start at, cross or follow 90 are left whole.
+    const onCamera = insertClip(
+      [...screen, on('s-cross', 'screen', 60, 60), ...others],
+      on('new', 'camera', 0, 45),
+      90,
+    );
+    expect(onCamera.filter((c) => c.track === 'screen')).toEqual([
+      ...screen,
+      on('s-cross', 'screen', 60, 60),
+    ]);
+    expect(onCamera.filter((c) => c.track === 'camera').map((c) => [c.start, c.duration])).toEqual([
+      [60, 30],
+      [135, 30],
+      [90, 45],
+    ]);
+    expect(onCamera.filter((c) => c.track === 'voice' || c.track === 'music')).toEqual(
+      others.filter((c) => c.track !== 'camera'),
+    );
+  });
+
   it('eases into a zoom, holds, and returns exactly to the uncropped frame', () => {
     const zoom = { id: 'z', start: 30, duration: 120, scale: 2, x: 25, y: 60 };
     expect(zoomAt([zoom], 29)).toBe(1);
@@ -246,6 +301,54 @@ describe('editing a timeline in frames', () => {
     // Shorten then extend lands on the original clip.
     const shorter = trimClip(clip, 'right', -45, open);
     expect(trimClip(shorter, 'right', 45, open)).toEqual(clip);
+  });
+
+  it('rounds a fractional pointer delta to a whole frame on both edges, in both directions', () => {
+    // clip: timeline 30..179 (end 180), source offset 60. A drag at a pixel is rarely a whole frame.
+    const cases: [string, 'left' | 'right', number, number[]][] = [
+      // [name, edge, delta, [start, offset, duration]]
+      ['left, in, rounds up', 'left', 12.6, [43, 73, 137]],
+      ['left, in, rounds down', 'left', 12.4, [42, 72, 138]],
+      ['left, out, rounds up', 'left', -12.4, [18, 48, 162]],
+      ['left, out, rounds down', 'left', -12.6, [17, 47, 163]],
+      ['right, in, rounds down', 'right', -12.4, [30, 60, 138]],
+      ['right, in, rounds up', 'right', -12.6, [30, 60, 137]],
+      ['right, out, rounds up', 'right', 12.6, [30, 60, 163]],
+      ['right, out, rounds down', 'right', 12.4, [30, 60, 162]],
+    ];
+    expect(cases.map(([, edge, delta]) => trimClip(clip, edge, delta, open))).toEqual(
+      cases.map(([, , , [start, offset, duration]]) => ({ ...clip, start, offset, duration })),
+    );
+    // However fine the pointer, every trim lands on whole frames with the edge on the nearest one.
+    for (let tenths = -200; tenths <= 200; tenths++) {
+      const delta = tenths / 10;
+      const left = trimClip(clip, 'left', delta, open);
+      const right = trimClip(clip, 'right', delta, open);
+      expect([left.start, left.offset, left.duration, right.duration].every(Number.isInteger)).toBe(
+        true,
+      );
+      expect(left.start).toBe(Math.floor(30 + delta + 0.5));
+      expect(right.start + right.duration).toBe(Math.floor(180 + delta + 0.5));
+    }
+  });
+
+  it('rounds a fractional delta before it meets a bound or the one-frame minimum', () => {
+    const bounds = { start: 25, end: 190 };
+    // Left bound 25: -4.6 rounds onto it, -5.4 rounds past it and stops at it, -4.4 stays inside.
+    expect(trimClip(clip, 'left', -4.6, bounds).start).toBe(25);
+    expect(trimClip(clip, 'left', -5.4, bounds).start).toBe(25);
+    expect(trimClip(clip, 'left', -4.4, bounds).start).toBe(26);
+    // Right bound 190: 9.6 rounds onto it, 10.6 rounds past it and stops at it, 9.4 stays inside.
+    expect(trimClip(clip, 'right', 9.6, bounds).duration).toBe(160);
+    expect(trimClip(clip, 'right', 10.6, bounds).duration).toBe(160);
+    expect(trimClip(clip, 'right', 9.4, bounds).duration).toBe(159);
+    // One frame is the least a clip keeps: 148.6 rounds onto it, 150.6 rounds past it.
+    expect(trimClip(clip, 'left', 148.6, open)).toMatchObject({ start: 179, duration: 1 });
+    expect(trimClip(clip, 'left', 150.6, open)).toMatchObject({ start: 179, duration: 1 });
+    expect(trimClip(clip, 'left', 147.4, open)).toMatchObject({ start: 177, duration: 3 });
+    expect(trimClip(clip, 'right', -148.6, open).duration).toBe(1);
+    expect(trimClip(clip, 'right', -150.4, open).duration).toBe(1);
+    expect(trimClip(clip, 'right', -147.4, open).duration).toBe(3);
   });
 
   it('keeps one frame and stops an edge at its bounds', () => {
