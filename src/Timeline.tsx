@@ -32,8 +32,10 @@ import {
   placeMedia,
   snapFrame,
   trackNumber,
+  trimBounds,
   trimClip,
   type Clip,
+  type TrimBounds,
   type DropTarget,
   type NewTrack,
   type Track,
@@ -267,16 +269,17 @@ function razorFrame(
   return snapFrame(at, targets, (SNAP_PIXELS / lane.width) * duration);
 }
 
-// Report a trim only when it moved the edge. trimClip only shortens, so an equal duration means
-// nothing moved: a plain click on a grip, or an arrow key in the direction it cannot go.
+// Report a trim only when it moved the edge: a plain click on a grip, or an arrow key into a limit,
+// leaves the clip as it was and adds no undo step.
 function commitTrim(
   onTrim: ((clip: Clip) => void) | undefined,
   clip: Clip,
   edge: 'left' | 'right',
   delta: number,
+  bounds: TrimBounds,
 ): void {
-  const next = trimClip(clip, edge, delta); // → Clip
-  if (next.duration !== clip.duration) onTrim?.(next);
+  const next = trimClip(clip, edge, delta, bounds); // → Clip
+  if (next.start !== clip.start || next.duration !== clip.duration) onTrim?.(next);
 }
 
 function useTimelineScale(seconds: number) {
@@ -418,11 +421,13 @@ export function Timeline({
           {clips
             .filter((c) => c.track === id)
             .map((originalClip) => {
+              const asset = assets.find((a) => a.id === originalClip.assetId);
+              // A still has no source length to run out of; asset.duration is in frames.
+              const bounds = trimBounds(clips, originalClip, asset?.duration); // → TrimBounds
               const clip =
                 drag?.clipId === originalClip.id
-                  ? trimClip(originalClip, drag.edge, drag.delta)
+                  ? trimClip(originalClip, drag.edge, drag.delta, bounds)
                   : originalClip;
-              const asset = assets.find((a) => a.id === clip.assetId);
               return (
                 <button
                   key={clip.id}
@@ -486,6 +491,7 @@ export function Timeline({
                             clip,
                             edge,
                             (event.key === 'ArrowLeft' ? -1 : 1) * (event.shiftKey ? 10 : 1),
+                            bounds,
                           );
                         }}
                         onPointerDown={(event) => {
@@ -519,6 +525,7 @@ export function Timeline({
                             originalClip,
                             drag.edge,
                             ((event.clientX - drag.x) / drag.width) * duration,
+                            bounds,
                           );
                         }}
                         onPointerCancel={() => setDrag(undefined)}

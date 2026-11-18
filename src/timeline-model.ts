@@ -142,20 +142,53 @@ export function zoomAt(zooms: Zoom[], frame: number): number {
   return 1 + (zoom.scale - 1) * eased;
 }
 
-/** Shorten a clip edge by a timeline delta, preserving at least one source frame. */
-export function trimClip(clip: Clip, edge: 'left' | 'right', delta: number): Clip {
-  const removed = Math.min(
-    clip.duration - 1,
-    Math.max(0, Math.round(edge === 'left' ? delta : -delta)),
-  );
-  return edge === 'left'
-    ? {
-        ...clip,
-        start: clip.start + removed,
-        offset: clip.offset + removed,
-        duration: clip.duration - removed,
-      }
-    : { ...clip, duration: clip.duration - removed };
+/** The timeline frames a clip's edges may reach: `start` for its left edge, `end` for its right. */
+export type TrimBounds = { start: number; end: number };
+
+/**
+ * How far a clip's edges can move: no further than the nearest clip edge on its own track, the
+ * head or tail of its source, frame 0 and the 24-hour cap. A still has no `sourceFrames`.
+ */
+export function trimBounds(clips: Clip[], clip: Clip, sourceFrames?: number): TrimBounds {
+  const end = clip.start + clip.duration;
+  const lane = clips.filter((c) => c.id !== clip.id && c.track === clip.track);
+  // A still has no source time to run out of, so only a clip with a source length has a head.
+  const head = sourceFrames === undefined ? 0 : clip.start - clip.offset; // → frame the source begins
+  return {
+    start: Math.max(
+      0,
+      head,
+      ...lane.map((c) => c.start + c.duration).filter((edge) => edge <= clip.start),
+    ),
+    end: Math.min(
+      MAX_FRAMES,
+      head + (sourceFrames ?? Infinity),
+      ...lane.map((c) => c.start).filter((edge) => edge >= end),
+    ),
+  };
+}
+
+/** Move a clip edge by a timeline delta, within `bounds` and leaving at least one frame. */
+export function trimClip(
+  clip: Clip,
+  edge: 'left' | 'right',
+  delta: number,
+  bounds: TrimBounds,
+): Clip {
+  const end = clip.start + clip.duration;
+  if (edge === 'right')
+    return {
+      ...clip,
+      duration:
+        Math.max(clip.start + 1, Math.min(bounds.end, Math.round(end + delta))) - clip.start,
+    };
+  const start = Math.min(end - 1, Math.max(bounds.start, Math.round(clip.start + delta)));
+  return {
+    ...clip,
+    start,
+    offset: Math.max(0, clip.offset + start - clip.start),
+    duration: end - start,
+  };
 }
 
 /** Camera translation percentages center a manually marked mouse position during the zoom hold. */

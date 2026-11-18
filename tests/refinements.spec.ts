@@ -317,6 +317,158 @@ test('a trim grip commits only real trims, on the clip as it is at release', asy
   expect(first.x + first.width).toBeLessThanOrEqual(second.x + 0.5);
 });
 
+test('trim grips extend as well as shorten, up to the first limit, one undo step each', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const undo = page.getByRole('button', { name: 'Undo', exact: true });
+  const clips = page.getByTestId('track-screen').getByRole('button');
+  const grip = (clip: number, edge: 'left' | 'right') =>
+    clips.nth(clip).getByRole('slider', { name: `Trim ${edge} edge` });
+  // The grip's value is the frame its edge sits on, so it reports the clamped preview mid-drag.
+  const frame = async (clip: number, edge: 'left' | 'right') =>
+    Number(await grip(clip, edge).getAttribute('aria-valuenow'));
+  const perFrame = (await page.getByTestId('track-screen').boundingBox())!.width / 360;
+  const drag = async (clip: number, edge: 'left' | 'right', frames: number, release = true) => {
+    // Changes to the same values within 800 ms fold into one undo step, so pause between gestures.
+    await page.waitForTimeout(1200);
+    const box = (await grip(clip, edge).boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + frames * perFrame, y, { steps: 8 });
+    if (release) await page.mouse.up();
+  };
+  const undoAll = async () => {
+    while (await undo.isEnabled()) await undo.click();
+  };
+  // s1 is 0..180 and s2 is 180..360 on source 210..390 of a 420-frame source.
+  expect([await frame(0, 'right'), await frame(1, 'left'), await frame(1, 'right')]).toEqual([
+    180, 180, 360,
+  ]);
+
+  // Touching a neighbour blocks an outward arrow, and a blocked arrow is not an edit.
+  await grip(0, 'right').focus();
+  await page.keyboard.press('ArrowRight');
+  await grip(1, 'left').focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(undo).toBeDisabled();
+
+  // Shorten then extend by dragging the same edge restores it; each gesture is one undo step.
+  await drag(0, 'right', -60);
+  expect(await frame(0, 'right')).toBe(120);
+  await drag(0, 'right', 40);
+  expect(await frame(0, 'right')).toBe(160);
+  await undo.click();
+  expect(await frame(0, 'right')).toBe(120);
+  await undo.click();
+  expect(await frame(0, 'right')).toBe(180);
+  await expect(undo).toBeDisabled();
+
+  // The gap case: shorten s1, then pull s2's left edge outward. It stops at s1's end, and the
+  // preview already shows that clamp before release.
+  await drag(0, 'right', -60);
+  await drag(1, 'left', -100, false);
+  expect(await frame(1, 'left')).toBe(120);
+  await page.mouse.up();
+  expect([await frame(1, 'left'), await frame(1, 'right')]).toEqual([120, 360]);
+  await undo.click();
+  expect(await frame(1, 'left')).toBe(180);
+
+  // Right edge stops at the source tail (390 of 420 would end at 390), left arrows go both ways.
+  await drag(1, 'right', 100);
+  expect(await frame(1, 'right')).toBe(390);
+  await undoAll();
+  await grip(0, 'right').focus();
+  await page.keyboard.press('Shift+ArrowLeft');
+  await grip(1, 'left').focus();
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('ArrowLeft');
+  expect(await frame(1, 'left')).toBe(178);
+  await page.keyboard.press('ArrowRight');
+  expect(await frame(1, 'left')).toBe(179);
+
+  // A click on a grip commits nothing, even at a limit.
+  await undoAll();
+  const box = (await grip(1, 'left').boundingBox())!;
+  await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(undo).toBeDisabled();
+});
+
+test('a still extends its left edge to a neighbour or frame 0, and the extension survives reopening', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const png = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 200;
+    canvas.getContext('2d')!.fillRect(0, 0, 400, 200);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  await page.getByLabel('Import local media').setInputFiles({
+    name: 'still.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(png, 'base64'),
+  });
+  await expect(page.getByTestId('media-status')).toHaveText('5 assets ready', { timeout: 30000 });
+  const screen = page.getByTestId('track-screen');
+  const remove = async (index: number) => {
+    await screen.getByRole('button').nth(index).click();
+    await page.getByRole('button', { name: 'Delete selected clip or zoom', exact: true }).click();
+  };
+  // Leave only s1 (0..180) on the screen track, then put a 1 s still at frame 300 after it.
+  await remove(1);
+  await page.getByRole('slider', { name: 'Timeline playhead' }).fill('300');
+  await page.getByRole('button', { name: 'Select still.png', exact: true }).click();
+  await page.getByLabel('Still duration seconds', { exact: true }).fill('1');
+  await page.getByLabel('Still duration seconds', { exact: true }).press('Enter');
+  await page.getByRole('button', { name: 'Insert source at playhead', exact: true }).click();
+  const still = screen.getByRole('button').filter({ hasText: 'still.png' });
+  const left = still.getByRole('slider', { name: 'Trim left edge' });
+  await left.focus();
+  for (let i = 0; i < 20; i++) await page.keyboard.press('Shift+ArrowLeft');
+  // The still has offset 0 and no source length, so only its neighbour stops it.
+  await expect(left).toHaveAttribute('aria-valuenow', '180');
+  await page.waitForTimeout(1200);
+
+  // With the neighbour gone, nothing but frame 0 stops it.
+  await remove(0);
+  await left.focus();
+  for (let i = 0; i < 20; i++) await page.keyboard.press('Shift+ArrowLeft');
+  await expect(left).toHaveAttribute('aria-valuenow', '0');
+  await expect(still.getByRole('slider', { name: 'Trim right edge' })).toHaveAttribute(
+    'aria-valuenow',
+    '330',
+  );
+
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const saved = (await (await downloaded).path())!;
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Portable project saved');
+  await page.reload();
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await page.getByLabel('Open local project').setInputFiles(saved);
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Project reopened', {
+    timeout: 30000,
+  });
+  const reopened = page
+    .getByTestId('track-screen')
+    .getByRole('button')
+    .filter({ hasText: 'still.png' });
+  await expect(reopened.getByRole('slider', { name: 'Trim left edge' })).toHaveAttribute(
+    'aria-valuenow',
+    '0',
+  );
+  await expect(reopened.getByRole('slider', { name: 'Trim right edge' })).toHaveAttribute(
+    'aria-valuenow',
+    '330',
+  );
+});
+
 test('ends mouse marking when its zoom is removed, and does not arm the next zoom', async ({
   page,
 }) => {
