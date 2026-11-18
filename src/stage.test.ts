@@ -13,6 +13,38 @@ describe('laying out the stage', () => {
     expect(maskRect('camera', swapped)).toEqual({ x: 10, y: 10, width: 362, height: 700 });
   });
 
+  it('in PiP, fills the stage with the screen and insets a 16:9 third-width camera in a corner', () => {
+    // Usable width 1260, so the inset is 420 × 236.25, 10 px inside the screen's corner.
+    const pip = { ...layout, mode: 'pip' as const };
+    const inset = { width: 420, height: 236.25 };
+    for (const swapped of [false, true])
+      expect(maskRect('screen', { ...pip, swapped })).toEqual({
+        x: 10,
+        y: 10,
+        width: 1260,
+        height: 700,
+      });
+    expect(maskRect('camera', pip)).toEqual({ x: 840, y: 463.75, ...inset });
+    expect(maskRect('camera', { ...pip, corner: 'top-left' })).toEqual({ x: 20, y: 20, ...inset });
+    expect(maskRect('camera', { ...pip, corner: 'top-right' })).toEqual({
+      x: 840,
+      y: 20,
+      ...inset,
+    });
+    expect(maskRect('camera', { ...pip, corner: 'bottom-left' })).toEqual({
+      x: 20,
+      y: 463.75,
+      ...inset,
+    });
+    // Actual pixels scale the same geometry.
+    expect(maskRect('camera', pip, { width: 1920, height: 1080 })).toEqual({
+      x: 1260,
+      y: 695.625,
+      width: 630,
+      height: 354.375,
+    });
+  });
+
   it('gives a background the whole actual stage and a centered crop, whatever the layout', () => {
     for (const size of [STAGE, { width: 1920, height: 1080 }, { width: 3840, height: 2160 }])
       for (const swapped of [false, true])

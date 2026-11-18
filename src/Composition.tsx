@@ -43,7 +43,7 @@ export function Composition({ clips, assets, zooms, layout, tracks, muted }: Com
         color: '#fff',
       }}
     >
-      {paintOrder(tracks).map(({ id, role, placeholder }) => {
+      {paintOrder(tracks, layout.mode === 'pip').map(({ id, role, placeholder }) => {
         const mask = maskRect(role, layout, size); // → actual render-pixel rect
         const view = cameraTransform(mask, role === 'screen' ? camera : undefined); // → affine
         const crop = cropPosition(role, layout); // → percent

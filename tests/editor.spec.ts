@@ -1179,3 +1179,55 @@ test('a clip waveform keeps its source bins at any timeline scale, spreading the
   await scale.fill((await scale.getAttribute('min'))!);
   await expect.poll(async () => 1000 % Number((await read()).rate)).toBe(0);
 });
+
+test('picture in picture insets the camera in the corner picked on the live preview, by pointer or keyboard', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const undo = page.getByRole('button', { name: 'Undo', exact: true });
+  const corner = (name: string) =>
+    page.getByRole('button', { name: `Camera ${name}`, exact: true });
+  // The camera mask in stage units: the screen mask is 700 tall at (10, 10) in both layouts.
+  const camera = async () => {
+    const screen = (await page.getByTestId('screen-mask').boundingBox())!;
+    const box = (await page.getByTestId('camera-mask').boundingBox())!;
+    const unit = screen.height / 700;
+    return [box.x - screen.x + 10 * unit, box.y - screen.y + 10 * unit, box.width].map((v) =>
+      Math.round(v / unit),
+    );
+  };
+  await expect(corner('top left')).toHaveCount(0);
+  await choose(page.getByLabel('Composition layout'), 'pip');
+  await expect(page.getByText('Picture in picture').first()).toBeVisible();
+  // A 420-wide 16:9 inset, 10 px inside the screen's bottom-right corner by default.
+  expect(await camera()).toEqual([840, 464, 420]);
+  await expect(corner('bottom right')).toHaveAttribute('aria-pressed', 'true');
+
+  await page.waitForTimeout(1200);
+  await corner('top left').click();
+  expect(await camera()).toEqual([20, 20, 420]);
+  await expect(corner('top left')).toHaveAttribute('aria-pressed', 'true');
+  await undo.click();
+  expect(await camera()).toEqual([840, 464, 420]);
+
+  await page.waitForTimeout(1200);
+  await corner('bottom left').focus();
+  await page.keyboard.press('Enter');
+  expect(await camera()).toEqual([20, 464, 420]);
+  await page.waitForTimeout(1200);
+  await corner('top right').focus();
+  await page.keyboard.press('Enter');
+  expect(await camera()).toEqual([840, 20, 420]);
+
+  // Moving the camera track below the screen still paints the inset above the full-frame screen.
+  const paint = page.locator('[data-testid="screen-mask"], [data-testid="camera-mask"]');
+  await page.getByRole('button', { name: 'Move Talking head down', exact: true }).click();
+  await expect(paint.first()).toHaveAttribute('data-testid', 'screen-mask');
+  await expect(paint.last()).toHaveAttribute('data-testid', 'camera-mask');
+
+  // Side by side again hides the corner targets and restores the legacy masks.
+  await choose(page.getByLabel('Composition layout'), 'side');
+  await expect(corner('top left')).toHaveCount(0);
+  expect(await camera()).toEqual([908, 10, 362]);
+});

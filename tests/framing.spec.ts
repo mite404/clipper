@@ -351,3 +351,169 @@ for (const { title, zoom, frame, source, smooth } of [
       for (const pixel of [preview, fixture.copy, fixture.exported].map((pixels) => pixels[1]))
         expect(Math.abs(pixel[0] - smooth(0.95) * 255)).toBeGreaterThan(24);
   });
+
+test('a top-left PiP camera inset lands in the same place in preview, Copy frame and export', async ({
+  page,
+}) => {
+  test.setTimeout(90000);
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready');
+  // Stage points: inside the 420 × 236.25 inset at (20, 20), and on the screen around it.
+  const probes = [
+    [40, 40],
+    [420, 240],
+    [470, 140],
+    [230, 290],
+    [1100, 600],
+  ];
+  const blue = [true, true, false, false, false];
+  const fixture = await page.evaluate(async (probes) => {
+    const exportModule = '/src/export.ts';
+    const modelModule = '/src/timeline-model.ts';
+    const bunnyModule = '/node_modules/mediabunny/dist/bundles/mediabunny.mjs';
+    const { renderVideo, renderFrameImage } = await import(exportModule);
+    const { DEFAULT_TRACKS } = await import(modelModule);
+    const {
+      Output,
+      WebMOutputFormat,
+      BufferTarget,
+      CanvasSource,
+      Input,
+      BlobSource,
+      ALL_FORMATS,
+      CanvasSink,
+    } = await import(bunnyModule);
+    // A solid 12-frame VP9 source in one colour.
+    const solid = async (colour: string, width: number, height: number) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const paint = canvas.getContext('2d')!;
+      paint.fillStyle = colour;
+      paint.fillRect(0, 0, width, height);
+      const target = new BufferTarget();
+      const output = new Output({ format: new WebMOutputFormat(), target });
+      const video = new CanvasSource(canvas, { codec: 'vp9', bitrate: 2000000 });
+      output.addVideoTrack(video, { frameRate: 30 });
+      await output.start();
+      for (let frame = 0; frame < 12; frame++) await video.add(frame / 30, 1 / 30);
+      video.close();
+      await output.finalize();
+      return new Blob([target.buffer], { type: 'video/webm' });
+    };
+    const sources = {
+      red: await solid('#ff0000', 1280, 720),
+      blue: await solid('#0000ff', 640, 360),
+    };
+    const assets = Object.entries(sources).map(([id, blob]) => ({
+      id,
+      name: `${id}.webm`,
+      kind: 'video',
+      width: id === 'red' ? 1280 : 640,
+      height: id === 'red' ? 720 : 360,
+      duration: 12,
+      peaks: [],
+      hasAudio: false,
+      thumbnail: '',
+      url: URL.createObjectURL(blob),
+    }));
+    const clips = [
+      { id: 'main', assetId: 'red', track: 'screen', start: 0, duration: 12, offset: 0 },
+      { id: 'inset', assetId: 'blue', track: 'camera', start: 0, duration: 12, offset: 0 },
+    ];
+    const layout = {
+      mode: 'pip',
+      corner: 'top-left',
+      radius: 0,
+      screenX: 50,
+      screenY: 50,
+      cameraX: 50,
+      cameraY: 50,
+    };
+    const edit = { assets, clips, layout, zooms: [], tracks: DEFAULT_TRACKS };
+    const read = (context: CanvasRenderingContext2D) =>
+      probes.map(([x, y]) => Array.from(context.getImageData(x, y, 1, 1).data));
+    let copy, exported;
+    try {
+      const image = await createImageBitmap(
+        await renderFrameImage({ ...edit, frame: 6, width: 1920 }),
+      );
+      const stage = document.createElement('canvas');
+      stage.width = 1280;
+      stage.height = 720;
+      const context = stage.getContext('2d')!;
+      context.drawImage(image, 0, 0, 1280, 720);
+      copy = read(context);
+      const encoded = await renderVideo({ ...edit, muted: [], width: 1920, onProgress: () => {} });
+      const input = new Input({ source: new BlobSource(encoded), formats: ALL_FORMATS });
+      try {
+        const sink = new CanvasSink(await input.getPrimaryVideoTrack(), { width: 1280 });
+        exported = read((await sink.getCanvas(6.01 / 30)).canvas.getContext('2d'));
+      } finally {
+        input.dispose();
+      }
+    } finally {
+      for (const asset of assets) URL.revokeObjectURL(asset.url);
+    }
+    const data = (blob: Blob) =>
+      new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.readAsDataURL(blob);
+      });
+    const media = [];
+    for (const asset of assets)
+      media.push({ id: asset.id, name: asset.name, data: await data(sources[asset.id as 'red']) });
+    return {
+      copy,
+      exported,
+      project: JSON.stringify({ version: 2, fps: 30, clips, zooms: [], layout, muted: [], media }),
+    };
+  }, probes);
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'pip.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(fixture.project),
+  });
+  await page.getByLabel('Timeline playhead', { exact: true }).fill('6');
+  await expect(page.getByTestId('camera-mask').locator('video')).toHaveCount(1);
+  await page.waitForTimeout(500);
+  // The PiP screen mask is 1260 × 700 at (10, 10), so it locates the whole stage on screen.
+  const screen = (await page.getByTestId('screen-mask').boundingBox())!;
+  const unit = screen.width / 1260;
+  const shot = await page.screenshot({
+    clip: {
+      x: screen.x - 10 * unit,
+      y: screen.y - 10 * unit,
+      width: 1280 * unit,
+      height: 720 * unit,
+    },
+    scale: 'css',
+  });
+  const preview = await page.evaluate(
+    async ({ png, probes, unit }) => {
+      const image = await createImageBitmap(
+        await (await fetch(`data:image/png;base64,${png}`)).blob(),
+      );
+      const context = new OffscreenCanvas(image.width, image.height).getContext('2d')!;
+      context.drawImage(image, 0, 0);
+      return probes.map(([x, y]) =>
+        Array.from(context.getImageData(Math.round(x * unit), Math.round(y * unit), 1, 1).data),
+      );
+    },
+    { png: shot.toString('base64'), probes, unit },
+  );
+  for (const [name, pixels] of [
+    ['preview', preview],
+    ['copy', fixture.copy],
+    ['export', fixture.exported],
+  ] as const)
+    pixels.forEach(([r, , b], i) =>
+      expect({
+        name,
+        probe: probes[i],
+        camera: b > 160 && r < 90,
+        screen: r > 160 && b < 90,
+      }).toEqual({ name, probe: probes[i], camera: blue[i], screen: !blue[i] }),
+    );
+});

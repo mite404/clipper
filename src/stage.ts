@@ -1,6 +1,13 @@
 import type { VisualRole } from './timeline-model';
 
+/** Picture-in-picture corners for the camera inset, in reading order. */
+export const CORNERS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const;
+export type Corner = (typeof CORNERS)[number];
 export type Layout = {
+  // Side by side when absent. In PiP, swapped is kept but not applied.
+  mode?: 'pip';
+  // The PiP inset's corner; bottom-right when absent.
+  corner?: Corner;
   swapped?: boolean;
   radius: number;
   screenX: number;
@@ -26,6 +33,26 @@ export const STAGE = { width: 1280, height: 720 };
 const MARGIN = 10;
 const GAP = 18;
 const MASK_WIDTH = { screen: 880, camera: STAGE.width - 2 * MARGIN - GAP - 880 };
+// The PiP screen fills the stage inside the margin; the camera is a 16:9 third of it.
+const FULL: Rect = {
+  x: MARGIN,
+  y: MARGIN,
+  width: STAGE.width - 2 * MARGIN,
+  height: STAGE.height - 2 * MARGIN,
+};
+const INSET = { width: FULL.width / 3, height: ((FULL.width / 3) * 9) / 16 };
+
+// The PiP camera inset, MARGIN inside the screen's corner, in edit coordinates.
+function insetRect(corner: Corner = 'bottom-right'): Rect {
+  const [vertical, horizontal] = corner.split('-');
+  const near = (start: number, length: number, inset: number, far: boolean) =>
+    far ? start + length - MARGIN - inset : start + MARGIN;
+  return {
+    x: near(FULL.x, FULL.width, INSET.width, horizontal === 'right'),
+    y: near(FULL.y, FULL.height, INSET.height, vertical === 'bottom'),
+    ...INSET,
+  };
+}
 
 /**
  * Where a visual role paints, in render pixels or normalized edit coordinates when size is
@@ -36,6 +63,15 @@ export function maskRect(track: VisualRole, layout: Layout, size: Size = STAGE):
   const first: VideoTrack = layout.swapped ? 'camera' : 'screen';
   const scaleX = size.width / STAGE.width;
   const scaleY = size.height / STAGE.height;
+  if (layout.mode === 'pip') {
+    const rect = track === 'screen' ? FULL : insetRect(layout.corner); // → edit rect
+    return {
+      x: rect.x * scaleX,
+      y: rect.y * scaleY,
+      width: rect.width * scaleX,
+      height: rect.height * scaleY,
+    };
+  }
   return {
     x: (track === first ? MARGIN : MARGIN + MASK_WIDTH[first] + GAP) * scaleX,
     y: MARGIN * scaleY,

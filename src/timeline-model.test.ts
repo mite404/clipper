@@ -599,6 +599,13 @@ describe('the track registry', () => {
       { id: 'camera', role: 'camera', placeholder: true },
       { id: 'screen-2', role: 'screen', placeholder: false },
     ]);
+    // In picture in picture the camera inset paints last, even moved below a screen track.
+    expect(paintOrder([tracks[2], second, tracks[0], tracks[1]], true).map((t) => t.id)).toEqual([
+      'bg',
+      'screen-2',
+      'screen',
+      'camera',
+    ]);
   });
 
   it('places whole sources by kind, creating compatible tracks and refusing without moving', () => {

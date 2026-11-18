@@ -211,6 +211,12 @@ describe('portable project parsing', () => {
     const swapped = project();
     swapped.layout.swapped = true;
     expect(parseProject(JSON.stringify(swapped)).edit.layout.swapped).toBe(true);
+    const pip = project();
+    Object.assign(pip.layout, { mode: 'pip', corner: 'top-left' });
+    expect(parseProject(JSON.stringify(pip)).edit.layout).toMatchObject({
+      mode: 'pip',
+      corner: 'top-left',
+    });
   });
 
   it('accepts zooms that touch without overlapping', () => {
@@ -367,6 +373,20 @@ describe('portable project parsing', () => {
         Object.assign(p.layout, { swapped: 'yes' });
       },
       /swapped/i,
+    ],
+    [
+      'invalid layout mode',
+      (p: ReturnType<typeof project>) => {
+        Object.assign(p.layout, { mode: 'grid' });
+      },
+      /layout\.mode/i,
+    ],
+    [
+      'invalid PiP corner',
+      (p: ReturnType<typeof project>) => {
+        Object.assign(p.layout, { mode: 'pip', corner: 'middle' });
+      },
+      /layout\.corner/i,
     ],
     [
       'invalid zoom focus',

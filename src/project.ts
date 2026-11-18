@@ -1,4 +1,4 @@
-import type { Layout } from './stage';
+import { CORNERS, type Corner, type Layout } from './stage';
 import { openMedia, type Asset } from './media';
 import {
   DEFAULT_TRACKS,
@@ -93,6 +93,32 @@ function unique(ids: string[], field: string) {
 
 function range(start: number, duration: number, field: string) {
   if (start + duration > MAX_FRAMES) throw new Error(`${field} range exceeds 24 hours.`);
+}
+
+// The composition settings. Older files omit swapped; Side by side is stored as no mode.
+function layoutOf(value: unknown): Layout {
+  const settings = object(value, 'layout');
+  const layout: Layout = {
+    radius: number(settings.radius, 'layout.radius', 0, 60),
+    screenX: number(settings.screenX, 'layout.screenX', 0, 100),
+    screenY: number(settings.screenY, 'layout.screenY', 0, 100),
+    cameraX: number(settings.cameraX, 'layout.cameraX', 0, 100),
+    cameraY: number(settings.cameraY, 'layout.cameraY', 0, 100),
+  };
+  if (settings.swapped !== undefined) {
+    if (typeof settings.swapped !== 'boolean') throw new Error('layout.swapped must be boolean.');
+    layout.swapped = settings.swapped;
+  }
+  if (settings.mode !== undefined) {
+    if (settings.mode !== 'pip') throw new Error('layout.mode must be pip when present.');
+    layout.mode = settings.mode;
+  }
+  if (settings.corner !== undefined) {
+    if (!CORNERS.includes(settings.corner as Corner))
+      throw new Error('layout.corner must be top-left, top-right, bottom-left or bottom-right.');
+    layout.corner = settings.corner as Corner;
+  }
+  return layout;
 }
 
 // Optional, so files without chapters open unchanged. Titles are trimmed; the list is put in order.
@@ -307,18 +333,7 @@ export function parseProject(text: string): {
   // ponytail: pairwise scan; sort by start and compare neighbours if files carry thousands of zooms
   if (zooms.some((zoom) => zoomsOverlap(zooms, zoom))) throw new Error('Zooms cannot overlap.');
 
-  const settings = object(root.layout, 'layout');
-  const layout: Layout = {
-    radius: number(settings.radius, 'layout.radius', 0, 60),
-    screenX: number(settings.screenX, 'layout.screenX', 0, 100),
-    screenY: number(settings.screenY, 'layout.screenY', 0, 100),
-    cameraX: number(settings.cameraX, 'layout.cameraX', 0, 100),
-    cameraY: number(settings.cameraY, 'layout.cameraY', 0, 100),
-  };
-  if (settings.swapped !== undefined) {
-    if (typeof settings.swapped !== 'boolean') throw new Error('layout.swapped must be boolean.');
-    layout.swapped = settings.swapped;
-  }
+  const layout = layoutOf(root.layout); // → Layout
   const marked = chapters(root.chapters);
   // Track toggles validate like muted. Files saved before locks and track selection omit them.
   const toggles = (field: 'muted' | 'locked' | 'selectedTracks', fallback?: unknown[]) => {

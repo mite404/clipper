@@ -477,12 +477,16 @@ export function moveTrack(tracks: TrackDef[], id: Track, step: 1 | -1): TrackDef
 
 /**
  * Visual tracks in paint order, back to front. Only the lowest screen and camera track paints its
- * role's empty mask, so a masked track stacked above another never hides it.
+ * role's empty mask, so a masked track stacked above another never hides it. Picture in picture
+ * paints by role instead, so the full-frame screen never covers the camera inset.
  */
 export function paintOrder(
   tracks: TrackDef[],
+  pip = false,
 ): { id: Track; role: VisualRole; placeholder: boolean }[] {
-  const visual = tracks.flatMap((t) => (t.kind === 'visual' ? [t] : []));
+  const listed = tracks.flatMap((t) => (t.kind === 'visual' ? [t] : [])); // → registry order
+  const rank = (role: VisualRole) => ['background', 'screen', 'camera'].indexOf(role);
+  const visual = pip ? [...listed].sort((a, b) => rank(a.role) - rank(b.role)) : listed;
   return visual.map(({ id, role }) => ({
     id,
     role,

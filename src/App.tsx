@@ -96,7 +96,7 @@ import { CursorControls } from './CursorControls';
 import { ZoomMotionControls } from './ZoomMotionControls';
 import { moveZoom, resizeZoom, resolveZooms } from './zoom-generation';
 import { screenTracks } from './cursor-render';
-import { maskRect, STAGE, type Layout } from './stage';
+import { CORNERS, maskRect, STAGE, type Layout } from './stage';
 import { useMediaDrawer } from './useMediaDrawer';
 import { PanelResizeHandle, usePanelLayout } from './PanelResizeHandle';
 import './styles.css';
@@ -131,7 +131,9 @@ export const INITIAL_EDIT: Edit = {
     { id: 'a2', assetId: 'music', track: 'music', start: 0, duration: 360, offset: 0 },
   ],
   zooms: [],
-  layout: { radius: 22, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
+  // The camera crop sits high, so a tall source cropped into the PiP inset keeps the face. Side by
+  // side's tall mask shows such a source's full height, so the anchor changes nothing there.
+  layout: { radius: 22, screenX: 50, screenY: 50, cameraX: 50, cameraY: 15 },
   tracks: DEFAULT_TRACKS,
 };
 
@@ -657,6 +659,52 @@ function editStep(event: KeyboardEvent, key: string): 1 | -1 | undefined {
   return key === 'arrowup' ? -1 : key === 'arrowdown' ? 1 : undefined;
 }
 
+// The composition layouts by stored mode; Side by side is stored as no mode.
+const LAYOUTS = {
+  side: { name: 'Side by side', detail: 'Landscape + portrait' },
+  pip: { name: 'Picture in picture', detail: 'Camera inset over the screen' },
+};
+
+// The layout choice, and in Side by side the side swap; PiP keeps swapped but never applies it.
+function LayoutChoice({
+  layout,
+  onLayout,
+}: {
+  layout: Layout;
+  onLayout: (layout: Layout) => void;
+}) {
+  const mode = layout.mode ?? 'side';
+  return (
+    <>
+      <label className="slider-label">
+        Layout
+        <Choice
+          label="Composition layout"
+          value={mode}
+          options={(['side', 'pip'] as const).map((value) => ({
+            value,
+            label: LAYOUTS[value].name,
+          }))}
+          onChange={(next) => onLayout({ ...layout, mode: next === 'pip' ? 'pip' : undefined })}
+        />
+      </label>
+      {mode === 'side' && (
+        <button
+          type="button"
+          className="layout-swatch"
+          aria-label="Composition: swap sides"
+          title="Swap screen and portrait sides"
+          onClick={() => onLayout({ ...layout, swapped: !layout.swapped })}
+          style={{ flexDirection: layout.swapped ? 'row-reverse' : 'row' }}
+        >
+          <span />
+          <span />
+        </button>
+      )}
+    </>
+  );
+}
+
 /** Editing controls for a selected zoom and the two composition masks. */
 export function Inspector({
   zoom,
@@ -689,8 +737,8 @@ export function Inspector({
           <Clapperboard size={17} />
         </span>
         <div>
-          <strong>Side by side</strong>
-          <small>Landscape + portrait</small>
+          <strong>{LAYOUTS[layout.mode ?? 'side'].name}</strong>
+          <small>{LAYOUTS[layout.mode ?? 'side'].detail}</small>
         </div>
         <Check size={14} />
       </div>
@@ -698,17 +746,7 @@ export function Inspector({
         <h3>
           Composition <span>16:9</span>
         </h3>
-        <button
-          type="button"
-          className="layout-swatch"
-          aria-label="Composition: swap sides"
-          title="Swap screen and portrait sides"
-          onClick={() => onLayout({ ...layout, swapped: !layout.swapped })}
-          style={{ flexDirection: layout.swapped ? 'row-reverse' : 'row' }}
-        >
-          <span />
-          <span />
-        </button>
+        <LayoutChoice layout={layout} onLayout={onLayout} />
         <label className="slider-label">
           Corner radius <output>{layout.radius}px</output>
           <input
@@ -1909,6 +1947,36 @@ export function App() {
                     {busy ? 'Preparing your cutting room…' : 'Import media to start composing'}
                   </div>
                 )}
+                {edit.layout.mode === 'pip' && !markZoom && (
+                  // Editor-only corner targets over the live preview; Copy frame and export draw the
+                  // composition itself, so these never reach a frame.
+                  <div className="pip-corners" role="group" aria-label="Camera corner">
+                    {CORNERS.map((corner) => {
+                      const slot = maskRect('camera', { ...edit.layout, corner }); // → stage rect
+                      const current = (edit.layout.corner ?? 'bottom-right') === corner;
+                      return (
+                        <button
+                          key={corner}
+                          type="button"
+                          aria-label={`Camera ${corner.replace('-', ' ')}`}
+                          aria-pressed={current}
+                          style={{
+                            left: `${(slot.x / STAGE.width) * 100}%`,
+                            top: `${(slot.y / STAGE.height) * 100}%`,
+                            width: `${(slot.width / STAGE.width) * 100}%`,
+                            height: `${(slot.height / STAGE.height) * 100}%`,
+                            borderRadius: `${(edit.layout.radius / slot.width) * 100}% / ${(edit.layout.radius / slot.height) * 100}%`,
+                          }}
+                          onClick={() => {
+                            if (current) return;
+                            change({ ...edit, layout: { ...edit.layout, corner } });
+                            setMessage(`Camera moved to the ${corner.replace('-', ' ')} corner.`);
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
                 {markZoom && (
                   <div
                     className="mouse-target"
@@ -1952,7 +2020,7 @@ export function App() {
               </div>
               <div className="compose-caption">
                 <span>
-                  <span className="status-dot" /> Side by side
+                  <span className="status-dot" /> {LAYOUTS[edit.layout.mode ?? 'side'].name}
                 </span>
                 <span>
                   Fit <Maximize2 size={12} />

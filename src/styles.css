@@ -2983,3 +2983,40 @@ html[data-panel-drag='row'] * {
   font-size: 9px;
   color: #838d99;
 }
+
+/* CLIP-22: editor-only PiP corner targets over the live preview. Free corners show on hover or
+   keyboard focus; the camera's own corner stays clear so the inset reads as itself. */
+.pip-corners button {
+  position: absolute;
+  z-index: 4;
+  padding: 0;
+  border: 1px dashed transparent;
+  background: transparent;
+  cursor: pointer;
+  transition:
+    border-color 150ms ease-out,
+    background-color 150ms ease-out;
+}
+.compose-stage:hover .pip-corners button:not([aria-pressed='true'], :focus-visible) {
+  border-color: #d4ed4888;
+}
+/* Hover tints a free corner and turns its dashes solid. */
+.pip-corners button:not([aria-pressed='true'], :focus-visible):hover {
+  border-style: solid;
+  border-color: #d4ed48;
+  background: #d4ed4826;
+}
+/* The app's focus ring, drawn as the target's own border plus an inset shadow so it follows the
+   inset's corner radius flush with its edge; the transparent outline remains for forced colors. */
+.pip-corners button:focus-visible {
+  outline-color: transparent;
+  border-style: solid;
+  border-color: #c2b4ff;
+  box-shadow: inset 0 0 0 1px #c2b4ff;
+}
+.pip-corners button:not([aria-pressed='true']):focus-visible {
+  background: #c2b4ff1f;
+}
+.pip-corners button[aria-pressed='true'] {
+  cursor: default;
+}

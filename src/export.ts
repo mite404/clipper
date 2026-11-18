@@ -154,7 +154,7 @@ function drawFrame(
 ): void {
   context.fillStyle = '#172324';
   context.fillRect(0, 0, STAGE.width, STAGE.height);
-  for (const { id, role, placeholder } of paintOrder(tracks)) {
+  for (const { id, role, placeholder } of paintOrder(tracks, layout.mode === 'pip')) {
     const mask = maskRect(role, layout); // → stage rect
     context.save();
     context.beginPath();
