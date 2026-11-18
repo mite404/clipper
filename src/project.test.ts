@@ -58,41 +58,35 @@ describe('portable project parsing', () => {
     }
   });
 
-  it('saves and reopens every source anchor and split lineage field', async () => {
+  it('reads legacy source anchors, rejects malformed ones and saves pinned zooms without them', async () => {
     const url = URL.createObjectURL(
       new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),
     );
-    const anchored: Edit = {
-      ...edit,
-      clips: [{ ...edit.clips[0], originId: 'original-take' }],
-      zooms: [
-        {
-          ...edit.zooms[0],
-          source: {
-            assetId: 'video',
-            clipId: 'original-take',
-            start: 15,
-            x: 0.27,
-            y: 0.64,
-          },
-        },
-      ],
-    };
+    const source = { assetId: 'video', clipId: 'original-take', start: 15, x: 0.27, y: 0.64 };
+    const clips = [{ ...edit.clips[0], originId: 'original-take' }];
+    const legacy = { ...project(), clips, zooms: [{ ...edit.zooms[0], source }] };
     try {
-      const saved = (await serializeProject(anchored, [{ ...asset, url }], [])).file;
-      expect(parseProject(await saved.text()).edit).toEqual(anchored);
-      for (const source of [
-        { ...anchored.zooms[0].source, x: -0.01 },
-        { ...anchored.zooms[0].source, start: 1.5 },
-        { ...anchored.zooms[0].source, start: 24 * 60 * 60 * 30 },
-        { ...anchored.zooms[0].source, assetId: 'missing' },
-        { ...anchored.zooms[0].source, clipId: 'unrelated-take' },
+      const opened = parseProject(JSON.stringify(legacy)).edit;
+      expect(opened).toEqual({ ...edit, clips, zooms: [{ ...edit.zooms[0], source }] });
+      const assets: Asset[] = [{ ...asset, url }];
+      const pinned = {
+        ...opened,
+        zooms: resolveZooms(opened.zooms, clips, assets, opened.layout, opened.tracks),
+      };
+      expect(pinned.zooms).toEqual([
+        { ...edit.zooms[0], x: expect.any(Number), y: expect.any(Number) },
+      ]);
+      const saved = (await serializeProject(pinned, assets, [])).file;
+      expect(JSON.parse(await saved.text()).zooms[0]).not.toHaveProperty('source');
+      expect(parseProject(await saved.text()).edit).toEqual(pinned);
+      for (const bad of [
+        { ...source, x: -0.01 },
+        { ...source, start: 1.5 },
+        { ...source, start: 24 * 60 * 60 * 30 },
+        { ...source, assetId: 'missing' },
+        { ...source, clipId: 'unrelated-take' },
       ]) {
-        const value = {
-          ...project(),
-          clips: anchored.clips,
-          zooms: [{ ...anchored.zooms[0], source }],
-        };
+        const value = { ...legacy, zooms: [{ ...edit.zooms[0], source: bad }] };
         expect(() => parseProject(JSON.stringify(value))).toThrow(/source|anchor/i);
       }
     } finally {
@@ -100,7 +94,7 @@ describe('portable project parsing', () => {
     }
   });
 
-  it('saves and reopens a source anchor on any screen-role clip, as zoom generation resolves it', async () => {
+  it('opens a legacy source anchor on any screen-role clip, as zoom generation resolves it', async () => {
     const url = URL.createObjectURL(
       new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),
     );
@@ -109,25 +103,27 @@ describe('portable project parsing', () => {
       { id: 's2', label: 'Screen 2 · Masked', kind: 'visual', role: 'screen' },
     ];
     const source = { assetId: 'video', clipId: 'clip', start: 15, x: 0.27, y: 0.64 };
-    const second: Edit = {
-      ...edit,
-      tracks,
-      clips: [{ ...edit.clips[0], track: 's2' }],
-      zooms: [{ ...edit.zooms[0], source }],
-    };
+    const second: Edit = { ...edit, tracks, clips: [{ ...edit.clips[0], track: 's2' }] };
     try {
       const saved = (await serializeProject(second, [{ ...asset, url }], [])).file;
-      const reopened = parseProject(await saved.text()).edit;
-      expect(reopened).toEqual(second);
-      const assets: Asset[] = [{ ...asset, url }];
-      expect(resolveZooms(reopened.zooms, reopened.clips, assets, reopened.layout, tracks)).toEqual(
-        [expect.objectContaining({ id: 'zoom', start: 0, duration: 30, source })],
-      );
-      // A camera clip is not a screen, for the parser or for zoom generation.
-      const face = { ...second, clips: [{ ...edit.clips[0], track: 'camera' }] };
       const json = JSON.parse(await saved.text());
-      expect(() => parseProject(JSON.stringify({ ...json, clips: face.clips }))).toThrow(/anchor/i);
-      expect(resolveZooms(face.zooms, face.clips, assets, face.layout, tracks)).toEqual([]);
+      const legacy = { ...json, zooms: [{ ...json.zooms[0], source }] };
+      const reopened = parseProject(JSON.stringify(legacy)).edit;
+      expect(reopened.zooms[0].source).toEqual(source);
+      const assets: Asset[] = [{ ...asset, url }];
+      const resolved = resolveZooms(
+        reopened.zooms,
+        reopened.clips,
+        assets,
+        reopened.layout,
+        tracks,
+      );
+      expect(resolved).toEqual([expect.objectContaining({ id: 'zoom', start: 0, duration: 30 })]);
+      expect(resolved[0]).not.toHaveProperty('source');
+      // A camera clip is not a screen, for the parser or for zoom generation.
+      const face = [{ ...edit.clips[0], track: 'camera' }];
+      expect(() => parseProject(JSON.stringify({ ...legacy, clips: face }))).toThrow(/anchor/i);
+      expect(resolveZooms(reopened.zooms, face, assets, reopened.layout, tracks)).toEqual([]);
     } finally {
       URL.revokeObjectURL(url);
     }

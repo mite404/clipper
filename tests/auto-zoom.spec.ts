@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('opens legacy click shots, undoes manual edits and keeps source anchors on save and reopen', async ({
+test('opens legacy click shots where they resolved, then pins them to the timeline', async ({
   page,
 }) => {
   await page.goto('/');
@@ -13,8 +13,9 @@ test('opens legacy click shots, undoes manual edits and keeps source anchors on 
   const fixture = JSON.parse(Buffer.concat(fixtureChunks).toString());
   fixture.zooms = [
     {
+      // Stored frames disagree with the anchor, so open must resolve it as before: frame 18.
       id: 'legacy-first',
-      start: 18,
+      start: 0,
       duration: 117,
       scale: 1.8,
       x: 60,
@@ -39,55 +40,29 @@ test('opens legacy click shots, undoes manual edits and keeps source anchors on 
     buffer: Buffer.from(JSON.stringify(fixture)),
   });
   const regions = page.getByRole('button', { name: 'Select zoom', exact: true });
+  const startOf = async (index: number) => {
+    await regions.nth(index).click();
+    return page.getByLabel('Zoom start seconds', { exact: true }).inputValue();
+  };
   await expect(regions).toHaveCount(2);
-  await regions.first().click();
-  await expect(page.getByLabel('Zoom start seconds', { exact: true })).toHaveValue('0.6');
+  expect(await startOf(0)).toBe('0.6');
   await expect(page.getByLabel('Zoom duration seconds', { exact: true })).toHaveValue('3.9');
-  await page.getByLabel('Zoom level', { exact: true }).press('ArrowRight');
-  await expect(page.getByLabel('Zoom level', { exact: true })).toHaveValue('1.9');
-  await page.getByRole('button', { name: 'Undo', exact: true }).click();
-  await expect(page.getByLabel('Zoom level', { exact: true })).toHaveValue('1.8');
+  expect(await startOf(1)).toBe('6.6');
+  // A ripple insert before both shots moves their footage; pinned zooms stay on their frames.
+  await page.getByRole('slider', { name: 'Timeline playhead' }).fill('0');
+  await page.getByRole('button', { name: 'Insert source at playhead', exact: true }).click();
+  await expect(page.locator('.app-footer [role="status"]')).toContainText(/Inserted/);
+  expect(await startOf(0)).toBe('0.6');
+  expect(await startOf(1)).toBe('6.6');
   const downloadEvent = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Save project', exact: true }).click();
-  const download = await downloadEvent;
-  const stream = await download.createReadStream();
+  const stream = await (await downloadEvent).createReadStream();
   const chunks = [];
   for await (const chunk of stream) chunks.push(chunk);
   const project = JSON.parse(Buffer.concat(chunks).toString());
-  expect(project.zooms).toHaveLength(2);
-  expect(project.zooms[0].source).toMatchObject({
-    assetId: 'landscape',
-    clipId: 's1',
-    start: 18,
-    x: 0.6,
-    y: 0.3,
-  });
-  expect(project.zooms[0].scale).toBe(1.8);
-  expect(project.zooms[1].source).toMatchObject({ clipId: 's2', start: 228, x: 0.3, y: 0.7 });
-  await page.reload();
-  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready');
-  await page.getByLabel('Open local project').setInputFiles({
-    name: 'clicks.clipper.json',
-    mimeType: 'application/json',
-    buffer: Buffer.from(JSON.stringify(project)),
-  });
-  await expect(regions).toHaveCount(2);
-  await regions.first().click();
-  await page.getByLabel('Zoom level', { exact: true }).press('ArrowLeft');
-  await expect(page.getByLabel('Zoom level', { exact: true })).toHaveValue('1.7');
-  const editedDownloadEvent = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Save project', exact: true }).click();
-  const editedStream = await (await editedDownloadEvent).createReadStream();
-  const editedChunks = [];
-  for await (const chunk of editedStream) editedChunks.push(chunk);
-  const edited = JSON.parse(Buffer.concat(editedChunks).toString());
-  expect(edited.zooms[0].source).toBeUndefined();
-  expect(edited.zooms[0].scale).toBe(1.7);
-  expect(edited.zooms[1]).toEqual(project.zooms[1]);
-  await page.getByRole('button', { name: 'Remove zoom', exact: true }).click();
-  await expect(regions).toHaveCount(1);
-  await regions.click();
-  await expect(page.getByLabel('Zoom start seconds', { exact: true })).toHaveValue('6.6');
+  expect(project.zooms.map((zoom: { start: number }) => zoom.start)).toEqual([18, 198]);
+  expect(project.zooms.every((zoom: object) => !('source' in zoom))).toBe(true);
+  expect(project.version).toBe(fixture.version);
 });
 
 test('centers a source-offset click identically in preview and decoded export', async ({

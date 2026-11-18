@@ -1,9 +1,10 @@
 import type { Asset } from './media';
 import { screenTracks } from './cursor-render';
+import type { AnchoredZoom, ZoomAnchor } from './project';
 import { ZOOM_LIMITS, zoomsOverlap, type Clip, type TrackDef, type Zoom } from './timeline-model';
 import { coverRect, cropPosition, maskRect, type Layout } from './stage';
 
-function focus(source: NonNullable<Zoom['source']>, asset: Asset, layout: Layout) {
+function focus(source: ZoomAnchor, asset: Asset, layout: Layout) {
   const mask = maskRect('screen', layout);
   const cover = coverRect(mask, asset, cropPosition('screen', layout));
   return {
@@ -14,13 +15,12 @@ function focus(source: NonNullable<Zoom['source']>, asset: Asset, layout: Layout
 
 // A shot keeps its whole clip range on any screen-role track; ownership only picks what follows.
 function sourcePieces(
-  zoom: Zoom,
+  { source, ...zoom }: AnchoredZoom,
   clips: Clip[],
   screens: string[],
   assets: Asset[],
   layout: Layout,
 ): Zoom[] {
-  const source = zoom.source;
   const asset = assets.find((item) => item.id === source?.assetId);
   if (!source || !asset) return [];
   const pieces: Zoom[] = [];
@@ -40,7 +40,6 @@ function sourcePieces(
       start: clip.start + start - clip.offset,
       duration: end - start,
       ...focus(source, asset, layout),
-      source: { ...source, start },
     });
   }
   return pieces;
@@ -60,9 +59,13 @@ function nonOverlapping(manual: Zoom[], generated: Zoom[], clips: Clip[]): Zoom[
   return result;
 }
 
-/** Resolve source-anchored shots once per edit, retaining manual timeline zooms. */
+/**
+ * Pin a parsed file's source-anchored shots to the timeline frames and focus they resolve to,
+ * dropping each anchor. Open calls it once; edits never re-anchor (D-1). Shots that resolve to
+ * nothing, or collide with a pinned zoom, are dropped. Pinned zooms pass through unchanged.
+ */
 export function resolveZooms(
-  zooms: Zoom[],
+  zooms: AnchoredZoom[],
   clips: Clip[],
   assets: Asset[],
   layout: Layout,
@@ -78,19 +81,10 @@ export function resolveZooms(
 
 /**
  * Move one zoom to a timeline frame, keeping its duration. It stays in the free gap it sits in,
- * so it stops at a neighbour's edge or the sequence end and never overlaps or jumps a zoom. A
- * generated shot's anchor moves in step while the shot stays in its clip; otherwise the shot
- * becomes a manual zoom, as when its start is edited.
+ * so it stops at a neighbour's edge or the sequence end and never overlaps or jumps a zoom.
  * @param total the sequence length in frames
  */
-export function moveZoom(
-  zooms: Zoom[],
-  id: string,
-  start: number,
-  total: number,
-  clips: Clip[],
-  tracks: TrackDef[],
-): Zoom[] {
+export function moveZoom(zooms: Zoom[], id: string, start: number, total: number): Zoom[] {
   const zoom = zooms.find((z) => z.id === id);
   if (!zoom) return zooms;
   const end = zoom.start + zoom.duration;
@@ -105,21 +99,5 @@ export function moveZoom(
     ...others.flatMap((z) => (z.start >= end ? [z.start] : [])),
   );
   const next = Math.max(low, Math.min(high - zoom.duration, Math.round(start))); // → frame
-  const { source, ...manual } = zoom;
-  const shifted = source && { ...source, start: source.start + next - zoom.start };
-  const screens = screenTracks(tracks);
-  // The shot resolves to `next` only through a clip whose source range holds all of it.
-  const anchored =
-    shifted &&
-    clips.some(
-      (clip) =>
-        screens.includes(clip.track) &&
-        clip.assetId === shifted.assetId &&
-        (clip.originId ?? clip.id) === shifted.clipId &&
-        shifted.start >= clip.offset &&
-        shifted.start + zoom.duration <= clip.offset + clip.duration &&
-        clip.start + shifted.start - clip.offset === next,
-    );
-  const moved = anchored ? { ...manual, start: next, source: shifted } : { ...manual, start: next };
-  return zooms.map((z) => (z.id === id ? moved : z));
+  return zooms.map((z) => (z.id === id ? { ...z, start: next } : z));
 }

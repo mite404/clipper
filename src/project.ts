@@ -16,6 +16,10 @@ import { screenTracks } from './cursor-render';
 
 /** The undoable edit. `tracks` is the ordered registry every clip's `track` resolves through. */
 export type Edit = { clips: Clip[]; zooms: Zoom[]; layout: Layout; tracks: TrackDef[] };
+/** A source anchor from files saved before zooms were pinned (D-1); only open reads it. */
+export type ZoomAnchor = { assetId: string; clipId: string; start: number; x: number; y: number };
+/** A parsed zoom: open resolves any anchor once with `resolveZooms`, then keeps it pinned. */
+export type AnchoredZoom = Zoom & { source?: ZoomAnchor };
 
 function object(value: unknown, field: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value))
@@ -85,7 +89,7 @@ function zoomSource(
   clips: Clip[],
   tracks: TrackDef[],
   duration: number,
-): NonNullable<Zoom['source']> {
+): ZoomAnchor {
   const source = object(value, 'Zoom source anchor');
   const assetId = string(source.assetId, 'source.assetId');
   const clipId = string(source.clipId, 'source.clipId');
@@ -119,7 +123,7 @@ function imageKind(kind: unknown, data: string, version: unknown): { kind?: 'ima
 
 /** Validates the portable envelope, not media codecs or decoded source durations. */
 export function parseProject(text: string): {
-  edit: Edit;
+  edit: Edit & { zooms: AnchoredZoom[] };
   media: { id: string; name: string; data: string; kind?: 'image'; cursor?: CursorTrack }[];
   muted: Track[];
   locked: Track[];
@@ -202,7 +206,7 @@ export function parseProject(text: string): {
     'clip',
   );
 
-  const zooms: Zoom[] = array(root.zooms, 'zooms').map((entry, i) => {
+  const zooms: AnchoredZoom[] = array(root.zooms, 'zooms').map((entry, i) => {
     const item = object(entry, `zooms[${i}]`);
     const id = string(item.id, `zooms[${i}].id`);
     const start = frame(item.start, `zooms[${i}].start`);

@@ -98,16 +98,13 @@ it('does not treat a repeated switch as a drag', () => {
 });
 
 it('keeps a drag in one step when its first change also cleared another field', () => {
-  const anchored: Edit = {
-    ...base,
-    zooms: [{ ...base.zooms[0], source: { assetId: 'x', clipId: 'a', start: 20, x: 0.5, y: 0.5 } }],
-  };
+  const instant: Edit = { ...base, zooms: [{ ...base.zooms[0], instant: true }] };
   const scale = (value: number) => (edit: Edit) => ({
     ...edit,
-    zooms: [{ ...edit.zooms[0], scale: value, source: undefined }],
+    zooms: [{ ...edit.zooms[0], scale: value, instant: undefined }],
   });
   expect(
-    run(anchored, [
+    run(instant, [
       [0, scale(1.9)],
       [16, scale(2)],
       [32, scale(2.1)],

@@ -437,7 +437,7 @@ function ZoomBlock({
         const dx = event.clientX - held.x;
         if (preview === undefined && Math.abs(dx) < DRAG_THRESHOLD) return;
         const wanted = zoom.start + (dx / held.width) * duration; // → frame
-        const kept = moveZoom(zooms, zoom.id, wanted, duration, [], []); // → gap-clamped zooms
+        const kept = moveZoom(zooms, zoom.id, wanted, duration); // → gap-clamped zooms
         setPreview(kept.find((z) => z.id === zoom.id)!.start);
       }}
       onPointerUp={() => {

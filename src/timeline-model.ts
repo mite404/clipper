@@ -24,7 +24,6 @@ export type Zoom = {
   y: number;
   follow?: 'focused' | 'smooth';
   instant?: boolean;
-  source?: { assetId: string; clipId: string; start: number; x: number; y: number };
 };
 export const FPS = 30;
 /** No clip or zoom may end later than this: 24 hours of timeline. */

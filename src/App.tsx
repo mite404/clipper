@@ -902,24 +902,14 @@ export function App() {
         setMessage(`${labelOf(edit.tracks, refused)} is locked.`);
         return false;
       }
-      const next = {
-        ...proposed,
-        zooms: resolveZooms(
-          proposed.zooms,
-          proposed.clips,
-          assets,
-          proposed.layout,
-          proposed.tracks,
-        ),
-      }; // → Edit
-      const step = classifyChange(edit, next, gesture.current, performance.now()); // → HistoryStep
+      const step = classifyChange(edit, proposed, gesture.current, performance.now()); // → HistoryStep
       if (step.kind === 'none') return true;
       gesture.current = step.gesture;
       if (step.kind === 'push') setHistory((previous) => [...previous.slice(-49), edit]);
-      setEdit(next);
+      setEdit(proposed);
       return true;
     },
-    [edit, assets, locked],
+    [edit, locked],
   );
   // ponytail: history keeps 50 steps, so undoing all of a longer session reads as saved.
   // Add a saved marker to the edit itself if that ever costs someone work.
@@ -1662,7 +1652,7 @@ export function App() {
                       change({
                         ...edit,
                         zooms: edit.zooms.map((z) =>
-                          z.id === selectedZoom.id ? { ...z, x, y, source: undefined } : z,
+                          z.id === selectedZoom.id ? { ...z, x, y } : z,
                         ),
                       });
                       setMarkingZoomId(null);
@@ -1876,7 +1866,7 @@ export function App() {
             onMoveZoom={(id, start) =>
               change({
                 ...edit,
-                zooms: moveZoom(edit.zooms, id, start, duration, edit.clips, edit.tracks),
+                zooms: moveZoom(edit.zooms, id, start, duration),
               })
             }
           />
@@ -1906,7 +1896,7 @@ export function App() {
             }
             change({
               ...edit,
-              zooms: edit.zooms.map((z) => (z.id === zoom.id ? { ...zoom, source: undefined } : z)),
+              zooms: edit.zooms.map((z) => (z.id === zoom.id ? zoom : z)),
             });
           }}
         >
