@@ -9,14 +9,13 @@ const fixture = (name: string) => ({
 });
 
 // Audio and model files must never leave the browser: every request outside the app's own origin
-// fails the test. Google Fonts is blocked rather than allowed until REF-57 self-hosts it.
+// fails the test.
 async function guardNetwork(page: Page) {
   const outside: string[] = [];
   await page.route(
     (url) => !['127.0.0.1', 'localhost'].includes(url.hostname),
     (route) => {
-      const host = new URL(route.request().url()).hostname;
-      if (!/^fonts\.(googleapis|gstatic)\.com$/.test(host)) outside.push(route.request().url());
+      outside.push(route.request().url());
       return route.abort();
     },
   );
