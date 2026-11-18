@@ -65,7 +65,9 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
     mimeType: 'application/json',
     buffer: Buffer.from('{'),
   });
-  await expect(page.getByRole('alert')).toContainText('Could not attach cursor');
+  await expect(page.locator('.cursor-error[role="alert"]')).toContainText(
+    'Could not attach cursor',
+  );
   await expect(page.getByTestId('cursor-status')).toHaveText('5 samples · 1 cursor asset');
   await expect(page.getByLabel('Cursor time offset (ms)')).toHaveValue('-78');
   const corrupt = { ...cursorFixture, assets: [{ ...cursorFixture.assets[0], width: 2 }] };
@@ -74,7 +76,7 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify(corrupt)),
   });
-  await expect(page.getByRole('alert')).toContainText('dimensions');
+  await expect(page.locator('.cursor-error[role="alert"]')).toContainText('dimensions');
   await expect(page.getByTestId('cursor-status')).toHaveText('5 samples · 1 cursor asset');
   const pngHeader = Buffer.from(
     cursorFixture.assets[0].imageDataUrl.split(',')[1],
@@ -95,7 +97,9 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
       }),
     ),
   });
-  await expect(page.getByRole('alert')).toContainText('Could not attach cursor');
+  await expect(page.locator('.cursor-error[role="alert"]')).toContainText(
+    'Could not attach cursor',
+  );
   await expect(page.getByLabel('Cursor time offset (ms)')).toHaveValue('-78');
   await page.getByRole('button', { name: 'Select A conversation' }).click();
   await expect(page.getByTestId('cursor-status')).toHaveText('No cursor sidecar');

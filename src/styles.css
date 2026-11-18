@@ -3268,3 +3268,73 @@ input[type='number'],
   cursor: auto;
   user-select: text;
 }
+/* Toasts for finished slow actions: a bottom-right stack above the footer. */
+[data-slot='toast-region'] {
+  width: min(340px, calc(100vw - 24px));
+  height: var(--toast-front-height);
+  /* Clear of the footer and the Preview quality list that opens up from it: ui-sdk raises the
+     toast layer above every popup, so a toast over that list would take its clicks. */
+  /* ponytail: sized for that three-option list; raise it if a footer list grows taller. */
+  margin: 0 12px 120px auto;
+}
+[data-slot='toast-region'][data-expanded] {
+  height: calc(var(--toast-stack-height) + (var(--toast-count) - 1) * 8px);
+}
+.toast {
+  --y: calc(var(--toast-index) * -8px);
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: calc(100 - var(--toast-index));
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  height: var(--toast-height);
+  overflow: hidden;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--popover);
+  color: var(--foreground);
+  font-size: 12px;
+  line-height: 1.4;
+  box-shadow: 0 8px 24px #0009;
+  user-select: none;
+  translate: var(--toast-swipe-x, 0px) calc(var(--y) + var(--toast-swipe-y, 0px));
+  scale: calc(1 - var(--toast-index) * 0.04);
+  transition:
+    translate 300ms cubic-bezier(0.23, 1, 0.32, 1),
+    scale 300ms cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 200ms ease,
+    height 300ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.toast > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--green);
+}
+.toast:not([data-front], [data-expanded]) {
+  height: var(--toast-front-height);
+}
+.toast[data-expanded] {
+  --y: calc(-1 * (var(--toast-offset) + var(--toast-index) * 8px));
+  scale: 1;
+}
+.toast[data-starting-style][data-front] {
+  --y: 100%;
+}
+.toast:is([data-starting-style]:not([data-front]), [data-ending-style]) {
+  opacity: 0;
+}
+.toast[data-swiping] {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transition-property: opacity;
+  }
+  .toast[data-starting-style][data-front] {
+    --y: 0px;
+    opacity: 0;
+  }
+}

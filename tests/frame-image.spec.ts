@@ -147,6 +147,7 @@ for (const kind of ['png', 'jpeg'])
     px.forEach((pixel, i) => expect(near(pixel, expected[i], 3)).toBe(true));
     await page.getByRole('button', { name: 'Copy frame', exact: true }).click();
     await expect(page.locator('.app-footer [role="status"]')).toContainText('copied');
+    await expect(page.getByRole('region', { name: 'Notifications' })).toContainText('copied as');
     const copied = await page.evaluate(async () => {
       const [item] = await navigator.clipboard.read();
       const bitmap = await createImageBitmap(await item.getType('image/png'));
@@ -393,15 +394,17 @@ test('copies the held frame to the clipboard through the Copy frame button', asy
     mimeType: 'application/json',
     buffer: Buffer.from(project),
   });
-  await expect(page.getByRole('status').filter({ hasText: 'Project reopened' })).toBeVisible();
+  await expect(
+    page.locator('.app-footer [role="status"]').filter({ hasText: 'Project reopened' }),
+  ).toBeVisible();
   const next = page.getByRole('button', { name: 'Next frame', exact: true });
   for (let i = 0; i < 11; i++) await next.click();
   const button = page.getByRole('button', { name: 'Copy frame', exact: true });
   await button.focus();
   await page.keyboard.press('Enter');
-  await expect(page.getByRole('status').filter({ hasText: 'Frame 11 copied' })).toContainText(
-    '1920 × 1080',
-  );
+  await expect(
+    page.locator('.app-footer [role="status"]').filter({ hasText: 'Frame 11 copied' }),
+  ).toContainText('1920 × 1080');
   await expect(button).toBeEnabled();
   await expect(button).toBeFocused();
   const copied = await page.evaluate(async () => {
@@ -430,10 +433,14 @@ test('shows a visible error and recovers when the clipboard or media fails', asy
     mimeType: 'application/json',
     buffer: Buffer.from(project),
   });
-  await expect(page.getByRole('status').filter({ hasText: 'Project reopened' })).toBeVisible();
+  await expect(
+    page.locator('.app-footer [role="status"]').filter({ hasText: 'Project reopened' }),
+  ).toBeVisible();
   const button = page.getByRole('button', { name: 'Copy frame', exact: true });
   const timecode = await page.getByTestId('timecode').textContent();
-  const failure = page.getByRole('status').filter({ hasText: 'Could not copy frame' });
+  const failure = page
+    .locator('.app-footer [role="status"]')
+    .filter({ hasText: 'Could not copy frame' });
   const settle = async () => {
     await expect(failure).toBeVisible();
     await expect(button).toBeEnabled();
@@ -462,7 +469,9 @@ test('shows a visible error and recovers when the clipboard or media fails', asy
     mimeType: 'application/json',
     buffer: Buffer.from(project),
   });
-  await expect(page.getByRole('status').filter({ hasText: 'Project reopened' })).toBeVisible();
+  await expect(
+    page.locator('.app-footer [role="status"]').filter({ hasText: 'Project reopened' }),
+  ).toBeVisible();
   await page.evaluate(() => {
     const original = window.fetch;
     window.fetch = (input, init) =>
@@ -522,7 +531,9 @@ test('held preview and copied PNG show the same stored-time frame at WebM bounda
     mimeType: 'application/json',
     buffer: Buffer.from(project),
   });
-  await expect(page.getByRole('status').filter({ hasText: 'Project reopened' })).toBeVisible();
+  await expect(
+    page.locator('.app-footer [role="status"]').filter({ hasText: 'Project reopened' }),
+  ).toBeVisible();
   const player = page.getByTestId('compose-monitor').locator('video');
   await expect(player).toHaveCount(1);
   const next = page.getByRole('button', { name: 'Next frame', exact: true });
@@ -562,7 +573,7 @@ test('held preview and copied PNG show the same stored-time frame at WebM bounda
     });
     await button.click();
     await expect(
-      page.getByRole('status').filter({ hasText: `Frame ${frame} copied` }),
+      page.locator('.app-footer [role="status"]').filter({ hasText: `Frame ${frame} copied` }),
     ).toBeVisible();
     const copied = await page.evaluate(async () => {
       const [item] = await navigator.clipboard.read();
@@ -593,7 +604,9 @@ test('copies the frame and edit held at activation, not what changed while it re
     mimeType: 'application/json',
     buffer: Buffer.from(project),
   });
-  await expect(page.getByRole('status').filter({ hasText: 'Project reopened' })).toBeVisible();
+  await expect(
+    page.locator('.app-footer [role="status"]').filter({ hasText: 'Project reopened' }),
+  ).toBeVisible();
   const next = page.getByRole('button', { name: 'Next frame', exact: true });
   for (let i = 0; i < 11; i++) await next.click();
   // Stall the render's media read so the edit and playhead can change before it decodes.
@@ -619,7 +632,9 @@ test('copies the frame and edit held at activation, not what changed while it re
   await expect(clipB).toHaveCount(0);
   await expect(page.getByTestId('timecode')).toContainText('13');
   await page.evaluate(() => (window as unknown as { __release: () => void }).__release());
-  await expect(page.getByRole('status').filter({ hasText: 'Frame 11 copied' })).toBeVisible();
+  await expect(
+    page.locator('.app-footer [role="status"]').filter({ hasText: 'Frame 11 copied' }),
+  ).toBeVisible();
   const pixel = await page.evaluate(async () => {
     const [item] = await navigator.clipboard.read();
     const image = await createImageBitmap(await item.getType('image/png'));

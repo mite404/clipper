@@ -360,7 +360,7 @@ for (const kind of ['video', 'audio']) {
           buffer: Buffer.from('not media'),
         });
         await expect(
-          page.getByRole('status').filter({ hasText: 'Could not import' }),
+          page.locator('.app-footer [role="status"]').filter({ hasText: 'Could not import' }),
         ).toBeVisible();
       } else {
         await page.getByLabel('Open local project').setInputFiles({
@@ -368,7 +368,9 @@ for (const kind of ['video', 'audio']) {
           mimeType: 'application/json',
           buffer: Buffer.from('not JSON'),
         });
-        await expect(page.getByRole('status').filter({ hasText: 'Could not open' })).toBeVisible();
+        await expect(
+          page.locator('.app-footer [role="status"]').filter({ hasText: 'Could not open' }),
+        ).toBeVisible();
       }
       await expect(source).toHaveJSProperty('paused', true);
       const held = await source.evaluate((media: HTMLMediaElement) => media.currentTime);
@@ -690,7 +692,7 @@ test('imports local video and audio without uploading them', async ({ page }) =>
   await markRange(page, 15, 60);
   await page.getByRole('button', { name: 'Insert source at playhead' }).click();
   await expect(page.getByTestId('track-music').getByRole('button')).toHaveCount(2);
-  await expect(page.locator('[role="status"]')).toContainText('Inserted');
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Inserted');
   expect(uploads).toEqual([]);
 });
 
@@ -704,7 +706,7 @@ test('keeps all tracks on screen and survives realistic difficult imports', asyn
     mimeType: 'video/mp4',
     buffer: Buffer.from('not a video'),
   });
-  await expect(page.locator('[role="status"]')).toContainText('Could not import');
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Could not import');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready');
   const name =
     '2026-11-15_DevRel_Quarterly_Platform_Walkthrough_Review_v12_screen_recording_' +

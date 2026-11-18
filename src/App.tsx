@@ -11,6 +11,7 @@ import {
   type SetStateAction,
 } from 'react';
 import { Player, type PlayerRef } from '@remotion/player';
+import { toast } from '@ui-sdk/react/toast';
 import {
   ArrowDownToLine,
   ArrowLeft,
@@ -416,7 +417,9 @@ function useTranscription(
         const blob = await (await fetch(target.url)).blob();
         const transcript = await transcribe(blob, report, controller.signal);
         setAssets((all) => all.map((a) => (a.id === target.id ? { ...a, transcript } : a)));
-        setMessage(success(target.name, transcript));
+        const done = success(target.name, transcript);
+        setMessage(done);
+        toast.success(done);
       } catch (error) {
         setMessage(failure(target.name, controller.signal.aborted, error));
       } finally {
@@ -1791,12 +1794,12 @@ export function App() {
       setSavedTranscripts(assets.map((a) => a.transcript));
       // The next change starts a new step, so Undo can return to exactly what was saved.
       gesture.current = null;
-      setMessage(
-        omitted.length
-          ? `Portable project saved. Left out unused media: ${omitted.join(', ')}. ` +
-              'It could not be read or did not fit in the file.'
-          : 'Portable project saved with source media included. No relinking needed.',
-      );
+      const done = omitted.length
+        ? `Portable project saved. Left out unused media: ${omitted.join(', ')}. ` +
+          'It could not be read or did not fit in the file.'
+        : 'Portable project saved with source media included. No relinking needed.';
+      setMessage(done);
+      toast.success(done);
     } catch (error) {
       setMessage(
         `Could not save project. ${error instanceof Error ? error.message : 'Unknown error.'}`,
@@ -1852,7 +1855,9 @@ export function App() {
       setSourceId(imported[0]?.id ?? '');
       seek(0);
       setTimeout(() => previous.forEach((a) => URL.revokeObjectURL(a.url)), 0);
-      setMessage('Project reopened. Embedded media restored locally; no relinking or upload.');
+      const done = 'Project reopened. Embedded media restored locally; no relinking or upload.';
+      setMessage(done);
+      toast.success(done);
     } catch (error) {
       imported.forEach((a) => URL.revokeObjectURL(a.url));
       setMessage(
@@ -1893,9 +1898,9 @@ export function App() {
         size: blob.size,
         saved: false,
       });
-      setMessage(
-        `Video exported at ${exportWidth} × ${(exportWidth * 9) / 16}, ${fpsName(outputFps)}. Rendered locally.`,
-      );
+      const done = `Video exported at ${exportWidth} × ${(exportWidth * 9) / 16}, ${fpsName(outputFps)}. Rendered locally.`;
+      setMessage(done);
+      toast.success(done);
     } catch (error) {
       setMessage(
         controller.signal.aborted
@@ -1925,9 +1930,9 @@ export function App() {
       // The promise goes straight into the item so the write starts inside the click.
       const png = import('./export').then(({ renderFrameImage }) => renderFrameImage(snapshot));
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
-      setMessage(
-        `Frame ${snapshot.frame} copied as ${snapshot.width} × ${(snapshot.width * 9) / 16} PNG. Rendered locally.`,
-      );
+      const done = `Frame ${snapshot.frame} copied as ${snapshot.width} × ${(snapshot.width * 9) / 16} PNG. Rendered locally.`;
+      setMessage(done);
+      toast.success(done);
     } catch (error) {
       setMessage(
         `Could not copy frame. ${error instanceof Error ? error.message : 'Unknown error.'}`,
