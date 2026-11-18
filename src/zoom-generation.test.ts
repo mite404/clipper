@@ -1,8 +1,8 @@
 import { expect, it } from 'vitest';
 import type { Asset } from './media';
-import { DEFAULT_TRACKS, type Clip, type TrackDef, type Zoom } from './timeline-model';
+import { DEFAULT_TRACKS, ZOOM_LIMITS, type Clip, type TrackDef, type Zoom } from './timeline-model';
 import { splitClip, insertClip } from './timeline-model';
-import { moveZoom, resolveZooms } from './zoom-generation';
+import { moveZoom, resizeZoom, resolveZooms } from './zoom-generation';
 import type { AnchoredZoom } from './project';
 
 const layout = { radius: 22, screenX: 25, screenY: 80, cameraX: 50, cameraY: 50 };
@@ -149,4 +149,49 @@ it('moves a zoom over its neighbours, keeping its duration and overwriting what 
   const nudge = (start: number) => moveZoom(late, 'late', start, 360)[0].start;
   expect(nudge(301)).toBe(300);
   expect(nudge(290)).toBe(290);
+});
+
+it('resizes a zoom from either edge over its neighbours, never under the minimum', () => {
+  const a: Zoom = { id: 'a', start: 0, duration: 30, scale: 2, x: 40, y: 60, follow: 'focused' };
+  const b: Zoom = { ...a, id: 'b', start: 100 };
+  const c: Zoom = { ...a, id: 'c', start: 200 };
+  const zooms = [a, b, c];
+  const resize = (id: string, edge: 'left' | 'right', frame: number) =>
+    resizeZoom(zooms, id, edge, frame, 300);
+  // The right edge moves the end and keeps the start; the left edge keeps the end. Every other
+  // field, such as the scale, focus and follow, is untouched, so a generated shot stays a plain zoom.
+  expect(resize('b', 'right', 160)).toEqual([a, { ...b, duration: 60 }, c]);
+  expect(resize('b', 'left', 70)).toEqual([a, { ...b, start: 70, duration: 60 }, c]);
+  expect(resize('b', 'right', 160.6)[1].duration).toBe(61);
+  // Over a neighbour's head or tail it trims it; a remnant shorter than a zoom's minimum goes.
+  expect(resize('b', 'right', 215)).toEqual([
+    a,
+    { ...b, duration: 115 },
+    { ...c, start: 215, duration: 15 },
+  ]);
+  expect(resize('b', 'right', 225)).toEqual([a, { ...b, duration: 125 }]);
+  expect(resize('b', 'left', 20)).toEqual([
+    { ...a, duration: 20 },
+    { ...b, start: 20, duration: 110 },
+    c,
+  ]);
+  // Covering a neighbour removes it; frame 0 and the sequence end hold at both ends.
+  expect(resize('b', 'right', 999)).toEqual([a, { ...b, duration: 200 }]);
+  expect(resize('b', 'left', -50)).toEqual([{ ...b, start: 0, duration: 130 }, c]);
+  // Dragged across the opposite edge, a zoom stops at the minimum length, never inverted or empty.
+  expect(resize('b', 'right', 0)[1]).toEqual({ ...b, duration: ZOOM_LIMITS.minFrames });
+  expect(resize('b', 'left', 999)[1]).toEqual({
+    ...b,
+    start: 130 - ZOOM_LIMITS.minFrames,
+    duration: ZOOM_LIMITS.minFrames,
+  });
+  expect(resizeZoom(zooms, 'missing', 'left', 10, 300)).toBe(zooms);
+  // A zoom ending past a sequence that shrank under it can shorten but not be pulled left.
+  const late = [{ ...a, id: 'late', start: 300, duration: 120 }];
+  expect(resizeZoom(late, 'late', 'right', 999, 360)[0].duration).toBe(120);
+  expect(resizeZoom(late, 'late', 'right', 350, 360)[0].duration).toBe(50);
+  expect(resizeZoom(late, 'late', 'left', 250, 360)[0]).toMatchObject({
+    start: 250,
+    duration: 170,
+  });
 });

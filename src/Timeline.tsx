@@ -18,9 +18,11 @@ import { bindDrag } from '@ui-sdk/core';
 import {
   createElement,
   memo,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
+  type CSSProperties,
   type DragEvent,
   type HTMLAttributes,
   type MouseEvent,
@@ -28,7 +30,7 @@ import {
   type ReactNode,
 } from 'react';
 import type { Asset } from './media';
-import { moveZoom } from './zoom-generation';
+import { moveZoom, resizeZoom } from './zoom-generation';
 import {
   FPS,
   MAX_FRAMES,
@@ -485,6 +487,111 @@ const arrowStep = (event: {
   (event.shiftKey ? 10 : 1) *
   Number(![event.altKey, event.ctrlKey, event.metaKey].some(Boolean));
 
+/** What a drag or key press may ask of a zoom: both land on a frame, and overwrite what they cover. */
+export type ZoomEdits = {
+  move: (id: string, start: number) => void;
+  resize: (id: string, edge: 'left' | 'right', frame: number) => void;
+};
+
+// The state of an edge-grip drag on one zoom. A press follows the pointer past the threshold,
+// previews the span the edge would leave, drawn over the zooms it will overwrite, and commits once
+// on release; Escape or a taken-over pointer ends it with no commit.
+function useEdgeDrag(
+  zoom: Zoom,
+  zooms: Zoom[],
+  duration: number,
+  onResize?: (id: string, edge: 'left' | 'right', frame: number) => void,
+) {
+  const [sized, setSized] = useState<Span>(); // → previewed span
+  const stop = useRef<(() => void) | null>(null);
+  useEffect(() => () => stop.current?.(), []);
+  const dragEdge = (edge: 'left' | 'right', grip: HTMLElement, down: globalThis.PointerEvent) => {
+    const lane = grip.closest('.zoom-lane')!.getBoundingClientRect();
+    const from = edge === 'left' ? zoom.start : zoom.start + zoom.duration; // → frame
+    let wanted: number | undefined;
+    stop.current = bindDrag(grip, down, {
+      threshold: DRAG_THRESHOLD,
+      cancelOnEscape: true,
+      onMove: ({ x }) => {
+        wanted = from + ((x - down.clientX) / lane.width) * duration;
+        const kept = resizeZoom(zooms, zoom.id, edge, wanted, duration).find(
+          (z) => z.id === zoom.id,
+        )!;
+        setSized({ start: kept.start, duration: kept.duration });
+      },
+      onEnd: (_event, canceled) => {
+        setSized(undefined);
+        if (!canceled && wanted !== undefined) onResize?.(zoom.id, edge, wanted);
+      },
+    });
+  };
+  return { sized, dragEdge };
+}
+
+type Span = { start: number; duration: number };
+
+// The span a zoom is being dragged to: an edge-resize preview wins over a body-move preview.
+const dragSpan = (zoom: Zoom, moved?: number, sized?: Span): Span | undefined =>
+  sized ?? (moved === undefined ? undefined : { start: moved, duration: zoom.duration });
+
+// A zoom block's inline geometry and cursor. A dragged zoom draws over the zooms it will overwrite.
+function zoomStyle(zoom: Zoom, duration: number, span?: Span): CSSProperties {
+  const { start, duration: length } = span ?? zoom;
+  const style: CSSProperties = {
+    left: `${(start / duration) * 100}%`,
+    width: `${(length / duration) * 100}%`,
+    cursor: 'grab',
+    touchAction: 'none',
+  };
+  return span ? { ...style, cursor: 'grabbing', zIndex: 1 } : style;
+}
+
+// One edge grip of a zoom: a press selects it and a drag, or an arrow key (a frame, ten with
+// Shift), moves that edge.
+function ZoomGrip({
+  edge,
+  zoom,
+  duration,
+  dragEdge,
+  onSelect,
+  onResize,
+}: {
+  edge: 'left' | 'right';
+  zoom: Zoom;
+  duration: number;
+  onSelect: (id: string) => void;
+  dragEdge: (edge: 'left' | 'right', grip: HTMLElement, down: globalThis.PointerEvent) => void;
+  onResize?: (id: string, edge: 'left' | 'right', frame: number) => void;
+}) {
+  const at = edge === 'left' ? zoom.start : zoom.start + zoom.duration; // → frame
+  return (
+    <span
+      className={`zoom-grip ${edge}`}
+      role="slider"
+      tabIndex={0}
+      aria-label={`Resize zoom ${edge} edge`}
+      aria-valuemin={0}
+      aria-valuemax={duration}
+      aria-valuenow={at}
+      onKeyDown={(event) => {
+        const step = arrowStep(event);
+        if (!step) return;
+        event.preventDefault();
+        event.stopPropagation();
+        onResize?.(zoom.id, edge, at + step);
+      }}
+      onPointerDown={(event) => {
+        if (event.button !== 0) return;
+        // The grip is its own drag: the body's move must not start under it. A drag swallows the
+        // click that would select, so a press selects, as a clip's grip does.
+        event.stopPropagation();
+        onSelect(zoom.id);
+        dragEdge(edge, event.currentTarget, event.nativeEvent);
+      }}
+    />
+  );
+}
+
 // One zoom region: a click selects it, and a drag past the threshold or an arrow key moves it.
 function ZoomBlock({
   zoom,
@@ -493,6 +600,7 @@ function ZoomBlock({
   selected,
   onSelect,
   onMove,
+  onResize,
 }: {
   zoom: Zoom;
   zooms: Zoom[];
@@ -500,6 +608,7 @@ function ZoomBlock({
   selected: boolean;
   onSelect: (id: string) => void;
   onMove?: (id: string, start: number) => void;
+  onResize?: (id: string, edge: 'left' | 'right', frame: number) => void;
 }) {
   // Where the press began and the lane width it maps over; null when no press is held.
   const press = useRef<{ x: number; width: number } | null>(null);
@@ -509,17 +618,12 @@ function ZoomBlock({
     press.current = null;
     setPreview(undefined);
   };
+  const { sized, dragEdge } = useEdgeDrag(zoom, zooms, duration, onResize);
   return (
     <button
       aria-label="Select zoom"
       className={`zoom-block ${selected ? 'selected' : ''}`}
-      style={{
-        left: `${((preview ?? zoom.start) / duration) * 100}%`,
-        width: `${(zoom.duration / duration) * 100}%`,
-        // A dragged zoom draws over the zooms it will overwrite on release.
-        ...(preview === undefined ? { cursor: 'grab' } : { cursor: 'grabbing', zIndex: 1 }),
-        touchAction: 'none',
-      }}
+      style={zoomStyle(zoom, duration, dragSpan(zoom, preview, sized))}
       onClick={() => onSelect(zoom.id)}
       onKeyDown={(event) => {
         if (event.key === 'Escape') return cancel();
@@ -555,6 +659,17 @@ function ZoomBlock({
     >
       <ZoomIn size={12} />
       <span>{zoom.scale.toFixed(1)}× zoom</span>
+      {(['left', 'right'] as const).map((edge) => (
+        <ZoomGrip
+          key={edge}
+          edge={edge}
+          zoom={zoom}
+          duration={duration}
+          dragEdge={dragEdge}
+          onSelect={onSelect}
+          onResize={onResize}
+        />
+      ))}
     </button>
   );
 }
@@ -566,12 +681,14 @@ function ZoomLane({
   selected,
   onSelect,
   onMove,
+  onResize,
 }: {
   zooms: Zoom[];
   duration: number;
   selected: string;
   onSelect: (id: string) => void;
   onMove?: (id: string, start: number) => void;
+  onResize?: (id: string, edge: 'left' | 'right', frame: number) => void;
 }) {
   return (
     <div className="zoom-lane timeline-lane">
@@ -584,6 +701,7 @@ function ZoomLane({
           selected={selected === zoom.id}
           onSelect={onSelect}
           onMove={onMove}
+          onResize={onResize}
         />
       ))}
       {!zooms.length && <span className="lane-hint">Add a zoom to bring the details closer</span>}
@@ -606,7 +724,7 @@ export function Timeline({
   onRazor,
   onRazorHover,
   drop,
-  onMoveZoom,
+  zoomEdits,
   zoomRef,
 }: {
   clips: Clip[];
@@ -626,8 +744,8 @@ export function Timeline({
   onRazorHover?: (frame: number) => void;
   /** The pool drag in progress, so lanes can say whether they would take it. */
   drop?: PoolDrag;
-  /** Move a zoom to a timeline frame; the editor keeps it in its free gap. */
-  onMoveZoom?: (id: string, start: number) => void;
+  /** Move a zoom, or one of its edges, to a timeline frame; it overwrites the zooms it covers. */
+  zoomEdits?: ZoomEdits;
   /** Filled with the keyboard scale step while clips exist, for the editor's `-` and `=` keys. */
   zoomRef?: { current: ((step: 1 | -1) => void) | null };
 }) {
@@ -919,7 +1037,8 @@ export function Timeline({
             duration={duration}
             selected={selected}
             onSelect={onSelect}
-            onMove={onMoveZoom}
+            onMove={zoomEdits?.move}
+            onResize={zoomEdits?.resize}
           />
           {createRow('screen')}
           {visualRows(registry).map(laneRow)}

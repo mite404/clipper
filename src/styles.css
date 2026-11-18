@@ -1124,10 +1124,50 @@ p {
   overflow: hidden;
   font-size: 8px;
   white-space: nowrap;
+  container-type: inline-size;
+}
+/* Below the width two grips and the label need, the icon and label would pile under the grips as
+   clipped text, so a short block shows only its grips. It keeps its accessible name, and the
+   Inspector shows the scale. */
+@container (max-width: 96px) {
+  .zoom-block > :not(.zoom-grip) {
+    display: none;
+  }
 }
 .zoom-block.selected {
   border-color: #d0b5f1;
   filter: brightness(1.4);
+}
+/* Edge grips resize the zoom. Like .clip-grip they show on a selected, hovered or focused block.
+   Each takes at most 40% of the block, so a six-frame zoom keeps a sliver of body between them. */
+.zoom-grip {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  max-width: 40%;
+  cursor: ew-resize;
+  touch-action: none;
+  opacity: 0;
+  z-index: 1;
+  background: linear-gradient(
+    90deg,
+    transparent 4px,
+    #e7dcf588 4px,
+    #e7dcf588 7px,
+    transparent 7px
+  );
+}
+.zoom-grip.left {
+  left: 0;
+}
+.zoom-grip.right {
+  right: 0;
+  transform: scaleX(-1);
+}
+.zoom-block.selected .zoom-grip,
+.zoom-grip:focus-visible {
+  opacity: 1;
 }
 .timeline-clip {
   position: absolute;
@@ -1597,6 +1637,9 @@ p {
   }
   .timeline-clip.selected:hover {
     filter: brightness(1.52);
+  }
+  .zoom-block:hover .zoom-grip {
+    opacity: 1;
   }
   .secondary-button:hover {
     background: #3a3543;

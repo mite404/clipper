@@ -287,3 +287,172 @@ test('a zoom dropped inside another splits it, and the right piece keeps its loo
   const { zooms } = JSON.parse(await readFile(saved, 'utf8')) as { zooms: { id: string }[] };
   expect(new Set(zooms.map((z) => z.id)).size).toBe(3);
 });
+
+test('dragging either edge of a zoom draws over its neighbours and overwrites them on release, and keys resize it', async ({
+  page,
+}) => {
+  const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
+  const add = page.getByRole('button', { name: 'Add zoom', exact: true });
+  const regions = page.getByRole('button', { name: 'Select zoom', exact: true });
+  const undo = page.getByRole('button', { name: 'Undo', exact: true });
+  const start = page.getByLabel('Zoom start seconds', { exact: true });
+  const length = page.getByLabel('Zoom duration seconds', { exact: true });
+  // Two 4 s zooms on the 12 s demo: A at 0 and B at 8 s.
+  await playhead.fill('0');
+  await add.click();
+  await playhead.fill('240');
+  await add.click();
+  await expect(regions).toHaveCount(2);
+  const [a, b] = [regions.nth(0), regions.nth(1)];
+  const grip = (zoom: typeof a, edge: 'left' | 'right') =>
+    zoom.getByRole('slider', { name: `Resize zoom ${edge} edge` });
+  const lane = async () => (await page.locator('.zoom-lane').boundingBox())!;
+  // The block's frames, read from its inline geometry: a pressed block must not scale.
+  const framesOf = async (zoom: typeof a) =>
+    zoom.evaluate((e) => {
+      const { left, width } = (e as HTMLElement).style;
+      return [
+        Math.round((parseFloat(left) / 100) * 360),
+        Math.round((parseFloat(width) / 100) * 360),
+      ];
+    });
+  const dragEdge = async (
+    zoom: typeof a,
+    edge: 'left' | 'right',
+    frames: number,
+    before?: () => Promise<void>,
+  ) => {
+    const perFrame = (await lane()).width / 360;
+    const box = (await grip(zoom, edge).boundingBox())!;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(box.x + box.width / 2, y);
+    await page.mouse.down();
+    await page.mouse.move(box.x + box.width / 2 + frames * perFrame, y, { steps: 8 });
+    await before?.();
+    await page.mouse.up();
+  };
+
+  // Each block carries two grips, and pressing one selects the zoom without changing its size.
+  await expect(grip(a, 'left')).toHaveCount(1);
+  await expect(grip(a, 'right')).toHaveCount(1);
+  const idle = (await a.boundingBox())!;
+  const held = (await grip(a, 'right').boundingBox())!;
+  await page.mouse.move(held.x + held.width / 2, held.y + held.height / 2);
+  await page.mouse.down();
+  expect(await a.boundingBox()).toEqual(idle);
+  await page.mouse.up();
+  expect(await a.boundingBox()).toEqual(idle);
+  await expect(a).toHaveClass(/selected/);
+  await expect(length).toHaveValue('4');
+
+  // Dragging an edge of the unselected zoom selects it, as a clip's grip does: the drag swallows
+  // the click that would.
+  await b.click();
+  await expect(a).not.toHaveClass(/selected/);
+  await dragEdge(a, 'right', 30);
+  await expect(a).toHaveClass(/selected/);
+  await undo.click();
+  await expect(length).toHaveValue('4');
+
+  // The right edge drags 1 s out into free space, keeping the start and every other field.
+  await dragEdge(a, 'right', 30);
+  await expect(start).toHaveValue('0');
+  await expect(length).toHaveValue('5');
+  await expect(page.getByLabel('Camera follow', { exact: true })).toHaveValue('focused');
+  await undo.click();
+  await expect(length).toHaveValue('4');
+
+  // Held over B's head, A draws on top and B stays whole; released, A overwrites B's head, and
+  // one Undo restores both.
+  await dragEdge(a, 'right', 150, async () => {
+    expect(await framesOf(a)).toEqual([0, 270]);
+    expect(await framesOf(b)).toEqual([240, 120]);
+    await expect(a).toHaveCSS('z-index', '1');
+  });
+  await expect(regions).toHaveCount(2);
+  expect(await framesOf(a)).toEqual([0, 270]);
+  expect(await framesOf(b)).toEqual([270, 90]);
+  await undo.click();
+  expect(await framesOf(a)).toEqual([0, 120]);
+  expect(await framesOf(b)).toEqual([240, 120]);
+
+  // Dragged past the sequence end, the edge stops there and B, covered whole, is removed.
+  await dragEdge(a, 'right', 600);
+  await expect(regions).toHaveCount(1);
+  await expect(length).toHaveValue('12');
+  await undo.click();
+  await expect(regions).toHaveCount(2);
+  await expect(length).toHaveValue('4');
+
+  // B's left edge dragged over A's tail trims it; dragged to frame 0 it covers A and removes it.
+  await b.click();
+  await dragEdge(b, 'left', -150);
+  expect(await framesOf(a)).toEqual([0, 90]);
+  expect(await framesOf(b)).toEqual([90, 270]);
+  await undo.click();
+  await dragEdge(b, 'left', -600);
+  await expect(regions).toHaveCount(1);
+  await expect(start).toHaveValue('0');
+  await expect(length).toHaveValue('12');
+  await undo.click();
+  await expect(regions).toHaveCount(2);
+  await expect(start).toHaveValue('8');
+  await expect(length).toHaveValue('4');
+
+  // Dragged across the other edge, a zoom stops at the six-frame minimum.
+  await a.click();
+  await dragEdge(a, 'right', -300);
+  expect(await framesOf(a)).toEqual([0, 6]);
+  // A block that short shows only its grips, never clipped text under them; it keeps its name.
+  const label = a.locator('span:not(.zoom-grip)');
+  await expect(label).toBeHidden();
+  await expect(a).toHaveAttribute('aria-label', 'Select zoom');
+  await undo.click();
+  await expect(label).toBeVisible();
+  expect(await framesOf(a)).toEqual([0, 120]);
+
+  // Escape mid-drag cancels the resize, even over a neighbour.
+  await dragEdge(a, 'right', 150, async () => {
+    expect(await framesOf(a)).toEqual([0, 270]);
+    await page.keyboard.press('Escape');
+  });
+  expect(await framesOf(a)).toEqual([0, 120]);
+  expect(await framesOf(b)).toEqual([240, 120]);
+  await expect(length).toHaveValue('4');
+
+  // A focused grip resizes its edge by a frame, ten with Shift, and the playhead stays.
+  await playhead.fill('30');
+  await grip(a, 'right').focus();
+  await page.keyboard.press('ArrowRight');
+  expect(await framesOf(a)).toEqual([0, 121]);
+  await page.keyboard.press('Shift+ArrowLeft');
+  expect(await framesOf(a)).toEqual([0, 111]);
+  await expect(playhead).toHaveValue('30');
+  await grip(b, 'left').focus();
+  await page.keyboard.press('Shift+ArrowLeft');
+  expect(await framesOf(b)).toEqual([230, 130]);
+  // Arrows with Alt, Ctrl or Meta are left to the editor and never resize.
+  for (const chord of ['Alt+ArrowRight', 'Control+ArrowRight', 'Meta+ArrowLeft']) {
+    await grip(b, 'left').focus();
+    await page.keyboard.press(chord);
+    expect(await framesOf(b)).toEqual([230, 130]);
+  }
+
+  // The body still drags the whole zoom and a click on it still selects.
+  await a.click();
+  const body = (await a.boundingBox())!;
+  const perFrame = (await lane()).width / 360;
+  await page.mouse.move(body.x + body.width / 2, body.y + body.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(body.x + body.width / 2 + 20 * perFrame, body.y + body.height / 2, {
+    steps: 6,
+  });
+  await page.mouse.up();
+  expect(await framesOf(a)).toEqual([20, 111]);
+
+  // The keys follow the same rule: pushing A's edge into B trims B's head.
+  await grip(a, 'right').focus();
+  for (let press = 0; press < 12; press++) await page.keyboard.press('Shift+ArrowRight');
+  expect(await framesOf(a)).toEqual([20, 231]);
+  expect(await framesOf(b)).toEqual([251, 109]);
+});

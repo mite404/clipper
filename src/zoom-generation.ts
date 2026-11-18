@@ -99,3 +99,29 @@ export function moveZoom(zooms: Zoom[], id: string, start: number, total: number
   const next = Math.max(0, Math.min(high, Math.round(start))); // → frame
   return overwrite(zooms, { ...zoom, start: next }, () => true, ZOOM_LIMITS.minFrames);
 }
+
+/**
+ * Move one edge of a zoom to a timeline frame, the other edge staying put, overwriting the zooms
+ * the span then covers. The edge stops at frame 0, the sequence end and `ZOOM_LIMITS.minFrames`
+ * from the other edge, so a zoom never inverts or vanishes. Every other field is kept.
+ * @param frame where the dragged edge should sit
+ * @param total the sequence length in frames
+ */
+export function resizeZoom(
+  zooms: Zoom[],
+  id: string,
+  edge: 'left' | 'right',
+  frame: number,
+  total: number,
+): Zoom[] {
+  const zoom = zooms.find((z) => z.id === id);
+  if (!zoom) return zooms;
+  const min = ZOOM_LIMITS.minFrames;
+  const end = zoom.start + zoom.duration;
+  const at = Math.round(frame);
+  // A zoom the sequence already ends inside keeps its end as the bound, so no edit pulls it left.
+  const stop =
+    edge === 'right' ? Math.max(zoom.start + min, Math.min(Math.max(total, end), at)) : end;
+  const start = edge === 'left' ? Math.max(0, Math.min(end - min, at)) : zoom.start; // → frame
+  return overwrite(zooms, { ...zoom, start, duration: stop - start }, () => true, min);
+}
