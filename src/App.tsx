@@ -55,6 +55,7 @@ import {
   type Clip,
   type DropTarget,
   type NewTrack,
+  type Chapter,
   type Track,
   type TrackDef,
   type Zoom,
@@ -66,7 +67,13 @@ import {
   placeMedia,
   splitClip,
   splitWhere,
+  addChapter,
+  chapterId,
+  chapterList,
   clock,
+  removeChapter,
+  retitleChapter,
+  shownChapters,
   timecode,
   trackNumber,
   ZOOM_LIMITS,
@@ -80,6 +87,7 @@ import {
   validateSources,
   type Edit,
 } from './project';
+import { ChapterControls } from './ChapterControls';
 import { CursorControls } from './CursorControls';
 import { ZoomMotionControls } from './ZoomMotionControls';
 import { moveZoom, resizeZoom, resolveZooms } from './zoom-generation';
@@ -943,6 +951,9 @@ export function App() {
     selectedZoom ?? edit.zooms.find((z) => frame >= z.start && frame < z.start + z.duration);
   const screenMask = maskRect('screen', edit.layout); // → stage rect the mouse target covers
   const selectedClip = edit.clips.find((c) => c.id === selected);
+  // Chapters past the end of the sequence stay in the file but are neither drawn nor listed.
+  const chapters = shownChapters(edit.chapters ?? [], duration);
+  const selectedChapter = chapters.find((chapter) => chapterId(chapter) === selected);
   const cursorAsset = selectedClip
     ? screenTracks(edit.tracks).includes(selectedClip.track)
       ? assets.find((source) => source.id === selectedClip.assetId)
@@ -1136,10 +1147,34 @@ export function App() {
     },
     [edit, change],
   );
+  // Chapters are one undo step per change; none left means the edit carries no list at all.
+  const setChapters = useCallback(
+    (next: Chapter[]) => change({ ...edit, chapters: next.length ? next : undefined }),
+    [edit, change],
+  );
+  const markChapter = useCallback(() => {
+    const at = frameRef.current;
+    const next = addChapter(edit.chapters ?? [], at);
+    if (!next) return setMessage('A chapter already sits at this frame.');
+    if (setChapters(next)) {
+      setSelected(chapterId({ frame: at, title: '' }));
+      setMessage(`Chapter added at ${timecode(at)}.`);
+    }
+  }, [edit, setChapters]);
+  const copyChapters = useCallback(() => {
+    navigator.clipboard.writeText(chapterList(edit.chapters ?? [], duration)).then(
+      () => setMessage(`Copied ${chapters.length} chapter${chapters.length === 1 ? '' : 's'}.`),
+      () => setMessage('Could not copy chapters. The browser refused clipboard access.'),
+    );
+  }, [edit, duration, chapters.length]);
+  const removeMarked = useCallback(() => {
+    if (selectedChapter) setChapters(removeChapter(edit.chapters ?? [], selectedChapter.frame));
+  }, [edit, selectedChapter, setChapters]);
   const removeSelected = useCallback(() => {
     if (selectedZoom) change({ ...edit, zooms: edit.zooms.filter((z) => z.id !== selected) });
     else if (selectedClip) change({ ...edit, clips: edit.clips.filter((c) => c.id !== selected) });
-  }, [edit, selected, selectedZoom, selectedClip, change]);
+    else removeMarked();
+  }, [edit, selected, selectedZoom, selectedClip, change, removeMarked]);
 
   const hasAssets = assets.length > 0;
   useEffect(() => {
@@ -1324,6 +1359,12 @@ export function App() {
         addZoom();
         return;
       }
+      if (key === 'm') {
+        if (event.repeat || event.shiftKey) return;
+        event.preventDefault();
+        markChapter();
+        return;
+      }
       // Display only: the scale changes how long the timeline looks, never a clip. Matched by the
       // typed character, so the keys follow the user's layout.
       if (key === '-' || key === '=') {
@@ -1362,6 +1403,7 @@ export function App() {
     exportProgress,
     markingMouse,
     addZoom,
+    markChapter,
   ]);
   const importFiles = async (files: FileList) => {
     setBusy(true);
@@ -1970,7 +2012,7 @@ export function App() {
               </button>
               <IconButton
                 label="Delete selected clip or zoom"
-                disabled={!selectedClip && !selectedZoom}
+                disabled={!selectedClip && !selectedZoom && !selectedChapter}
                 onClick={removeSelected}
               >
                 <Trash2 size={14} />
@@ -2006,9 +2048,9 @@ export function App() {
             }}
             onSeek={seek}
             zoomRef={timelineZoom}
+            chapters={chapters}
             onTrim={putClip}
-            onRazor={tool === 'razor' ? razor : undefined}
-            onRazorHover={tool === 'razor' ? razorHover : undefined}
+            razor={tool === 'razor' ? { cut: razor, hover: razorHover } : undefined}
             zoomEdits={{
               move: (id, start) =>
                 change({ ...edit, zooms: moveZoom(edit.zooms, id, start, duration) }),
@@ -2062,6 +2104,14 @@ export function App() {
               />
             </section>
           )}
+          <ChapterControls
+            chapters={chapters}
+            selected={selectedChapter}
+            onRename={(frame, title) =>
+              setChapters(retitleChapter(edit.chapters ?? [], frame, title))
+            }
+            onCopy={copyChapters}
+          />
           <CursorControls
             key={cursorAsset?.id}
             asset={cursorAsset}
@@ -2179,6 +2229,7 @@ export function App() {
           ['V / C', 'Selection tool / Razor tool (hover to preview the cut frame, click to cut)'],
           [MAC ? '⌘ K' : 'Alt K', 'Cut every unlocked track at the playhead'],
           ['B', 'Create zoom at playhead (4 seconds)'],
+          ['M', 'Mark a chapter at the playhead · Delete removes the selected one'],
           ['- / =', 'Zoom the timeline out / in · changes the display only, never a clip'],
           ['Delete', 'Remove selected clip or zoom · only from the timeline'],
           ['⌘ / Ctrl Z', 'Undo last edit'],

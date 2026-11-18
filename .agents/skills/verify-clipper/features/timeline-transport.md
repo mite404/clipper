@@ -13,6 +13,12 @@ Splice video and speech, seek synchronized media, and shuttle with keyboard cont
   first and last frame.
 - Play/pause via transport and Space; J rewind, K pause, L play, repeated J/L for faster speeds.
 - Audio mute, decoded waveform progress, and silent reverse playback.
+- Chapters: M marks one at the playhead (not in a text field), shown as a flag on the ruler. A flag
+  click seeks to it and selects it; Delete removes it; the Inspector edits its title; Copy chapters
+  copies `mm:ss Title` lines, with `00:00 Start` first when none sits at frame 0. Each add, rename
+  and delete is one undo step, and they save with the project. `all` runs `tests/chapters.spec.ts`.
+  Chapters past the sequence end stay in the file but are hidden and left out of the list. Flags
+  cannot be dragged and are not written into MP4 files.
 - Left/right edge sliders shorten clips by pointer drag or arrows; Shift adjusts ten frames.
 - Timeline scale and native horizontal scrolling expose the entire sequence.
 - After a pause the arrow key and the frame buttons step from the frame the timecode shows, so Next

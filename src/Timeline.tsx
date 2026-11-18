@@ -38,11 +38,13 @@ import {
   placeMedia,
   rulerMarks,
   snapFrame,
+  chapterId,
   clock,
   timecode,
   trackNumber,
   trimBounds,
   trimClip,
+  type Chapter,
   type Clip,
   type TrimBounds,
   type DropTarget,
@@ -711,6 +713,45 @@ function ZoomLane({
   );
 }
 
+/** What the Razor tool does; both are absent while it is not armed. */
+type Razor = {
+  cut?: (clipId: string, frame: number) => void;
+  /** The pointer is over a cuttable frame, which the playhead follows. */
+  hover?: (frame: number) => void;
+};
+const NO_RAZOR: Razor = {};
+
+// The chapters as flags on the ruler: a press seeks to one and selects it.
+function ChapterFlags({
+  chapters = [],
+  selected,
+  duration,
+  onSeek,
+  onSelect,
+}: {
+  chapters?: Chapter[];
+  selected: string;
+  duration: number;
+  onSeek: (frame: number) => void;
+  onSelect: (id: string) => void;
+}) {
+  return chapters.map((chapter) => (
+    <button
+      key={chapter.frame}
+      type="button"
+      className="chapter-flag"
+      aria-label={`Chapter ${chapter.title} at ${timecode(chapter.frame)}`}
+      aria-pressed={selected === chapterId(chapter)}
+      title={`${chapter.title} · ${timecode(chapter.frame)}`}
+      style={{ left: `${(chapter.frame / duration) * 100}%` }}
+      onClick={() => {
+        onSeek(chapter.frame);
+        onSelect(chapterId(chapter));
+      }}
+    />
+  ));
+}
+
 /** Multitrack timeline with a frame-accurate ruler and waveform playback highlighting. */
 export function Timeline({
   clips,
@@ -723,11 +764,11 @@ export function Timeline({
   onSeek,
   headers,
   onTrim,
-  onRazor,
-  onRazorHover,
+  razor = NO_RAZOR,
   drop,
   zoomEdits,
   zoomRef,
+  chapters,
 }: {
   clips: Clip[];
   assets: Asset[];
@@ -741,17 +782,18 @@ export function Timeline({
   onTrim?: (clip: Clip) => void;
   /** Set while the Razor tool is active: clicks cut a clip at the clicked frame instead of
    * selecting it. */
-  onRazor?: (clipId: string, frame: number) => void;
-  /** Set with `onRazor`: the pointer is over a cuttable frame, which the playhead follows. */
-  onRazorHover?: (frame: number) => void;
+  razor?: Razor;
   /** The pool drag in progress, so lanes can say whether they would take it. */
   drop?: PoolDrag;
   /** Move a zoom, or one of its edges, to a timeline frame; it overwrites the zooms it covers. */
   zoomEdits?: ZoomEdits;
   /** Filled with the keyboard scale step while clips exist, for the editor's `-` and `=` keys. */
   zoomRef?: { current: ((step: 1 | -1) => void) | null };
+  /** The chapters inside the sequence, drawn as flags on the ruler. */
+  chapters?: Chapter[];
 }) {
   const { registry, tracks, onToggleTrack, onMoveTrack } = headers;
+  const { cut: onRazor, hover: onRazorHover } = razor;
   const seconds = duration / FPS;
   const { viewport, label, minScale, maxScale, scale, setScale, zoom, width } =
     useTimelineScale(seconds);
@@ -1014,6 +1056,13 @@ export function Timeline({
                 {mark % FPS ? timecode(mark) : clock(mark)}
               </span>
             ))}
+            <ChapterFlags
+              chapters={chapters}
+              selected={selected}
+              duration={duration}
+              onSeek={onSeek}
+              onSelect={onSelect}
+            />
             <div
               className="ruler-playhead"
               aria-hidden="true"

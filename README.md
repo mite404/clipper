@@ -29,6 +29,8 @@ service holds 5173, so beside it run `npm run dev -- --port <free port>`.
 - Landscape-left and portrait-right cover crops with shared 22px masks by default.
 - Click the Inspector's composition preview to swap sides, drag either clip edge to shorten, and
   scroll/scale the timeline, with `-` and `=` zooming it out and in.
+- Chapter markers: `M` marks one at the playhead, shown as ruler flags you can click, rename in the
+  Inspector, delete, save with the project and copy as a YouTube-style list.
 - Timed screen zooms with editable scale, manually marked mouse focus, and smooth in/hold/out.
 - Portable project save/reopen with embedded original media and no relinking requirement.
 - Local rendered video export at 1920×1080 or 3840×2160 as MP4, MOV or WebM, chosen in the export

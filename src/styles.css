@@ -2881,3 +2881,28 @@ html[data-panel-drag='row'] * {
     grid-template-rows: 240px;
   }
 }
+
+/* A chapter flag on the ruler: a small pennant at its frame, above the playhead scrubber input (z-index 7). */
+.chapter-flag {
+  position: absolute;
+  top: 0;
+  z-index: 8;
+  width: 9px;
+  height: 11px;
+  padding: 0;
+  border: 0;
+  background: #e0b341;
+  clip-path: polygon(0 0, 100% 35%, 0 70%, 0 100%);
+  cursor: pointer;
+}
+.chapter-flag[aria-pressed='true'] {
+  background: #fff;
+}
+.chapter-title {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 9px;
+  color: #838d99;
+}
