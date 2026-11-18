@@ -357,6 +357,25 @@ export function trimTo(clip: Clip, edge: 'left' | 'right', frame: number): Clip 
   return trimClip(clip, edge, frame - from, { start: 0, end: MAX_FRAMES });
 }
 
+/**
+ * The edit point `step` away from `frame` (-1 before it, 1 after): a start or end of a clip on an
+ * unlocked track, frame 0, or the last frame. Undefined when there is none that way. A locked
+ * track's edges are not edit points, though its clips still set the sequence's length.
+ */
+export function editPoint(
+  clips: Clip[],
+  locked: Track[],
+  duration: number,
+  frame: number,
+  step: 1 | -1,
+): number | undefined {
+  const edges = clips.filter((clip) => !locked.includes(clip.track));
+  const points = [0, duration, ...edges.flatMap((clip) => [clip.start, clip.start + clip.duration])]
+    .map((point) => Math.min(point, duration - 1)) // the playhead's last stop is the last frame
+    .filter((point) => (step > 0 ? point > frame : point < frame));
+  return points.length ? (step > 0 ? Math.min(...points) : Math.max(...points)) : undefined;
+}
+
 /** Round gaps, in seconds, a ruler mark may sit apart. */
 const RULER_STEPS = [
   1, 2, 5, 10, 15, 30, 60, 120, 300, 600, 900, 1800, 3600, 7200, 14400, 43200, 86400,

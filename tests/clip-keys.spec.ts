@@ -103,3 +103,62 @@ test('a locked lane refuses the trim, and modifiers or a text field never trim o
   await expect(clipAt(page, 'screen', 0)).toHaveAttribute('aria-pressed', 'true');
   await expect(clipAt(page, 'camera', 0)).toHaveAttribute('aria-pressed', 'false');
 });
+
+test('Up and Down step to the previous and next edit point and leave sliders, fields and Shift alone', async ({
+  page,
+}) => {
+  await openEditor(page);
+  // The demo's edit points: 0, the screen splice at 180, and the last frame, 359.
+  await at(page, 100);
+  // A focused slider keeps its own arrow keys.
+  await page.keyboard.press('ArrowUp');
+  await expect(playhead(page)).toHaveValue('101');
+  const crop = page.getByRole('spinbutton', { name: 'screen horizontal crop' });
+  await crop.focus();
+  await page.keyboard.press('ArrowUp');
+  await expect(crop).toHaveValue('51');
+  await expect(playhead(page)).toHaveValue('101');
+
+  // Before the timeline has been pressed, the arrows are the page's: a focused Inspector button
+  // scrolls its panel and the playhead stays.
+  const inspector = page.locator('#inspector-pane');
+  await inspector.getByRole('button').first().focus();
+  const scrolled = await inspector.evaluate((el) => el.scrollTop);
+  await page.keyboard.press('ArrowDown');
+  await expect.poll(() => inspector.evaluate((el) => el.scrollTop)).toBeGreaterThan(scrolled);
+  await expect(playhead(page)).toHaveValue('101');
+  // A press on a clip puts focus in the timeline, where the arrows jump.
+  await clipAt(page, 'screen', 0).click();
+  await page.keyboard.press('Shift+ArrowDown');
+  await expect(playhead(page)).toHaveValue('101');
+  // The editor takes the key, so the page must not also scroll: a later listener sees it prevented.
+  await page.evaluate(() =>
+    window.addEventListener('keydown', (event) =>
+      Object.assign(window, { lastKeyPrevented: event.defaultPrevented }),
+    ),
+  );
+  for (const [key, frame] of [
+    ['ArrowDown', '180'],
+    ['ArrowDown', '359'],
+    ['ArrowDown', '359'],
+    ['ArrowUp', '180'],
+    ['ArrowUp', '0'],
+    ['ArrowUp', '0'],
+  ]) {
+    await page.keyboard.press(key);
+    await expect(playhead(page)).toHaveValue(frame);
+    expect(
+      await page.evaluate(() => (window as { lastKeyPrevented?: boolean }).lastKeyPrevented),
+    ).toBe(true);
+  }
+  await expect(undo(page)).toBeEnabled(); // only the crop field edit; the jumps are not edits
+});
+
+test("a locked track's clip edges are not edit points", async ({ page }) => {
+  await openEditor(page);
+  await at(page, 100);
+  await page.getByRole('button', { name: 'Lock Screen recording', exact: true }).click();
+  await page.keyboard.press('ArrowDown');
+  // The screen splice at 180 is skipped; the other tracks' next edge is the last frame.
+  await expect(playhead(page)).toHaveValue('359');
+});

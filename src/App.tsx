@@ -72,6 +72,7 @@ import {
   chapterList,
   clipAt,
   clock,
+  editPoint,
   removeChapter,
   retitleChapter,
   shownChapters,
@@ -655,6 +656,12 @@ function runClipKey(keys: Map<string, () => void>, event: KeyboardEvent, key: st
   return true;
 }
 
+// Up steps back to the previous edit point and Down on to the next; Shift keeps its own meaning.
+function editStep(event: KeyboardEvent, key: string): 1 | -1 | undefined {
+  if (event.shiftKey) return undefined;
+  return key === 'arrowup' ? -1 : key === 'arrowdown' ? 1 : undefined;
+}
+
 /** Editing controls for a selected zoom and the two composition masks. */
 export function Inspector({
   zoom,
@@ -1184,6 +1191,14 @@ export function App() {
     },
     [selectedClip, putClip],
   );
+  // Up and Down step the playhead to the previous and next edit point.
+  const jumpEdit = useCallback(
+    (step: 1 | -1) => {
+      const to = editPoint(edit.clips, locked, duration, frameRef.current, step);
+      if (to !== undefined) seek(to);
+    },
+    [edit.clips, locked, duration, seek],
+  );
   const copyChapters = useCallback(() => {
     navigator.clipboard.writeText(chapterList(edit.chapters ?? [], duration)).then(
       () => setMessage(`Copied ${chapters.length} chapter${chapters.length === 1 ? '' : 's'}.`),
@@ -1388,6 +1403,14 @@ export function App() {
         [']', () => trimSelected('right')],
       ]);
       if (runClipKey(clipKeys, event, key)) return;
+      // Like Delete, only once the timeline has been pressed or focused: a button elsewhere keeps
+      // its panel's native scrolling.
+      const step = editStep(event, key);
+      if (step && inTimeline.current) {
+        event.preventDefault();
+        jumpEdit(step);
+        return;
+      }
       if (key === 'm') {
         if (event.repeat || event.shiftKey) return;
         event.preventDefault();
@@ -1435,6 +1458,7 @@ export function App() {
     markChapter,
     selectUnder,
     trimSelected,
+    jumpEdit,
   ]);
   const importFiles = async (files: FileList) => {
     setBusy(true);
@@ -2260,6 +2284,7 @@ export function App() {
           ['V / C', 'Selection tool / Razor tool (hover to preview the cut frame, click to cut)'],
           [MAC ? '⌘ K' : 'Alt K', 'Cut every unlocked track at the playhead'],
           ['B', 'Create zoom at playhead (4 seconds)'],
+          ['↑ / ↓', 'Playhead to the previous / next edit point · from the timeline'],
           ['X', 'Select the clip under the playhead (the selected track, else the topmost video)'],
           ['[ / ]', "Trim the selected clip's start / end to the playhead · no ripple"],
           ['M', 'Mark a chapter at the playhead · Delete removes the selected one'],

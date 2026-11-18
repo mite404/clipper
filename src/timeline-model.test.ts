@@ -5,6 +5,7 @@ import {
   chapterList,
   clipAt,
   clipPiece,
+  editPoint,
   clock,
   covers,
   createTrack,
@@ -826,5 +827,49 @@ describe('trimTo', () => {
     expect(trimTo(clip, 'right', 31)).toMatchObject({ start: 30, duration: 1 });
     expect(trimTo(clip, 'left', 31)).toMatchObject({ start: 31, duration: 149 });
     expect(trimTo(clip, 'right', 179)).toMatchObject({ duration: 149 });
+  });
+});
+
+describe('editPoint', () => {
+  const on = (id: string, track: string, start: number, duration: number): Clip => ({
+    ...clip,
+    id,
+    track,
+    start,
+    duration,
+  });
+  // Screen 10..40 and 70..100; camera 25..90 (ends mid-way). The sequence is 100 frames long.
+  const clips = [on('a', 'screen', 10, 30), on('b', 'screen', 70, 30), on('c', 'camera', 25, 65)];
+  const next = (frame: number, locked: string[] = []) => editPoint(clips, locked, 100, frame, 1);
+  const prev = (frame: number, locked: string[] = []) => editPoint(clips, locked, 100, frame, -1);
+
+  it('steps to the nearest start or end ahead, and from a point to the one after it', () => {
+    // 0, 10, 25, 40, 70, 90, then the last frame 99 for the end of the sequence.
+    expect([0, 9, 10, 24, 25, 39, 40, 69, 70, 89, 90].map((frame) => next(frame))).toEqual([
+      10, 10, 25, 25, 40, 40, 70, 70, 90, 90, 99,
+    ]);
+  });
+
+  it('steps to the nearest one behind, ending at frame 0', () => {
+    expect([99, 91, 90, 71, 70, 41, 40, 26, 25, 11, 10, 1].map((frame) => prev(frame))).toEqual([
+      90, 90, 70, 70, 40, 40, 25, 25, 10, 10, 0, 0,
+    ]);
+  });
+
+  it('has nothing past either end', () => {
+    expect(next(99)).toBeUndefined();
+    expect(prev(0)).toBeUndefined();
+    expect(editPoint([], [], 1, 0, 1)).toBeUndefined();
+  });
+
+  it('ignores the edges of a locked track, which still set the sequence length', () => {
+    expect(next(0, ['screen'])).toBe(25);
+    expect(next(25, ['screen'])).toBe(90);
+    expect(prev(99, ['camera'])).toBe(70);
+    expect([0, 70, 100].map((frame) => next(frame, ['screen', 'camera']))).toEqual([
+      99,
+      99,
+      undefined,
+    ]);
   });
 });

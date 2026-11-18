@@ -16,7 +16,11 @@ Splice video and speech, seek synchronized media, and shuttle with keyboard cont
 - X selects the clip under the playhead (a selected track's first, else the topmost video; nothing
   over a gap). `[` and `]` trim the selected clip's start or end to the playhead as one undo step,
   with no ripple; they do nothing outside the clip, and a locked lane refuses. No modifiers, not in
-  text fields. `all` runs `tests/clip-keys.spec.ts`. Up and Down have no editor binding.
+  text fields. Up and Down step the playhead to the previous and next edit point (a clip start or
+  end on an unlocked track, frame 0 or the last frame) once the timeline has been pressed or
+  focused, as Delete is gated. A focused slider, field or any panel outside it keeps its own arrow
+  keys (a button in the Inspector still scrolls it), and Shift+arrow is left alone. `all` runs
+  `tests/clip-keys.spec.ts`.
 - Chapters: M marks one at the playhead (not in a text field), shown as a flag on the ruler. A flag
   click seeks to it and selects it; Delete removes it; the Inspector edits its title; Copy chapters
   copies `mm:ss Title` lines, with `00:00 Start` first when none sits at frame 0. Each add, rename
