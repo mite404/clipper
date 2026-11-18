@@ -39,18 +39,18 @@ primary repository since 2026-11-16; the Amp-hosted scaffold is gone. See
 ## Two-lane staffing audit, 2026-11-17
 
 Audited against fetched `b44e7c9a71473e1be0bf1159e9130c4528429afe` and the preserved candidates,
-then reconciled after accepted `aae6f84`. There are 149 canonical IDs: 70 delivered rows, nine
-owner-decision rows and 70 remaining queue entries. The 70 comprise 65 implementation/qualification
+then reconciled after accepted `063bc31`. There are 149 canonical IDs: 71 delivered rows, nine
+owner-decision rows and 69 remaining queue entries. The 69 comprise 64 implementation/qualification
 candidates below, four conditional or parked entries and one umbrella. These are ticket counts, not
 a claim that 65 source changes are approved or immediately runnable.
 
-The Sonnet queue has three candidates: REF-49 granted, REF-51 ready and CLIP-45 held. The Opus queue
-has 62: 20 ready to scope/assign and 42 dependency-, contract- or owner-gated. Across both lanes
-that is 21 ready or granted and 44 held. Ready means recorded technical predecessors are satisfied,
-not permission to edit shared paths or skip acceptance scoping. A held ticket can have an
-independently useful subpart, but its entire remaining scope is not ready. Preserve the delivery
-order above numeric order and optional cleanup. Reassess a classification when a bounded contract
-changes its scope.
+The Sonnet queue has two candidates: REF-51 granted and CLIP-45 held. The Opus queue has 62: 20
+ready to scope/assign and 42 dependency-, contract- or owner-gated. Across both lanes that is 20
+ready or granted and 44 held. Ready means recorded technical predecessors are satisfied, not
+permission to edit shared paths or skip acceptance scoping. A held ticket can have an independently
+useful subpart, but its entire remaining scope is not ready. Preserve the delivery order above
+numeric order and optional cleanup. Reassess a classification when a bounded contract changes its
+scope.
 
 ### Sonnet candidate queue
 
@@ -60,8 +60,7 @@ expand its grant.
 
 | Candidate           | Readiness       | Why this lane; remaining gate                                                                                                  |
 | ------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| [REF-49](#ref-49)   | Granted         | Owner recording: clip edges extend as well as shorten.                                                                         |
-| [REF-51](#ref-51)   | Ready           | Razor hover seeks the real playhead to the cut frame; it stays until moved.                                                    |
+| [REF-51](#ref-51)   | Granted         | Razor hover seeks the real playhead to the cut frame; it stays until moved.                                                    |
 | [CLIP-45](#clip-45) | Dependency-held | Existing-action widget and defaults only, after CLIP-40; reclassify if its scoped contract adds a new sharing/export pipeline. |
 
 ### Opus candidate queue
@@ -115,20 +114,20 @@ their old Medium/test-only labels do not make either whole ticket a small mechan
 | [CLIP-31](#clip-31)                                     | Umbrella only; its three concrete XML tickets are counted above, not a fourth exporter.                                                 |
 
 The original CLIP-20b owner confirms no edits, acceptance run or unique untransferred source. Patch
-`94d759e6` and textual receipts `be8a63df` are transferred and hash-verified; raw traces remain
-preserved in that worker for selective retrieval. The original CLIP-9b owner is also quiescent with
-no untransferred source; its historical candidate/compact receipts are transferred and its full ramp
-scope is not implemented. REF-27b's existing Sol owner completed qualification and is frozen. These
-old threads retain their evidence, not concurrent implementation grants. Research-only owners retain
-research, not source ownership. Main pushes and full/performance acceptance remain
-coordinator-serialized; no review gate changes.
+`94d759e6` and textual receipts `be8a63df` are transferred and hash-verified; CLIP-20b is delivered,
+so its raw traces are no longer needed and that worker is archived. The original CLIP-9b owner is
+also quiescent with no untransferred source; its historical candidate/compact receipts are
+transferred and its full ramp scope is not implemented. REF-27b's existing Sol owner completed
+qualification and is frozen. These old threads retain their evidence, not concurrent implementation
+grants. Research-only owners retain research, not source ownership. Main pushes and full/performance
+acceptance remain coordinator-serialized; no review gate changes.
 
 ### Active two-worker grants
 
 | Lane            | Worker                                                                           | Current grant                                                                     |
 | --------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- |
 | Opus 5.5 medium | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | REF-47 delivered at `aae6f84`, exact-SHA CI44217820183 green; now granted REF-50. |
-| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | REF-46 delivered at `729b72d`, exact-SHA CI44198295097 green; now granted REF-49. |
+| Sonnet 5.5 high | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | REF-49 delivered at `063bc31`, exact-SHA CI44223873248 green; now granted REF-51. |
 
 CLIP-20b is delivered at `6156fb4`, a cherry-pick of the reviewed tree onto `f6b77aa` with all
 eleven source blobs unchanged. Coordinator gates on that exact tree passed 136 units, strict
@@ -319,6 +318,16 @@ region.
   undo steps. Locked lanes and gaps do not seek. Coordinator default, open to the owner: while
   playing, hover does not seek, so playback is not fought.
 
+REF-49 is delivered at
+[`063bc31`](https://github.com/mite404/clipper/commit/063bc314860750472368cdc8246ab917839f15fe),
+with green exact-SHA [CI44223873248](https://github.com/mite404/clipper/actions/runs/44223873248). A
+first candidate was blocked because a still's left edge stayed pinned; v2 gives stills no source
+head and keeps the offset at 0 or more. Both reviews returned LAND; `all` passed 172/172 and
+isolated `performance` 20/20 on the exact head. Known existing behaviours, accepted and not in
+scope: history merges changes made within 800 ms; on clips shorter than about 7 frames the left grip
+is partly covered; a clip whose asset is missing has an unbounded right tail. REF-51 is granted to
+Sonnet on `src/Timeline.tsx`, `src/App.tsx` and `tests/split-tools.spec.ts`.
+
 CLIP-2c is delivered at
 [1de89b5](https://github.com/mite404/clipper/commit/1de89b5895d8fcdd530c13d91bc34a4fe71e7942) with
 [CI44185392612](https://github.com/mite404/clipper/actions/runs/44185392612): thirteen reviewed
@@ -491,7 +500,7 @@ upload is authorized.
 | ------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
 | Queue and delivery        | [T-136752bf](https://ampcode.com/threads/T-136752bf-6ed3-4930-b791-1cd134662797) | This file, acceptance and exclusive main push slot                      |
 | Non-simple implementation | [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85) | Opus medium; REF-47 delivered, REF-50 granted                           |
-| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; REF-46 delivered, REF-49 granted                           |
+| Small implementation      | [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7) | Sonnet high; REF-49 delivered, REF-51 granted                           |
 | Independent review        | [T-f987a229](https://ampcode.com/threads/T-f987a229-4e36-414e-8f45-105461c86dce) | Opus medium; independent exact-tree review gate                         |
 | Source and tooling review | [T-9f34d223](https://ampcode.com/threads/T-9f34d223-cd32-4c23-a11f-8bca3ae61271) | Opus 5.5 medium; took over from Fable T-2d1e888a at the owner's request |
 | Cursor implementation     | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a) | Speed-style unit delivered; no active implementation grant              |
@@ -957,7 +966,7 @@ images were hosted, see [Known limits](#known-limits)).
 | Track registry and drops     | CLIP-2c delivered at `1de89b5` with green exact-SHA CI44185392612; reservation released                                                                 |
 | Default layout fit           | REF-46 delivered at `729b72d` with green exact-SHA CI44198295097; reservation released                                                                  |
 | Second-screen cursor         | REF-47 delivered at `aae6f84` with green exact-SHA CI44217820183; reservation released                                                                  |
-| Clip edge extension          | REF-49 granted to Sonnet T-01a1e78d: trimClip, grip handlers and commitTrim, onTrim limits, one spec                                                    |
+| Razor hover seek             | REF-51 granted to Sonnet T-01a1e78d: Razor hover/click in Timeline.tsx, App.tsx razor handlers and help line, split-tools spec                          |
 | Zoom inside source           | REF-50 granted to Opus T-0e774456: stage.ts camera clamp, framing follow paths, unit and fixture specs                                                  |
 | Obsolete UI deletion         | UI-6 delivered at `f164235` with green exact-SHA CI44041254397; reservation released                                                                    |
 | UI-6 leftovers               | UI-6b delivered at `3ec157c` with green exact-SHA CI44047934496; reservation released                                                                   |
@@ -1436,9 +1445,9 @@ original note for every row.
 | <a id="ref-46"></a>[REF-46](#ref-46)                 | Fit every lane and the preview in the default layout                | Small  | Delivered at [729b72d](https://github.com/mite404/clipper/commit/729b72d5854e13cfbf4d7af845de99f95beb579b); green exact-SHA [CI44198295097](https://github.com/mite404/clipper/actions/runs/44198295097) | CLIP-2c review follow-up; dropped +72px kept as reference                                                           |
 | <a id="ref-47"></a>[REF-47](#ref-47)                 | Cursor overlay for a second screen-role track                       | Medium | Delivered at [aae6f84](https://github.com/mite404/clipper/commit/aae6f8443cc1810e40ab255428158f7bf9656d32); green exact-SHA [CI44217820183](https://github.com/mite404/clipper/actions/runs/44217820183) | CLIP-2c follow-up; zoom already applies to every screen-role track                                                  |
 | <a id="ref-48"></a>[REF-48](#ref-48)                 | Drag a zoom region to reposition it                                 | Medium | Dependency-held: REF-50, then Sonnet's Timeline work                                                                                                                                                     | Owner recording; subpart of CLIP-9b regions                                                                         |
-| <a id="ref-49"></a>[REF-49](#ref-49)                 | Extend clip edges as well as shorten them                           | Small  | Granted to Sonnet [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7)                                                                                                       | Owner recording; `trimClip` never adds frames                                                                       |
+| <a id="ref-49"></a>[REF-49](#ref-49)                 | Extend clip edges as well as shorten them                           | Small  | Delivered at [063bc31](https://github.com/mite404/clipper/commit/063bc314860750472368cdc8246ab917839f15fe); green exact-SHA [CI44223873248](https://github.com/mite404/clipper/actions/runs/44223873248) | Owner recording; `trimClip` never adds frames                                                                       |
 | <a id="ref-50"></a>[REF-50](#ref-50)                 | Keep a zoom inside its source mask                                  | Medium | Granted to Opus [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85)                                                                                                         | Owner recording; unclamped `cameraTransform`                                                                        |
-| <a id="ref-51"></a>[REF-51](#ref-51)                 | Razor hover shows the prospective cut frame                         | Small  | Ready for Sonnet after REF-49; owner chose a real seek                                                                                                                                                   | Owner recording; supersedes stationary playhead                                                                     |
+| <a id="ref-51"></a>[REF-51](#ref-51)                 | Razor hover shows the prospective cut frame                         | Small  | Granted to Sonnet [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7); owner chose a real seek                                                                              | Owner recording; supersedes stationary playhead                                                                     |
 | <a id="ref-32"></a>[REF-32](#ref-32)                 | Correct source-preview playback error and busy lifecycle            | Medium | Delivered at [4b49623](https://github.com/mite404/clipper/commit/4b4962397e4ac237ab774b8d4a2f2a44280514b2); [green exact-SHA CI](https://github.com/mite404/clipper/actions/runs/43986804408)            | Reservation released; canonical previews promoted and verified                                                      |
 | <a id="ref-33"></a>[REF-33](#ref-33)                 | Qualify download URL lifetime outside Chromium                      | Medium | Blocked                                                                                                                                                                                                  | another supported WebCodecs browser                                                                                 |
 | <a id="ref-34"></a>[REF-34](#ref-34)                 | Remove Player listener lifetime assumptions                         | Small  | Deferred proposal                                                                                                                                                                                        | reproduce a listener lifecycle defect first                                                                         |
