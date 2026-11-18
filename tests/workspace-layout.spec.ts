@@ -98,6 +98,31 @@ test.describe('media edge preview', () => {
     await expect(page.getByText('Project media', { exact: true })).toBeHidden();
   });
 
+  test('Escape pressed in the commit that opens the peek closes it', async ({ page }) => {
+    await page.goto('/');
+    await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+    const drawer = page.locator('#media-drawer');
+    await page.locator('button[aria-controls="media-drawer"]').click();
+    await expect(drawer).toHaveAttribute('data-mode', 'closed');
+    // A pointer outside the pool zones ends the suppression that follows a toggle click.
+    await page.mouse.move(700, 80);
+    // Presses Escape in the commit that turns the drawer into a peek, before any passive effect.
+    await drawer.evaluate((element) => {
+      new MutationObserver((_, observer) => {
+        if (element.getAttribute('data-mode') !== 'peek') return;
+        observer.disconnect();
+        document.body.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
+        );
+        element.setAttribute('data-escape-sent', 'yes');
+      }).observe(element, { attributes: true, attributeFilter: ['data-mode'] });
+    });
+    const workspace = (await page.locator('.workspace').boundingBox())!;
+    await page.mouse.move(workspace.x + 2, workspace.y + 40);
+    await expect(drawer).toHaveAttribute('data-escape-sent', 'yes');
+    await expect(drawer).toHaveAttribute('data-mode', 'closed');
+  });
+
   test('holds keyboard focus, returns it on Escape and removes closed rows from Tab order', async ({
     page,
   }) => {

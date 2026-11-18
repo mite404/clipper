@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 
 type Drawer = { mode: 'pinned' | 'closed' | 'peek'; instant: boolean };
 
@@ -17,7 +17,7 @@ export function useMediaDrawer(blocked: boolean) {
   const suppressed = useRef(true);
   const over = useRef(false);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (view.mode === 'pinned') return;
     const query = window.matchMedia(FINE_HOVER);
     let timer: ReturnType<typeof setTimeout>;
