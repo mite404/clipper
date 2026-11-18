@@ -929,3 +929,153 @@ test('never reads media a project file cannot hold', async ({ page }) => {
   await expect(status).toContainText('a project file holds 375 MB');
   expect(downloads).toBe(1);
 });
+
+test('opening a project with one undecodable video replaces nothing and leaks no media URL', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const live = new Set<string>();
+    let created = 0;
+    const create = URL.createObjectURL.bind(URL),
+      revoke = URL.revokeObjectURL.bind(URL);
+    URL.createObjectURL = (blob) => {
+      const url = create(blob);
+      live.add(url);
+      created++;
+      return url;
+    };
+    URL.revokeObjectURL = (url) => {
+      live.delete(url);
+      revoke(url);
+    };
+    Object.assign(window, { liveMediaUrls: live, createdMediaUrls: () => created });
+  });
+  const liveUrls = () =>
+    page.evaluate(() => (Reflect.get(window, 'liveMediaUrls') as Set<string>).size);
+  // URLs ever created, so a failure that comes before any media is decoded cannot pass as clean.
+  const createdUrls = () =>
+    page.evaluate(() => (Reflect.get(window, 'createdMediaUrls') as () => number)());
+  const status = page.locator('.app-footer [role="status"]');
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const saving = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const project = JSON.parse(await readFile((await (await saving).path())!, 'utf8'));
+  // The embedded sources that decode come first and last; the broken video sits between them, so
+  // the open has already read some media when it fails.
+  const broken = {
+    id: 'broken',
+    name: 'broken.mp4',
+    data: `data:video/mp4;base64,${Buffer.from('not a video, only bytes').toString('base64')}`,
+  };
+  project.media.splice(2, 0, broken);
+  // An edit the opened project must not replace, and one undo step it must not clear.
+  await page.getByRole('slider', { name: 'Corner radius' }).fill('33');
+  const radius = page.getByTestId('screen-mask');
+  const wanted = await radius.evaluate((element) => getComputedStyle(element).borderRadius);
+  const undo = page.getByRole('button', { name: 'Undo', exact: true });
+  await expect(undo).toBeEnabled();
+  const urls = await liveUrls();
+  const createdBefore = await createdUrls();
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'broken.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(project)),
+  });
+  await expect(status).toContainText('Could not open project.');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready');
+  await expect(radius).toHaveCSS('border-radius', wanted);
+  await expect(undo).toBeEnabled();
+  await expect(page.getByRole('slider', { name: 'Corner radius' })).toHaveValue('33');
+  // The open decoded sources before the broken one failed, and released every URL it made.
+  expect(await createdUrls()).toBeGreaterThan(createdBefore);
+  await expect.poll(liveUrls).toBe(urls);
+  // The editor still plays the sources it already had.
+  await page.getByRole('button', { name: 'Play composition', exact: true }).click();
+  await expect
+    .poll(() =>
+      page
+        .locator('[data-testid="camera-mask"] video:visible')
+        .evaluate((video: HTMLVideoElement) => video.currentTime),
+    )
+    .toBeGreaterThan(0.1);
+});
+
+test('a failed or cancelled export leaves the editor ready, and a new export clears the last one', async ({
+  page,
+}) => {
+  test.setTimeout(240000);
+  await page.addInitScript(() => {
+    // H.264 encoding is reported unavailable, so MP4 and MOV exports fail and WebM still works.
+    const Native = window.VideoEncoder;
+    window.VideoEncoder = class extends Native {
+      static override async isConfigSupported(config: VideoEncoderConfig) {
+        return config.codec.startsWith('avc')
+          ? { supported: false, config }
+          : Native.isConfigSupported(config);
+      }
+    };
+    const live = new Set<string>();
+    const create = URL.createObjectURL.bind(URL),
+      revoke = URL.revokeObjectURL.bind(URL);
+    URL.createObjectURL = (blob) => {
+      const url = create(blob);
+      live.add(url);
+      return url;
+    };
+    URL.revokeObjectURL = (url) => {
+      live.delete(url);
+      revoke(url);
+    };
+    Object.assign(window, { liveMediaUrls: live });
+  });
+  const liveUrls = () =>
+    page.evaluate(() => (Reflect.get(window, 'liveMediaUrls') as Set<string>).size);
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const status = page.locator('.app-footer [role="status"]');
+  const progress = page.getByRole('progressbar', { name: 'Video export progress' });
+  const exportButton = page.getByRole('button', { name: 'Export video', exact: true });
+  const save = page.getByRole('link', { name: /^Save/ });
+  const baseline = await liveUrls();
+  const render = async (format: string) => {
+    await exportButton.click();
+    await page.getByRole('combobox', { name: 'Format' }).selectOption(format);
+    await page.getByRole('button', { name: 'Render video', exact: true }).click();
+  };
+  // Nothing is left half-done: no progress bar, no Save link, Export video usable again.
+  const settled = async () => {
+    await expect(progress).toHaveCount(0);
+    await expect(save).toHaveCount(0);
+    await expect(exportButton).toBeEnabled();
+    await expect(page.getByRole('button', { name: 'Cancel export', exact: true })).toHaveCount(0);
+  };
+
+  await render('mp4');
+  await expect(status).toContainText(/Export failed\. .*MP4 AVC/);
+  await expect(status).not.toContainText('cancelled');
+  await settled();
+  expect(await liveUrls()).toBe(baseline);
+
+  await render('webm');
+  await expect.poll(async () => Number(await progress.getAttribute('value'))).toBeGreaterThan(0.1);
+  await page.getByRole('button', { name: 'Cancel export', exact: true }).click();
+  await expect(status).toContainText('Export cancelled.');
+  await expect(status).not.toContainText('failed');
+  await settled();
+  expect(await liveUrls()).toBe(baseline);
+
+  await render('webm');
+  await expect(status).toContainText('Video exported at 1920', { timeout: 150000 });
+  await expect(save).toHaveText(/Save video/);
+  await expect(save).toHaveAttribute('download', /\.webm$/);
+  await expect(progress).toHaveCount(0);
+  expect(await liveUrls()).toBe(baseline + 1);
+
+  // A new export, even one that fails, drops the previous video and releases its URL.
+  await render('mp4');
+  await expect(status).toContainText('Export failed.');
+  await settled();
+  await expect.poll(liveUrls).toBe(baseline);
+});
