@@ -210,6 +210,29 @@ describe('portable project parsing', () => {
     expect(parseProject(JSON.stringify(value)).edit.zooms).toHaveLength(2);
   });
 
+  it('accepts zoom and layout values exactly at their limits', () => {
+    // Every limit is inclusive, so a file saved at one still opens.
+    const edges = project();
+    Object.assign(edges.zooms[0], {
+      start: 24 * 60 * 60 * 30 - 6,
+      duration: 6,
+      scale: 1,
+      x: 0,
+      y: 100,
+    });
+    edges.layout = { radius: 60, screenX: 100, screenY: 0, cameraX: 0, cameraY: 100 };
+    const opened = parseProject(JSON.stringify(edges)).edit;
+    expect(opened.zooms[0]).toMatchObject({ scale: 1, x: 0, y: 100, duration: 6 });
+    expect(opened.layout).toEqual(edges.layout);
+    const top = project();
+    Object.assign(top.zooms[0], { scale: 3, x: 100, y: 0 });
+    expect(parseProject(JSON.stringify(top)).edit.zooms[0]).toMatchObject({
+      scale: 3,
+      x: 100,
+      y: 0,
+    });
+  });
+
   it('allows an empty project', () => {
     const value = { ...project(), clips: [], zooms: [], media: [], muted: [] };
     expect(parseProject(JSON.stringify(value)).edit.clips).toEqual([]);
@@ -358,6 +381,76 @@ describe('portable project parsing', () => {
       /duration/i,
     ],
     [
+      'a zoom scale below one',
+      (p: ReturnType<typeof project>) => {
+        p.zooms[0].scale = 0.5;
+      },
+      /zooms\[0\]\.scale/,
+    ],
+    [
+      'a zoom focus y above 100',
+      (p: ReturnType<typeof project>) => {
+        p.zooms[0].y = 101;
+      },
+      /zooms\[0\]\.y/,
+    ],
+    [
+      'a zoom focus y below zero',
+      (p: ReturnType<typeof project>) => {
+        p.zooms[0].y = -0.5;
+      },
+      /zooms\[0\]\.y/,
+    ],
+    [
+      'a zoom focus x below zero',
+      (p: ReturnType<typeof project>) => {
+        p.zooms[0].x = -0.5;
+      },
+      /zooms\[0\]\.x/,
+    ],
+    [
+      'a zoom one frame past the 24 hour limit',
+      (p: ReturnType<typeof project>) => {
+        Object.assign(p.zooms[0], { start: 24 * 60 * 60 * 30 - 29, duration: 30 });
+      },
+      /range/i,
+    ],
+    [
+      'a layout screenX above 100',
+      (p: ReturnType<typeof project>) => {
+        p.layout.screenX = 100.5;
+      },
+      /screenX/i,
+    ],
+    [
+      'a layout screenY below zero',
+      (p: ReturnType<typeof project>) => {
+        p.layout.screenY = -1;
+      },
+      /screenY/i,
+    ],
+    [
+      'a layout cameraY above 100',
+      (p: ReturnType<typeof project>) => {
+        p.layout.cameraY = 101;
+      },
+      /cameraY/i,
+    ],
+    [
+      'a layout cameraX above 100',
+      (p: ReturnType<typeof project>) => {
+        p.layout.cameraX = 100.01;
+      },
+      /cameraX/i,
+    ],
+    [
+      'a negative layout radius',
+      (p: ReturnType<typeof project>) => {
+        p.layout.radius = -1;
+      },
+      /radius/i,
+    ],
+    [
       'a zoom shorter than six frames',
       (p: ReturnType<typeof project>) => {
         p.zooms[0].duration = 5;
@@ -448,6 +541,51 @@ describe('decoded source validation', () => {
     const audioEdit: Edit = { ...edit, clips: [{ ...edit.clips[0], track: 'voice' }] };
     expect(() => validateSources(audioEdit, [asset])).not.toThrow();
     expect(() => validateSources(audioEdit, [{ ...asset, hasAudio: false }])).toThrow(/audio/i);
+  });
+});
+
+describe('source rules for every track', () => {
+  // The clip needs 45 frames of source, which `asset` has; an image carries no duration.
+  const { duration: _length, ...still } = asset;
+  const sources: Record<string, Asset> = {
+    video: asset,
+    'silent video': { ...asset, hasAudio: false },
+    'audio only': { ...asset, kind: 'audio' },
+    image: { ...still, kind: 'image', hasAudio: false },
+  };
+  // What validateSources says of one clip on one track holding one source.
+  const verdict = (track: string, source: Asset) => {
+    const clips = [{ ...edit.clips[0], track }];
+    try {
+      validateSources({ ...edit, clips }, [source]);
+      return 'accepted';
+    } catch (error) {
+      return (error as Error).message;
+    }
+  };
+  const needsPicture = (label: string) => `Clip clip on ${label} requires video or image media.`;
+  const needsSound = (label: string) => `Clip clip on ${label} requires an audio stream.`;
+  // Each track takes exactly the sources its kind can play: screen and camera need something to
+  // draw, voice and music need an audio stream, so an image is never heard nor audio seen.
+  it.each([
+    ['screen', 'video', 'accepted'],
+    ['screen', 'silent video', 'accepted'],
+    ['screen', 'image', 'accepted'],
+    ['screen', 'audio only', needsPicture('Screen recording')],
+    ['camera', 'video', 'accepted'],
+    ['camera', 'silent video', 'accepted'],
+    ['camera', 'image', 'accepted'],
+    ['camera', 'audio only', needsPicture('Talking head')],
+    ['voice', 'video', 'accepted'],
+    ['voice', 'audio only', 'accepted'],
+    ['voice', 'silent video', needsSound('Voiceover')],
+    ['voice', 'image', needsSound('Voiceover')],
+    ['music', 'video', 'accepted'],
+    ['music', 'audio only', 'accepted'],
+    ['music', 'silent video', needsSound('Music')],
+    ['music', 'image', needsSound('Music')],
+  ])('on %s a %s source is %s', (track, name, expected) => {
+    expect(verdict(track, sources[name])).toBe(expected);
   });
 });
 
@@ -560,20 +698,110 @@ describe('portable project serialization', () => {
     expect(Array.from(new Uint8Array(await blob.arrayBuffer()))).toEqual([0, 1, 2, 255]);
   });
 
-  it('preserves unused library media and untyped bytes without a large spread call', async () => {
-    const bytes = new Uint8Array(65537).fill(253);
-    const url = URL.createObjectURL(new Blob([bytes]));
+  it('preserves unused library media and untyped bytes of every size around a chunk edge', async () => {
+    const empty: Edit = { ...edit, clips: [], zooms: [] };
+    // Bytes that differ from their neighbours, so a dropped or repeated byte shows.
+    const patterned = (length: number) => Uint8Array.from({ length }, (_, i) => (i * 7 + 3) % 256);
+    for (const length of [1, 32767, 32768, 32769, 65536, 65537]) {
+      const bytes = patterned(length);
+      const url = URL.createObjectURL(new Blob([bytes]));
+      try {
+        const saved = (await serializeProject(empty, [{ ...asset, url }], [])).file;
+        const reopened = parseProject(await saved.text());
+        expect(reopened.media).toHaveLength(1);
+        expect(reopened.media[0].data).toMatch(/^data:application\/octet-stream;base64,/);
+        const restored = await (await fetch(reopened.media[0].data)).arrayBuffer();
+        expect(new Uint8Array(restored)).toEqual(bytes);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+  });
+
+  it('never spreads more than 32768 bytes into one String.fromCharCode call', async () => {
+    // Node's own limit is far higher than a browser's, so a payload that overflows nothing here would
+    // still pass an unchunked save; the call sizes are what keep a large file saving everywhere.
+    const url = URL.createObjectURL(new Blob([new Uint8Array(100_000).fill(253)]));
+    const spy = vi.spyOn(String, 'fromCharCode');
     try {
       const empty: Edit = { ...edit, clips: [], zooms: [] };
-      const saved = (await serializeProject(empty, [{ ...asset, url }], [])).file;
-      const reopened = parseProject(await saved.text());
-      expect(reopened.media).toHaveLength(1);
-      const restored = await (await fetch(reopened.media[0].data)).arrayBuffer();
-      expect(new Uint8Array(restored)).toEqual(bytes);
+      await serializeProject(empty, [{ ...asset, url }], []);
+      const widest = Math.max(...spy.mock.calls.map((args) => args.length));
+      expect(widest).toBeGreaterThan(0);
+      expect(widest).toBeLessThanOrEqual(32768);
+      expect(spy.mock.calls.reduce((sum, args) => sum + args.length, 0)).toBeGreaterThanOrEqual(
+        100_000,
+      );
+    } finally {
+      spy.mockRestore();
+      URL.revokeObjectURL(url);
+    }
+  });
+
+  it('saves the edit as it was when Save began, whatever changes while media is read', async () => {
+    const url = URL.createObjectURL(new Blob([new Uint8Array([1, 2, 3])], { type: 'video/mp4' }));
+    try {
+      const live: Edit = structuredClone(edit);
+      const muted = ['music'];
+      const locked = ['voice'];
+      const pending = serializeProject(live, [{ ...asset, url }], muted, {
+        locked,
+        selectedTracks: [],
+      });
+      // Edits, undo and toggles carry on while the bytes are read.
+      live.zooms[0].x = 99;
+      live.clips[0].duration = 1;
+      live.layout.radius = 5;
+      muted.push('camera');
+      locked.length = 0;
+      const saved = parseProject(await (await pending).file.text());
+      expect(saved.edit).toEqual(edit);
+      expect(saved.muted).toEqual(['music']);
+      expect(saved.locked).toEqual(['voice']);
     } finally {
       URL.revokeObjectURL(url);
     }
   });
+
+  it('checks decoded sources before reading any media, so a bad edit is never saved', async () => {
+    const fetched = vi.spyOn(globalThis, 'fetch');
+    try {
+      const short = { ...asset, duration: 44, url: 'blob:never-read' };
+      await expect(serializeProject(edit, [short], [])).rejects.toThrow(
+        "Clip clip source range exceeds recording.mp4's decoded duration.",
+      );
+      const missing = { ...asset, id: 'other', url: 'blob:never-read' };
+      await expect(serializeProject(edit, [missing], [])).rejects.toThrow(
+        'Clip clip references missing media video.',
+      );
+      expect(fetched).not.toHaveBeenCalled();
+    } finally {
+      fetched.mockRestore();
+    }
+  });
+
+  it.each([
+    [
+      'overlapping zooms',
+      { zooms: [edit.zooms[0], { ...edit.zooms[0], id: 'b', start: 29 }] },
+      /overlap/i,
+    ],
+    ['a fractional clip start', { clips: [{ ...edit.clips[0], start: 0.5 }] }, /start/i],
+    ['a zoom scale past the limit', { zooms: [{ ...edit.zooms[0], scale: 3.5 }] }, /scale/i],
+    ['a zoom that shares a clip ID', { zooms: [{ ...edit.zooms[0], id: 'clip' }] }, /duplicate/i],
+  ])(
+    'refuses to write %s, so Save never produces a file Open rejects',
+    async (_name, change, message) => {
+      const url = URL.createObjectURL(new Blob([new Uint8Array([1])], { type: 'video/mp4' }));
+      try {
+        await expect(
+          serializeProject({ ...edit, ...change }, [{ ...asset, url }], []),
+        ).rejects.toThrow(message);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    },
+  );
 
   it('refuses network URLs rather than downloading or uploading media', async () => {
     const fetched = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('Network attempted'));
