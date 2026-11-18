@@ -36,6 +36,37 @@ const clip: Clip = {
 // Room on both sides, so a test names only the limit it exercises.
 const open = { start: 0, end: 1000 };
 
+// Pixels between each neighbouring pair of marks, and the frames between the first two.
+const rulerGaps = (marks: number[], scale: number) =>
+  marks.slice(1).map((mark, i) => ((mark - marks[i]) / FPS) * scale);
+const rulerStep = (marks: number[]) => (marks.length > 1 ? marks[1] - marks[0] : FPS);
+
+// What must hold of a ruler at any length and scale; each entry is a name and when it is broken.
+const RULER_CHECKS: [string, (marks: number[], duration: number, scale: number) => boolean][] = [
+  ['does not start at 0', (marks) => marks[0] !== 0],
+  ['passes the end', (marks, duration) => marks.at(-1)! > duration],
+  ['does not increase', (marks) => marks.some((mark, i) => i && mark <= marks[i - 1])],
+  ['has marks under 64 px apart', (marks, _, scale) => rulerGaps(marks, scale).some((g) => g < 64)],
+  [
+    // Every second boundary carries a mark, so a label never skips the whole second it sits in.
+    'steps by something other than a frame divisor of a second or whole seconds',
+    (marks) => {
+      const step = rulerStep(marks);
+      return (step < FPS ? FPS % step : step % FPS) !== 0;
+    },
+  ],
+  [
+    // The 9-mark cap holds only until the ruler would go sparse, and then marks stay 160 px apart.
+    'has over 9 marks closer than 160 px',
+    (marks, _, scale) => marks.length > 9 && rulerGaps(marks, scale).some((g) => g < 160),
+  ],
+  [
+    // Never a wide hole where a window could hold no mark, unless a single frame is the finest step.
+    'leaves a 480 px gap that a finer step would close',
+    (marks, _, scale) => rulerStep(marks) > 1 && rulerGaps(marks, scale).some((g) => g >= 480),
+  ],
+];
+
 describe('editing a timeline in frames', () => {
   it('skips both ramps only for an instant zoom', () => {
     const zoom = { id: 'instant', start: 30, duration: 60, scale: 2, x: 40, y: 60, instant: true };
@@ -139,21 +170,14 @@ describe('editing a timeline in frames', () => {
     expect(rulerMarks(180, 150)).toEqual([0, 30, 60, 90, 120, 150, 180]);
   });
 
-  it('keeps ruler marks whole, distinct, at most 9 and 64 px apart at any length and scale', () => {
+  it('keeps ruler marks distinct, increasing, 64 px apart and on a round step at any length and scale', () => {
     const faults: string[] = [];
     for (const duration of [1, 29, 30, 31, 180, 360, 3600, 108000, 2592000])
-      for (const scale of [1, 5, 20.5, 66, 103.67, 400, 3000]) {
+      for (const scale of [1, 5, 20.5, 66, 103.67, 400, 2000, 3000]) {
         const marks = rulerMarks(duration, scale);
-        const gaps = marks.slice(1).map((mark, i) => ((mark - marks[i]) / FPS) * scale);
-        const problems = [
-          marks[0] !== 0 && 'does not start at 0',
-          marks.length > 9 && 'has more than 9 marks',
-          marks.at(-1)! > duration && 'passes the end',
-          marks.some((mark) => mark % FPS !== 0) && 'has a fractional second',
-          gaps.some((gap) => gap < 64) && 'has marks under 64 px apart',
-          marks.some((mark, i) => i && mark <= marks[i - 1]) && 'does not increase',
-        ].filter(Boolean);
-        faults.push(...problems.map((problem) => `${duration} frames at ${scale} px/s ${problem}`));
+        for (const [problem, broken] of RULER_CHECKS)
+          if (broken(marks, duration, scale))
+            faults.push(`${duration} frames at ${scale} px/s ${problem}`);
       }
     expect(faults).toEqual([]);
     expect(rulerMarks(1, 3000)).toEqual([0]);
@@ -162,8 +186,8 @@ describe('editing a timeline in frames', () => {
   it('drops a last mark that is not the end and sits within 20 px of it', () => {
     // 3610 s at 3 px/s: the 3600 s mark is 30 px from the end, so it stays...
     expect(rulerMarks(3610 * FPS, 3).at(-1)).toBe(3600 * FPS);
-    // ...and at 1 px/s it is 10 px away, so its wide label would overhang the padding.
-    expect(rulerMarks(3610 * FPS, 1).at(-1)).toBe(3000 * FPS);
+    // ...and at 0.5 px/s it is 5 px away (600 s steps stay 300 px apart, short of refining), so its wide label would overhang the padding.
+    expect(rulerMarks(3610 * FPS, 0.5).at(-1)).toBe(3000 * FPS);
     // A mark exactly at the end always stays, and so does frame 0.
     expect(rulerMarks(3600 * FPS, 1).at(-1)).toBe(3600 * FPS);
     expect(rulerMarks(1, 0.5)).toEqual([0]);
@@ -173,6 +197,32 @@ describe('editing a timeline in frames', () => {
     // The 12 s demo: 2 s steps at fit scale on a wide window, 5 s steps on a narrow one.
     expect(rulerMarks(360, 103.67)).toEqual([0, 60, 120, 180, 240, 300, 360]);
     expect(rulerMarks(360, 20.5)).toEqual([0, 150, 300]);
+  });
+
+  it('keeps the 2 s demo steps up to a 320 px gap and refines to frames beyond it', () => {
+    const step = (scale: number) => {
+      const marks = rulerMarks(360, scale);
+      return marks[1] - marks[0]; // → frames between marks
+    };
+    // 160 px/s: 2 s steps sit 320 px apart, the widest gap that is left alone.
+    expect(step(160)).toBe(60);
+    // Just past it, the smallest step 160 px apart or wider takes over: one second here.
+    expect(step(161)).toBe(30);
+    // 4x fit, 8x fit and the 32x maximum of the demo: 15, 10 and 2 frames.
+    expect(step(361)).toBe(15);
+    expect(step(723)).toBe(10);
+    expect(step(2890)).toBe(2);
+    // The finest step is one frame, so every frame of a very deep zoom carries a mark.
+    expect(step(9000)).toBe(1);
+  });
+
+  it('marks every second boundary of a refined ruler, so each whole second keeps its label', () => {
+    const marks = rulerMarks(360, 2890);
+    expect(marks.filter((mark) => mark % FPS === 0)).toEqual(
+      Array.from({ length: 13 }, (_, i) => i * FPS),
+    );
+    expect(marks.slice(0, 4)).toEqual([0, 2, 4, 6]);
+    expect(marks.at(-1)).toBe(360);
   });
 
   it('moves either edge in both directions without changing source timing', () => {

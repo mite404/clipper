@@ -197,12 +197,22 @@ const RULER_STEPS = [
 /** Closest two ruler marks may sit, and most a ruler carries. */
 const RULER_GAP_PIXELS = 64;
 const RULER_MAX_MARKS = 9;
+/**
+ * The mark cap counts marks over the whole sequence, so zoomed in it leaves one mark for hundreds of
+ * pixels and a viewport can hold none. Past `RULER_SPARSE_PIXELS` between marks the cap is waived and
+ * the ruler refines, to the smallest step at least `RULER_REFINED_PIXELS` apart. The refined steps
+ * include sub-second ones, in frames that divide a second so every whole second keeps its mark.
+ */
+const RULER_SPARSE_PIXELS = 320;
+const RULER_REFINED_PIXELS = 160;
+const RULER_FRAME_STEPS = [1, 2, 3, 5, 10, 15];
 /** A last mark nearer the end than this is dropped: its label would overhang the ruler padding. */
 const RULER_END_PIXELS = 20;
 
 /**
- * The frames a ruler labels: whole seconds from frame 0 at the smallest round step that keeps the
- * marks `RULER_GAP_PIXELS` apart and at most `RULER_MAX_MARKS` of them, so no two labels read alike.
+ * The frames a ruler labels: from frame 0 at the smallest round step that keeps the marks
+ * `RULER_GAP_PIXELS` apart and at most `RULER_MAX_MARKS` of them, so no two labels read alike. Zoomed
+ * in far enough that the marks would be sparse, the step refines to frames instead.
  * @param duration Sequence length in frames.
  * @param scale Timeline pixels per second.
  */
@@ -212,10 +222,13 @@ export function rulerMarks(duration: number, scale: number): number[] {
       (seconds) =>
         seconds * scale >= RULER_GAP_PIXELS && duration / (seconds * FPS) < RULER_MAX_MARKS,
     ) ?? RULER_STEPS.at(-1)!; // → seconds between marks
-  const marks = Array.from(
-    { length: Math.floor(duration / (step * FPS)) + 1 },
-    (_, i) => i * step * FPS,
-  );
+  const sparse = step * scale > RULER_SPARSE_PIXELS;
+  const frames = sparse
+    ? [...RULER_FRAME_STEPS, ...RULER_STEPS.map((seconds) => seconds * FPS)].find(
+        (candidate) => (candidate / FPS) * scale >= RULER_REFINED_PIXELS,
+      )! // → frames between marks; the whole-second step above always qualifies
+    : step * FPS;
+  const marks = Array.from({ length: Math.floor(duration / frames) + 1 }, (_, i) => i * frames);
   // The wider h:mm:ss labels overhang the ruler padding at fit scale and make the timeline
   // scroll, so a last mark that is not the end and sits close to it is left out.
   return marks.filter(

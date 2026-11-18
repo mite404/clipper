@@ -245,3 +245,36 @@ test('- and = zoom the timeline display one step at a time without editing the s
   for (const key of ['-', '=']) await page.keyboard.press(key);
   expect(await value()).toBe(before);
 });
+
+test('the ruler keeps labelling frames at the deepest zoom', async ({ page }) => {
+  await openEditor(page);
+  const scale = page.getByRole('slider', { name: 'Timeline scale' });
+  const viewport = page.getByTestId('timeline-scroll');
+  await scale.fill((await scale.getAttribute('max'))!);
+  await page.getByRole('slider', { name: 'Timeline playhead' }).fill('250');
+  // Scroll the playhead's frame to the middle of the lanes, as Add zoom or a seek would.
+  await viewport.evaluate((element) => {
+    const head = document.querySelector('.playhead')!.getBoundingClientRect();
+    const port = element.getBoundingClientRect();
+    element.scrollLeft += head.left - (port.left + port.width / 2);
+  });
+  // A label counts as visible where it lies right of the sticky track labels and inside the port.
+  const visible = async () =>
+    page.locator('.ruler > span').evaluateAll((spans) => {
+      const lanes = document.querySelector('.ruler-label')!.getBoundingClientRect().right;
+      const edge = document
+        .querySelector('[data-testid="timeline-scroll"]')!
+        .getBoundingClientRect();
+      return spans
+        .filter((span) => {
+          const box = span.getBoundingClientRect();
+          return box.left >= lanes && box.right <= edge.right;
+        })
+        .map((span) => span.textContent!);
+    });
+  const labels = await visible();
+  expect(labels.length).toBeGreaterThanOrEqual(2);
+  // Between whole seconds a label is a frame timecode, matching the readout's mm:ss:ff.
+  expect(labels.every((label) => /^\d\d:\d\d(:\d\d)?$/.test(label))).toBe(true);
+  expect(labels.some((label) => /^\d\d:\d\d:\d\d$/.test(label))).toBe(true);
+});
