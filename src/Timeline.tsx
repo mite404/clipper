@@ -46,6 +46,15 @@ import { ASSET_DRAG, IconButton, Waveform, timecode } from './components';
 
 /** Per-track toggle lists a project saves. */
 export type TrackToggles = Record<'muted' | 'locked' | 'selected', Track[]>;
+/** What the track headers need: the edit's ordered tracks, their saved toggles and their actions. */
+export type TrackHeaders = {
+  /** Rows and V/A numbers follow the registry. */
+  registry: TrackDef[];
+  /** Saved per-track toggles: muted audio, locked lanes, and Split's selected tracks. */
+  tracks: TrackToggles;
+  onToggleTrack: (list: keyof TrackToggles, track: Track) => void;
+  onMoveTrack: (id: Track, step: 1 | -1) => void;
+};
 
 // Header icons by role; audio keeps the voiceover microphone and the music note it always had.
 const ICONS = { background: Image, screen: Film, camera: Camera };
@@ -328,13 +337,10 @@ export function Timeline({
   selected,
   onSelect,
   onSeek,
-  registry,
-  tracks,
-  onToggleTrack,
+  headers,
   onTrim,
   onRazor,
   drop,
-  onMoveTrack,
 }: {
   clips: Clip[];
   assets: Asset[];
@@ -344,19 +350,15 @@ export function Timeline({
   selected: string;
   onSelect: (id: string) => void;
   onSeek: (frame: number) => void;
-  /** The edit's ordered tracks; rows and V/A numbers follow it. */
-  registry: TrackDef[];
-  /** Saved per-track toggles: muted audio, locked lanes, and Split's selected tracks. */
-  tracks: TrackToggles;
-  onToggleTrack: (list: keyof TrackToggles, track: Track) => void;
+  headers: TrackHeaders;
   onTrim?: (clip: Clip) => void;
   /** Set while the Razor tool is active: clicks cut a clip at the clicked frame instead of
    * selecting it. */
   onRazor?: (clipId: string, frame: number) => void;
   /** The pool drag in progress, so lanes can say whether they would take it. */
   drop?: PoolDrag;
-  onMoveTrack: (id: Track, step: 1 | -1) => void;
 }) {
+  const { registry, tracks, onToggleTrack, onMoveTrack } = headers;
   const seconds = duration / FPS;
   const { viewport, label, minScale, maxScale, scale, setScale, width } = useTimelineScale(seconds);
   const ticks = Math.max(2, Math.min(9, Math.floor((seconds * scale) / 64) + 1));

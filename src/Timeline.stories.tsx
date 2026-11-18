@@ -56,8 +56,18 @@ function TimelineOverflow() {
     <>
       <section className="sequence-area" style={{ height: 300, marginBottom: 70 }}>
         <Timeline
-          registry={TRACKS}
-          onMoveTrack={() => {}}
+          headers={{
+            registry: TRACKS,
+            tracks,
+            onToggleTrack: (list, track: Track) =>
+              setTracks((previous) => ({
+                ...previous,
+                [list]: previous[list].includes(track)
+                  ? previous[list].filter((item) => item !== track)
+                  : [...previous[list], track],
+              })),
+            onMoveTrack: () => {},
+          }}
           clips={clips}
           assets={
             mode === CASES['Demo data']
@@ -72,15 +82,6 @@ function TimelineOverflow() {
           selected={selected}
           onSelect={setSelected}
           onSeek={setFrame}
-          tracks={tracks}
-          onToggleTrack={(list, track: Track) =>
-            setTracks((previous) => ({
-              ...previous,
-              [list]: previous[list].includes(track)
-                ? previous[list].filter((item) => item !== track)
-                : [...previous[list], track],
-            }))
-          }
         />
       </section>
       <div

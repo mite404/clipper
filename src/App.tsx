@@ -1840,9 +1840,13 @@ export function App() {
             <span className="timeline-toolbar-hint">Double-click a track to seek</span>
           </div>
           <Timeline
-            registry={edit.tracks}
+            headers={{
+              registry: edit.tracks,
+              tracks: trackToggles,
+              onToggleTrack: toggleTrackIn,
+              onMoveTrack: moveTrackBy,
+            }}
             drop={dragging && { media: placed(dragging), onDrop: place }}
-            onMoveTrack={moveTrackBy}
             clips={edit.clips}
             assets={assets}
             zooms={edit.zooms}
@@ -1854,8 +1858,6 @@ export function App() {
               setMarkingZoomId(null);
             }}
             onSeek={seek}
-            tracks={trackToggles}
-            onToggleTrack={toggleTrackIn}
             onTrim={(clip) => {
               setSpeed(0);
               change({ ...edit, clips: edit.clips.map((c) => (c.id === clip.id ? clip : c)) });

@@ -276,8 +276,12 @@ function LibraryRecord({ view, worst = false }: { view: string; worst?: boolean 
       <div style={{ padding: 20 }}>
         {toggle}
         <Timeline
-          registry={INITIAL_EDIT.tracks}
-          onMoveTrack={() => {}}
+          headers={{
+            registry: INITIAL_EDIT.tracks,
+            tracks: { muted: [], locked: [], selected: [] },
+            onToggleTrack: () => {},
+            onMoveTrack: () => {},
+          }}
           clips={clips}
           assets={data}
           zooms={[zoom]}
@@ -286,8 +290,6 @@ function LibraryRecord({ view, worst = false }: { view: string; worst?: boolean 
           selected={selected}
           onSelect={setSelected}
           onSeek={setFrame}
-          tracks={{ muted: [], locked: [], selected: [] }}
-          onToggleTrack={() => {}}
           onTrim={(clip) =>
             setClips((previous) => previous.map((c) => (c.id === clip.id ? clip : c)))
           }
