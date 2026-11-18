@@ -2217,10 +2217,14 @@ p {
 }
 .mouse-target {
   position: absolute;
-  border: 2px dashed #d4ed48;
-  background: #d4ed4809;
+  border: 2px dashed transparent;
   cursor: crosshair;
+  touch-action: none;
   z-index: 5;
+}
+.mouse-target[data-marking] {
+  border-color: #d4ed48;
+  background: #d4ed4809;
 }
 .mouse-target span {
   position: absolute;
@@ -2230,12 +2234,6 @@ p {
   border-radius: 50%;
   transform: translate(-50%, -50%);
   pointer-events: none;
-}
-.animation-guide {
-  padding: 8px 12px;
-  color: #d4ed48;
-  font-size: 10px;
-  line-height: 1.5;
 }
 .header-actions {
   flex-wrap: wrap;

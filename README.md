@@ -133,9 +133,9 @@ the user-facing preview. Restart the editor service after source changes to rebu
   screen recordings are not.
 - Stills are PNG and JPEG only, placed on a visual track with a duration. There are no still
   backgrounds or motion.
-- Ordinary recordings contain no reliable cursor-position track. Mark mouse position is manual and
-  uses one fixed focus point per zoom, not automatic cursor tracking. Edge focus can reveal
-  background.
+- Ordinary recordings contain no reliable cursor-position track. The mouse focus is marked by hand,
+  by pressing and dragging on the screen video, one fixed focus point per zoom, not automatic cursor
+  tracking. Edge focus can reveal background.
 - Imported video audio is available for explicit insertion onto an audio track, not auto-linked.
 - Waveforms are decoded peaks with realtime playback highlighting, not live recording inputs.
 - Filmstrips repeat the first decoded thumbnail. Edge handles shorten only; source in/out plus

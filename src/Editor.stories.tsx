@@ -342,7 +342,6 @@ export const MouseCenteredZoom: Story = {
     const canvas = within(canvasElement);
     await canvas.findByText('4 assets ready', {}, { timeout: 30000 });
     await userEvent.click(canvas.getAllByRole('button', { name: 'Add zoom at playhead' })[0]);
-    await userEvent.click(canvas.getByRole('button', { name: 'Mark mouse position' }));
   },
 };
 export const PortableProjectAndExport: Story = { args: { view: 'editor' }, render: () => <App /> };

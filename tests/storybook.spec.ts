@@ -69,8 +69,7 @@ test('composition and timeline records render the actual shared components', asy
   await page.goto(
     `${storybook}/iframe.html?id=clipper-shared-library--mouse-centered-zoom&viewMode=story`,
   );
-  await expect(page.getByRole('button', { name: 'Set mouse focus on screen' })).toBeVisible({
-    timeout: 30000,
-  });
-  await expect(page.getByText(/Recordings do not contain cursor metadata/)).toBeVisible();
+  // The added zoom is selected, so the screen video takes a press to mark its mouse focus.
+  await expect(page.getByTestId('mouse-target')).toBeAttached({ timeout: 30000 });
+  await expect(page.getByRole('button', { name: 'Mark mouse position' })).toHaveCount(0);
 });

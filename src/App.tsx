@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type Dispatch,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
   type SetStateAction,
 } from 'react';
@@ -239,6 +240,15 @@ function sourceTracks(tracks: TrackDef[], kind?: Asset['kind']): TrackDef[] {
   ];
 }
 
+// A pointer on the mouse target → its percent of the screen mask, clamped to the mask.
+const maskPoint = (event: ReactPointerEvent<HTMLElement>) => {
+  const rect = event.currentTarget.getBoundingClientRect();
+  const percent = (value: number) => Math.max(0, Math.min(100, Math.round(value * 100)));
+  return {
+    x: percent((event.clientX - rect.left) / rect.width),
+    y: percent((event.clientY - rect.top) / rect.height),
+  };
+};
 const role = (track: TrackDef) => (track.kind === 'audio' ? 'audio' : track.role);
 const labelOf = (tracks: TrackDef[], id: Track) => tracks.find((t) => t.id === id)?.label ?? id;
 
@@ -632,8 +642,6 @@ export function Inspector({
   onZoom,
   onRemoveZoom,
   onAddZoom,
-  onMarkMouse,
-  markingMouse = false,
   duration,
   children,
 }: {
@@ -643,8 +651,6 @@ export function Inspector({
   onZoom: (zoom: Zoom) => void;
   onRemoveZoom: () => void;
   onAddZoom: () => void;
-  onMarkMouse?: () => void;
-  markingMouse?: boolean;
   duration: number;
   children?: ReactNode;
 }) {
@@ -739,16 +745,9 @@ export function Inspector({
         </h3>
         {zoom ? (
           <>
-            <button
-              className="secondary-button"
-              onClick={onMarkMouse}
-              disabled={!onMarkMouse}
-              aria-pressed={markingMouse}
-            >
-              {markingMouse ? 'Cancel mouse marking' : 'Mark mouse position'}
-            </button>
             <p className="inspector-copy">
-              Mark focus in the unzoomed frame. Editing a generated shot makes it manual.
+              Press and drag on the screen video to mark the mouse focus. Editing a generated shot
+              makes it manual.
             </p>
             <ZoomMotionControls zoom={zoom} onChange={onZoom} />
             <label className="slider-label">
@@ -895,7 +894,8 @@ export function App() {
   const [tool, setTool] = useState<'select' | 'razor'>('select');
   const [message, setMessage] = useState('Ready for your next story.');
   const [help, setHelp] = useState(false);
-  const [markingZoomId, setMarkingZoomId] = useState<string | null>(null);
+  // The mouse focus being dragged on the screen video, committed to its zoom on release.
+  const [mark, setMark] = useState<{ id: string; x: number; y: number } | null>(null);
   const [exportWidth, setExportWidth] = useState<1920 | 3840>(1920);
   const [exportFormat, setExportFormat] = useState<'mp4' | 'mov' | 'webm'>('mp4');
   const [exportProgress, setExportProgress] = useState<number | null>(null);
@@ -941,8 +941,10 @@ export function App() {
   const transcription = useTranscription(asset, setAssets, setMessage);
   const dragging = assets.find((a) => a.id === dragAsset);
   const selectedZoom = edit.zooms.find((z) => z.id === selected);
-  // Marking belongs to one zoom, so it ends by itself when that zoom is removed, undone or deselected.
-  const markingMouse = markingZoomId !== null && selectedZoom?.id === markingZoomId;
+  const markingMouse = mark !== null;
+  // A press on the screen video marks the selected zoom, else the one under the playhead.
+  const markZoom =
+    selectedZoom ?? edit.zooms.find((z) => frame >= z.start && frame < z.start + z.duration);
   const screenMask = maskRect('screen', edit.layout); // → stage rect the mouse target covers
   const selectedClip = edit.clips.find((c) => c.id === selected);
   const cursorAsset = selectedClip
@@ -952,6 +954,16 @@ export function App() {
     : selectedZoom
       ? undefined
       : asset;
+  useEffect(() => {
+    if (!markingMouse) return;
+    const cancel = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      setMark(null);
+    };
+    window.addEventListener('keydown', cancel);
+    return () => window.removeEventListener('keydown', cancel);
+  }, [markingMouse]);
   const compositionProps = useMemo(
     () => ({ ...edit, zooms: markingMouse ? [] : edit.zooms, assets, muted }),
     [edit, assets, muted, markingMouse],
@@ -1443,7 +1455,6 @@ export function App() {
     transcription.cancel();
     setBusy(true);
     setSpeed(0);
-    setMarkingZoomId(null);
     const imported: Asset[] = [];
     try {
       const project = parseProject(await file.text());
@@ -1494,7 +1505,6 @@ export function App() {
   const exportBasename = `developer-walkthrough-${exportWidth === 1920 ? '1080p' : '4k'}`;
   const exportVideo = async () => {
     setSpeed(0);
-    setMarkingZoomId(null);
     setExportProgress(0);
     setReadyVideo(null);
     const controller = new AbortController();
@@ -1587,7 +1597,6 @@ export function App() {
         onSelect={(id) => {
           setSourceId(id);
           setSelected('');
-          setMarkingZoomId(null);
         }}
         onImport={importFiles}
         onDrag={setDragAsset}
@@ -1793,10 +1802,12 @@ export function App() {
                     {busy ? 'Preparing your cutting room…' : 'Import media to start composing'}
                   </div>
                 )}
-                {markingMouse && selectedZoom && (
-                  <button
+                {markZoom && (
+                  <div
                     className="mouse-target"
-                    aria-label="Set mouse focus on screen"
+                    data-testid="mouse-target"
+                    data-marking={markingMouse || undefined}
+                    aria-hidden="true"
                     style={{
                       left: `${(screenMask.x / STAGE.width) * 100}%`,
                       top: `${(screenMask.y / STAGE.height) * 100}%`,
@@ -1804,66 +1815,34 @@ export function App() {
                       height: `${(screenMask.height / STAGE.height) * 100}%`,
                       borderRadius: `${(edit.layout.radius / screenMask.width) * 100}% / ${(edit.layout.radius / screenMask.height) * 100}%`,
                     }}
-                    onClick={(event) => {
-                      const rect = event.currentTarget.getBoundingClientRect();
-                      const x = event.detail
-                        ? Math.round(((event.clientX - rect.left) / rect.width) * 100)
-                        : selectedZoom.x;
-                      const y = event.detail
-                        ? Math.round(((event.clientY - rect.top) / rect.height) * 100)
-                        : selectedZoom.y;
+                    onPointerDown={(event) => {
+                      if (event.button !== 0) return;
+                      event.currentTarget.setPointerCapture(event.pointerId);
+                      setSpeed(0);
+                      setSelected(markZoom.id);
+                      setMark({ id: markZoom.id, ...maskPoint(event) });
+                      // Each mark is its own undo step, never merged into the previous edit.
+                      gesture.current = null;
+                    }}
+                    onPointerMove={(event) => mark && setMark({ ...mark, ...maskPoint(event) })}
+                    onPointerUp={(event) => {
+                      if (!mark) return;
+                      const { x, y } = maskPoint(event);
+                      setMark(null);
                       change({
                         ...edit,
-                        zooms: edit.zooms.map((z) =>
-                          z.id === selectedZoom.id ? { ...z, x, y } : z,
-                        ),
+                        zooms: edit.zooms.map((z) => (z.id === mark.id ? { ...z, x, y } : z)),
                       });
-                      setMarkingZoomId(null);
                       setMessage(`Mouse focus marked at ${x}%, ${y}%. Preview the zoom hold.`);
                     }}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Escape') {
-                        event.preventDefault();
-                        setMarkingZoomId(null);
-                        return;
-                      }
-                      if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(event.key))
-                        return;
-                      event.preventDefault();
-                      const x = Math.max(
-                        0,
-                        Math.min(
-                          100,
-                          selectedZoom.x +
-                            (event.key === 'ArrowLeft' ? -1 : event.key === 'ArrowRight' ? 1 : 0),
-                        ),
-                      );
-                      const y = Math.max(
-                        0,
-                        Math.min(
-                          100,
-                          selectedZoom.y +
-                            (event.key === 'ArrowUp' ? -1 : event.key === 'ArrowDown' ? 1 : 0),
-                        ),
-                      );
-                      change({
-                        ...edit,
-                        zooms: edit.zooms.map((z) =>
-                          z.id === selectedZoom.id ? { ...z, x, y } : z,
-                        ),
-                      });
-                    }}
+                    // Cancelled or interrupted gestures leave the focus as it was, with no undo step.
+                    onPointerCancel={() => setMark(null)}
+                    onLostPointerCapture={() => setMark(null)}
                   >
-                    <span style={{ left: `${selectedZoom.x}%`, top: `${selectedZoom.y}%` }} />
-                  </button>
+                    {mark && <span style={{ left: `${mark.x}%`, top: `${mark.y}%` }} />}
+                  </div>
                 )}
               </div>
-              {markingMouse && (
-                <div className="animation-guide">
-                  Mark mouse position · Recordings do not contain cursor metadata. Click the mouse
-                  in this unzoomed screen frame, or use arrows and Enter.
-                </div>
-              )}
               <div className="compose-caption">
                 <span>
                   <span className="status-dot" /> Side by side
@@ -2017,7 +1996,6 @@ export function App() {
             selected={selected}
             onSelect={(id) => {
               setSelected(id);
-              setMarkingZoomId(null);
             }}
             onSeek={seek}
             zoomRef={timelineZoom}
@@ -2047,11 +2025,6 @@ export function App() {
           duration={duration}
           onLayout={(layout) => change({ ...edit, layout })}
           onAddZoom={addZoom}
-          onMarkMouse={() => {
-            setSpeed(0);
-            setMarkingZoomId(markingMouse ? null : (selectedZoom?.id ?? null));
-          }}
-          markingMouse={markingMouse}
           onRemoveZoom={removeSelected}
           onZoom={(zoom) => {
             if (zoomsOverlap(edit.zooms, zoom)) {

@@ -185,20 +185,20 @@ it('moves the clamp only where the owning clip changes between sources of differ
   expect(cameras[60].y).toBeCloseTo(-20);
 });
 
-it('leaves Mark mouse position unzoomed, so a click maps straight to the source under it', () => {
-  // Marking renders with no zooms; the click's percent of the mask is the stored focus.
+it('marks the mouse focus on the unzoomed frame, so a press maps straight to the source under it', () => {
+  // A held mark renders with no zooms; the press's percent of the mask is the stored focus.
   const edge: Zoom = { id: 'e', start: 0, duration: 120, scale: 1.4, x: 83, y: 87 };
   const paths = prepareFraming([edge], [clip], [asset], layout, DEFAULT_TRACKS);
   for (const frame of [0, 60, 119])
     expect(framingAt([], paths, frame)).toEqual(zoomCamera([], frame));
   const mask = maskRect('screen', layout);
   const cover = coverRect(mask, asset, cropPosition('screen', layout));
-  const click = { x: mask.x + 0.83 * mask.width, y: mask.y + 0.87 * mask.height };
+  const press = { x: mask.x + 0.83 * mask.width, y: mask.y + 0.87 * mask.height };
   const source = {
     x: (0.83 * mask.width - cover.x) / cover.width,
     y: (0.87 * mask.height - cover.y) / cover.height,
   };
   const point = sourceToStage(source, mask, cover, framingAt([], paths, 60));
-  expect(point.x).toBeCloseTo(click.x);
-  expect(point.y).toBeCloseTo(click.y);
+  expect(point.x).toBeCloseTo(press.x);
+  expect(point.y).toBeCloseTo(press.y);
 });

@@ -10,15 +10,17 @@ masks and screen-only zoom animations.
   fields stop at the timeline end and at a six-frame minimum length.
 - Ease in, hold, and ease out, driven by the same composition frame as video.
 - The Inspector's composition preview swaps frame sides without changing the mask dimensions.
-- Mark mouse position pauses and shows the unzoomed screen for manual focus selection.
+- Pressing on the screen video pauses and shows the unzoomed screen while held; release sets the
+  focus.
 
 ## How to get to it (user POV)
 
 Use Inspector's crop and radius controls. Add zoom at playhead in Inspector or Add zoom in the
-timeline toolbar. Select the purple zoom segment to edit it. Choose Mark mouse position, then click
-the cursor location on the screen frame or use arrows and Enter. Escape cancels marking. Click the
-miniature composition preview in Inspector to swap sides. Enter and Space activate the same button.
-The composer window title is not an action. Undo restores the previous layout.
+timeline toolbar. Select the purple zoom segment to edit it, or leave the playhead inside it. Press
+and drag on the screen video to the cursor location and release; a plain click works too. Escape
+during the drag cancels it. Zoom focus X and Y are the keyboard equivalent. Click the miniature
+composition preview in Inspector to swap sides. Enter and Space activate the same button. The
+composer window title is not an action. Undo restores the previous layout.
 
 ## Driving it with Playwright
 

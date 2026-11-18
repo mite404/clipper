@@ -214,74 +214,48 @@ test('swaps frames, trims with edge handles and scrolls to the timeline end', as
   await expect(page.getByText('12.0 seconds · Stereo · Local workspace')).toBeVisible();
 });
 
-test('marks a mouse position, centers it during zoom and reopens embedded media after reload', async ({
+test('marks the mouse position by pressing and dragging on the screen video, as one undo step', async ({
   page,
 }) => {
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
   await page.getByRole('button', { name: 'Add zoom at playhead' }).first().click();
-  await page.getByRole('button', { name: 'Mark mouse position' }).click();
-  await expect(page.getByText(/Recordings do not contain cursor metadata/)).toBeVisible();
-  const target = page.getByRole('button', { name: 'Set mouse focus on screen' });
+  // The old armed mode and its copy are gone; the gesture needs no setup.
+  await expect(page.getByRole('button', { name: 'Mark mouse position' })).toHaveCount(0);
+  await expect(page.getByText(/cursor metadata|Mark focus in the unzoomed frame/)).toHaveCount(0);
+  const target = page.getByTestId('mouse-target');
   await page.getByRole('combobox', { name: 'Export resolution' }).selectOption('3840');
   await expect(target).toHaveCSS('border-top-left-radius', '2.5% 3.14286%');
-  const box = await target.boundingBox();
-  await page.mouse.click(box!.x + box!.width * 0.25, box!.y + box!.height * 0.65);
-  await expect(page.getByRole('button', { name: 'Mark mouse position' })).toBeVisible();
-  await expect(page.getByLabel('Zoom focus X', { exact: true })).toHaveValue('25');
-  await expect(page.getByLabel('Zoom focus Y', { exact: true })).toHaveValue('65');
+  await expect(target).toHaveCSS('touch-action', 'none');
   await page.getByRole('slider', { name: 'Zoom level' }).fill('2');
   await page.getByRole('slider', { name: 'Timeline playhead' }).fill('60');
-  await expect(page.getByTestId('screen-content')).toHaveCSS('transform', /matrix\(2, 0, 0, 2,/);
-  // The pan, not only the scale: the marked 25%, 65% point is held at the mask centre.
-  const held = async () => {
-    const mask = (await page.getByTestId('screen-mask').boundingBox())!;
-    const content = (await page.getByTestId('screen-content').boundingBox())!;
-    return {
-      scale: content.width / mask.width,
-      focusX: (content.x + content.width * 0.25 - mask.x) / mask.width,
-      focusY: (content.y + content.height * 0.65 - mask.y) / mask.height,
-    };
-  };
-  const before = await held();
-  expect(before.scale).toBeCloseTo(2, 2);
-  expect(before.focusX).toBeCloseTo(0.5, 2);
-  expect(before.focusY).toBeCloseTo(0.5, 2);
-  await page.getByRole('combobox', { name: 'Export resolution' }).selectOption('1920');
-  expect(await held()).toEqual(before);
-  await page.getByRole('button', { name: 'Composition: swap sides' }).click();
-  const swapped = await held();
-  expect(swapped.focusX).toBeCloseTo(0.5, 2);
-  expect(swapped.focusY).toBeCloseTo(0.5, 2);
-  await page.getByRole('button', { name: 'Mute Voiceover', exact: true }).click();
-  const downloaded = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Save project', exact: true }).click();
-  const download = await downloaded;
-  const path = (await download.path())!;
-  const json = JSON.parse(await readFile(path, 'utf8'));
-  expect(json.version).toBe(2);
-  expect(json.media).toHaveLength(4);
-  expect(json.media.every((asset: { data: string }) => asset.data.startsWith('data:'))).toBe(true);
-  await page.reload();
-  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
-  await page.getByLabel('Open local project').setInputFiles(path);
-  await expect(page.locator('.app-footer [role="status"]')).toContainText('Project reopened', {
-    timeout: 30000,
-  });
-  await page.getByRole('button', { name: 'Select zoom' }).click();
-  await expect(page.getByLabel('Zoom focus X', { exact: true })).toHaveValue('25');
-  await expect(page.getByRole('button', { name: 'Unmute Voiceover', exact: true })).toBeVisible();
-  expect((await page.getByTestId('camera-mask').boundingBox())!.x).toBeLessThan(
-    (await page.getByTestId('screen-mask').boundingBox())!.x,
-  );
-  await page.getByRole('button', { name: 'Play composition', exact: true }).click();
-  await expect
-    .poll(() =>
-      page
-        .locator('[data-testid="camera-mask"] video:visible')
-        .evaluate((v: HTMLVideoElement) => v.currentTime),
-    )
-    .toBeGreaterThan(0.1);
+  const content = page.getByTestId('screen-content');
+  await expect(content).toHaveCSS('transform', /matrix\(2, 0, 0, 2,/);
+  const box = (await target.boundingBox())!;
+  const at = (x: number, y: number) => [box.x + box.width * x, box.y + box.height * y] as const;
+  const x = page.getByLabel('Zoom focus X', { exact: true });
+  const y = page.getByLabel('Zoom focus Y', { exact: true });
+
+  // Held: the preview is unzoomed and the circle follows the pointer; the edit waits for release.
+  await page.mouse.move(...at(0.6, 0.4));
+  await page.mouse.down();
+  await expect(content).not.toHaveCSS('transform', /matrix\(2, 0, 0, 2,/);
+  await page.mouse.move(...at(0.25, 0.65), { steps: 6 });
+  await expect(target.locator('span')).toHaveAttribute('style', /left: 25%; top: 65%/);
+  await expect(x).toHaveValue('50');
+  await page.mouse.up();
+  await expect(x).toHaveValue('25');
+  await expect(y).toHaveValue('65');
+  await expect(content).toHaveCSS('transform', /matrix\(2, 0, 0, 2,/);
+
+  // A plain click commits the press point.
+  await page.mouse.click(...at(0.7, 0.3));
+  await expect(x).toHaveValue('70');
+  await expect(y).toHaveValue('30');
+  // Each gesture is one undo step.
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(x).toHaveValue('25');
+  await expect(y).toHaveValue('65');
 });
 
 test('a trim grip commits only real trims, on the clip as it is at release', async ({ page }) => {
@@ -500,23 +474,57 @@ test('pressing or selecting a clip, a trim grip or a zoom block never changes it
   }
 });
 
-test('ends mouse marking when its zoom is removed, and does not arm the next zoom', async ({
+test('a cancelled mark restores the focus with no undo step, and the playhead zoom is the fallback', async ({
   page,
 }) => {
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
   await page.getByRole('button', { name: 'Add zoom at playhead' }).first().click();
-  await page.getByRole('button', { name: 'Mark mouse position' }).click();
-  await expect(page.getByRole('button', { name: 'Set mouse focus on screen' })).toBeVisible();
-  await page.getByRole('button', { name: 'Remove zoom' }).click();
-  await expect(page.getByText(/Recordings do not contain cursor metadata/)).toHaveCount(0);
-  // Shortcuts were dead while marking stayed armed with nothing left to cancel it.
+  const target = page.getByTestId('mouse-target');
+  const box = (await target.boundingBox())!;
+  const at = (x: number, y: number) => [box.x + box.width * x, box.y + box.height * y] as const;
+  const x = page.getByLabel('Zoom focus X', { exact: true });
+  await page.mouse.click(...at(0.2, 0.2));
+  await expect(x).toHaveValue('20');
+
+  // Escape mid-drag, then a pointercancel mid-drag: neither moves the focus nor adds a step.
+  await page.mouse.move(...at(0.8, 0.8));
+  await page.mouse.down();
+  await page.mouse.move(...at(0.9, 0.9), { steps: 3 });
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await expect(x).toHaveValue('20');
+  await page.mouse.move(...at(0.8, 0.8));
+  await page.mouse.down();
+  await page.mouse.move(...at(0.9, 0.9), { steps: 3 });
+  await target.dispatchEvent('pointercancel', { pointerId: 1, isPrimary: true });
+  await page.mouse.up();
+  await expect(x).toHaveValue('20');
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(x).toHaveValue('50');
+  // Shortcuts work again after a cancelled gesture.
+  await page.mouse.move(5, 5);
   await page.keyboard.press('l');
   await expect(page.getByTestId('transport-state')).not.toHaveText('Paused');
-  await page.keyboard.press('k');
-  await page.getByRole('button', { name: 'Add zoom at playhead' }).first().click();
-  await expect(page.getByRole('button', { name: 'Mark mouse position' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Set mouse focus on screen' })).toHaveCount(0);
+  // A press pauses playback, as marking always has.
+  await page.mouse.move(...at(0.5, 0.5));
+  await page.mouse.down();
+  await expect(page.getByTestId('transport-state')).toHaveText('Paused');
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await expect(x).toHaveValue('50');
+
+  // With a clip selected, a press marks the zoom under the playhead and selects it.
+  await page.getByRole('slider', { name: 'Timeline playhead' }).fill('30');
+  await page.getByTestId('track-screen').getByRole('button').first().click();
+  await expect(x).toHaveCount(0);
+  await page.mouse.click(...at(0.4, 0.6));
+  await expect(x).toHaveValue('40');
+  await expect(page.getByLabel('Zoom focus Y', { exact: true })).toHaveValue('60');
+  // Outside every zoom, with no zoom selected, there is nothing to mark.
+  await page.getByRole('slider', { name: 'Timeline playhead' }).fill('300');
+  await page.getByTestId('track-screen').getByRole('button').first().click();
+  await expect(target).toHaveCount(0);
 });
 
 test('keeps unsaved edits through a tab close and an opened project', async ({ page }) => {
