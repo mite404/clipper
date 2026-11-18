@@ -978,13 +978,22 @@ export function App() {
     [cutAt, selected, selectedTracks],
   );
   const splitAll = useCallback(() => cutAt(() => true), [cutAt]);
+  // Hovering a cuttable frame seeks the real playhead there; it is no edit, and playback is not fought.
+  const razorHover = useCallback(
+    (at: number) => {
+      if (speed === 0 && at !== frameRef.current) seek(at);
+    },
+    [speed, seek],
+  );
   const razor = useCallback(
     (id: string, at: number) => {
       const next = splitClip(edit.clips, id, at);
       if (next.length === edit.clips.length) return; // a clip edge or a gap is no cut
-      if (change({ ...edit, clips: next })) setMessage('Razor cut. Source timing preserved.');
+      if (!change({ ...edit, clips: next })) return;
+      setMessage('Razor cut. Source timing preserved.');
+      seek(at); // the playhead stays on the cut frame
     },
-    [edit, change],
+    [edit, change, seek],
   );
   // One command for pool drops and keyboard placement. It reads the source and the edit as they
   // are at release, and a lock refuses it through change().
@@ -1863,6 +1872,7 @@ export function App() {
               change({ ...edit, clips: edit.clips.map((c) => (c.id === clip.id ? clip : c)) });
             }}
             onRazor={tool === 'razor' ? razor : undefined}
+            onRazorHover={tool === 'razor' ? razorHover : undefined}
           />
           <div className="sequence-footer">
             <span>
@@ -2029,7 +2039,7 @@ export function App() {
           ['Space', 'Play / pause · also from sliders, menus, checkboxes and file buttons'],
           ['Enter', 'Toggle a focused checkbox or open a focused menu'],
           ['← / →', 'Step one frame'],
-          ['V / C', 'Selection tool / Razor tool (click a clip to cut it)'],
+          ['V / C', 'Selection tool / Razor tool (hover to preview the cut frame, click to cut)'],
           [MAC ? '⌘ K' : 'Alt K', 'Cut every unlocked track at the playhead'],
           ['B', 'Create zoom at playhead (4 seconds)'],
           ['Delete', 'Remove selected clip or zoom · only from the timeline'],

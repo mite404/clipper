@@ -23,6 +23,7 @@ import {
   type DragEvent,
   type HTMLAttributes,
   type MouseEvent,
+  type PointerEvent,
   type ReactNode,
 } from 'react';
 import type { Asset } from './media';
@@ -245,7 +246,7 @@ function dropFrame(event: DragEvent<HTMLElement>, duration: number): number {
   return Math.max(0, Math.floor(((event.clientX - rect.left) / rect.width) * duration));
 }
 
-// Razor snapping reaches this far on screen, to the playhead or any clip edge on any track.
+// Razor snapping reaches this far on screen, to any clip edge on any track.
 const SNAP_PIXELS = 8;
 // Up is toward the front for visual tracks and toward the end of the list for audio ones.
 const UP = { visual: 1, audio: -1 } as const;
@@ -264,8 +265,16 @@ const TOGGLES = [
   { list: 'locked', name: (label: string) => `Lock ${label}`, icons: [LockOpen, Lock] },
 ] as const;
 
-// The frame a still Razor click cuts at, snapped; null for a keyboard press or a pointer drag,
-// which select the clip as the Selection tool does.
+// The frame Razor would cut at under the pointer, snapped to clip edges. Hover and click share it,
+// so the playhead a hover leaves is the frame the click cuts.
+function razorAt(event: MouseEvent<HTMLElement>, targets: number[], duration: number): number {
+  const lane = event.currentTarget.parentElement!.getBoundingClientRect(); // → lane box in px
+  const at = Math.round(((event.clientX - lane.left) / lane.width) * duration); // → frame
+  return snapFrame(at, targets, (SNAP_PIXELS / lane.width) * duration);
+}
+
+// The frame a still Razor click cuts at; null for a keyboard press or a pointer drag, which
+// select the clip as the Selection tool does.
 function razorFrame(
   event: MouseEvent<HTMLElement>,
   pressX: number,
@@ -273,9 +282,35 @@ function razorFrame(
   duration: number,
 ): number | null {
   if (!event.detail || Math.abs(event.clientX - pressX) > SNAP_PIXELS / 2) return null;
-  const lane = event.currentTarget.parentElement!.getBoundingClientRect(); // → lane box in px
-  const at = Math.round(((event.clientX - lane.left) / lane.width) * duration); // → frame
-  return snapFrame(at, targets, (SNAP_PIXELS / lane.width) * duration);
+  return razorAt(event, targets, duration);
+}
+
+// A pen or mouse hover over a cuttable frame of a clip reports that frame; touch, a clip edge and a
+// gap report nothing.
+function reportHoverCut(
+  onHover: (frame: number) => void,
+  event: PointerEvent<HTMLElement>,
+  clip: Clip,
+  targets: number[],
+  duration: number,
+): void {
+  if (event.pointerType === 'touch') return;
+  const at = razorAt(event, targets, duration); // → frame
+  // Strictly inside the clip: at an edge a click is no cut.
+  if (Math.min(at - clip.start, clip.start + clip.duration - at) > 0) onHover(at);
+}
+
+// The pointer-move handler of a clip. A locked lane takes no cut, so it does not move the playhead.
+function hoverCut(
+  onHover: ((frame: number) => void) | undefined,
+  locked: boolean,
+  clip: Clip,
+  targets: number[],
+  duration: number,
+): (event: PointerEvent<HTMLElement>) => void {
+  return (event) => {
+    if (onHover && !locked) reportHoverCut(onHover, event, clip, targets, duration);
+  };
 }
 
 // Report a trim only when it moved the edge: a plain click on a grip, or an arrow key into a limit,
@@ -340,6 +375,7 @@ export function Timeline({
   headers,
   onTrim,
   onRazor,
+  onRazorHover,
   drop,
 }: {
   clips: Clip[];
@@ -355,6 +391,8 @@ export function Timeline({
   /** Set while the Razor tool is active: clicks cut a clip at the clicked frame instead of
    * selecting it. */
   onRazor?: (clipId: string, frame: number) => void;
+  /** Set with `onRazor`: the pointer is over a cuttable frame, which the playhead follows. */
+  onRazorHover?: (frame: number) => void;
   /** The pool drag in progress, so lanes can say whether they would take it. */
   drop?: PoolDrag;
 }) {
@@ -373,7 +411,7 @@ export function Timeline({
   }>();
   // Where the pointer last went down: a Razor drag is not a click, so it never cuts.
   const pressX = useRef(0);
-  const snapTargets = [frame, ...clips.flatMap((c) => [c.start, c.start + c.duration])];
+  const snapTargets = clips.flatMap((c) => [c.start, c.start + c.duration]);
   const zone = { drop, registry, clips, locked: tracks.locked, duration };
   const createRow = (kind: NewTrack) => (
     <div className="track-row create-row" key={`create-${kind}`}>
@@ -437,6 +475,13 @@ export function Timeline({
                   aria-label={`${asset?.name ?? 'Missing media'} at ${(clip.start / FPS).toFixed(1)} seconds`}
                   aria-pressed={selected === clip.id}
                   onPointerDown={(event) => (pressX.current = event.clientX)}
+                  onPointerMove={hoverCut(
+                    onRazorHover,
+                    tracks.locked.includes(id),
+                    clip,
+                    snapTargets,
+                    duration,
+                  )}
                   onClick={(event) => {
                     const at = onRazor
                       ? razorFrame(event, pressX.current, snapTargets, duration)

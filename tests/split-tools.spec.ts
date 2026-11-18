@@ -40,6 +40,23 @@ async function clickLane(page: Page, lane: string, frame: number, nudge = 0) {
   await page.mouse.click(box.x + (frame / 360) * box.width + nudge, box.y + box.height / 2);
 }
 
+// A pointer jump straight onto a lane at a timeline frame, so only that position is hovered.
+async function hoverLane(page: Page, lane: string, frame: number, nudge = 0) {
+  const box = (await page.getByTestId(`track-${lane}`).boundingBox())!;
+  await page.mouse.move(box.x + (frame / 360) * box.width + nudge, box.y + box.height / 2);
+}
+
+// A key pressed right after "assets ready" appears is dropped: the shortcut handler's effect has
+// not yet re-registered with busy=false (same on base). The header click gives it that time.
+async function armRazor(page: Page) {
+  await page.locator('.app-header').click({ position: { x: 4, y: 4 } });
+  await page.keyboard.press('c');
+  await expect(page.getByRole('button', { name: 'Razor tool', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
+}
+
 const status = (page: Page) => page.locator('.app-footer [role="status"]');
 const toggle = (page: Page, name: string) => page.getByRole('button', { name, exact: true });
 const ORIGINAL = {
@@ -143,11 +160,13 @@ test('C picks Razor and V picks Selection; Razor cuts at the clicked frame, snap
 
   await seek(page, 45);
   await clickLane(page, 'camera', 100);
-  await clickLane(page, 'voice', 45, 6);
+  // The playhead is no snap target any more (a hover seek would make it circular), so this
+  // click snaps to the camera cut's edge at 100.
+  await clickLane(page, 'voice', 100, 6);
   expect(await lanes(page)).toEqual({
     ...ORIGINAL,
     camera: ['0.0 seconds', '3.3 seconds'],
-    voice: ['0.0 seconds', '1.5 seconds'],
+    voice: ['0.0 seconds', '3.3 seconds'],
   });
   await expect(
     page.getByRole('button', { name: 'Flower study at 0.0 seconds', exact: true }),
@@ -372,3 +391,107 @@ for (const [platform, cut] of [
     await expect(state).toHaveText('Playing · 1×');
     await page.keyboard.press('KeyK');
   });
+
+test.describe('Razor hover seeks the real playhead to the frame a click would cut', () => {
+  const playhead = (page: Page) => page.getByRole('slider', { name: 'Timeline playhead' });
+  const undo = (page: Page) => page.getByRole('button', { name: 'Undo', exact: true });
+
+  test('it follows the pointer onto cuttable clips, stays after it leaves and edits nothing', async ({
+    page,
+  }) => {
+    await open(page);
+    await armRazor(page);
+    await hoverLane(page, 'camera', 100);
+    await expect(playhead(page)).toHaveValue('100');
+    await expect(page.locator('.transport-readout')).toContainText('00:03:10');
+    await page.locator('.app-header').hover({ position: { x: 4, y: 4 } });
+    await expect(playhead(page)).toHaveValue('100');
+    // The playhead is not a snap target: a hover a few pixels from it moves it on, never sticks.
+    await hoverLane(page, 'camera', 100, 6);
+    await expect.poll(async () => Number(await playhead(page).inputValue())).toBeGreaterThan(100);
+    // Any cuttable clip seeks, audio included, and a neighbour's edge snaps within reach.
+    await hoverLane(page, 'voice', 250);
+    await expect(playhead(page)).toHaveValue('250');
+    await hoverLane(page, 'camera', 180, -3);
+    await expect(playhead(page)).toHaveValue('180');
+    // Near the clip's own edge the snap lands on the edge, which is no cut and does not seek.
+    await hoverLane(page, 'camera', 0, 2);
+    await expect(playhead(page)).toHaveValue('180');
+    expect(await lanes(page)).toEqual(ORIGINAL);
+    await expect(undo(page)).toBeDisabled();
+  });
+
+  test('a locked lane, a gap, the Selection tool and playback do not seek', async ({ page }) => {
+    await open(page);
+    await armRazor(page);
+    await toggle(page, `Lock ${NAMES.voice}`).click();
+    await hoverLane(page, 'voice', 120);
+    await expect(playhead(page)).toHaveValue('0');
+    // Shorten the camera clip by 30 frames so the end of its lane is a gap.
+    const grip = page.getByTestId('track-camera').getByRole('slider', { name: 'Trim right edge' });
+    await page.keyboard.press('v');
+    await grip.focus();
+    for (let i = 0; i < 3; i++) await page.keyboard.press('Shift+ArrowLeft');
+    await page.locator('.app-header').click({ position: { x: 4, y: 4 } });
+    await page.keyboard.press('c');
+    await hoverLane(page, 'camera', 345);
+    await expect(playhead(page)).toHaveValue('0');
+    await page.keyboard.press('v');
+    await hoverLane(page, 'camera', 100);
+    await expect(playhead(page)).toHaveValue('0');
+    await page.keyboard.press('c');
+    // Touch never hover-seeks; the same event from a mouse does (checked at the end).
+    const camera = page.getByTestId('track-camera');
+    const lane = (await camera.boundingBox())!;
+    const point = (frame: number) => ({
+      clientX: lane.x + (frame / 360) * lane.width,
+      clientY: lane.y + lane.height / 2,
+    });
+    const clip = camera.locator('.timeline-clip').first();
+    await clip.dispatchEvent('pointermove', { pointerType: 'touch', ...point(100) });
+    await expect(playhead(page)).toHaveValue('0');
+    await page.keyboard.press('l');
+    await expect(page.getByTestId('transport-state')).toHaveText('Playing · 1×');
+    await hoverLane(page, 'camera', 300);
+    await page.waitForTimeout(250);
+    expect(Number(await playhead(page).inputValue())).toBeLessThan(100);
+    await page.keyboard.press('k');
+    await hoverLane(page, 'camera', 300, 1);
+    await expect(playhead(page)).toHaveValue('300');
+    await clip.dispatchEvent('pointermove', { pointerType: 'mouse', ...point(200) });
+    await expect(playhead(page)).toHaveValue('200');
+  });
+
+  test('a click with no hover before it cuts and leaves the playhead on the cut frame', async ({
+    page,
+  }) => {
+    await open(page);
+    await armRazor(page);
+    const camera = page.getByTestId('track-camera');
+    const lane = (await camera.boundingBox())!;
+    const at = { clientX: lane.x + (100 / 360) * lane.width, clientY: lane.y + lane.height / 2 };
+    const clip = camera.locator('.timeline-clip').first();
+    await clip.dispatchEvent('pointerdown', at);
+    await clip.dispatchEvent('click', { detail: 1, ...at });
+    expect((await lanes(page)).camera).toEqual(['0.0 seconds', '3.3 seconds']);
+    await expect(playhead(page)).toHaveValue('100');
+  });
+
+  test('a click cuts at the hovered frame and leaves the playhead there through undo', async ({
+    page,
+  }) => {
+    await open(page);
+    await armRazor(page);
+    await hoverLane(page, 'camera', 100);
+    await expect(playhead(page)).toHaveValue('100');
+    await expect(undo(page)).toBeDisabled();
+    await page.mouse.down();
+    await page.mouse.up();
+    expect((await lanes(page)).camera).toEqual(['0.0 seconds', '3.3 seconds']);
+    await expect(playhead(page)).toHaveValue('100');
+    await undo(page).click();
+    expect((await lanes(page)).camera).toEqual(['0.0 seconds']);
+    await expect(undo(page)).toBeDisabled();
+    await expect(playhead(page)).toHaveValue('100');
+  });
+});
