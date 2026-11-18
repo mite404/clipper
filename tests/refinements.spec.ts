@@ -438,6 +438,29 @@ test('a clip body drag draws over its neighbours, overwrites on release and chan
   expect((await held.boundingBox())!.x + (await held.boundingBox())!.width).toBeGreaterThan(
     (await under.boundingBox())!.x + 1,
   );
+  // Nothing of s2 shows through s1: across s1's title band where it covers s2's label, every pixel
+  // matches s1's own plain background in that row over the empty lane just before s2.
+  const [front, back] = [(await held.boundingBox())!, (await under.boundingBox())!];
+  const band = (await held.locator('.filmstrip').boundingBox())!.y - front.y - 2;
+  const shot = await page.screenshot({
+    clip: { x: back.x - 20, y: front.y + 1, width: 120, height: band },
+    scale: 'css',
+  });
+  const stray = await page.evaluate(async (png) => {
+    const image = await createImageBitmap(
+      await (await fetch(`data:image/png;base64,${png}`)).blob(),
+    );
+    const context = new OffscreenCanvas(image.width, image.height).getContext('2d')!;
+    context.drawImage(image, 0, 0);
+    const { data, width, height } = context.getImageData(0, 0, image.width, image.height);
+    let count = 0;
+    for (let y = 0; y < height; y++)
+      for (let x = 24; x < width; x++)
+        for (let c = 0; c < 3; c++)
+          if (Math.abs(data[(y * width + x) * 4 + c] - data[y * width * 4 + c]) > 2) count++;
+    return count;
+  }, shot.toString('base64'));
+  expect(stray).toBe(0);
   await page.mouse.up();
   expect(await starts('screen')).toEqual(['2.0 seconds', '8.0 seconds']);
   // s2 still shows the source frames it showed there, so its tail still ends at 13 s (390).

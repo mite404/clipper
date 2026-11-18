@@ -1181,6 +1181,8 @@ p {
   padding: 0;
   text-align: left;
   overflow: hidden;
+  /* Its title's z-index stays inside it, so a clip dragged over a neighbour hides its label. */
+  isolation: isolate;
 }
 /* Selection is a colour step, never a size change: the border keeps its 1px and nothing paints
    outside the box. Hover brightens by a smaller step, and by a larger one on a selected item. */
