@@ -7,8 +7,13 @@ browser. No source media is uploaded and no account is required.
 
 ```bash
 npm ci
+npm run fetch:whisper
 npm run dev
 ```
+
+`npm run fetch:whisper` downloads the pinned Whisper `tiny.en` files (about 42 MB) into the
+git-ignored `public/models/` and checks each one's SHA-256. Clipper serves them itself, so
+transcription never downloads anything at runtime.
 
 `npm run dev` serves on port 5173 and exits with a port-in-use error if it is taken, rather than
 moving to another port. In an Amp orb, run `amp orb services ensure` for supervised editor and
@@ -28,6 +33,8 @@ service holds 5173, so beside it run `npm run dev -- --port <free port>`.
 - Portable project save/reopen with embedded original media and no relinking requirement.
 - Local rendered video export at 1920×1080 or 3840×2160 as MP4, MOV or WebM, chosen in the export
   dialog, with the exact filename shown, progress and cancellation.
+- English transcription of a video or audio source with Whisper `tiny.en`, run in a worker on this
+  device, with progress and Cancel; the transcript is saved with the project.
 - Shared Storybook records, including mouse-marking mode, and realistic stress-data toggles.
 
 The layout follows the supplied desktop-plus-talking-head example and the source/compose workflow in

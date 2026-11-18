@@ -25,6 +25,12 @@ jobs:
           cache: npm
       - run: npm install --global npm@10.9.10
       - run: npm ci
+      # Whisper files are pinned by revision and SHA-256 in the script, so its hash keys the cache.
+      - uses: actions/cache@v6
+        with:
+          path: public/models
+          key: whisper-${{ hashFiles('scripts/fetch-whisper.mjs') }}
+      - run: npm run fetch:whisper
       - run: npm run format:check
       - run: npm run lint
       - run: npm run lint:typed

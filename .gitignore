@@ -6,3 +6,6 @@ playwright-report/
 .fallow/
 .amp/*
 !.amp/services.yaml
+
+# Whisper model files, fetched by npm run fetch:whisper (ADR-31)
+/public/models/

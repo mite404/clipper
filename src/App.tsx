@@ -5,7 +5,9 @@ import {
   useMemo,
   useRef,
   useState,
+  type Dispatch,
   type ReactNode,
+  type SetStateAction,
 } from 'react';
 import { Player, type PlayerRef } from '@remotion/player';
 import {
@@ -36,9 +38,18 @@ import {
   ZoomIn,
 } from 'lucide-react';
 import { Composition } from './Composition';
-import { IconButton, MediaLibrary, Waveform, clock, timecode } from './components';
+import {
+  IconButton,
+  MediaLibrary,
+  TranscriptPanel,
+  Waveform,
+  clock,
+  timecode,
+  type TranscriptProps,
+} from './components';
 import { type Asset, DEFAULT_STILL_FRAMES, loadDemo, readMedia, unreadableNamesake } from './media';
 import { CREATE, Timeline } from './Timeline';
+import { transcribe, type Transcript } from './transcribe';
 import {
   DEFAULT_TRACKS,
   FPS,
@@ -326,12 +337,78 @@ function stillInsertionError(asset: Asset, edit: Edit, assets: Asset[]): string 
   return null;
 }
 
+type TranscriptionJob = { id: string; label: string; ratio: number; controller: AbortController };
+
+// Why a source cannot be transcribed now, or undefined when it can.
+const unavailable = (asset: Asset, running?: string) =>
+  !asset.hasAudio
+    ? 'This source has no audio track.'
+    : running && running !== asset.id
+      ? 'Another source is being transcribed.'
+      : undefined;
+
+// The status line a finished, cancelled or failed transcription leaves.
+const failure = (name: string, aborted: boolean, error: unknown) =>
+  aborted
+    ? 'Transcription cancelled.'
+    : `Could not transcribe ${name}. ${error instanceof Error ? error.message : ''}`;
+const success = (name: string, { segments }: Transcript) =>
+  segments.length ? `Transcribed ${name}.` : `No speech found in ${name}.`;
+
+// One source's transcript row, given the one transcription that may be running.
+const transcriptRow = (
+  asset: Asset,
+  job: TranscriptionJob | null,
+  start: (asset: Asset) => void,
+): TranscriptProps => ({
+  transcript: asset.transcript,
+  job: job?.id === asset.id ? job : undefined,
+  unavailable: unavailable(asset, job?.id),
+  onTranscribe: () => start(asset),
+  onCancel: () => job?.controller.abort(),
+});
+
+// One transcription at a time; its result lands on the source asset, as cursor data does.
+function useTranscription(
+  asset: Asset | undefined,
+  setAssets: Dispatch<SetStateAction<Asset[]>>,
+  setMessage: (message: string) => void,
+): { row?: TranscriptProps; running: boolean; cancel: () => void } {
+  const [job, setJob] = useState<TranscriptionJob | null>(null);
+  const start = useCallback(
+    async (target: Asset) => {
+      const controller = new AbortController();
+      const report = (label: string, ratio: number) =>
+        setJob({ id: target.id, label, ratio, controller });
+      report('Preparing audio', 0);
+      try {
+        const blob = await (await fetch(target.url)).blob();
+        const transcript = await transcribe(blob, report, controller.signal);
+        setAssets((all) => all.map((a) => (a.id === target.id ? { ...a, transcript } : a)));
+        setMessage(success(target.name, transcript));
+      } catch (error) {
+        setMessage(failure(target.name, controller.signal.aborted, error));
+      } finally {
+        setJob(null);
+      }
+    },
+    [setAssets, setMessage],
+  );
+  const row = useMemo(
+    () =>
+      asset && asset.kind !== 'image' ? transcriptRow(asset, job, (a) => void start(a)) : undefined,
+    [asset, job, start],
+  );
+  return { row, running: job !== null, cancel: () => job?.controller.abort() };
+}
+
 /** Source preview with explicit in/out points and track-targeted ripple insertion. */
 export function SourceMonitor({
   asset,
   tracks,
   onInsert,
   blocked = false,
+  transcript,
 }: {
   asset?: Asset;
   /** The edit's registry, so the target list follows created and reordered tracks. */
@@ -339,6 +416,8 @@ export function SourceMonitor({
   onInsert: (track: Track, offset: number, duration: number) => void;
   /** Pause source playback while workspace controls cannot be used. */
   blocked?: boolean;
+  /** The source's transcript row; omitted for stills. */
+  transcript?: TranscriptProps;
 }) {
   const [sourceUrl, setSourceUrl] = useState(() => asset?.url);
   const [choice, setChoice] = useState<Track>(() => defaultTrack(tracks, asset?.kind));
@@ -531,6 +610,16 @@ export function SourceMonitor({
           <Plus size={15} />
         </IconButton>
       </div>
+      {transcript && (
+        <TranscriptPanel
+          {...transcript}
+          onSeek={(seconds) => {
+            const media = video.current ?? audio.current;
+            if (media) media.currentTime = seconds;
+            setPreview((p) => ({ ...p, time: seconds }));
+          }}
+        />
+      )}
     </section>
   );
 }
@@ -801,6 +890,8 @@ export function App() {
   const [locked, setLocked] = useState<Track[]>([]);
   const [selectedTracks, setSelectedTracks] = useState<Track[]>([]);
   const [savedTracks, setSavedTracks] = useState({ muted, locked, selectedTracks });
+  // Transcripts live on assets, outside the edit history, so saving records which ones it held.
+  const [savedTranscripts, setSavedTranscripts] = useState<Asset['transcript'][]>([]);
   const [tool, setTool] = useState<'select' | 'razor'>('select');
   const [message, setMessage] = useState('Ready for your next story.');
   const [help, setHelp] = useState(false);
@@ -836,6 +927,7 @@ export function App() {
   const rewinding = useRef(false);
   const duration = Math.max(1, ...edit.clips.map((c) => c.start + c.duration));
   const asset = assets.find((a) => a.id === sourceId);
+  const transcription = useTranscription(asset, setAssets, setMessage);
   const dragging = assets.find((a) => a.id === dragAsset);
   const selectedZoom = edit.zooms.find((z) => z.id === selected);
   // Marking belongs to one zoom, so it ends by itself when that zoom is removed, undone or deselected.
@@ -917,7 +1009,9 @@ export function App() {
     (history.length > 0 && edit !== savedEdit) ||
     !sameTracks(muted, savedTracks.muted) ||
     !sameTracks(locked, savedTracks.locked) ||
-    !sameTracks(selectedTracks, savedTracks.selectedTracks);
+    !sameTracks(selectedTracks, savedTracks.selectedTracks) ||
+    assets.some((a) => a.transcript && !savedTranscripts.includes(a.transcript)) ||
+    transcription.running;
   const working = unsaved || exportProgress !== null;
   useEffect(() => {
     if (!working) return;
@@ -1298,6 +1392,7 @@ export function App() {
       downloadBlob(file, 'developer-walkthrough.clipper.json');
       setSavedEdit(edit);
       setSavedTracks({ muted, ...tracks });
+      setSavedTranscripts(assets.map((a) => a.transcript));
       // The next change starts a new step, so Undo can return to exactly what was saved.
       gesture.current = null;
       setMessage(
@@ -1318,6 +1413,8 @@ export function App() {
   const mayDiscard = () =>
     !unsaved || window.confirm('Open this project and discard your unsaved edits?');
   const openProject = async (file: File) => {
+    // The new project replaces the sources, so a running transcription has nowhere to land.
+    transcription.cancel();
     setBusy(true);
     setSpeed(0);
     setMarkingZoomId(null);
@@ -1326,7 +1423,8 @@ export function App() {
       const project = parseProject(await file.text());
       for (const media of project.media) {
         const response = await fetch(media.data);
-        imported.push(await readMedia(await response.blob(), media.name, media.id, media.cursor));
+        const read = await readMedia(await response.blob(), media.name, media.id, media.cursor);
+        imported.push({ ...read, transcript: media.transcript });
         if ((imported[imported.length - 1].kind === 'image') !== (media.kind === 'image'))
           throw new Error(`Image kind does not match embedded media ${media.name}.`);
       }
@@ -1346,6 +1444,7 @@ export function App() {
       setMuted(project.muted);
       setLocked(project.locked);
       setSelectedTracks(project.selectedTracks);
+      setSavedTranscripts(imported.map((a) => a.transcript));
       setSavedTracks({
         muted: project.muted,
         locked: project.locked,
@@ -1478,9 +1577,15 @@ export function App() {
   );
   const sourceView = useMemo(
     () => (
-      <SourceMonitor asset={asset} tracks={edit.tracks} onInsert={insert} blocked={sourceBlocked} />
+      <SourceMonitor
+        asset={asset}
+        tracks={edit.tracks}
+        onInsert={insert}
+        blocked={sourceBlocked}
+        transcript={transcription.row}
+      />
     ),
-    [asset, edit.tracks, insert, sourceBlocked],
+    [asset, edit.tracks, insert, sourceBlocked, transcription.row],
   );
   const playerView = useMemo(
     () => (

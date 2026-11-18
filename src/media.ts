@@ -1,6 +1,7 @@
 import { ALL_FORMATS, AudioBufferSink, BlobSource, CanvasSink, Input } from 'mediabunny';
 import { FPS } from './timeline-model';
 import { validateCursorImages, type CursorTrack } from './cursor';
+import type { Transcript } from './transcribe';
 
 export type Asset = {
   id: string;
@@ -13,6 +14,7 @@ export type Asset = {
   peaks: number[];
   thumbnail: string;
   cursor?: CursorTrack;
+  transcript?: Transcript;
 } & (
   | { kind: 'video' | 'audio'; duration: number; hasAudio: boolean }
   | { kind: 'image'; duration?: never; hasAudio: false }

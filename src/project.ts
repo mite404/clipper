@@ -13,6 +13,7 @@ import {
 } from './timeline-model';
 import { parseCursorTrack, type CursorTrack } from './cursor';
 import { screenTracks } from './cursor-render';
+import type { Transcript } from './transcribe';
 
 /** The undoable edit. `tracks` is the ordered registry every clip's `track` resolves through. */
 export type Edit = { clips: Clip[]; zooms: Zoom[]; layout: Layout; tracks: TrackDef[] };
@@ -84,6 +85,24 @@ function range(start: number, duration: number, field: string) {
   if (start + duration > MAX_FRAMES) throw new Error(`${field} range exceeds 24 hours.`);
 }
 
+// Segments are source seconds, sorted and never overlapping, so subtitles can trust their order.
+function transcript(value: unknown, field: string): Transcript {
+  const item = object(value, field);
+  let previous = 0;
+  const segments = array(item.segments, `${field}.segments`).map((entry, i) => {
+    const at = `${field}.segments[${i}]`;
+    const segment = object(entry, at);
+    const start = number(segment.start, `${at}.start`, previous, MAX_FRAMES / FPS);
+    const end = number(segment.end, `${at}.end`, start, MAX_FRAMES / FPS);
+    if (end === start) throw new Error(`${at} must end after it starts.`);
+    const text = string(segment.text, `${at}.text`);
+    if (text.length > 4000) throw new Error(`${at}.text must be at most 4000 characters.`);
+    previous = end;
+    return { start, end, text };
+  });
+  return { model: string(item.model, `${field}.model`), segments };
+}
+
 function zoomSource(
   value: unknown,
   clips: Clip[],
@@ -121,10 +140,24 @@ function imageKind(kind: unknown, data: string, version: unknown): { kind?: 'ima
   return { kind: 'image' };
 }
 
+// The optional per-source fields a file carries beside the media bytes.
+const sidecars = ({ kind, cursor, transcript }: Asset) => ({
+  ...(kind === 'image' ? { kind: 'image' as const } : {}),
+  ...(cursor ? { cursor } : {}),
+  ...(transcript ? { transcript } : {}),
+});
+
 /** Validates the portable envelope, not media codecs or decoded source durations. */
 export function parseProject(text: string): {
   edit: Edit & { zooms: AnchoredZoom[] };
-  media: { id: string; name: string; data: string; kind?: 'image'; cursor?: CursorTrack }[];
+  media: {
+    id: string;
+    name: string;
+    data: string;
+    kind?: 'image';
+    cursor?: CursorTrack;
+    transcript?: Transcript;
+  }[];
   muted: Track[];
   locked: Track[];
   selectedTracks: Track[];
@@ -173,6 +206,9 @@ export function parseProject(text: string): {
       data,
       ...kind,
       ...(item.cursor === undefined ? {} : { cursor: parseCursorTrack(item.cursor) }),
+      ...(item.transcript === undefined
+        ? {}
+        : { transcript: transcript(item.transcript, `media[${i}].transcript`) }),
     };
   });
   unique(
@@ -388,8 +424,7 @@ export async function serializeProject(
       id: asset.id,
       name: asset.name,
       data,
-      ...(asset.kind === 'image' ? { kind: 'image' as const } : {}),
-      ...(asset.cursor ? { cursor: asset.cursor } : {}),
+      ...sidecars(asset),
     });
   }
   const { version, tracks, ...rest } = fileEdit(snapshot, media);

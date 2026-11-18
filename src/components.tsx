@@ -2,6 +2,7 @@ import { useMemo, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { Film, Image, Music2, Plus, Upload } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui-sdk/react/tooltip';
 import type { Asset } from './media';
+import type { Transcript } from './transcribe';
 import { FPS } from './timeline-model';
 
 const two = (n: number) => String(n).padStart(2, '0');
@@ -198,5 +199,95 @@ export function MediaLibrary({
         </a>
       </div>
     </aside>
+  );
+}
+
+/** What a source's transcript row shows and does, apart from seeking its preview. */
+export type TranscriptProps = {
+  transcript?: Transcript;
+  /** The running transcription of this source: its status label and the share done, 0 to 1. */
+  job?: { label: string; ratio: number };
+  /** Why Transcribe is unavailable, such as no audio track or another run in progress. */
+  unavailable?: string;
+  onTranscribe: () => void;
+  onCancel: () => void;
+};
+
+// Transcribe, or Cancel while a transcription of this source runs.
+function TranscriptAction({
+  transcript,
+  job,
+  unavailable,
+  onTranscribe,
+  onCancel,
+}: TranscriptProps) {
+  if (job)
+    return (
+      <button className="text-button" onClick={onCancel}>
+        Cancel
+      </button>
+    );
+  return (
+    <button
+      className="text-button"
+      disabled={unavailable !== undefined}
+      title={unavailable ?? 'Transcribe speech on this device. Audio never leaves it.'}
+      onClick={onTranscribe}
+    >
+      {transcript ? 'Transcribe again' : 'Transcribe'}
+    </button>
+  );
+}
+
+// Progress while running, a note until there is speech, then the timed segments.
+function TranscriptBody({
+  transcript,
+  job,
+  note,
+  onSeek,
+}: Pick<TranscriptProps, 'transcript' | 'job'> & {
+  note: string;
+  onSeek: (seconds: number) => void;
+}) {
+  if (job)
+    return (
+      <div className="transcript-progress">
+        <progress aria-label="Transcription progress" value={job.ratio} max={1} />
+        <span>{job.label}</span>
+      </div>
+    );
+  if (!transcript) return <p className="transcript-note">{note}</p>;
+  if (!transcript.segments.length) return <p className="transcript-note">No speech found.</p>;
+  return (
+    <ol className="transcript-segments">
+      {transcript.segments.map((segment) => (
+        <li key={segment.start}>
+          <button onClick={() => onSeek(segment.start)}>
+            <time>{clock(segment.start * FPS)}</time>
+            <span>{segment.text}</span>
+          </button>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+/** A source's local transcript: Transcribe, its progress and Cancel, then timed segments. */
+export function TranscriptPanel({
+  onSeek,
+  ...props
+}: TranscriptProps & { onSeek: (seconds: number) => void }) {
+  return (
+    <section className="transcript" aria-label="Transcript">
+      <div className="transcript-head">
+        <span>Transcript</span>
+        <TranscriptAction {...props} />
+      </div>
+      <TranscriptBody
+        {...props}
+        note={props.unavailable ?? 'Speech is transcribed on this device.'}
+        onSeek={onSeek}
+      />
+    </section>
   );
 }

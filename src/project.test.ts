@@ -147,6 +147,44 @@ describe('portable project parsing', () => {
     }
   });
 
+  it('saves and reopens a source transcript, and rejects a malformed one', async () => {
+    const url = URL.createObjectURL(
+      new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),
+    );
+    const transcript = {
+      model: 'whisper-tiny.en@794207f',
+      segments: [
+        { start: 0, end: 7.74, text: 'And so my fellow Americans' },
+        { start: 7.74, end: 10.64, text: 'ask not 🇺🇸' },
+      ],
+    };
+    try {
+      const saved = (await serializeProject(edit, [{ ...asset, url, transcript }], [])).file;
+      const json = JSON.parse(await saved.text());
+      expect(json.version).toBe(2);
+      expect(json.media[0].transcript).toEqual(transcript);
+      expect(parseProject(await saved.text()).media[0]).toEqual({ ...media[0], transcript });
+      const [first, second] = transcript.segments;
+      for (const bad of [
+        { ...transcript, model: '' },
+        { ...transcript, segments: {} },
+        { ...transcript, segments: [{ ...first, end: 0 }] },
+        { ...transcript, segments: [{ ...first, start: -1 }] },
+        { ...transcript, segments: [{ ...first, end: Infinity }] },
+        { ...transcript, segments: [{ ...first, end: 24 * 60 * 60 + 1 }] },
+        { ...transcript, segments: [{ ...first, text: 7 }] },
+        { ...transcript, segments: [{ ...first, text: 'x'.repeat(4001) }] },
+        { ...transcript, segments: [second, first] },
+        { ...transcript, segments: [first, { ...second, start: 7 }] },
+      ]) {
+        const value = { ...project(), media: [{ ...media[0], transcript: bad }] };
+        expect(() => parseProject(JSON.stringify(value))).toThrow(/transcript/i);
+      }
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+
   it('reopens edit settings and embedded bytes without treating them as decoded media', () => {
     // A file from before track locks and selection has neither key; both default to empty.
     expect(parseProject(JSON.stringify(project()))).toEqual({

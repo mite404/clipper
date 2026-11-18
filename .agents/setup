@@ -46,6 +46,7 @@ echo "Toolchain ready after ${SECONDS}s: Node $(node --version), npm $(npm --ver
 echo 'Installing locked dependencies and Git hooks'
 npm ci --no-audit --no-fund
 echo "Dependencies ready after ${SECONDS}s"
+npm run fetch:whisper
 
 echo 'Installing and checking Playwright Chromium'
 npx --no-install playwright install chromium

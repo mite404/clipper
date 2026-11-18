@@ -550,6 +550,80 @@ p {
   display: flex;
   gap: 8px;
 }
+.transcript {
+  margin-top: 11px;
+  border-top: 1px solid var(--line);
+  padding-top: 4px;
+  font-size: 9px;
+  color: #989da5;
+}
+.transcript-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.transcript-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.transcript-progress progress {
+  flex: 1;
+  min-width: 0;
+  height: 3px;
+  appearance: none;
+  border: 0;
+  border-radius: 2px;
+  background: #ffffff14;
+  overflow: hidden;
+}
+.transcript-progress progress::-webkit-progress-bar {
+  background: #ffffff14;
+}
+.transcript-progress progress::-webkit-progress-value {
+  background: var(--green);
+  transition: width 200ms ease-out;
+}
+.transcript-progress progress::-moz-progress-bar {
+  background: var(--green);
+}
+.transcript-note {
+  margin: 2px 0 0;
+  color: #666f76;
+}
+.transcript-segments {
+  max-height: 120px;
+  margin: 2px 0 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+.transcript-segments button {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 3px;
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font-size: 9px;
+  line-height: 1.45;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.transcript-segments button:hover {
+  background: #ffffff08;
+}
+.transcript-segments time {
+  flex-shrink: 0;
+  color: #666f76;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 8px;
+  line-height: 1.8;
+}
 .source-range label {
   display: flex;
   align-items: center;
