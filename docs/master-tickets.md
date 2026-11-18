@@ -44,10 +44,10 @@ owner-decision rows and 70 remaining queue entries. The 70 comprise 65 implement
 candidates below, four conditional or parked entries and one umbrella. These are ticket counts, not
 a claim that 65 source changes are approved or immediately runnable.
 
-The Sonnet queue has three candidates: REF-49 granted, REF-51 owner-gated and CLIP-45 held. The Opus
-queue has 62: 20 ready to scope/assign and 42 dependency-, contract- or owner-gated. Across both
-lanes that is 21 ready or granted and 44 held. Ready means recorded technical predecessors are
-satisfied, not permission to edit shared paths or skip acceptance scoping. A held ticket can have an
+The Sonnet queue has three candidates: REF-49 granted, REF-51 ready and CLIP-45 held. The Opus queue
+has 62: 20 ready to scope/assign and 42 dependency-, contract- or owner-gated. Across both lanes
+that is 21 ready or granted and 44 held. Ready means recorded technical predecessors are satisfied,
+not permission to edit shared paths or skip acceptance scoping. A held ticket can have an
 independently useful subpart, but its entire remaining scope is not ready. Preserve the delivery
 order above numeric order and optional cleanup. Reassess a classification when a bounded contract
 changes its scope.
@@ -61,7 +61,7 @@ expand its grant.
 | Candidate           | Readiness       | Why this lane; remaining gate                                                                                                  |
 | ------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | [REF-49](#ref-49)   | Granted         | Owner recording: clip edges extend as well as shorten.                                                                         |
-| [REF-51](#ref-51)   | Owner-gated     | Razor hover shows the prospective cut frame; seek semantics await owner.                                                       |
+| [REF-51](#ref-51)   | Ready           | Razor hover seeks the real playhead to the cut frame; it stays until moved.                                                    |
 | [CLIP-45](#clip-45) | Dependency-held | Existing-action widget and defaults only, after CLIP-40; reclassify if its scoped contract adds a new sharing/export pipeline. |
 
 ### Opus candidate queue
@@ -309,11 +309,15 @@ region.
   move it, keeping its duration, refusing overlap and sequence bounds, one undo step, keyboard
   equivalent, and click still selects. A generated source-anchored shot must keep its anchor in step
   so `resolveZooms` does not move it back.
-- REF-51, Sonnet after REF-49, owner-gated: with Razor active, hovering a cuttable clip shows the
-  playhead at the frame a click would cut. This supersedes any stationary-playhead reading of
-  CLIP-2e. Whether hover performs a real seek (playhead and preview move and stay) or shows a
-  hover-only cut line and preview that restores on leave is the owner's call; with a real seek,
-  snapping to the playhead becomes circular and applies only to clip edges.
+- REF-51, Sonnet after REF-49, ready. Owner decision (2026-11-18, this coordinator thread): option
+  A, a real seek. "They would stay there until the playhead is moved again. Cutting a clip region
+  doesn't move the playhead anywhere else but to the frame that's being cut." With Razor active,
+  hovering a cuttable clip seeks the playhead and preview to the frame a click would cut, and they
+  stay there after the pointer leaves until something else moves the playhead. A click cuts at that
+  frame and leaves the playhead on it. This supersedes any stationary-playhead reading of CLIP-2e.
+  Snapping to the playhead becomes circular, so Razor snaps to clip edges only. Hover seeks add no
+  undo steps. Locked lanes and gaps do not seek. Coordinator default, open to the owner: while
+  playing, hover does not seek, so playback is not fought.
 
 CLIP-2c is delivered at
 [1de89b5](https://github.com/mite404/clipper/commit/1de89b5895d8fcdd530c13d91bc34a4fe71e7942) with
@@ -1434,7 +1438,7 @@ original note for every row.
 | <a id="ref-48"></a>[REF-48](#ref-48)                 | Drag a zoom region to reposition it                                 | Medium | Dependency-held: REF-50, then Sonnet's Timeline work                                                                                                                                                     | Owner recording; subpart of CLIP-9b regions                                                                         |
 | <a id="ref-49"></a>[REF-49](#ref-49)                 | Extend clip edges as well as shorten them                           | Small  | Granted to Sonnet [T-01a1e78d](https://ampcode.com/threads/T-01a1e78d-0f03-7486-a2dd-c86bc8261ee7)                                                                                                       | Owner recording; `trimClip` never adds frames                                                                       |
 | <a id="ref-50"></a>[REF-50](#ref-50)                 | Keep a zoom inside its source mask                                  | Medium | Granted to Opus [T-0e774456](https://ampcode.com/threads/T-0e774456-fd5d-4e1e-a9a0-a2b716c91b85)                                                                                                         | Owner recording; unclamped `cameraTransform`                                                                        |
-| <a id="ref-51"></a>[REF-51](#ref-51)                 | Razor hover shows the prospective cut frame                         | Small  | Owner-gated: real seek or hover-only preview                                                                                                                                                             | Owner recording; supersedes stationary playhead                                                                     |
+| <a id="ref-51"></a>[REF-51](#ref-51)                 | Razor hover shows the prospective cut frame                         | Small  | Ready for Sonnet after REF-49; owner chose a real seek                                                                                                                                                   | Owner recording; supersedes stationary playhead                                                                     |
 | <a id="ref-32"></a>[REF-32](#ref-32)                 | Correct source-preview playback error and busy lifecycle            | Medium | Delivered at [4b49623](https://github.com/mite404/clipper/commit/4b4962397e4ac237ab774b8d4a2f2a44280514b2); [green exact-SHA CI](https://github.com/mite404/clipper/actions/runs/43986804408)            | Reservation released; canonical previews promoted and verified                                                      |
 | <a id="ref-33"></a>[REF-33](#ref-33)                 | Qualify download URL lifetime outside Chromium                      | Medium | Blocked                                                                                                                                                                                                  | another supported WebCodecs browser                                                                                 |
 | <a id="ref-34"></a>[REF-34](#ref-34)                 | Remove Player listener lifetime assumptions                         | Small  | Deferred proposal                                                                                                                                                                                        | reproduce a listener lifecycle defect first                                                                         |
