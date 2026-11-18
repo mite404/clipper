@@ -1,9 +1,39 @@
 import { test, expect } from '@playwright/test';
 import { motionCursorFixture } from '../src/cursor.fixture';
 
-// ponytail: generous first bound. Local worst frame is 67 ms and worst task 64 ms under 4x
-// throttling; CI logged neither before this change. Tighten towards 250 once CI runs show rafMax.
-const STALL_MS = 500;
+// Frames land on 16.7 ms vsync steps: a healthy 4x-throttled play is steady 30 fps (33.4 ms). Over
+// 30 idle runs the worst frame was 167 ms and the worst long task 135 ms, with one busy neighbour on
+// a 2-CPU orb 167 ms and 124 ms, and with two 200 ms and 210 ms. A 300 ms stall at play start gave
+// 314 ms and 332 ms at the least, so 250 leaves 40 ms above the worst contention and 64 below it.
+const STALL_MS = 250;
+// Cadence ceiling for the slowest quarter of frames. It sits between the 2-vsync (33.4 ms) and
+// 3-vsync (50 ms) steps, so a play that holds 30 fps passes, and one that adds ~30 ms of work to
+// every frame (50 to 66.7 ms) fails. A tail percentile such as p95 sits on a step edge (100 ms), so
+// it is logged but not asserted. A busy neighbour on a 2-CPU orb slows the cadence of about one
+// play in twenty with no way to tell it from a regression in one run, so a slow play is replayed:
+// ATTEMPTS plays, and the cadence must hold in at least one.
+const CADENCE_MS = 42;
+const ATTEMPTS = 3;
+
+type Frames = { rafP75: number; rafCount: number };
+const steady = (r: Frames) => r.rafP75 < CADENCE_MS && r.rafCount > 100;
+
+// Cadence tips over whenever the host steals a burst of frames, so a slow play is replayed from the
+// start and fails only when no attempt holds it. A real regression slows every replay. A pass that
+// needed a replay is logged and annotated, so a drifting orb never goes unnoticed.
+async function replayUntilSteady<T extends Frames>(
+  first: T,
+  replay: (attempt: number) => Promise<T>,
+): Promise<T> {
+  let last = first;
+  let attempts = 1;
+  for (; !steady(last) && attempts < ATTEMPTS; attempts++) last = await replay(attempts + 1);
+  const held = steady(last) ? `held on attempt ${attempts}` : 'never held';
+  console.log(JSON.stringify({ cadenceAttempts: attempts, cadenceHeld: steady(last) }));
+  if (attempts > 1)
+    test.info().annotations.push({ type: 'cadence replay', description: `${held} of ${ATTEMPTS}` });
+  return last;
+}
 
 type Perf = {
   start: number;
@@ -17,6 +47,8 @@ for (const follow of [false, true]) {
   test(`play starts promptly without monopolizing the browser thread${follow ? ' with cursor follow' : ''}`, async ({
     page,
   }) => {
+    // Setup, then up to ATTEMPTS five-second plays, which a starved orb stretches past 30 seconds.
+    test.setTimeout(60_000);
     const cdp = await page.context().newCDPSession(page);
     await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
     await cdp.send('Performance.enable');
@@ -85,17 +117,17 @@ for (const follow of [false, true]) {
       await expect(page.getByLabel('Camera follow')).toHaveValue('focused');
     }
     // Sampling is armed before the click, so a stall inside the click itself is measured too.
-    await page.evaluate(() => {
-      const perf: Perf = { start: 0, done: false, firstAdvance: 0, frames: [], longTasks: [] };
-      Object.assign(window, { __perf: perf });
-      new PerformanceObserver((list) => {
-        perf.longTasks.push(
-          ...list.getEntries().map(({ startTime, duration }) => ({ startTime, duration })),
-        );
-      }).observe({ type: 'longtask', buffered: false });
-      document.addEventListener(
-        'click',
-        (event) => {
+    const sample = async (attempt: number) => {
+      await page.evaluate(() => {
+        Reflect.get(window, '__stopPerf')?.(); // → detaches the previous attempt
+        const perf: Perf = { start: 0, done: false, firstAdvance: 0, frames: [], longTasks: [] };
+        const observer = new PerformanceObserver((list) => {
+          perf.longTasks.push(
+            ...list.getEntries().map(({ startTime, duration }) => ({ startTime, duration })),
+          );
+        });
+        observer.observe({ type: 'longtask', buffered: false });
+        const onClick = (event: MouseEvent) => {
           const play =
             event.target instanceof Element &&
             event.target.closest('[aria-label="Play composition"]');
@@ -114,53 +146,71 @@ for (const follow of [false, true]) {
             else perf.done = true;
           };
           requestAnimationFrame(tick);
-        },
-        true,
+        };
+        document.addEventListener('click', onClick, true);
+        Object.assign(window, {
+          __perf: perf,
+          __stopPerf: () => {
+            observer.disconnect();
+            document.removeEventListener('click', onClick, true);
+          },
+        });
+      });
+      const before = await cdp.send('Performance.getMetrics');
+      await page.getByRole('button', { name: 'Play composition', exact: true }).click();
+      const result = await page.evaluate(async () => {
+        const perf = (window as unknown as { __perf: Perf }).__perf;
+        if (!perf.start) throw new Error('The Play click was never observed.');
+        while (!perf.done) await new Promise((resolve) => setTimeout(resolve, 100));
+        const sorted = [...perf.frames].sort((a, b) => a - b);
+        return {
+          firstAdvance: perf.firstAdvance,
+          rafP75: sorted[Math.floor(sorted.length * 0.75)],
+          rafP95: sorted[Math.floor(sorted.length * 0.95)],
+          rafMax: sorted.at(-1) ?? Infinity,
+          rafCount: sorted.length,
+          // Long tasks that ran during the five seconds after the click, not during page load.
+          longTaskMax: Math.max(
+            0,
+            ...perf.longTasks
+              .filter((task) => task.startTime + task.duration > perf.start)
+              .map((task) => task.duration),
+          ),
+        };
+      });
+      const after = await cdp.send('Performance.getMetrics');
+      const metric = (metrics: { name: string; value: number }[], name: string) =>
+        metrics.find((m) => m.name === name)?.value ?? 0;
+      console.log(
+        JSON.stringify({
+          ...result,
+          attempt,
+          scriptSeconds:
+            metric(after.metrics, 'ScriptDuration') - metric(before.metrics, 'ScriptDuration'),
+          taskSeconds:
+            metric(after.metrics, 'TaskDuration') - metric(before.metrics, 'TaskDuration'),
+          cpuThrottle: 4,
+          follow,
+          url: new URL(page.url()).origin,
+        }),
       );
+      await page.keyboard.press('k');
+      return result;
+    };
+
+    // The first, cold play must start promptly and never stall. A percentile hides one long
+    // freeze, so the worst frame and the worst task are bounded too.
+    const first = await sample(1);
+    expect(first.firstAdvance).toBeGreaterThan(0);
+    expect(first.firstAdvance).toBeLessThan(1000);
+    expect(first.rafMax).toBeLessThan(STALL_MS);
+    expect(first.longTaskMax).toBeLessThan(STALL_MS);
+    const cadence = await replayUntilSteady(first, async (attempt) => {
+      await page.getByRole('slider', { name: 'Timeline playhead' }).fill('0');
+      return sample(attempt);
     });
-    const before = await cdp.send('Performance.getMetrics');
-    await page.getByRole('button', { name: 'Play composition', exact: true }).click();
-    const result = await page.evaluate(async () => {
-      const perf = (window as unknown as { __perf: Perf }).__perf;
-      if (!perf.start) throw new Error('The Play click was never observed.');
-      while (!perf.done) await new Promise((resolve) => setTimeout(resolve, 100));
-      const sorted = [...perf.frames].sort((a, b) => a - b);
-      return {
-        firstAdvance: perf.firstAdvance,
-        rafP95: sorted[Math.floor(sorted.length * 0.95)],
-        rafMax: sorted.at(-1) ?? Infinity,
-        rafCount: sorted.length,
-        // Long tasks that ran during the five seconds after the click, not during page load.
-        longTaskMax: Math.max(
-          0,
-          ...perf.longTasks
-            .filter((task) => task.startTime + task.duration > perf.start)
-            .map((task) => task.duration),
-        ),
-      };
-    });
-    const after = await cdp.send('Performance.getMetrics');
-    const metric = (metrics: { name: string; value: number }[], name: string) =>
-      metrics.find((m) => m.name === name)?.value ?? 0;
-    console.log(
-      JSON.stringify({
-        ...result,
-        scriptSeconds:
-          metric(after.metrics, 'ScriptDuration') - metric(before.metrics, 'ScriptDuration'),
-        taskSeconds: metric(after.metrics, 'TaskDuration') - metric(before.metrics, 'TaskDuration'),
-        cpuThrottle: 4,
-        follow,
-        url: new URL(page.url()).origin,
-      }),
-    );
-    await page.keyboard.press('k');
-    expect(result.firstAdvance).toBeGreaterThan(0);
-    expect(result.firstAdvance).toBeLessThan(1000);
-    expect(result.rafP95).toBeLessThan(100);
-    // A percentile hides one long freeze, so the worst frame and the worst task are bounded too.
-    expect(result.rafCount).toBeGreaterThan(100);
-    expect(result.rafMax).toBeLessThan(STALL_MS);
-    expect(result.longTaskMax).toBeLessThan(STALL_MS);
+    expect(cadence.rafP75).toBeLessThan(CADENCE_MS);
+    expect(cadence.rafCount).toBeGreaterThan(100);
   });
 }
 
