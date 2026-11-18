@@ -4,6 +4,7 @@ import {
   DEFAULT_TRACKS,
   FPS,
   GAIN_LIMITS,
+  OUTPUT_FPS,
   MAX_CHAPTER_TITLE,
   MAX_FRAMES,
   ZOOM_LIMITS,
@@ -13,6 +14,7 @@ import {
   type Track,
   type TrackDef,
   type Zoom,
+  type OutputFps,
   type ZoomCurve,
 } from './timeline-model';
 import { parseCursorTrack, type CursorTrack } from './cursor';
@@ -129,6 +131,15 @@ function clipGain(value: unknown, field: string): { gain?: number } {
   return db === 0 ? {} : { gain: db };
 }
 
+// The export rate. A file without one exports at Auto, the cadence it always had; Auto itself is
+// never written, so only the five explicit rates are valid here.
+function outputFps(value: unknown): OutputFps {
+  if (value === undefined) return 'auto';
+  const choice = OUTPUT_FPS.find((fps) => fps !== 'auto' && fps === value);
+  if (!choice) throw new Error('outputFps must be 24, 29.97, 60, 100 or 120.');
+  return choice;
+}
+
 // Optional, so files without chapters open unchanged. Titles are trimmed; the list is put in order.
 function chapters(value: unknown): Chapter[] {
   const list = array(value === undefined ? [] : value, 'chapters').map((entry, i) => {
@@ -222,6 +233,7 @@ export function parseProject(text: string): {
   muted: Track[];
   locked: Track[];
   selectedTracks: Track[];
+  outputFps: OutputFps;
 } {
   let value: unknown;
   try {
@@ -356,6 +368,7 @@ export function parseProject(text: string): {
     muted: toggles('muted'),
     locked: toggles('locked', []),
     selectedTracks: toggles('selectedTracks', []),
+    outputFps: outputFps(root.outputFps),
   };
 }
 
@@ -456,7 +469,10 @@ export async function serializeProject(
   edit: Omit<Edit, 'tracks'> & Partial<Pick<Edit, 'tracks'>>,
   assets: Asset[],
   muted: Track[],
-  toggles: { locked: Track[]; selectedTracks: Track[] } = { locked: [], selectedTracks: [] },
+  toggles: { locked: Track[]; selectedTracks: Track[]; outputFps?: OutputFps } = {
+    locked: [],
+    selectedTracks: [],
+  },
 ): Promise<{ file: Blob; omitted: string[] }> {
   const snapshot: Edit = { tracks: DEFAULT_TRACKS, ...structuredClone(edit) };
   // An undone track creation can leave toggles naming a track the registry no longer has.
@@ -465,6 +481,7 @@ export async function serializeProject(
     muted: listed(muted),
     locked: listed(toggles.locked),
     selectedTracks: listed(toggles.selectedTracks),
+    ...(toggles.outputFps && toggles.outputFps !== 'auto' && { outputFps: toggles.outputFps }),
   };
   validateSources(snapshot, assets);
   const usedIds = new Set(snapshot.clips.map((clip) => clip.assetId));
@@ -504,6 +521,7 @@ export async function serializeProject(
         muted: parsed.muted,
         locked: parsed.locked,
         selectedTracks: parsed.selectedTracks,
+        ...(parsed.outputFps !== 'auto' && { outputFps: parsed.outputFps }),
       }),
     ],
     { type: 'application/json' },

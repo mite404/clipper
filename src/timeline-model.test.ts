@@ -2,6 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   FPS,
   GAIN_LIMITS,
+  outputFrames,
+  outputRate,
+  outputTick,
   addChapter,
   chapterList,
   clipAt,
@@ -920,5 +923,33 @@ describe('clip gain', () => {
   it('gives both halves of a split the clip gain', () => {
     const [left, right] = splitClip([{ ...clip, gain: -6 }], 'screen', 90);
     expect([left.gain, right.gain]).toEqual([-6, -6]);
+  });
+});
+
+describe('output frame rates', () => {
+  it('resolves 29.97 to NTSC 30000/1001 and Auto to the 30 fps project cadence', () => {
+    expect(outputRate('29.97')).toEqual({ p: 30000, q: 1001 });
+    expect(outputRate('auto')).toEqual({ p: 30, q: 1 });
+    expect(outputRate('120')).toEqual({ p: 120, q: 1 });
+  });
+
+  it('counts output samples in whole-number rational arithmetic', () => {
+    // 31 ticks is 1.0333 s: 62 samples at 60 fps and 124 at 120, never one extra from rounding.
+    expect(outputFrames(31, outputRate('60'))).toBe(62);
+    expect(outputFrames(31, outputRate('120'))).toBe(124);
+    // An exact boundary adds no sample; a partial one adds one.
+    expect(outputFrames(30, outputRate('24'))).toBe(24);
+    expect(outputFrames(31, outputRate('24'))).toBe(25);
+    // 1000 ticks at 30000/1001 is 999.001 samples, so a last short one: 1000, not 999.
+    expect(outputFrames(1000, outputRate('29.97'))).toBe(1000);
+    expect(outputFrames(300, outputRate('29.97'))).toBe(300);
+    expect(outputFrames(90, outputRate('auto'))).toBe(90);
+  });
+
+  it('places each sample at its exact composition tick', () => {
+    expect(outputTick(1, outputRate('60'))).toBe(0.5);
+    expect(outputTick(3, outputRate('24'))).toBe(3.75);
+    expect(outputTick(1000, outputRate('29.97'))).toBeCloseTo(1001, 9);
+    expect(outputTick(7, outputRate('auto'))).toBe(7);
   });
 });

@@ -22,10 +22,14 @@ import {
   FPS,
   covers,
   gainFactor,
+  outputFrames,
+  outputRate,
+  outputTick,
   paintOrder,
   sourceFrame,
   timecode,
   type Clip,
+  type OutputFps,
   type Track,
   type TrackDef,
   type Zoom,
@@ -47,6 +51,8 @@ export type RenderVideoOptions = {
    * MOV uses AVC and uncompressed 16-bit PCM audio (about 11.5 MB/minute at stereo 48 kHz).
    */
   format?: 'mp4' | 'mov' | 'webm';
+  /** Output rate; Auto, the default, is the 30 fps project cadence. The edit grid never changes. */
+  fps?: OutputFps;
   onProgress: (progress: number) => void;
   signal?: AbortSignal;
 };
@@ -331,7 +337,18 @@ export async function renderFrameImage({
   }
 }
 
-/** Render and encode locally at 30fps. The Blob MIME identifies the actual container.
+// Where output sample `index` starts and how long it shows, in seconds, cut at the timeline end.
+// WebM keeps 1 ms timestamps, so both ends round to the millisecond and a sample that rounds to
+// nothing is skipped: endpoints move by at most 0.5 ms, and errors never accumulate.
+function sampleSpan(index: number, rate: { p: number; q: number }, end: number, webm: boolean) {
+  const at = (n: number) => Math.min((n * rate.q) / rate.p, end); // → seconds
+  const round = (seconds: number) => (webm ? Math.round(seconds * 1000) / 1000 : seconds);
+  const start = round(at(index));
+  return { start, duration: round(at(index + 1)) - start };
+}
+
+/** Render and encode locally at the chosen output rate. The Blob MIME identifies the actual
+ * container.
  * @throws When the selected codecs are unavailable, media cannot decode, or encoding fails.
  * @throws {DOMException} When the abort signal is cancelled.
  */
@@ -344,6 +361,7 @@ export async function renderVideo({
   muted,
   width,
   format,
+  fps = 'auto',
   onProgress,
   signal,
 }: RenderVideoOptions): Promise<Blob> {
@@ -353,6 +371,8 @@ export async function renderVideo({
   const frames = Math.max(0, ...clips.map((clip) => clip.start + clip.duration));
   if (!Number.isInteger(frames) || frames <= 0) throw new Error('Add clips before exporting.');
   const height = (width * 9) / 16;
+  const rate = outputRate(fps); // → exact p/q
+  const samples = outputFrames(frames, rate);
   const gains = new Map(tracks.flatMap((t) => (t.kind === 'audio' ? [[t.id, t.gain]] : [])));
   const audioClips = clips.filter(
     (clip) =>
@@ -364,7 +384,7 @@ export async function renderVideo({
   const videoOptions = {
     width,
     height,
-    frameRate: FPS,
+    frameRate: rate.p / rate.q,
     bitrate: width === 3840 ? 24_000_000 : 8_000_000,
   };
   const audioOptions = { sampleRate: 48000, numberOfChannels: 2, bitrate: 128000 };
@@ -408,7 +428,12 @@ export async function renderVideo({
   const audio = audioClips.length
     ? new AudioBufferSource({ codec: profile.audio, ...audioOptions })
     : undefined;
-  output.addVideoTrack(video, { frameRate: FPS });
+  // Only MP4/MOV at 29.97 take the rate hint: its 1/30000 timebase is exact there, while the
+  // default timebase is exact for every whole rate and WebM keeps 1 ms whatever the hint says.
+  output.addVideoTrack(
+    video,
+    rate.q !== 1 && selected !== 'webm' ? { frameRate: rate.p / rate.q } : {},
+  );
   if (audio) output.addAudioTrack(audio);
   const inputs = new Map<string, Input>();
   const images = new Map<string, ImageBitmap>();
@@ -426,11 +451,14 @@ export async function renderVideo({
         continue;
       }
       const { sink, first } = await videoSink(inputs, clip, 2);
-      const times = Array.from({ length: clip.duration }, (_, index) =>
-        Math.max(first, sourceFrame(clip, clip.start + index) / FPS),
-      );
+      // The source time of every output sample the clip is live for, made as the encoder asks.
+      const times = function* () {
+        const last = outputFrames(clip.start + clip.duration, rate);
+        for (let n = outputFrames(clip.start, rate); n < last; n++)
+          yield Math.max(first, sourceFrame(clip, outputTick(n, rate)) / FPS);
+      };
       // Each canvas is drawn before the next is requested, so two pooled canvases never collide.
-      const iterator = sink.canvasesAtTimestamps(times);
+      const iterator = sink.canvasesAtTimestamps(times());
       iterators.push(iterator);
       visuals.push({ kind: 'video' as const, clip, iterator });
     }
@@ -442,8 +470,9 @@ export async function renderVideo({
     }
     context.setTransform(width / STAGE.width, 0, 0, height / STAGE.height, 0, 0);
     const paths = prepareFraming(zooms, clips, assets, layout, tracks);
-    for (let frame = 0; frame < frames; frame++) {
+    for (let index = 0; index < samples; index++) {
       check();
+      const frame = outputTick(index, rate); // → fractional composition tick
       const layers: Layer[] = [];
       for (const visual of visuals) {
         const { clip } = visual;
@@ -464,8 +493,9 @@ export async function renderVideo({
         layers,
         cursorDrawing(clips, assets, frame, layout, cursorImages, tracks),
       );
-      await video.add(frame / FPS, 1 / FPS);
-      onProgress(0.1 + (0.85 * (frame + 1)) / frames);
+      const span = sampleSpan(index, rate, frames / FPS, selected === 'webm');
+      if (span.duration > 0) await video.add(span.start, span.duration);
+      onProgress(0.1 + (0.85 * (index + 1)) / samples);
     }
     video.close();
     check();

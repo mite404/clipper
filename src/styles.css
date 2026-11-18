@@ -993,11 +993,6 @@ p {
   letter-spacing: 1px;
   padding-top: 4px;
 }
-.ruler-label > span:last-child {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 7px;
-  letter-spacing: 0;
-}
 .ruler {
   position: relative;
   border-bottom: 1px solid #ffffff10;

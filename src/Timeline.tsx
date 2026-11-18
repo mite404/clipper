@@ -1116,7 +1116,6 @@ export function Timeline({
         <div className="timeline-grid" style={{ width, minWidth: '100%' }}>
           <div className="ruler-label" ref={label}>
             <span>TRACKS</span>
-            <span>30 FPS</span>
           </div>
           <div className="ruler">
             {rulerMarks(duration, scale).map((mark) => (

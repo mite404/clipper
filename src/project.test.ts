@@ -196,13 +196,18 @@ describe('portable project parsing', () => {
 
   it('reopens edit settings and embedded bytes without treating them as decoded media', () => {
     // A file from before track locks and selection has neither key; both default to empty.
+    // Without an output rate it exports at Auto, the 30 fps it always had.
     expect(parseProject(JSON.stringify(project()))).toEqual({
       edit,
       media,
       muted: ['music'],
       locked: [],
       selectedTracks: [],
+      outputFps: 'auto',
     });
+    expect(parseProject(JSON.stringify({ ...project(), outputFps: '29.97' })).outputFps).toBe(
+      '29.97',
+    );
     const toggled = { ...project(), locked: ['voice'], selectedTracks: ['screen', 'camera'] };
     expect(parseProject(JSON.stringify(toggled))).toMatchObject({
       locked: ['voice'],
@@ -271,6 +276,11 @@ describe('portable project parsing', () => {
     [JSON.stringify({ ...project(), selectedTracks: {} }), /selectedTracks/i],
     [JSON.stringify({ ...project(), selectedTracks: ['other'] }), /track/i],
     [JSON.stringify({ ...project(), selectedTracks: ['camera', 'camera'] }), /duplicate/i],
+    // Only the five explicit rates are stored, as strings; Auto is stored as no key.
+    [JSON.stringify({ ...project(), outputFps: '30' }), /outputFps/],
+    [JSON.stringify({ ...project(), outputFps: 'auto' }), /outputFps/],
+    [JSON.stringify({ ...project(), outputFps: 29.97 }), /outputFps/],
+    [JSON.stringify({ ...project(), outputFps: null }), /outputFps/],
   ])('rejects malformed or incompatible input: %s', (text, message) => {
     expect(() => parseProject(text)).toThrow(message);
   });
@@ -698,6 +708,7 @@ describe('portable project serialization', () => {
         await serializeProject(edit, [{ ...asset, url }], ['music'], {
           locked: ['voice', 'screen'],
           selectedTracks: ['camera'],
+          outputFps: '60',
         })
       ).file;
     } finally {
@@ -714,6 +725,7 @@ describe('portable project serialization', () => {
       muted: ['music'],
       locked: ['voice', 'screen'],
       selectedTracks: ['camera'],
+      outputFps: '60',
     });
     const reopened = parseProject(text);
     expect(reopened).toEqual({
@@ -722,6 +734,7 @@ describe('portable project serialization', () => {
       muted: ['music'],
       locked: ['voice', 'screen'],
       selectedTracks: ['camera'],
+      outputFps: '60',
     });
     const blob = await (await fetch(reopened.media[0].data)).blob();
     expect(Array.from(new Uint8Array(await blob.arrayBuffer()))).toEqual([0, 1, 2, 255]);

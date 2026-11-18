@@ -53,9 +53,11 @@ import { transcribe, type Transcript } from './transcribe';
 import {
   DEFAULT_TRACKS,
   FPS,
+  OUTPUT_FPS,
   type Clip,
   type DropTarget,
   type NewTrack,
+  type OutputFps,
   type Chapter,
   type Track,
   type TrackDef,
@@ -662,6 +664,9 @@ function editStep(event: KeyboardEvent, key: string): 1 | -1 | undefined {
   return key === 'arrowup' ? -1 : key === 'arrowdown' ? 1 : undefined;
 }
 
+// An output rate as the Output FPS control and the export summary name it.
+const fpsName = (fps: OutputFps) => (fps === 'auto' ? 'Auto' : `${fps} fps`);
+
 // The composition layouts by stored mode; Side by side is stored as no mode.
 const LAYOUTS = {
   side: { name: 'Side by side', detail: 'Landscape + portrait' },
@@ -946,7 +951,9 @@ export function App() {
   // Mutes, locks and Split's track targets are saved with the project but are never undo steps.
   const [locked, setLocked] = useState<Track[]>([]);
   const [selectedTracks, setSelectedTracks] = useState<Track[]>([]);
-  const [savedTracks, setSavedTracks] = useState({ muted, locked, selectedTracks });
+  // Saved with the project like the track toggles, outside undo. Resolution is not saved.
+  const [outputFps, setOutputFps] = useState<OutputFps>('auto');
+  const [savedTracks, setSavedTracks] = useState({ muted, locked, selectedTracks, outputFps });
   // Transcripts live on assets, outside the edit history, so saving records which ones it held.
   const [savedTranscripts, setSavedTranscripts] = useState<Asset['transcript'][]>([]);
   const [tool, setTool] = useState<'select' | 'razor'>('select');
@@ -1099,6 +1106,7 @@ export function App() {
     !sameTracks(muted, savedTracks.muted) ||
     !sameTracks(locked, savedTracks.locked) ||
     !sameTracks(selectedTracks, savedTracks.selectedTracks) ||
+    outputFps !== savedTracks.outputFps ||
     assets.some((a) => a.transcript && !savedTranscripts.includes(a.transcript)) ||
     transcription.running;
   const working = unsaved || exportProgress !== null || (readyVideo !== null && !readyVideo.saved);
@@ -1577,7 +1585,7 @@ export function App() {
     setBusy(true);
     setSpeed(0);
     try {
-      const tracks = { locked, selectedTracks };
+      const tracks = { locked, selectedTracks, outputFps };
       const { file, omitted } = await serializeProject(edit, assets, muted, tracks);
       downloadBlob(file, 'developer-walkthrough.clipper.json');
       setSavedEdit(edit);
@@ -1633,11 +1641,13 @@ export function App() {
       setMuted(project.muted);
       setLocked(project.locked);
       setSelectedTracks(project.selectedTracks);
+      setOutputFps(project.outputFps);
       setSavedTranscripts(imported.map((a) => a.transcript));
       setSavedTracks({
         muted: project.muted,
         locked: project.locked,
         selectedTracks: project.selectedTracks,
+        outputFps: project.outputFps,
       });
       setHistory([]);
       setSelected(project.edit.clips[0]?.id ?? '');
@@ -1670,6 +1680,7 @@ export function App() {
         muted,
         width: exportWidth,
         format: exportFormat,
+        fps: outputFps,
         onProgress: (value) => {
           const next = Math.round(value * 100) / 100;
           if (next === progress) return;
@@ -1684,7 +1695,9 @@ export function App() {
         size: blob.size,
         saved: false,
       });
-      setMessage(`Video exported at ${exportWidth} × ${(exportWidth * 9) / 16}. Rendered locally.`);
+      setMessage(
+        `Video exported at ${exportWidth} × ${(exportWidth * 9) / 16}, ${fpsName(outputFps)}. Rendered locally.`,
+      );
     } catch (error) {
       setMessage(
         controller.signal.aborted
@@ -1850,6 +1863,14 @@ export function App() {
                 { value: '3840', label: '3840 × 2160' },
               ]}
               onChange={(value) => setExportWidth(value === '3840' ? 3840 : 1920)}
+            />
+            <Choice
+              label="Output FPS"
+              value={outputFps}
+              disabled={exportProgress !== null}
+              describedBy={outputFps === 'auto' ? 'output-fps-auto' : undefined}
+              options={OUTPUT_FPS.map((value) => ({ value, label: fpsName(value) }))}
+              onChange={setOutputFps}
             />
             <button
               className="secondary-button"
@@ -2199,7 +2220,7 @@ export function App() {
             <span>
               <kbd>J</kbd> Rewind <kbd>K</kbd> Pause <kbd>L</kbd> Play / faster
             </span>
-            <span>Frame-accurate · 30 fps</span>
+            <span>Frame-accurate</span>
           </div>
         </section>
         <Inspector
@@ -2329,7 +2350,11 @@ export function App() {
         <dl>
           <dt>Resolution</dt>
           <dd>
-            {exportWidth} × {(exportWidth * 9) / 16} · 30 fps
+            {exportWidth} × {(exportWidth * 9) / 16}
+          </dd>
+          <dt>Frame rate</dt>
+          <dd id="output-fps-auto">
+            {outputFps === 'auto' ? 'Auto uses project cadence (30 fps)' : fpsName(outputFps)}
           </dd>
         </dl>
         <label htmlFor="export-format">Format</label>

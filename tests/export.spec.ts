@@ -1659,3 +1659,119 @@ test('exports clip gain as decibels of the decoded audio, and a muted gained cli
   ).streams.map((stream: { codec_type: string }) => stream.codec_type);
   expect(streams).toEqual(['video']);
 });
+
+// One rate per row; MP4 covers every rate, WebM and MOV the cases their timebases handle
+// differently: WebM's 1 ms grid at 29.97 and 100, MOV's hint at 29.97 and none at 24.
+for (const [format, fps] of [
+  ['mp4', '24'],
+  ['mp4', '29.97'],
+  ['mp4', '60'],
+  ['mp4', '100'],
+  ['mp4', '120'],
+  ['webm', '29.97'],
+  ['webm', '100'],
+  ['mov', '24'],
+  ['mov', '29.97'],
+] as const) {
+  test(`exports ${fps} fps ${format} at exact rational times, showing the source frame of each time`, async ({
+    page,
+  }, info) => {
+    test.setTimeout(120000);
+    // 31 ticks is 1.0333 s: no rate fits it evenly, so every row ends with a short last picture.
+    const ticks = 31;
+    const offset = 14;
+    const [p, q] = fps === '29.97' ? [30000, 1001] : [Number(fps), 1];
+    // Independent of the app: the count of output times n·q/p before the end, and the source frame
+    // each shows, by exact rational arithmetic.
+    const samples = Math.ceil((ticks * p) / (30 * q) - 1e-9);
+    const sourceAt = (n: number) => offset + Math.floor((n * 30 * q) / p + 1e-9);
+    const fixture = info.outputPath('frame-bars.mp4');
+    // Black frames with a white bar 10 px further right on each 30 fps source frame.
+    execFileSync('ffmpeg', [
+      ...['-v', 'error', '-y', '-f', 'lavfi', '-i', 'color=c=black:s=640x360:r=30:d=2'],
+      ...['-f', 'lavfi', '-i', 'color=c=white:s=10x360:r=30:d=2', '-filter_complex'],
+      ...["[0:v][1:v]overlay=x='n*10':y=0:shortest=1,format=yuv420p", '-c:v', 'libx264', fixture],
+    ]);
+    await page.route('**/export-fixture', (route) =>
+      route.fulfill({ contentType: 'text/html', body: '<html><body>Export fixture</body></html>' }),
+    );
+    await page.route('**/frame-bars', (route) => route.fulfill({ path: fixture }));
+    await page.goto('/export-fixture');
+    const bytes = await page.evaluate(
+      async ({ ticks, offset, format, fps }) => {
+        const mediaModule = '/src/media.ts',
+          exportModule = '/src/export.ts';
+        const { readMedia } = await import(mediaModule);
+        const { renderVideo } = await import(exportModule);
+        const asset = await readMedia(await (await fetch('/frame-bars')).blob(), 'bars', 'bars');
+        const blob = await renderVideo({
+          assets: [asset],
+          clips: [{ id: 's', assetId: 'bars', track: 'screen', start: 0, duration: ticks, offset }],
+          zooms: [],
+          layout: { radius: 0, screenX: 50, screenY: 50, cameraX: 50, cameraY: 50 },
+          muted: [],
+          width: 1920,
+          format,
+          fps,
+          onProgress: () => undefined,
+        });
+        return Array.from(new Uint8Array(await blob.arrayBuffer()));
+      },
+      { ticks, offset, format, fps },
+    );
+    const rendered = info.outputPath(`export.${format}`);
+    writeFileSync(rendered, Buffer.from(bytes));
+    const { packets, format: container } = JSON.parse(
+      execFileSync('ffprobe', [
+        ...['-v', 'error', '-select_streams', 'v', '-show_entries'],
+        ...['packet=pts_time,duration_time:format=duration', '-of', 'json', rendered],
+      ]).toString(),
+    );
+    const starts = packets
+      .map((packet: { pts_time: string }) => Number(packet.pts_time))
+      .sort((a: number, b: number) => a - b);
+    // WebM keeps 1 ms timestamps, so each end may move by up to 0.5 ms; MP4 and MOV are exact.
+    const tolerance = format === 'webm' ? 0.0005 + 1e-6 : 1e-6;
+    expect(starts.length).toBe(samples);
+    const drift = starts.map((start: number, n: number) => Math.abs(start - (n * q) / p));
+    expect(Math.max(...drift)).toBeLessThanOrEqual(tolerance);
+    // The last picture ends with the timeline, not a whole frame later.
+    const last = packets.find(
+      (packet: { pts_time: string }) => Number(packet.pts_time) === starts.at(-1),
+    );
+    const end =
+      format === 'webm'
+        ? Number(container.duration)
+        : Number(last.pts_time) + Number(last.duration_time);
+    expect(Math.abs(end - ticks / 30)).toBeLessThanOrEqual(tolerance);
+    // Every output picture shows the source frame at its own time, read from the bar position.
+    const rows = (file: string, width: number, height: number) =>
+      execFileSync('ffmpeg', [
+        ...['-v', 'error', '-i', file, '-fps_mode', 'passthrough', '-vf'],
+        ...[`scale=${width}:${height},format=gray,crop=${width}:1:0:${height / 2}`],
+        ...['-f', 'rawvideo', '-'],
+      ]);
+    const barCentre = (row: Buffer, width: number, frame: number, from: number, to: number) => {
+      let sum = 0,
+        count = 0;
+      for (let x = from; x < to; x++)
+        if (row[frame * width + x] > 128) {
+          sum += x + 0.5;
+          count++;
+        }
+      return sum / count;
+    };
+    const source = rows(fixture, 640, 360);
+    const exported = rows(rendered, 1280, 720);
+    expect(exported.length).toBe(samples * 1280);
+    // The screen mask is 880 x 700 at x = 10; its cover-crop puts source x = 320 at its centre.
+    const errors = Array.from({ length: samples }, (_, n) => {
+      const shown = ((barCentre(exported, 1280, n, 10, 890) - 450) * 360) / 700 + 320;
+      return shown - barCentre(source, 640, sourceAt(n), 0, 640);
+    });
+    expect(
+      Math.max(...errors.map(Math.abs)),
+      `source px off per picture: ${errors.map((error) => error.toFixed(1)).join(' ')}`,
+    ).toBeLessThan(2.5);
+  });
+}

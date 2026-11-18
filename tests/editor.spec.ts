@@ -1244,3 +1244,66 @@ test('picture in picture insets the camera in the corner picked on the live prev
   await expect(corner('top left')).toHaveCount(0);
   expect(await camera()).toEqual([908, 10, 362]);
 });
+
+test('chooses an output frame rate beside resolution, names it for export and reopens it', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const fps = page.getByRole('combobox', { name: 'Output FPS' });
+  const resolution = page.getByRole('combobox', { name: 'Export resolution' });
+  // Exactly these six, in this order, with Auto explained outside the list.
+  expect(await choiceLabels(fps)).toEqual([
+    '24 fps',
+    '29.97 fps',
+    '60 fps',
+    '100 fps',
+    '120 fps',
+    'Auto',
+  ]);
+  await expectChoice(fps, 'auto');
+  await expect(fps).toHaveAccessibleDescription('Auto uses project cadence (30 fps)');
+  // Right of resolution on the same row, before the export buttons.
+  const [fpsBox, resolutionBox, exportBox] = await Promise.all(
+    [fps, resolution, page.getByRole('button', { name: 'Export video', exact: true })].map(
+      async (control) => (await control.boundingBox())!,
+    ),
+  );
+  expect(fpsBox.x).toBeGreaterThan(resolutionBox.x + resolutionBox.width - 1);
+  expect(fpsBox.x + fpsBox.width).toBeLessThan(exportBox.x);
+  expect(Math.abs(fpsBox.y - resolutionBox.y)).toBeLessThan(2);
+  // No other surface claims an output rate.
+  await expect(page.locator('.ruler-label')).toHaveText('TRACKS');
+  await expect(page.locator('.sequence-footer')).not.toContainText('fps');
+
+  // By keyboard: open on the current choice, step up one, and pick it.
+  await fps.focus();
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('Enter');
+  await expectChoice(fps, '120');
+  await expect(fps).toBeFocused();
+  await expect(fps).not.toHaveAccessibleDescription(/Auto/);
+  await page.getByRole('button', { name: 'Export video', exact: true }).click();
+  await expect(page.getByRole('dialog', { name: 'Export video' })).toContainText(
+    'Frame rate120 fps',
+  );
+  await page.keyboard.press('Escape');
+  await choose(fps, '29.97');
+
+  const saving = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const { readFile } = await import('node:fs/promises');
+  const saved = await readFile((await (await saving).path())!, 'utf8');
+  expect(JSON.parse(saved)).toMatchObject({ fps: 30, outputFps: '29.97' });
+  await page.reload();
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await expectChoice(fps, 'auto');
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'rate.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(saved),
+  });
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Project reopened');
+  await expectChoice(fps, '29.97');
+});

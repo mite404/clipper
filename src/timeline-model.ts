@@ -43,6 +43,28 @@ export const FPS = 30;
 /** No clip or zoom may end later than this: 24 hours of timeline. */
 export const MAX_FRAMES = 24 * 60 * 60 * FPS;
 
+/** Export frame-rate choices in menu order. Output only: the edit grid stays at FPS. */
+export const OUTPUT_FPS = ['24', '29.97', '60', '100', '120', 'auto'] as const;
+export type OutputFps = (typeof OUTPUT_FPS)[number];
+/** An exact frame rate, p/q frames per second. */
+export type Rate = { p: number; q: number };
+
+/** The exact rate of a choice: 29.97 is NTSC 30000/1001, and Auto is the project cadence. */
+export function outputRate(choice: OutputFps): Rate {
+  if (choice === '29.97') return { p: 30000, q: 1001 };
+  return { p: choice === 'auto' ? FPS : Number(choice), q: 1 };
+}
+
+/** Output samples that cover `ticks` edit frames: ceil(ticks·p / (FPS·q)), in whole numbers. */
+export function outputFrames(ticks: number, { p, q }: Rate): number {
+  return Math.floor((ticks * p + FPS * q - 1) / (FPS * q));
+}
+
+/** The composition tick output sample `index` shows, computed afresh rather than accumulated. */
+export function outputTick(index: number, { p, q }: Rate): number {
+  return (index * FPS * q) / p;
+}
+
 const two = (n: number) => String(n).padStart(2, '0');
 
 // Minutes and seconds, then frames when asked. From one hour up the hours lead, unpadded, so a
