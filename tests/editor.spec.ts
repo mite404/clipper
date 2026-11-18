@@ -2,6 +2,7 @@ import { test, expect, type Locator } from '@playwright/test';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+import { choiceLabels, choose, expectChoice } from './choice';
 
 type MediaWindow = Window & { liveMediaUrls: Set<string> };
 
@@ -61,7 +62,7 @@ test('imports still images with editable clip duration, alpha and portable reope
   await page.getByRole('button', { name: 'Select overlay.PNG', exact: true }).click();
   await expect(page.locator('.source-preview img')).toHaveJSProperty('naturalWidth', 400);
   await expect(page.getByLabel('Still duration seconds', { exact: true })).toHaveValue('5');
-  await expect(page.getByLabel('Insert onto track').locator('option')).toHaveCount(2);
+  await expect.poll(() => choiceLabels(page.getByLabel('Insert onto track'))).toHaveLength(2);
   const stillDuration = page.getByLabel('Still duration seconds', { exact: true });
   await stillDuration.fill('0');
   await stillDuration.press('Enter');
@@ -136,7 +137,7 @@ test('imports still images with editable clip duration, alpha and portable reope
     page.locator('[data-testid="screen-mask"] img[src^="blob:"]').first(),
   ).toHaveJSProperty('naturalWidth', 400);
   await page.getByRole('button', { name: 'Select portrait.JPG', exact: true }).click();
-  await page.getByLabel('Insert onto track').selectOption('camera');
+  await choose(page.getByLabel('Insert onto track'), 'camera');
   await page.getByLabel('Still duration seconds', { exact: true }).fill('1');
   await page.getByRole('button', { name: 'Insert source at playhead' }).click();
   await expect(page.getByTestId('track-camera').getByRole('button')).toHaveCount(3);
@@ -275,7 +276,7 @@ test('imports qualified H264 and AAC MP4/MOV, rejects ProRes and reopens exporte
     await page.getByRole('button', { name: 'Pause source', exact: true }).click();
     await page.getByRole('button', { name: 'Insert source at playhead', exact: true }).click();
   }
-  await page.getByLabel('Insert onto track').selectOption('voice');
+  await choose(page.getByLabel('Insert onto track'), 'voice');
   await page.getByRole('button', { name: 'Insert source at playhead', exact: true }).click();
   const saving = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Save project', exact: true }).click();
@@ -489,7 +490,7 @@ test('pauses source video and audio while export blocks the workspace without re
     await page.getByLabel('Source in seconds').fill('1');
     await page.getByLabel('Source out seconds').fill('3');
     const target = kind === 'video' ? 'camera' : 'music';
-    await page.getByLabel('Insert onto track').selectOption(target);
+    await choose(page.getByLabel('Insert onto track'), target);
     const source = page.locator(`.source-preview ${kind}`);
     if (kind === 'video')
       await page.getByRole('button', { name: 'Play source', exact: true }).click();
@@ -514,7 +515,7 @@ test('pauses source video and audio while export blocks the workspace without re
     await expect(page.getByRole('progressbar', { name: 'Video export progress' })).toHaveCount(0);
     await expect(page.getByLabel('Source in seconds')).toHaveValue('1');
     await expect(page.getByLabel('Source out seconds')).toHaveValue('3');
-    await expect(page.getByLabel('Insert onto track')).toHaveValue(target);
+    await expectChoice(page.getByLabel('Insert onto track'), target);
     await expect(source).toHaveJSProperty('paused', true);
     await expect(source).toHaveJSProperty('currentTime', held);
     await expect(page.locator('.source-error')).toHaveCount(0);
@@ -673,7 +674,7 @@ test('imports local video and audio without uploading them', async ({ page }) =>
   await page.getByRole('button', { name: 'Insert source at playhead' }).click();
   await expect(page.getByTestId('track-screen').getByRole('button')).toHaveCount(3);
   await page.getByRole('button', { name: 'Select music.wav' }).click();
-  await page.getByLabel('Insert onto track').selectOption('music');
+  await choose(page.getByLabel('Insert onto track'), 'music');
   await page.getByLabel('Source in seconds').fill('0.5');
   await page.getByLabel('Source out seconds').fill('2');
   await page.getByRole('button', { name: 'Insert source at playhead' }).click();

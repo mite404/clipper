@@ -1,5 +1,6 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { choiceLabels, choose, expectChoice, expectChoiceLabel } from './choice';
 
 // The demo timeline is 360 frames. Every lane is full, so a free span comes from a delete.
 const FRAMES = 360;
@@ -231,7 +232,7 @@ test('the keyboard places on existing and new tracks, reorders, and v4 files reo
   await pool(page, 'A conversation').focus();
   await page.keyboard.press('Enter');
   const target = page.getByLabel('Place onto');
-  await target.selectOption({ label: 'New V1 background · Full frame' });
+  await choose(target, { label: 'New V1 background · Full frame' });
   // Save refuses an edit past 24 hours, so placement refuses it first and adds nothing.
   const clips = await page.locator('.timeline-clip').count();
   await page.getByLabel('Place at seconds').fill('100000');
@@ -244,7 +245,7 @@ test('the keyboard places on existing and new tracks, reorders, and v4 files reo
   await page.getByLabel('Place at seconds').fill('6.12');
   await page.getByRole('button', { name: 'Place on timeline' }).press('Enter');
   expect(await starts(lane(page, 'Background · Full frame'))).toEqual(['6.1 seconds']);
-  await expect(target.locator('option')).toContainText(['V1 · Background · Full frame']);
+  await expect.poll(() => choiceLabels(target)).toContain('V1 · Background · Full frame');
 
   // Raise the background in front of the screen, then lock it by its stable identity.
   await page.getByRole('button', { name: 'Move Background · Full frame up' }).press('Enter');
@@ -291,15 +292,15 @@ test('Insert and Place start on the same track and fall back when Undo removes t
   await open(page);
   await pool(page, 'Flower study').click();
   const insertOnto = page.getByLabel('Insert onto track');
-  await expect(page.getByLabel('Place onto')).toHaveValue('screen');
-  await expect(insertOnto).toHaveValue('screen');
-  await page.getByLabel('Place onto').selectOption({ label: 'New screen track · Masked' });
+  await expectChoice(page.getByLabel('Place onto'), 'screen');
+  await expectChoice(insertOnto, 'screen');
+  await choose(page.getByLabel('Place onto'), { label: 'New screen track · Masked' });
   await page.getByRole('button', { name: 'Place on timeline' }).click();
   await expect(status(page)).toContainText('Placed Flower study on Screen 2 · Masked');
-  await insertOnto.selectOption({ label: 'V3 · Screen 2 · Masked' });
+  await choose(insertOnto, { label: 'V3 · Screen 2 · Masked' });
   await undo(page).click();
   // The chosen track is gone, so Insert targets the default track the select now shows.
-  await expect(insertOnto).toHaveValue('screen');
+  await expectChoice(insertOnto, 'screen');
   await page.getByRole('button', { name: 'Insert source at playhead' }).click();
   await expect(status(page)).toContainText('Inserted Flower study onto Screen recording.');
   expect(await headers(page)).toHaveLength(4);
@@ -375,7 +376,7 @@ test('a video in a file with only audio tracks names the missing track and canno
   await expect(status(page)).toContainText('Project reopened');
   await pool(page, 'Flower study').click();
   const insertOnto = page.getByLabel('Insert onto track');
-  await expect(insertOnto).toHaveValue('');
-  await expect(insertOnto.locator('option:checked')).toHaveText('No video track');
+  await expectChoice(insertOnto, '');
+  await expectChoiceLabel(insertOnto, 'No video track');
   await expect(page.getByRole('button', { name: 'Insert source at playhead' })).toBeDisabled();
 });

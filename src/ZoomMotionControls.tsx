@@ -1,5 +1,6 @@
 import { bindDrag } from '@ui-sdk/core';
 import { useState, type PointerEvent } from 'react';
+import { Choice } from './components';
 import { ZOOM_CURVES, type Zoom, type ZoomCurve } from './timeline-model';
 
 type Preset = keyof typeof ZOOM_CURVES;
@@ -73,20 +74,18 @@ function RampCurve({
     <div className="ramp-curve">
       <label className="slider-label">
         Zoom ramp
-        <select
-          aria-label="Zoom ramp curve"
+        <Choice
+          label="Zoom ramp curve"
           value={preset}
-          onChange={(event) => {
-            onChange(stored([...ZOOM_CURVES[event.currentTarget.value as Preset]]));
+          options={[
+            ...PRESETS.map((name) => ({ value: name, label: name })),
+            // Custom names a dragged curve; it is never picked, so it shows only while current.
+            ...(preset === 'Custom' ? [{ value: 'Custom' as const, label: 'Custom' }] : []),
+          ]}
+          onChange={(name) => {
+            if (name !== 'Custom') onChange(stored([...ZOOM_CURVES[name]]));
           }}
-        >
-          {PRESETS.map((name) => (
-            <option key={name} value={name}>
-              {name}
-            </option>
-          ))}
-          {preset === 'Custom' && <option value="Custom">Custom</option>}
-        </select>
+        />
       </label>
       <svg
         viewBox={`${-PAD} ${-PAD} ${W + 2 * PAD} ${H + 2 * PAD}`}

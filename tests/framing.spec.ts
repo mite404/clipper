@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { choose } from './choice';
 
 for (const width of [1920, 3840]) {
   for (const target of [
@@ -122,7 +123,7 @@ for (const width of [1920, 3840]) {
         mimeType: 'application/json',
         buffer: Buffer.from(fixture.project),
       });
-      await page.getByRole('combobox', { name: 'Export resolution' }).selectOption(String(width));
+      await choose(page.getByRole('combobox', { name: 'Export resolution' }), String(width));
       await expect(page.getByTestId('screen-mask')).toHaveCSS('width', `${(width * 880) / 1280}px`);
       const scrub = page.getByLabel('Timeline playhead', { exact: true });
       await scrub.fill(String(target.frame));
@@ -144,9 +145,9 @@ for (const width of [1920, 3840]) {
       );
       await page.getByRole('button', { name: 'Select zoom', exact: true }).click();
       await expect(page.getByLabel('Camera follow')).toHaveValue('focused');
-      await page.getByLabel('Camera follow').selectOption('smooth');
+      await choose(page.getByLabel('Camera follow'), 'smooth');
       await expect(content).not.toHaveCSS('transform', transform);
-      await page.getByLabel('Camera follow').selectOption('fixed');
+      await choose(page.getByLabel('Camera follow'), 'fixed');
       await page.getByLabel('Instant zoom').uncheck();
       await scrub.fill('0');
       await expect(content).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)');

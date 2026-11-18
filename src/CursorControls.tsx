@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { Choice } from './components';
 import type { Asset } from './media';
 import {
   DEFAULT_CURSOR_SETTINGS,
@@ -117,39 +118,28 @@ function CursorBehavior({
         <legend>Motion</legend>
         <label>
           Movement
-          <select
-            aria-label="Cursor motion"
+          <Choice
+            label="Cursor motion"
             value={settings.mode}
-            onChange={(event) =>
-              onChange({
-                ...settings,
-                mode: event.currentTarget.value === 'raw' ? 'raw' : 'smooth',
-              })
-            }
-          >
-            <option value="smooth">Smooth</option>
-            <option value="raw">Raw</option>
-          </select>
+            options={[
+              { value: 'smooth', label: 'Smooth' },
+              { value: 'raw', label: 'Raw' },
+            ]}
+            onChange={(mode) => onChange({ ...settings, mode })}
+          />
         </label>
         <label>
           Animation
-          <select
-            aria-label="Cursor animation style"
+          <Choice
+            label="Cursor animation style"
             value={settings.animationStyle ?? 'smooth'}
             disabled={settings.mode === 'raw'}
-            onChange={(event) => {
-              const animationStyle = ANIMATION_STYLES.find(
-                (style) => style === event.currentTarget.value,
-              );
-              if (animationStyle) onChange({ ...settings, animationStyle });
-            }}
-          >
-            {ANIMATION_STYLES.map((style) => (
-              <option key={style} value={style}>
-                {style[0].toUpperCase() + style.slice(1)}
-              </option>
-            ))}
-          </select>
+            options={ANIMATION_STYLES.map((style) => ({
+              value: style,
+              label: style[0].toUpperCase() + style.slice(1),
+            }))}
+            onChange={(animationStyle) => onChange({ ...settings, animationStyle })}
+          />
         </label>
         <p className="cursor-note">
           {settings.mode === 'raw'
@@ -188,21 +178,18 @@ function CursorBehavior({
           </label>
           <label>
             Per-clip ending
-            <select
-              aria-label="Cursor ending"
+            <Choice
+              label="Cursor ending"
               value={settings.ending ?? 'none'}
-              onChange={(event) => {
-                const value = event.currentTarget.value;
-                onChange({
-                  ...settings,
-                  ending: value === 'stop' || value === 'loop' ? value : undefined,
-                });
-              }}
-            >
-              <option value="none">Recorded ending</option>
-              <option value="stop">Stop early</option>
-              <option value="loop">Return to start</option>
-            </select>
+              options={[
+                { value: 'none', label: 'Recorded ending' },
+                { value: 'stop', label: 'Stop early' },
+                { value: 'loop', label: 'Return to start' },
+              ]}
+              onChange={(value) =>
+                onChange({ ...settings, ending: value === 'none' ? undefined : value })
+              }
+            />
           </label>
         </div>
         <p className="cursor-note">
@@ -234,19 +221,16 @@ function CursorAppearance({
         <legend>Appearance &amp; visibility</legend>
         <label>
           Style
-          <select
-            aria-label="Cursor style"
+          <Choice
+            label="Cursor style"
             value={settings.style ?? 'recorded'}
-            onChange={(event) => {
-              const style = event.currentTarget.value;
-              if (style === 'recorded' || style === 'default' || style === 'touch')
-                onChange({ ...cursor, settings: { ...settings, style } });
-            }}
-          >
-            <option value="recorded">Recorded shapes</option>
-            <option value="default">First embedded shape</option>
-            <option value="touch">Touch</option>
-          </select>
+            options={[
+              { value: 'recorded', label: 'Recorded shapes' },
+              { value: 'default', label: 'First embedded shape' },
+              { value: 'touch', label: 'Touch' },
+            ]}
+            onChange={(style) => onChange({ ...cursor, settings: { ...settings, style } })}
+          />
         </label>
         <label>
           Size

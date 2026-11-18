@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { choose } from './choice';
 
 test('stabilizes recorded shapes identically in preview and encoded frames through trimmed repeated source cuts', async ({
   page,
@@ -181,7 +182,7 @@ test('stabilizes recorded shapes identically in preview and encoded frames throu
   await expect(cursor).toHaveAttribute('src', result.urls[1]);
   await stabilize.check();
   for (const mode of ['raw', 'smooth']) {
-    await page.getByLabel('Cursor motion', { exact: true }).selectOption(mode);
+    await choose(page.getByLabel('Cursor motion', { exact: true }), mode);
     await page.getByRole('button', { name: 'Go to start', exact: true }).click();
     for (let frame = 0; frame < 16; frame++) {
       if ([0, 3, 6, 9, 12, 15].includes(frame))

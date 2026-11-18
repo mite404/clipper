@@ -40,6 +40,7 @@ import {
 } from 'lucide-react';
 import { Composition } from './Composition';
 import {
+  Choice,
   IconButton,
   MediaLibrary,
   TranscriptPanel,
@@ -329,13 +330,7 @@ function PlaceOnTimeline({
         );
       }}
     >
-      <select aria-label="Place onto" value={value} onChange={(e) => setChoice(e.target.value)}>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
+      <Choice label="Place onto" value={value} options={options} onChange={setChoice} />
       <input
         aria-label="Place at seconds"
         type="number"
@@ -610,21 +605,21 @@ export function SourceMonitor({
         </div>
       )}
       <div className="source-insert">
-        <select
-          aria-label="Insert onto track"
+        <Choice
+          label="Insert onto track"
           value={track}
-          onChange={(e) => setChoice(e.target.value)}
-        >
-          {/* No default fits, so name the gap instead of showing a track Insert would not use. */}
-          {!track && (
-            <option value="">No {asset?.kind === 'audio' ? 'audio' : 'video'} track</option>
-          )}
-          {targets.map((t) => (
-            <option key={t.id} value={t.id}>
-              {trackNumber(tracks, t.id)} · {t.label}
-            </option>
-          ))}
-        </select>
+          // No default fits, so name the gap instead of showing a track Insert would not use.
+          options={[
+            ...(track
+              ? []
+              : [{ value: '', label: `No ${asset?.kind === 'audio' ? 'audio' : 'video'} track` }]),
+            ...targets.map((t) => ({
+              value: t.id,
+              label: `${trackNumber(tracks, t.id)} · ${t.label}`,
+            })),
+          ]}
+          onChange={setChoice}
+        />
         <IconButton
           label="Insert source at playhead"
           disabled={!asset || !track || range.end <= range.start}
@@ -1354,6 +1349,9 @@ export function App() {
       // clicks still do.
       const file = target instanceof HTMLInputElement && target.type === 'file';
       if (file && key !== ' ') return;
+      // A menu keeps Enter, arrows and typing, and an open list keeps every key; Space still plays.
+      if (target?.closest('[data-slot="select-content"]')) return;
+      if (target?.closest('[data-slot="select-trigger"]') && key !== ' ') return;
       if (target instanceof HTMLInputElement && !slider && !file && target.type !== 'checkbox')
         return;
       if (target instanceof HTMLSelectElement || target instanceof HTMLInputElement) {
@@ -1790,15 +1788,16 @@ export function App() {
         </label>
         <div className="header-actions">
           <div className="export-controls">
-            <select
-              aria-label="Export resolution"
-              value={exportWidth}
+            <Choice
+              label="Export resolution"
+              value={String(exportWidth)}
               disabled={exportProgress !== null}
-              onChange={(event) => setExportWidth(event.target.value === '3840' ? 3840 : 1920)}
-            >
-              <option value="1920">1920 × 1080</option>
-              <option value="3840">3840 × 2160</option>
-            </select>
+              options={[
+                { value: '1920', label: '1920 × 1080' },
+                { value: '3840', label: '3840 × 2160' },
+              ]}
+              onChange={(value) => setExportWidth(value === '3840' ? 3840 : 1920)}
+            />
             <button
               className="secondary-button"
               disabled={busy || !edit.clips.length || exportProgress !== null}
@@ -2221,19 +2220,17 @@ export function App() {
           </dd>
         </dl>
         <label htmlFor="export-format">Format</label>
-        <select
+        <Choice
           id="export-format"
           value={exportFormat}
-          aria-describedby="export-format-description"
-          onChange={(event) => {
-            const value = event.target.value;
-            if (value === 'mp4' || value === 'mov' || value === 'webm') setExportFormat(value);
-          }}
-        >
-          <option value="mp4">MP4 · H.264 / AAC</option>
-          <option value="mov">MOV · H.264 / PCM</option>
-          <option value="webm">WebM · VP9 / Opus</option>
-        </select>
+          describedBy="export-format-description"
+          options={[
+            { value: 'mp4', label: 'MP4 · H.264 / AAC' },
+            { value: 'mov', label: 'MOV · H.264 / PCM' },
+            { value: 'webm', label: 'WebM · VP9 / Opus' },
+          ]}
+          onChange={setExportFormat}
+        />
         <p id="export-format-description">
           {exportFormat === 'mov'
             ? 'Uncompressed PCM audio adds about 11.5 MB per minute at stereo 48 kHz. Playback support varies by app.'

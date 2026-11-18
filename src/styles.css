@@ -80,13 +80,13 @@ body {
 }
 button,
 input,
-select {
+:is(select, .select) {
   font: inherit;
 }
 button,
 a,
 input,
-select {
+:is(select, .select) {
   -webkit-tap-highlight-color: transparent;
 }
 button {
@@ -111,7 +111,7 @@ a {
 }
 button:focus-visible,
 a:focus-visible,
-select:focus-visible,
+:is(select, .select):focus-visible,
 input:focus-visible {
   outline: 2px solid #c2b4ff;
   outline-offset: 3px;
@@ -120,7 +120,7 @@ svg {
   flex-shrink: 0;
 }
 input,
-select {
+:is(select, .select) {
   color: #d8dae0;
   background: #252729;
   border: 1px solid #ffffff12;
@@ -141,7 +141,7 @@ input[type='range'] {
   margin: 13px 0 8px;
   display: block;
 }
-select {
+:is(select, .select) {
   padding: 8px;
   max-width: 100%;
 }
@@ -384,7 +384,7 @@ p {
   gap: 5px;
   margin-top: 12px;
 }
-.place-control select {
+.place-control :is(select, .select) {
   grid-column: 1 / -1;
   min-width: 0;
   font-size: 9px;
@@ -644,7 +644,7 @@ p {
   gap: 5px;
   margin-top: 8px;
 }
-.source-insert select {
+.source-insert :is(select, .select) {
   flex: 1;
   font-size: 9px;
   padding: 6px;
@@ -771,6 +771,81 @@ p {
   .icon-button-tooltip,
   .icon-button-tooltip:is([data-starting-style], [data-ending-style]) {
     transition-property: opacity;
+    scale: none;
+  }
+}
+/* A ui-sdk select trigger keeps the native select's box; the rules above size it per panel. */
+.select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.select:active:not(:disabled) {
+  transform: none;
+}
+.select > [data-slot='select-value'] {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.select > svg {
+  opacity: 0.6;
+  transition: rotate 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.select[data-open] > svg {
+  rotate: 180deg;
+}
+.select-menu {
+  z-index: 30;
+  min-width: var(--anchor-width);
+  max-height: min(320px, var(--available-height));
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid #4b4e54;
+  border-radius: 6px;
+  background: #252729;
+  color: #dedfe2;
+  font-size: 11px;
+  box-shadow: 0 6px 20px #0008;
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 140ms cubic-bezier(0.23, 1, 0.32, 1),
+    scale 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.select-menu:is([data-starting-style], [data-ending-style]) {
+  opacity: 0;
+  scale: 0.97;
+}
+.select-menu [data-slot='select-item'] {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  outline: none;
+}
+.select-menu [data-slot='select-item'][data-highlighted] {
+  background: #ffffff12;
+}
+.select-menu [data-slot='select-item'][data-selected] {
+  color: #fff;
+}
+.select-menu [data-slot='select-item-indicator'] {
+  display: flex;
+  color: #c2b4ff;
+}
+@media (prefers-reduced-motion: reduce) {
+  .select > svg,
+  .select-menu,
+  .select-menu:is([data-starting-style], [data-ending-style]) {
+    transition-property: opacity;
+    rotate: none;
     scale: none;
   }
 }
@@ -1521,7 +1596,7 @@ p {
 .ramp-curve .slider-label {
   margin-bottom: 7px;
 }
-.ramp-curve svg {
+.ramp-curve > svg {
   display: block;
   width: 100%;
   aspect-ratio: 216 / 116;
@@ -2089,7 +2164,7 @@ p {
   font-size: 13px;
 }
 
-.export-dialog select {
+.export-dialog :is(select, .select) {
   width: 100%;
   min-height: 40px;
 }
@@ -2195,7 +2270,7 @@ p {
   .source-description {
     font-size: 8px;
   }
-  .source-insert select {
+  .source-insert :is(select, .select) {
     font-size: 8px;
   }
   .sequence-footer {
@@ -2318,7 +2393,7 @@ p {
   font-size: 10px;
   flex-shrink: 0;
 }
-.export-controls select {
+.export-controls :is(select, .select) {
   width: 124px;
   max-width: none;
   flex-shrink: 0;
@@ -2438,7 +2513,7 @@ p {
   align-items: center;
   gap: 6px;
 }
-.cursor-appearance select,
+.cursor-appearance :is(select, .select),
 .cursor-appearance input[type='number'] {
   min-height: 32px;
   padding: 5px 8px;
@@ -2500,7 +2575,7 @@ p {
 .cursor-group label:has(input[type='checkbox']) {
   justify-content: flex-start;
 }
-.cursor-group select,
+.cursor-group :is(select, .select),
 .cursor-group input[type='number'] {
   min-width: 0;
   max-width: 65%;
@@ -2515,17 +2590,19 @@ p {
 .cursor-group input[type='number'] {
   width: 8ch;
 }
-.cursor-group select:disabled {
+.cursor-group :is(select, .select):disabled {
   opacity: 0.5;
 }
-.cursor-group label:has(select),
-.cursor-controls[aria-label='Source cursor data'] .cursor-appearance label:has(select) {
+.cursor-group label:has(:is(select, .select)),
+.cursor-controls[aria-label='Source cursor data']
+  .cursor-appearance
+  label:has(:is(select, .select)) {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 6px;
 }
-.cursor-group select,
-.cursor-controls[aria-label='Source cursor data'] .cursor-appearance select {
+.cursor-group :is(select, .select),
+.cursor-controls[aria-label='Source cursor data'] .cursor-appearance :is(select, .select) {
   width: 100%;
   max-width: 100%;
 }

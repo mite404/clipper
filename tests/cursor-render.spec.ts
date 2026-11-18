@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { choose } from './choice';
 
 test('draws source-offset cursors through a cut, crop, side swap and zoom in preview and encoded frames', async ({
   page,
@@ -241,9 +242,9 @@ test('draws source-offset cursors through a cut, crop, side swap and zoom in pre
   expect(await cursor.evaluate((element) => parseFloat(getComputedStyle(element).top))).toBeCloseTo(
     346.5 * 1.5,
   );
-  await page.getByLabel('Cursor style', { exact: true }).selectOption('touch');
+  await choose(page.getByLabel('Cursor style', { exact: true }), 'touch');
   await page.getByText('Advanced cursor', { exact: true }).click();
-  await page.getByLabel('Cursor ending', { exact: true }).selectOption('loop');
+  await choose(page.getByLabel('Cursor ending', { exact: true }), 'loop');
   for (let frame = 0; frame < 3; frame++)
     await page.getByRole('button', { name: 'Previous frame', exact: true }).click();
   expect(
@@ -263,7 +264,7 @@ test('draws source-offset cursors through a cut, crop, side swap and zoom in pre
   await page.getByLabel('Hide cursor', { exact: true }).check();
   await expect(cursor).toHaveCount(0);
   await page.getByLabel('Hide cursor', { exact: true }).uncheck();
-  await page.getByLabel('Cursor ending', { exact: true }).selectOption('none');
+  await choose(page.getByLabel('Cursor ending', { exact: true }), 'none');
   await page.getByLabel('Hide cursor from (source seconds)').fill('0.1');
   await page.getByLabel('Hide cursor until (source seconds)').fill('0.2');
   await page.getByRole('button', { name: 'Add hidden range', exact: true }).click();

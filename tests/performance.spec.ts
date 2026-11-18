@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { motionCursorFixture } from '../src/cursor.fixture';
+import { choose, expectChoice } from './choice';
 
 // Frames land on 16.7 ms vsync steps: a healthy 4x-throttled play is steady 30 fps (33.4 ms). Over
 // 30 idle runs the worst frame was 167 ms and the worst long task 135 ms, with one busy neighbour on
@@ -70,8 +71,8 @@ for (const follow of [false, true]) {
       await rotate.check();
       await expect(rotate).toBeChecked();
       const animation = page.getByLabel('Cursor animation style', { exact: true });
-      await animation.selectOption('rapid');
-      await expect(animation).toHaveValue('rapid');
+      await choose(animation, 'rapid');
+      await expectChoice(animation, 'rapid');
       // Frozen legacy ten-second-hold workload, including its two original source anchors.
       const zooms = [
         {

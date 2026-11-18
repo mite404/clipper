@@ -1,6 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
+import { choose } from './choice';
 
 function inspectExport(file: string, width: number, format: string | undefined, audible: boolean) {
   const probe = JSON.parse(
@@ -1267,7 +1268,7 @@ test.describe('no mask shadow', () => {
     );
 
     // The preview at the same render size, through the editor's own project path.
-    await page.getByRole('combobox', { name: 'Export resolution' }).selectOption(String(width));
+    await choose(page.getByRole('combobox', { name: 'Export resolution' }), String(width));
     await page.getByLabel('Open local project').setInputFiles({
       name: 'no-shadow.clipper.json',
       mimeType: 'application/json',

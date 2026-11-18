@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { choose } from './choice';
 
 test('renders distinct cursor speed styles with default pixel parity through offsets and repeated cuts', async ({
   page,
@@ -182,7 +183,7 @@ test('renders distinct cursor speed styles with default pixel parity through off
     .toBeCloseTo(656.45 * 1.5);
   const mask = page.getByTestId('screen-mask');
   const original = await mask.screenshot();
-  await animation.selectOption('smooth');
+  await choose(animation, 'smooth');
   expect(await mask.screenshot()).toEqual(original);
   for (const [style, x] of [
     ['smooth', 656.45],
@@ -190,7 +191,7 @@ test('renders distinct cursor speed styles with default pixel parity through off
     ['rapid', 507.7],
     ['none', 157.7],
   ] as const) {
-    await animation.selectOption(style);
+    await choose(animation, style);
     await page.getByRole('button', { name: 'Go to start', exact: true }).click();
     for (let frame = 0; frame < 3; frame++)
       await page.getByRole('button', { name: 'Next frame', exact: true }).click();

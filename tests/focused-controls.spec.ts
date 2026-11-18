@@ -1,4 +1,5 @@
 import { test, expect, type Locator, type Page } from '@playwright/test';
+import { expectChoice } from './choice';
 
 type PickerWindow = Window & { pickerCalls: number; pickerThrows: boolean };
 
@@ -30,13 +31,21 @@ async function tabTo(page: Page, control: Locator) {
 async function spaceToggles(page: Page, control: Locator, value = true) {
   const state = page.getByTestId('transport-state');
   await expect(state).toHaveText('Paused');
-  const before = value ? await control.inputValue() : '';
+  // A native field's value, or a ui-sdk select trigger's chosen value.
+  const read = () =>
+    control.evaluate((el) =>
+      el instanceof HTMLInputElement || el instanceof HTMLSelectElement
+        ? el.value
+        : el.getAttribute('data-value'),
+    );
+  const before = value ? await read() : '';
   await page.keyboard.press('Space');
   await expect(state).toHaveText('Playing · 1×');
   await page.keyboard.press('Space');
   await expect(state).toHaveText('Paused');
   await expect(control).toBeFocused();
-  if (value) await expect(control).toHaveValue(before);
+  if (value) await expect.poll(read).toBe(before);
+  await expect(page.locator('[data-slot="select-content"][data-open]')).toHaveCount(0);
 }
 
 test('Space plays and pauses from focused sliders, buttons and separators', async ({ page }) => {
@@ -84,17 +93,36 @@ test('checkbox Enter toggles, select Enter opens its picker, and Space stays tra
   const track = page.getByLabel('Insert onto track');
   await tabTo(page, track);
   await spaceToggles(page, track);
-  await page.keyboard.press('Enter');
-  expect(await page.evaluate(() => (window as unknown as PickerWindow).pickerCalls)).toBe(1);
-  await page.keyboard.press('Escape');
-  await expect(state).toHaveText('Paused');
-  await page.evaluate(() => Object.assign(window, { pickerThrows: true }));
-  await track.focus();
-  await page.keyboard.press('Enter');
-  await expect(track).toHaveValue('screen');
-  // Targets list like the timeline rows, frontmost visual first, so Screen's next option is audio.
-  await page.keyboard.press('ArrowDown');
-  await expect(track).toHaveValue('voice');
+  if (await track.evaluate((el) => el.tagName === 'SELECT')) {
+    await page.keyboard.press('Enter');
+    expect(await page.evaluate(() => (window as unknown as PickerWindow).pickerCalls)).toBe(1);
+    await page.keyboard.press('Escape');
+    await expect(state).toHaveText('Paused');
+    await page.evaluate(() => Object.assign(window, { pickerThrows: true }));
+    await track.focus();
+    await page.keyboard.press('Enter');
+    await expect(track).toHaveValue('screen');
+    // Targets list like the timeline rows, frontmost visual first, so Screen's next option is audio.
+    await page.keyboard.press('ArrowDown');
+    await expect(track).toHaveValue('voice');
+  } else {
+    // The ui-sdk list is the picker: Enter opens it, Escape closes it and keeps the choice.
+    const list = page.locator('[data-slot="select-content"][data-open]');
+    await page.keyboard.press('Enter');
+    await expect(list).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(list).toHaveCount(0);
+    await expect(track).toBeFocused();
+    await expectChoice(track, 'screen');
+    await expect(state).toHaveText('Paused');
+    // Targets list like the timeline rows, frontmost visual first, so Screen's next option is audio.
+    await page.keyboard.press('Enter');
+    await page.keyboard.press('ArrowDown');
+    await page.keyboard.press('Enter');
+    await expect(list).toHaveCount(0);
+    await expectChoice(track, 'voice');
+    await expect(track).toBeFocused();
+  }
   await expect(state).toHaveText('Paused');
 
   await page.locator('.app-header').click({ position: { x: 4, y: 4 } });

@@ -3,42 +3,43 @@ import { copyFile, mkdtemp, readFile, truncate, utimes, writeFile } from 'node:f
 import { execFileSync } from 'node:child_process';
 import os from 'node:os';
 import path from 'node:path';
+import { choose, expectChoice } from './choice';
 
 test('opens export settings with MP4 at the app resolution and isolates modal shortcuts', async ({
   page,
 }, info) => {
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready');
-  await page.getByRole('combobox', { name: 'Export resolution' }).selectOption('3840');
+  await choose(page.getByRole('combobox', { name: 'Export resolution' }), '3840');
   await page.getByLabel('Timeline playhead', { exact: true }).fill('87');
   const open = page.getByRole('button', { name: 'Export video', exact: true });
   await open.click();
   const dialog = page.getByRole('dialog', { name: 'Export video' });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole('combobox', { name: 'Format' })).toHaveValue('mp4');
+  await expectChoice(dialog.getByRole('combobox', { name: 'Format' }), 'mp4');
   await expect(dialog).toContainText('3840 × 2160');
   await expect(dialog).toContainText('developer-walkthrough-4k.mp4');
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).focus();
   await page.keyboard.press('ArrowRight');
   await expect(page.getByLabel('Timeline playhead', { exact: true })).toHaveValue('87');
-  await dialog.getByRole('combobox', { name: 'Format' }).selectOption('mov');
+  await choose(dialog.getByRole('combobox', { name: 'Format' }), 'mov');
   await expect(dialog).toContainText('PCM');
   await expect(dialog).toContainText('11.5 MB');
   await page.keyboard.press('Escape');
   await expect(dialog).not.toBeVisible();
   await expect(open).toBeFocused();
   await open.click();
-  await expect(dialog.getByRole('combobox', { name: 'Format' })).toHaveValue('mov');
+  await expectChoice(dialog.getByRole('combobox', { name: 'Format' }), 'mov');
   await dialog.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(dialog).not.toBeVisible();
   await expect(open).toBeFocused();
   for (const viewport of [1440, 320]) {
     await page.setViewportSize({ width: viewport, height: 1000 });
     for (const width of [1920, 3840]) {
-      await page.getByRole('combobox', { name: 'Export resolution' }).selectOption(String(width));
+      await choose(page.getByRole('combobox', { name: 'Export resolution' }), String(width));
       await open.click();
       for (const format of ['mp4', 'mov', 'webm']) {
-        await dialog.getByRole('combobox', { name: 'Format' }).selectOption(format);
+        await choose(dialog.getByRole('combobox', { name: 'Format' }), format);
         const filename = `developer-walkthrough-${width === 1920 ? '1080p' : '4k'}.${format}`;
         await expect(dialog.getByText(filename, { exact: true })).toBeVisible();
         await expect(dialog).toContainText(
@@ -73,7 +74,7 @@ test('renders at selected HD and 4K dimensions while preserving fitted framing a
     await page.setViewportSize({ width: viewport, height: 1000 });
     const monitor = (await page.getByTestId('compose-monitor').boundingBox())!;
     for (const width of [1920, 3840, 1920]) {
-      await page.getByRole('combobox', { name: 'Export resolution' }).selectOption(String(width));
+      await choose(page.getByRole('combobox', { name: 'Export resolution' }), String(width));
       const root = await page.getByTestId('screen-mask').evaluate((element) => {
         const style = getComputedStyle(element.parentElement!);
         return { width: parseFloat(style.width), height: parseFloat(style.height) };
@@ -101,7 +102,7 @@ test('renders at selected HD and 4K dimensions while preserving fitted framing a
     }
   }
   await page.getByRole('button', { name: 'Play composition', exact: true }).click();
-  await page.getByRole('combobox', { name: 'Export resolution' }).selectOption('3840');
+  await choose(page.getByRole('combobox', { name: 'Export resolution' }), '3840');
   await expect(page.getByRole('button', { name: 'Pause playback', exact: true })).toBeVisible();
   await expect
     .poll(() => page.getByLabel('Timeline playhead', { exact: true }).inputValue())
@@ -224,7 +225,7 @@ test('marks the mouse position by pressing and dragging on the screen video, as 
   await expect(page.getByRole('button', { name: 'Mark mouse position' })).toHaveCount(0);
   await expect(page.getByText(/cursor metadata|Mark focus in the unzoomed frame/)).toHaveCount(0);
   const target = page.getByTestId('mouse-target');
-  await page.getByRole('combobox', { name: 'Export resolution' }).selectOption('3840');
+  await choose(page.getByRole('combobox', { name: 'Export resolution' }), '3840');
   await expect(target).toHaveCSS('border-top-left-radius', '2.5% 3.14286%');
   await expect(target).toHaveCSS('touch-action', 'none');
   await page.getByRole('slider', { name: 'Zoom level' }).fill('2');
@@ -782,11 +783,11 @@ for (const { width, format } of [1920, 3840].flatMap((width) =>
       buffer: Buffer.from(JSON.stringify(project)),
     });
     await expect(page.locator('.app-footer [role="status"]')).toContainText('Project reopened');
-    await page.getByRole('combobox', { name: 'Export resolution' }).selectOption(String(width));
+    await choose(page.getByRole('combobox', { name: 'Export resolution' }), String(width));
     const rendered = page.waitForEvent('download', { timeout: 150000 });
     await page.getByRole('button', { name: 'Export video', exact: true }).click();
-    await expect(page.getByRole('combobox', { name: 'Format', exact: true })).toHaveValue('mp4');
-    await page.getByRole('combobox', { name: 'Format', exact: true }).selectOption(format);
+    await expectChoice(page.getByRole('combobox', { name: 'Format', exact: true }), 'mp4');
+    await choose(page.getByRole('combobox', { name: 'Format', exact: true }), format);
     const filename = `developer-walkthrough-${width === 1920 ? '1080p' : '4k'}.${format}`;
     const displayed = await page
       .getByRole('dialog', { name: 'Export video' })
@@ -1064,7 +1065,7 @@ test('a failed or cancelled export leaves the editor ready, and a new export cle
   const baseline = await liveUrls();
   const render = async (format: string) => {
     await exportButton.click();
-    await page.getByRole('combobox', { name: 'Format' }).selectOption(format);
+    await choose(page.getByRole('combobox', { name: 'Format' }), format);
     await page.getByRole('button', { name: 'Render video', exact: true }).click();
   };
   // Nothing is left half-done: no progress bar, no Save link, Export video usable again.

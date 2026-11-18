@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
+import { choose, expectChoice } from './choice';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -467,7 +468,9 @@ test('dragging either edge of a zoom draws over its neighbours and overwrites th
 test('the ramp curve edits by preset and handle drag, one undo step each, and reopens', async ({
   page,
 }, testInfo) => {
-  const preset = page.getByLabel('Zoom ramp curve', { exact: true });
+  const preset = page.getByRole('combobox', { name: 'Zoom ramp curve', exact: true });
+  // The open preset list; Custom is listed only while the curve is one.
+  const presets = page.locator('[data-slot="select-content"][data-open]').getByRole('option');
   const undo = page.getByRole('button', { name: 'Undo', exact: true });
   const handles = page.locator('.ramp-curve circle');
   const handle = handles.nth(1);
@@ -494,22 +497,29 @@ test('the ramp curve edits by preset and handle drag, one undo step each, and re
   await page.getByRole('button', { name: 'Add zoom', exact: true }).click();
   // A new zoom has no curve, which is Smooth: today's ease. The graphic names it; the mouse-only
   // handles are hidden from assistive tech and out of the tab order.
-  await expect(preset).toHaveValue('Smooth');
+  await expectChoice(preset, 'Smooth');
+  // The plot's styles leave the trigger's own value and chevron alone.
+  await expect(preset.getByText('Smooth', { exact: true })).toBeVisible();
   expect(await points()).toEqual(['0.33', '0', '0.67', '1']);
   await expect(page.getByRole('img', { name: 'Zoom ramp: Smooth', exact: true })).toBeVisible();
   for (const circle of await handles.all()) {
     await expect(circle).toHaveAttribute('aria-hidden', 'true');
     await expect(circle).not.toHaveAttribute('tabindex');
   }
-  await expect(preset.locator('option')).toHaveText([
+  // The handles are mouse-only, so the preset list is the keyboard path: open, move and commit.
+  await preset.focus();
+  await page.keyboard.press('ArrowDown');
+  await expect(presets).toHaveText([
     'Smooth',
     'Ease in',
     'Ease out',
     'S-curve',
     'Fast then settle',
   ]);
-
-  await preset.selectOption('Ease out');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expect(presets).toHaveCount(0);
   expect(await points()).toEqual(['0', '0', '0.58', '1']);
   await expect(page.getByRole('img', { name: 'Zoom ramp: Ease out', exact: true })).toBeVisible();
 
@@ -518,13 +528,17 @@ test('the ramp curve edits by preset and handle drag, one undo step each, and re
   await drag(true);
   expect(await points()).toEqual(['0', '0', '0.58', '1']);
   await undo.click();
-  await expect(preset).toHaveValue('Smooth');
+  await expectChoice(preset, 'Smooth');
   await page.waitForTimeout(1200);
-  await preset.selectOption('Ease out');
+  await choose(preset, 'Ease out');
   // A released drag commits once, and the curve becomes Custom.
   await page.waitForTimeout(1200);
   await drag();
-  await expect(preset).toHaveValue('Custom');
+  await expectChoice(preset, 'Custom');
+  await preset.click();
+  await expect(presets).toHaveCount(6);
+  await expect(presets.last()).toHaveText('Custom');
+  await page.keyboard.press('Escape');
   const dragged = await points();
   expect(dragged.slice(0, 2)).toEqual(['0', '0']);
   expect(Number(dragged[2])).toBeLessThan(0.58);
@@ -546,12 +560,14 @@ test('the ramp curve edits by preset and handle drag, one undo step each, and re
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
   await page.getByLabel('Open local project').setInputFiles(saved);
   await page.getByRole('button', { name: 'Select zoom', exact: true }).click();
-  await expect(preset).toHaveValue('Custom');
+  await expectChoice(preset, 'Custom');
   expect(await points()).toEqual(dragged);
 
   // Choosing Smooth again drops the curve, and an instant zoom has no ramp to edit.
-  await preset.selectOption('Smooth');
-  await expect(preset.locator('option')).toHaveCount(5);
+  await choose(preset, 'Smooth');
+  await preset.click();
+  await expect(presets).toHaveCount(5);
+  await page.keyboard.press('Escape');
   await page.getByRole('checkbox', { name: 'Instant zoom' }).check();
   await expect(preset).toHaveCount(0);
 });

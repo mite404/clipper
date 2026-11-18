@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useId,
   useLayoutEffect,
   useMemo,
@@ -7,7 +8,16 @@ import {
   type ButtonHTMLAttributes,
   type ReactNode,
 } from 'react';
-import { Film, Image, Music2, Plus, Upload } from 'lucide-react';
+import { Check, ChevronDown, Film, Image, Music2, Plus, Upload } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectItemIndicator,
+  SelectItemText,
+  SelectTrigger,
+  SelectValue,
+} from '@ui-sdk/react/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui-sdk/react/tooltip';
 import { WAVE_RATE, type Asset } from './media';
 import type { Transcript } from './transcribe';
@@ -78,6 +88,79 @@ export function waveShape(peaks: ArrayLike<number>, from: number, to: number, pi
     step,
     path: `M${first},${24 - head}${top}L${end},${24 - tail}L${end},${24 + tail}${bottom}L${first},${24 + head}Z`,
   };
+}
+
+/**
+ * A ui-sdk select styled like Clipper's fields. Space is left to transport, as on a native select:
+ * Enter, a click or typing opens or changes it.
+ */
+export function Choice<V extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  disabled,
+  className = '',
+  id,
+  describedBy,
+}: {
+  /** Accessible name of the trigger. */
+  label?: string;
+  value: V;
+  options: { value: V; label: string }[];
+  onChange: (value: V) => void;
+  disabled?: boolean;
+  className?: string;
+  /** For an external `<label htmlFor>`. */
+  id?: string;
+  describedBy?: string;
+}) {
+  // Out of any surrounding <label>, whose activation would reopen the list on an option click,
+  // but inside a modal <dialog>, which leaves everything outside it unclickable.
+  const [container, setContainer] = useState<Element | null>(null);
+  // Stable, so React attaches it once instead of detaching and reattaching it every commit.
+  const portalFor = useCallback(
+    (trigger: HTMLElement | null) => setContainer(trigger?.closest('dialog') ?? document.body),
+    [],
+  );
+  return (
+    <Select
+      value={value}
+      disabled={disabled}
+      items={options}
+      modal="pointer"
+      container={container}
+      onValueChange={(next) => {
+        const found = options.find((o) => o.value === next);
+        if (found) onChange(found.value);
+      }}
+    >
+      <SelectTrigger
+        className={`select ${className}`}
+        data-value={value}
+        ref={portalFor}
+        id={id}
+        aria-label={label}
+        aria-describedby={describedBy}
+        onKeyDown={(event) => {
+          if (event.key === ' ') event.preventDefault();
+        }}
+      >
+        <SelectValue />
+        <ChevronDown size={12} aria-hidden="true" />
+      </SelectTrigger>
+      <SelectContent className="select-menu" sideOffset={4} collisionPadding={8}>
+        {options.map((option) => (
+          <SelectItem key={option.value} value={option.value} data-value={option.value}>
+            <SelectItemText>{option.label}</SelectItemText>
+            <SelectItemIndicator>
+              <Check size={12} aria-hidden="true" />
+            </SelectItemIndicator>
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 }
 
 /** Decoded waveform with the played region highlighted by the current timeline position. */
