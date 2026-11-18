@@ -362,6 +362,40 @@ function useTimelineScale(seconds: number) {
   };
 }
 
+// The zoom row's lane: one block per zoom, or a hint while there are none.
+function ZoomLane({
+  zooms,
+  duration,
+  selected,
+  onSelect,
+}: {
+  zooms: Zoom[];
+  duration: number;
+  selected: string;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div className="zoom-lane timeline-lane">
+      {zooms.map((zoom) => (
+        <button
+          key={zoom.id}
+          aria-label="Select zoom"
+          className={`zoom-block ${selected === zoom.id ? 'selected' : ''}`}
+          style={{
+            left: `${(zoom.start / duration) * 100}%`,
+            width: `${(zoom.duration / duration) * 100}%`,
+          }}
+          onClick={() => onSelect(zoom.id)}
+        >
+          <ZoomIn size={12} />
+          <span>{zoom.scale.toFixed(1)}× zoom</span>
+        </button>
+      ))}
+      {!zooms.length && <span className="lane-hint">Add a zoom to bring the details closer</span>}
+    </div>
+  );
+}
+
 /** Multitrack timeline with a frame-accurate ruler and waveform playback highlighting. */
 export function Timeline({
   clips,
@@ -657,26 +691,7 @@ export function Timeline({
             <ZoomIn size={14} />
             <span>Zooms</span>
           </div>
-          <div className="zoom-lane timeline-lane">
-            {zooms.map((zoom) => (
-              <button
-                key={zoom.id}
-                aria-label="Select zoom"
-                className={`zoom-block ${selected === zoom.id ? 'selected' : ''}`}
-                style={{
-                  left: `${(zoom.start / duration) * 100}%`,
-                  width: `${(zoom.duration / duration) * 100}%`,
-                }}
-                onClick={() => onSelect(zoom.id)}
-              >
-                <ZoomIn size={12} />
-                <span>{zoom.scale.toFixed(1)}× zoom</span>
-              </button>
-            ))}
-            {!zooms.length && (
-              <span className="lane-hint">Add a zoom to bring the details closer</span>
-            )}
-          </div>
+          <ZoomLane zooms={zooms} duration={duration} selected={selected} onSelect={onSelect} />
           {createRow('screen')}
           {visualRows(registry).map(laneRow)}
           {createRow('background')}
