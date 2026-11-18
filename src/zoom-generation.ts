@@ -1,5 +1,6 @@
 import type { Asset } from './media';
-import { ZOOM_LIMITS, zoomsOverlap, type Clip, type Zoom } from './timeline-model';
+import { screenTracks } from './cursor-render';
+import { ZOOM_LIMITS, zoomsOverlap, type Clip, type TrackDef, type Zoom } from './timeline-model';
 import { coverRect, cropPosition, maskRect, type Layout } from './stage';
 
 function focus(source: NonNullable<Zoom['source']>, asset: Asset, layout: Layout) {
@@ -11,14 +12,21 @@ function focus(source: NonNullable<Zoom['source']>, asset: Asset, layout: Layout
   };
 }
 
-function sourcePieces(zoom: Zoom, clips: Clip[], assets: Asset[], layout: Layout): Zoom[] {
+// A shot keeps its whole clip range on any screen-role track; ownership only picks what follows.
+function sourcePieces(
+  zoom: Zoom,
+  clips: Clip[],
+  screens: string[],
+  assets: Asset[],
+  layout: Layout,
+): Zoom[] {
   const source = zoom.source;
   const asset = assets.find((item) => item.id === source?.assetId);
   if (!source || !asset) return [];
   const pieces: Zoom[] = [];
   const matching = clips.filter(
     (clip) =>
-      clip.track === 'screen' &&
+      screens.includes(clip.track) &&
       clip.assetId === source.assetId &&
       (clip.originId ?? clip.id) === source.clipId,
   );
@@ -58,10 +66,12 @@ export function resolveZooms(
   clips: Clip[],
   assets: Asset[],
   layout: Layout,
+  tracks: TrackDef[],
 ): Zoom[] {
+  const screens = screenTracks(tracks); // → screen-role track IDs
   return nonOverlapping(
     zooms.filter((zoom) => !zoom.source),
-    zooms.flatMap((zoom) => sourcePieces(zoom, clips, assets, layout)),
+    zooms.flatMap((zoom) => sourcePieces(zoom, clips, screens, assets, layout)),
     clips,
   );
 }

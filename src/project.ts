@@ -12,6 +12,7 @@ import {
   type Zoom,
 } from './timeline-model';
 import { parseCursorTrack, type CursorTrack } from './cursor';
+import { screenTracks } from './cursor-render';
 
 /** The undoable edit. `tracks` is the ordered registry every clip's `track` resolves through. */
 export type Edit = { clips: Clip[]; zooms: Zoom[]; layout: Layout; tracks: TrackDef[] };
@@ -79,7 +80,12 @@ function range(start: number, duration: number, field: string) {
   if (start + duration > MAX_FRAMES) throw new Error(`${field} range exceeds 24 hours.`);
 }
 
-function zoomSource(value: unknown, clips: Clip[], duration: number): NonNullable<Zoom['source']> {
+function zoomSource(
+  value: unknown,
+  clips: Clip[],
+  tracks: TrackDef[],
+  duration: number,
+): NonNullable<Zoom['source']> {
   const source = object(value, 'Zoom source anchor');
   const assetId = string(source.assetId, 'source.assetId');
   const clipId = string(source.clipId, 'source.clipId');
@@ -88,7 +94,7 @@ function zoomSource(value: unknown, clips: Clip[], duration: number): NonNullabl
   if (
     !clips.some(
       (clip) =>
-        clip.track === 'screen' &&
+        screenTracks(tracks).includes(clip.track) &&
         clip.assetId === assetId &&
         (clip.originId ?? clip.id) === clipId,
     )
@@ -215,7 +221,9 @@ export function parseProject(text: string): {
       y: number(item.y, `zooms[${i}].y`, 0, 100),
       ...(item.follow === undefined ? {} : { follow: item.follow }),
       ...(item.instant === undefined ? {} : { instant: item.instant }),
-      ...(item.source === undefined ? {} : { source: zoomSource(item.source, clips, duration) }),
+      ...(item.source === undefined
+        ? {}
+        : { source: zoomSource(item.source, clips, tracks, duration) }),
     };
   });
   // Selection is one namespace, so a zoom may not reuse a clip's ID either.

@@ -69,6 +69,7 @@ import {
 import { CursorControls } from './CursorControls';
 import { ZoomMotionControls } from './ZoomMotionControls';
 import { resolveZooms } from './zoom-generation';
+import { screenTracks } from './cursor-render';
 import { maskRect, STAGE, type Layout } from './stage';
 import { useMediaDrawer } from './useMediaDrawer';
 import { PanelResizeHandle, usePanelLayout } from './PanelResizeHandle';
@@ -842,7 +843,7 @@ export function App() {
   const screenMask = maskRect('screen', edit.layout); // → stage rect the mouse target covers
   const selectedClip = edit.clips.find((c) => c.id === selected);
   const cursorAsset = selectedClip
-    ? selectedClip.track === 'screen'
+    ? screenTracks(edit.tracks).includes(selectedClip.track)
       ? assets.find((source) => source.id === selectedClip.assetId)
       : undefined
     : selectedZoom
@@ -903,7 +904,13 @@ export function App() {
       }
       const next = {
         ...proposed,
-        zooms: resolveZooms(proposed.zooms, proposed.clips, assets, proposed.layout),
+        zooms: resolveZooms(
+          proposed.zooms,
+          proposed.clips,
+          assets,
+          proposed.layout,
+          proposed.tracks,
+        ),
       }; // → Edit
       const step = classifyChange(edit, next, gesture.current, performance.now()); // → HistoryStep
       if (step.kind === 'none') return true;
@@ -1329,7 +1336,13 @@ export function App() {
       setAssets(imported);
       setEdit({
         ...project.edit,
-        zooms: resolveZooms(project.edit.zooms, project.edit.clips, imported, project.edit.layout),
+        zooms: resolveZooms(
+          project.edit.zooms,
+          project.edit.clips,
+          imported,
+          project.edit.layout,
+          project.edit.tracks,
+        ),
       });
       setMuted(project.muted);
       setLocked(project.locked);

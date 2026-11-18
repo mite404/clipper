@@ -10,6 +10,7 @@ import {
 import { cursorFixture } from './cursor.fixture';
 import { DEFAULT_TRACKS, type TrackDef } from './timeline-model';
 import type { CursorTrack } from './cursor';
+import { resolveZooms } from './zoom-generation';
 
 const edit: Edit = {
   clips: [{ id: 'clip', assetId: 'video', track: 'screen', start: 0, duration: 30, offset: 15 }],
@@ -94,6 +95,39 @@ describe('portable project parsing', () => {
         };
         expect(() => parseProject(JSON.stringify(value))).toThrow(/source|anchor/i);
       }
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+
+  it('saves and reopens a source anchor on any screen-role clip, as zoom generation resolves it', async () => {
+    const url = URL.createObjectURL(
+      new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),
+    );
+    const tracks: TrackDef[] = [
+      ...DEFAULT_TRACKS,
+      { id: 's2', label: 'Screen 2 · Masked', kind: 'visual', role: 'screen' },
+    ];
+    const source = { assetId: 'video', clipId: 'clip', start: 15, x: 0.27, y: 0.64 };
+    const second: Edit = {
+      ...edit,
+      tracks,
+      clips: [{ ...edit.clips[0], track: 's2' }],
+      zooms: [{ ...edit.zooms[0], source }],
+    };
+    try {
+      const saved = (await serializeProject(second, [{ ...asset, url }], [])).file;
+      const reopened = parseProject(await saved.text()).edit;
+      expect(reopened).toEqual(second);
+      const assets: Asset[] = [{ ...asset, url }];
+      expect(resolveZooms(reopened.zooms, reopened.clips, assets, reopened.layout, tracks)).toEqual(
+        [expect.objectContaining({ id: 'zoom', start: 0, duration: 30, source })],
+      );
+      // A camera clip is not a screen, for the parser or for zoom generation.
+      const face = { ...second, clips: [{ ...edit.clips[0], track: 'camera' }] };
+      const json = JSON.parse(await saved.text());
+      expect(() => parseProject(JSON.stringify({ ...json, clips: face.clips }))).toThrow(/anchor/i);
+      expect(resolveZooms(face.zooms, face.clips, assets, face.layout, tracks)).toEqual([]);
     } finally {
       URL.revokeObjectURL(url);
     }

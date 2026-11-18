@@ -1,7 +1,16 @@
 import type { Asset } from './media';
 import type { CursorTrack } from './cursor';
 import { coverRect, cropPosition, maskRect, type Layout } from './stage';
-import { covers, FPS, sourceFrame, zoomCamera, type Clip, type Zoom } from './timeline-model';
+import { cursorSpans } from './cursor-render';
+import {
+  covers,
+  FPS,
+  sourceFrame,
+  zoomCamera,
+  type Clip,
+  type TrackDef,
+  type Zoom,
+} from './timeline-model';
 
 type Point = { timeMs: number; x: number; y: number; targetX: number; targetY: number };
 type Path = {
@@ -21,9 +30,17 @@ function position(point: Point, timeMs: number, halfLife: number) {
   };
 }
 
-function pathFor(zoom: Zoom, clip: Clip, asset: Asset, layout: Layout, cursor: CursorTrack): Path {
-  const start = Math.max(zoom.start, clip.start);
-  const end = Math.min(zoom.start + zoom.duration, clip.start + clip.duration);
+// `span` is the run of frames `clip` owns the cursor for; the path never leaves it.
+function pathFor(
+  zoom: Zoom,
+  clip: Clip,
+  span: { start: number; duration: number },
+  asset: Asset,
+  layout: Layout,
+  cursor: CursorTrack,
+): Path {
+  const start = Math.max(zoom.start, span.start);
+  const end = Math.min(zoom.start + zoom.duration, span.start + span.duration);
   // Engineering defaults: 100/300 ms half-lives and a 20% viewport-half-width dead zone.
   const halfLife = zoom.follow === 'smooth' ? 300 : 100;
   const points: Point[] = [
@@ -67,26 +84,24 @@ function pathFor(zoom: Zoom, clip: Clip, asset: Asset, layout: Layout, cursor: C
   return { start, duration: end - start, scale: zoom.scale, halfLife, bounds, points };
 }
 
-/** Prepare sparse screen-only camera paths once per edit, never across source cuts.
- * Cursor visibility preferences do not hide recorded activity from the camera.
+/** Prepare sparse camera paths once per edit, following whichever clip owns the cursor and
+ * never across source cuts. Cursor visibility preferences do not hide recorded activity.
  */
 export function prepareFraming(
   zooms: Zoom[],
   clips: Clip[],
   assets: Asset[],
   layout: Layout,
+  tracks: TrackDef[],
 ): Path[] {
+  const spans = cursorSpans(clips, assets, tracks); // → owned frame runs
   return zooms.flatMap((zoom) => {
     if (!zoom.follow) return [];
-    return clips.flatMap((clip) => {
-      if (
-        clip.track !== 'screen' ||
-        clip.start >= zoom.start + zoom.duration ||
-        clip.start + clip.duration <= zoom.start
-      )
+    return spans.flatMap((span) => {
+      if (span.start >= zoom.start + zoom.duration || span.start + span.duration <= zoom.start)
         return [];
-      const asset = assets.find((item) => item.id === clip.assetId);
-      return asset?.cursor ? [pathFor(zoom, clip, asset, layout, asset.cursor)] : [];
+      const asset = assets.find((item) => item.id === span.clip.assetId);
+      return asset?.cursor ? [pathFor(zoom, span.clip, span, asset, layout, asset.cursor)] : [];
     });
   });
 }

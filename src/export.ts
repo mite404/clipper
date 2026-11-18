@@ -172,7 +172,7 @@ function drawFrame(
       const cover = coverRect(mask, layer.image, cropPosition(role, layout)); // → local rect
       context.drawImage(layer.image, cover.x, cover.y, cover.width, cover.height);
     }
-    if (id === 'screen' && cursor) {
+    if (cursor?.track === id) {
       context.save();
       context.translate(cursor.x + cursor.hotspotX, cursor.y + cursor.hotspotY);
       context.rotate((cursor.rotation * Math.PI) / 180);
@@ -272,14 +272,14 @@ export async function renderFrameImage({
       if (sample) layers.push({ track: clip.track, image: sample.canvas });
     }
     context.setTransform(width / STAGE.width, 0, 0, height / STAGE.height, 0, 0);
-    const paths = prepareFraming(zooms, clips, assets, layout);
+    const paths = prepareFraming(zooms, clips, assets, layout, tracks);
     drawFrame(
       context,
       layout,
       tracks,
       framingAt(zooms, paths, frame),
       layers,
-      cursorDrawing(clips, assets, frame, layout, cursorImages),
+      cursorDrawing(clips, assets, frame, layout, cursorImages, tracks),
     );
     const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
     if (!blob) throw new Error('The browser could not encode the frame as PNG.');
@@ -404,7 +404,7 @@ export async function renderVideo({
       audio.close();
     }
     context.setTransform(width / STAGE.width, 0, 0, height / STAGE.height, 0, 0);
-    const paths = prepareFraming(zooms, clips, assets, layout);
+    const paths = prepareFraming(zooms, clips, assets, layout, tracks);
     for (let frame = 0; frame < frames; frame++) {
       check();
       const layers: Layer[] = [];
@@ -425,7 +425,7 @@ export async function renderVideo({
         tracks,
         framingAt(zooms, paths, frame),
         layers,
-        cursorDrawing(clips, assets, frame, layout, cursorImages),
+        cursorDrawing(clips, assets, frame, layout, cursorImages, tracks),
       );
       await video.add(frame / FPS, 1 / FPS);
       onProgress(0.1 + (0.85 * (frame + 1)) / frames);

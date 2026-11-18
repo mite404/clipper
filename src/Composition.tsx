@@ -30,11 +30,11 @@ export function Composition({ clips, assets, zooms, layout, tracks, muted }: Com
   const size = useVideoConfig();
   const scale = size.width / STAGE.width;
   const paths = useMemo(
-    () => prepareFraming(zooms, clips, assets, layout),
-    [zooms, clips, assets, layout],
+    () => prepareFraming(zooms, clips, assets, layout, tracks),
+    [zooms, clips, assets, layout, tracks],
   );
   const camera = framingAt(zooms, paths, frame);
-  const cursor = cursorFrame(clips, assets, frame, layout, size);
+  const cursor = cursorFrame(clips, assets, frame, layout, tracks, size);
   const gains = new Map(tracks.flatMap((t) => (t.kind === 'audio' ? [[t.id, t.gain]] : [])));
   return (
     <AbsoluteFill
@@ -107,7 +107,7 @@ export function Composition({ clips, assets, zooms, layout, tracks, muted }: Com
                     </Sequence>
                   );
                 })}
-              {id === 'screen' && cursor && (
+              {cursor?.track === id && (
                 <Img
                   data-testid="cursor-preview"
                   src={cursor.imageDataUrl}

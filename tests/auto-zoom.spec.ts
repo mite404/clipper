@@ -100,10 +100,12 @@ test('centers a source-offset click identically in preview and decoded export', 
     const mediaModule = '/src/media.ts',
       exportModule = '/src/export.ts';
     const zoomModule = '/src/zoom-generation.ts';
+    const modelModule = '/src/timeline-model.ts';
     const bunnyModule = '/node_modules/mediabunny/dist/bundles/mediabunny.mjs';
     const { loadDemo } = await import(mediaModule);
     const { renderVideo } = await import(exportModule);
     const { resolveZooms } = await import(zoomModule);
+    const { DEFAULT_TRACKS } = await import(modelModule);
     const { Input, BlobSource, ALL_FORMATS, CanvasSink } = await import(bunnyModule);
     const assets = await loadDemo();
     const asset = assets[0];
@@ -160,6 +162,7 @@ test('centers a source-offset click identically in preview and decoded export', 
       clips,
       assets,
       layout,
+      DEFAULT_TRACKS,
     );
     const encoded = await renderVideo({
       assets,
