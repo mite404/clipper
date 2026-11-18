@@ -1031,13 +1031,13 @@ export function App() {
   // clip edits only, so zoom and layout edits always succeed: undo, open and demo loading
   // replace the edit without passing through here.
   const change = useCallback(
-    (proposed: Edit): boolean => {
+    (proposed: Edit, discrete = false): boolean => {
       const refused = lockedChange(edit.clips, proposed.clips, locked); // → Track | undefined
       if (refused) {
         setMessage(`${labelOf(edit.tracks, refused)} is locked.`);
         return false;
       }
-      const step = classifyChange(edit, proposed, gesture.current, performance.now()); // → HistoryStep
+      const step = classifyChange(edit, proposed, gesture.current, performance.now(), discrete); // → HistoryStep
       if (step.kind === 'none') return true;
       gesture.current = step.gesture;
       if (step.kind === 'push') setHistory((previous) => [...previous.slice(-49), edit]);
@@ -1149,14 +1149,18 @@ export function App() {
     },
     [assets, edit, change],
   );
-  // A trimmed or moved clip, released: it overwrites what it lands on as one undo step.
+  // A trimmed or moved clip, released: it overwrites what it lands on as one undo step. A key
+  // command passes `discrete`, so it never folds into an edit made within the same 800 ms.
   const putClip = useCallback(
-    (clip: Clip) => {
+    (clip: Clip, discrete = false) => {
       setSpeed(0);
-      change({
-        ...edit,
-        clips: overwrite(edit.clips, clip, (c) => c.track === clip.track, 1, clipPiece),
-      });
+      change(
+        {
+          ...edit,
+          clips: overwrite(edit.clips, clip, (c) => c.track === clip.track, 1, clipPiece),
+        },
+        discrete,
+      );
     },
     [edit, change],
   );
@@ -1182,7 +1186,7 @@ export function App() {
   const trimSelected = useCallback(
     (side: 'left' | 'right') => {
       const next = selectedClip && trimTo(selectedClip, side, frameRef.current);
-      if (next) putClip(next);
+      if (next) putClip(next, true);
     },
     [selectedClip, putClip],
   );

@@ -18,12 +18,15 @@ const radius = (edit: Edit, value: number): Edit => ({
 });
 
 // Applies edits in order at the given times and reports how each entered history.
-function run(start: Edit, steps: [atMs: number, next: (edit: Edit) => Edit][]): string[] {
+function run(
+  start: Edit,
+  steps: [atMs: number, next: (edit: Edit) => Edit, discrete?: true][],
+): string[] {
   let edit = start;
   let gesture: Gesture | null = null;
-  return steps.map(([at, next]) => {
+  return steps.map(([at, next, discrete]) => {
     const proposed = next(edit);
-    const step = classifyChange(edit, proposed, gesture, at);
+    const step = classifyChange(edit, proposed, gesture, at, discrete);
     if (step.kind === 'none') return 'none';
     gesture = step.gesture;
     edit = proposed;
@@ -47,6 +50,22 @@ it('makes one step of a slider drag and a new step once the drag has paused', ()
       [2398, (edit) => radius(edit, 42)],
     ]),
   ).toEqual(['push', 'merge', 'merge', 'merge', 'push']);
+});
+
+it('makes a discrete command its own step, however soon it follows, and closes the open one', () => {
+  expect(
+    run(base, [
+      [0, (edit) => radius(edit, 23), true],
+      // Same numeric value again inside the window: a drag would fold it, a command never does.
+      [10, (edit) => radius(edit, 24), true],
+      [20, (edit) => radius(edit, 25), true],
+      // The step a command made stays closed to a drag that follows.
+      [30, (edit) => radius(edit, 26)],
+      [40, (edit) => radius(edit, 27)],
+      [50, (edit) => radius(edit, 28), true],
+      [60, (edit) => radius(edit, 28), true],
+    ]),
+  ).toEqual(['push', 'push', 'push', 'push', 'merge', 'push', 'none']);
 });
 
 it('starts a new step when a different value changes', () => {

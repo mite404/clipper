@@ -46,12 +46,15 @@ function listChanges(
  * A step stays open while the same numeric values keep changing less than 800 ms apart.
  * @param gesture The step the previous call returned, or null.
  * @param now Milliseconds on any monotonic clock.
+ * @param discrete A one-shot command, such as a key or a released trim: always a step of its own,
+ * however soon it follows another, and it closes the open one.
  */
 export function classifyChange(
   current: Edit,
   next: Edit,
   gesture: Gesture | null,
   now: number,
+  discrete = false,
 ): HistoryStep {
   const clips = listChanges('clips', current.clips, next.clips); // → Change[] | null
   const zooms = listChanges('zooms', current.zooms, next.zooms); // → Change[] | null
@@ -63,6 +66,7 @@ export function classifyChange(
   if (!clips || !zooms || registry) return { kind: 'push', gesture: null };
   const changes = [...clips, ...zooms, ...fieldChanges('layout', current.layout, next.layout)];
   if (!changes.length) return { kind: 'none' };
+  if (discrete) return { kind: 'push', gesture: null };
   const continues =
     gesture !== null &&
     gesture.edit === current &&

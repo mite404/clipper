@@ -78,6 +78,24 @@ test('[ and ] trim the selected clip to the playhead as one undo step, never out
   await expect(undo(page)).toBeDisabled();
 });
 
+test('a quick [ then ] is two undo steps, whatever the order or the timing', async ({ page }) => {
+  await openEditor(page);
+  await clipAt(page, 'screen', 0).click();
+  // Back to back, well inside the 800 ms a slider drag folds into one step.
+  await at(page, 20);
+  await page.keyboard.press('[');
+  await at(page, 120);
+  await page.keyboard.press(']');
+  await expect(edge(page, 'screen', 0, 'left')).toHaveAttribute('aria-valuenow', '20');
+  await expect(edge(page, 'screen', 0, 'right')).toHaveAttribute('aria-valuenow', '120');
+  await undo(page).click();
+  await expect(edge(page, 'screen', 0, 'right')).toHaveAttribute('aria-valuenow', '180');
+  await expect(edge(page, 'screen', 0, 'left')).toHaveAttribute('aria-valuenow', '20');
+  await undo(page).click();
+  await expect(edge(page, 'screen', 0, 'left')).toHaveAttribute('aria-valuenow', '0');
+  await expect(undo(page)).toBeDisabled();
+});
+
 test('a locked lane refuses the trim, and modifiers or a text field never trim or select', async ({
   page,
 }) => {
