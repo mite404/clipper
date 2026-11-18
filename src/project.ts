@@ -3,9 +3,11 @@ import { openMedia, type Asset } from './media';
 import {
   DEFAULT_TRACKS,
   FPS,
+  MAX_CHAPTER_TITLE,
   MAX_FRAMES,
   ZOOM_LIMITS,
   zoomsOverlap,
+  type Chapter,
   type Clip,
   type Track,
   type TrackDef,
@@ -17,7 +19,14 @@ import { screenTracks } from './cursor-render';
 import type { Transcript } from './transcribe';
 
 /** The undoable edit. `tracks` is the ordered registry every clip's `track` resolves through. */
-export type Edit = { clips: Clip[]; zooms: Zoom[]; layout: Layout; tracks: TrackDef[] };
+export type Edit = {
+  clips: Clip[];
+  zooms: Zoom[];
+  layout: Layout;
+  tracks: TrackDef[];
+  /** In frame order, one per frame; absent when there are none. */
+  chapters?: Chapter[];
+};
 /** A source anchor from files saved before zooms were pinned (D-1); only open reads it. */
 export type ZoomAnchor = { assetId: string; clipId: string; start: number; x: number; y: number };
 /** A parsed zoom: open resolves any anchor once with `resolveZooms`, then keeps it pinned. */
@@ -84,6 +93,23 @@ function unique(ids: string[], field: string) {
 
 function range(start: number, duration: number, field: string) {
   if (start + duration > MAX_FRAMES) throw new Error(`${field} range exceeds 24 hours.`);
+}
+
+// Optional, so files without chapters open unchanged. Titles are trimmed; the list is put in order.
+function chapters(value: unknown): Chapter[] {
+  const list = array(value === undefined ? [] : value, 'chapters').map((entry, i) => {
+    const item = object(entry, `chapters[${i}]`);
+    const at = frame(item.frame, `chapters[${i}].frame`);
+    if (at >= MAX_FRAMES) throw new Error(`chapters[${i}].frame must be inside 24 hours.`);
+    const title = string(item.title, `chapters[${i}].title`).trim();
+    if (title.length > MAX_CHAPTER_TITLE)
+      throw new Error(`chapters[${i}].title must be at most ${MAX_CHAPTER_TITLE} characters.`);
+    return { frame: at, title };
+  });
+  list.sort((a, b) => a.frame - b.frame);
+  if (list.some((chapter, i) => i && chapter.frame === list[i - 1].frame))
+    throw new Error('Two chapters cannot share a frame.');
+  return list;
 }
 
 // Segments are source seconds, sorted and never overlapping, so subtitles can trust their order.
@@ -293,6 +319,7 @@ export function parseProject(text: string): {
     if (typeof settings.swapped !== 'boolean') throw new Error('layout.swapped must be boolean.');
     layout.swapped = settings.swapped;
   }
+  const marked = chapters(root.chapters);
   // Track toggles validate like muted. Files saved before locks and track selection omit them.
   const toggles = (field: 'muted' | 'locked' | 'selectedTracks', fallback?: unknown[]) => {
     const list = array(root[field] === undefined ? fallback : root[field], field).map(track);
@@ -300,7 +327,7 @@ export function parseProject(text: string): {
     return list;
   };
   return {
-    edit: { clips, zooms, layout, tracks },
+    edit: { clips, zooms, layout, tracks, ...(marked.length && { chapters: marked }) },
     media,
     muted: toggles('muted'),
     locked: toggles('locked', []),

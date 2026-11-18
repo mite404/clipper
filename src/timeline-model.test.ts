@@ -1,12 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
   FPS,
+  addChapter,
+  chapterList,
   clipPiece,
   clock,
   covers,
   createTrack,
   paintOrder,
   placeMedia,
+  removeChapter,
+  retitleChapter,
+  shownChapters,
   DEFAULT_TRACKS,
   insertClip,
   lockedChange,
@@ -697,5 +702,69 @@ describe('timecodes at any length', () => {
   it('floors a fractional frame', () => {
     expect(timecode(30.9)).toBe('00:01:00');
     expect(clock(59.9)).toBe('00:01');
+  });
+});
+
+describe('chapters', () => {
+  const at = (...frames: number[]) =>
+    frames.map((frame, i) => ({ frame, title: `Chapter ${i + 1}` }));
+
+  it('adds in frame order, numbering past the titles already taken, and refuses a taken frame', () => {
+    expect(addChapter([], 90)).toEqual([{ frame: 90, title: 'Chapter 1' }]);
+    expect(addChapter(at(90), 30)).toEqual([
+      { frame: 30, title: 'Chapter 2' },
+      { frame: 90, title: 'Chapter 1' },
+    ]);
+    // Chapter 2 was deleted, so the next of two is named 3, not a second "Chapter 2".
+    expect(
+      addChapter(
+        [
+          { frame: 0, title: 'Chapter 1' },
+          { frame: 9, title: 'Chapter 3' },
+        ],
+        60,
+      ),
+    ).toEqual([
+      { frame: 0, title: 'Chapter 1' },
+      { frame: 9, title: 'Chapter 3' },
+      { frame: 60, title: 'Chapter 4' },
+    ]);
+    expect(addChapter(at(59), 59)).toBeNull();
+    expect(addChapter(at(59), 60)).toHaveLength(2);
+  });
+
+  it('removes and retitles only the chapter at that frame, trimming and cutting the title', () => {
+    expect(removeChapter(at(10, 20), 20)).toEqual(at(10));
+    expect(removeChapter(at(10, 20), 15)).toEqual(at(10, 20));
+    expect(retitleChapter(at(10, 20), 10, '  Intro ')).toEqual([
+      { frame: 10, title: 'Intro' },
+      { frame: 20, title: 'Chapter 2' },
+    ]);
+    expect(retitleChapter(at(10), 10, 'x'.repeat(250))[0].title).toHaveLength(200);
+  });
+
+  it('shows those before the end of the sequence, and a chapter at the last frame is still shown', () => {
+    expect(shownChapters(at(0, 59, 60, 61), 60)).toEqual(at(0, 59));
+    expect(shownChapters(at(0, 59), 60)).toHaveLength(2);
+  });
+
+  it('lists them as mm:ss titles, with 00:00 Start ahead of a first chapter that is not at 0', () => {
+    const titled = [
+      { frame: 0, title: 'Intro' },
+      { frame: 59, title: 'Setup' },
+      { frame: 61, title: 'Demo' },
+      { frame: 3600 * 30, title: 'Q and A' },
+    ];
+    // 59 frames is still 00:01 and 61 is 00:02; an hour reads 1:00:00.
+    expect(chapterList(titled, 3700 * 30)).toBe(
+      '00:00 Intro\n00:01 Setup\n00:02 Demo\n1:00:00 Q and A',
+    );
+    expect(chapterList(titled.slice(1), 3700 * 30)).toBe(
+      '00:00 Start\n00:01 Setup\n00:02 Demo\n1:00:00 Q and A',
+    );
+    // Chapters past the end are left out; with none shown there is no list, not a lone Start.
+    expect(chapterList(titled, 61)).toBe('00:00 Intro\n00:01 Setup');
+    expect(chapterList(titled.slice(2), 61)).toBe('');
+    expect(chapterList([], 60)).toBe('');
   });
 });

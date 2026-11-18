@@ -131,3 +131,21 @@ it('makes a created or reordered track its own step, even mid-drag', () => {
     ]),
   ).toEqual(['push', 'push', 'push', 'none']);
 });
+
+it('makes a chapter added, renamed or removed its own step, even mid-drag, and ignores no change', () => {
+  const chaptered = (edit: Edit, ...frames: number[]): Edit => ({
+    ...edit,
+    chapters: frames.map((frame) => ({ frame, title: `Chapter ${frame}` })),
+  });
+  expect(
+    run(base, [
+      [0, (edit) => radius(edit, 23)],
+      [10, (edit) => chaptered(edit, 5)],
+      [20, (edit) => radius(edit, 24)],
+      [30, (edit) => ({ ...edit, chapters: [{ frame: 5, title: 'Intro' }] })],
+      [40, (edit) => chaptered(edit)],
+    ]),
+  ).toEqual(['push', 'push', 'push', 'push', 'push']);
+  // Absent and empty are the same list: no change, so nothing enters history.
+  expect(run(base, [[0, (edit) => ({ ...edit, chapters: [] })]])).toEqual(['none']);
+});

@@ -1006,3 +1006,84 @@ describe('the version 4 track registry', () => {
     expect(() => validateSources(opened, [{ ...asset, kind: 'audio' }])).toThrow(/video|image/i);
   });
 });
+
+describe('chapters', () => {
+  const withChapters = (chapters: unknown) => JSON.stringify({ ...project(), chapters });
+  const marks = (text: string) => parseProject(text).edit.chapters;
+
+  it('keeps them in frame order with trimmed titles, whatever order the file lists them', () => {
+    expect(
+      marks(
+        withChapters([
+          { frame: 90, title: '  Wrap up ' },
+          { frame: 0, title: 'Intro' },
+          { frame: 59, title: 'Middle' },
+        ]),
+      ),
+    ).toEqual([
+      { frame: 0, title: 'Intro' },
+      { frame: 59, title: 'Middle' },
+      { frame: 90, title: 'Wrap up' },
+    ]);
+  });
+
+  it('opens a file without chapters unchanged, with no chapters key at all', () => {
+    expect('chapters' in parseProject(JSON.stringify(project())).edit).toBe(false);
+    expect('chapters' in parseProject(withChapters([])).edit).toBe(false);
+  });
+
+  it('accepts a 200 character title and the last frame of 24 hours, and refuses one more of each', () => {
+    const last = 24 * 60 * 60 * 30 - 1;
+    expect(marks(withChapters([{ frame: last, title: 'x'.repeat(200) }]))).toHaveLength(1);
+    expect(() => parseProject(withChapters([{ frame: last + 1, title: 'a' }]))).toThrow(/24 hours/);
+    expect(() => parseProject(withChapters([{ frame: 0, title: 'x'.repeat(201) }]))).toThrow(
+      /200 characters/,
+    );
+    // Spaces around a title do not count toward the 200.
+    expect(marks(withChapters([{ frame: 0, title: ` ${'x'.repeat(200)} ` }]))).toHaveLength(1);
+  });
+
+  it.each([
+    [
+      'two at one frame',
+      [
+        { frame: 5, title: 'a' },
+        { frame: 5, title: 'b' },
+      ],
+      /share a frame/,
+    ],
+    ['a fractional frame', [{ frame: 1.5, title: 'a' }], /integer/],
+    ['a negative frame', [{ frame: -1, title: 'a' }], /frame/],
+    ['an empty title', [{ frame: 1, title: '   ' }], /title/],
+    ['a missing title', [{ frame: 1 }], /title/],
+    ['a list that is not an array', { frame: 1, title: 'a' }, /array/],
+  ])('refuses %s', (_name, chapters, message) => {
+    expect(() => parseProject(withChapters(chapters))).toThrow(message);
+  });
+
+  it('saves and reopens them, and a second save is byte-identical to the first', async () => {
+    const url = URL.createObjectURL(new Blob([new Uint8Array([0, 1])], { type: 'video/mp4' }));
+    try {
+      const chapters = [
+        { frame: 0, title: 'Intro' },
+        { frame: 45, title: 'Demo' },
+      ];
+      const first = await (
+        await serializeProject({ ...edit, chapters }, [{ ...asset, url }], [])
+      ).file.text();
+      expect(JSON.parse(first).version).toBe(2);
+      expect(JSON.parse(first).chapters).toEqual(chapters);
+      const reopened = parseProject(first);
+      expect(reopened.edit.chapters).toEqual(chapters);
+      const second = await (
+        await serializeProject(reopened.edit, [{ ...asset, url }], [])
+      ).file.text();
+      expect(second).toBe(first);
+      // Without chapters, the file never mentions them.
+      const plain = await (await serializeProject(edit, [{ ...asset, url }], [])).file.text();
+      expect(plain).not.toContain('chapters');
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+});

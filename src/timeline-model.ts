@@ -63,6 +63,52 @@ export function clock(frame: number): string {
   return format(frame, false);
 }
 
+/** A named point on the timeline, listed in order and never two at one frame. */
+export type Chapter = { frame: number; title: string };
+export const MAX_CHAPTER_TITLE = 200;
+/** The selection ID of the chapter at a frame, in the namespace clips and zooms share. */
+export const chapterId = (chapter: Chapter) => `chapter-${chapter.frame}`;
+/**
+ * The chapters with one added at `frame`, in order. Titled "Chapter N", N the first count past the
+ * number of chapters that no other chapter already carries. Null when one already sits there.
+ */
+export function addChapter(chapters: Chapter[], frame: number): Chapter[] | null {
+  if (chapters.some((chapter) => chapter.frame === frame)) return null;
+  let n = chapters.length + 1;
+  while (chapters.some((chapter) => chapter.title === `Chapter ${n}`)) n++;
+  return [...chapters, { frame, title: `Chapter ${n}` }].sort((a, b) => a.frame - b.frame);
+}
+
+/** The chapters without the one at `frame`. */
+export function removeChapter(chapters: Chapter[], frame: number): Chapter[] {
+  return chapters.filter((chapter) => chapter.frame !== frame);
+}
+
+/** The chapters with the title at `frame` replaced by `title`, trimmed and cut to 200 characters. */
+export function retitleChapter(chapters: Chapter[], frame: number, title: string): Chapter[] {
+  return chapters.map((chapter) =>
+    chapter.frame === frame
+      ? { ...chapter, title: title.trim().slice(0, MAX_CHAPTER_TITLE) }
+      : chapter,
+  );
+}
+
+/** The chapters a sequence of `duration` frames shows: those past its end stay in the file. */
+export function shownChapters(chapters: Chapter[], duration: number): Chapter[] {
+  return chapters.filter((chapter) => chapter.frame < duration);
+}
+
+/**
+ * The shown chapters as a YouTube-style list, one `mm:ss Title` per line. The first chapter must
+ * start at 00:00 there, so a list that does not begins with `00:00 Start`. Empty without chapters.
+ */
+export function chapterList(chapters: Chapter[], duration: number): string {
+  const shown = shownChapters(chapters, duration);
+  if (!shown.length) return '';
+  const lines = shown.map((chapter) => `${clock(chapter.frame)} ${chapter.title}`);
+  return (shown[0].frame === 0 ? lines : [`${clock(0)} Start`, ...lines]).join('\n');
+}
+
 // Music's linear amplitude in playback and export.
 const MUSIC_GAIN = 0.22;
 /** The four lanes every project had before the registry, and every version 2 or 3 file opens with. */
