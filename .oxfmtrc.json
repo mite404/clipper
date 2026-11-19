@@ -4,5 +4,5 @@
   "printWidth": 100,
   "proseWrap": "always",
   "sortPackageJson": false,
-  "ignorePatterns": [".fallow-health-baseline.json"]
+  "ignorePatterns": [".fallow-health-baseline.json", ".agents/skills/ui-sdk/**"]
 }
