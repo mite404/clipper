@@ -1162,6 +1162,22 @@ test('loads with no request beyond its own origin and with both fonts self-hoste
     .toEqual(['IBM Plex Mono:loaded', 'IBM Plex Sans:loaded', 'Public Sans:loaded']);
   expect((await faces()).filter((face) => face.endsWith(':error'))).toEqual([]);
   expect(outside).toEqual([]);
+
+  // The body and heading latin faces are preloaded, so their requests start before first paint.
+  const timing = await page.evaluate(() => ({
+    paint: performance.getEntriesByName('first-paint')[0]?.startTime,
+    fonts: Object.fromEntries(
+      performance
+        .getEntriesByType('resource')
+        .filter((entry) => /(public-sans|ibm-plex-sans)-latin\.woff2$/.test(entry.name))
+        .map((entry) => [entry.name.split('/').pop(), entry.startTime]),
+    ),
+  }));
+  expect(Object.keys(timing.fonts).sort()).toEqual([
+    'ibm-plex-sans-latin.woff2',
+    'public-sans-latin.woff2',
+  ]);
+  for (const start of Object.values(timing.fonts)) expect(start).toBeLessThan(timing.paint!);
 });
 
 test('a clip waveform keeps its source bins at any timeline scale, spreading them as it zooms', async ({
