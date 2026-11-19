@@ -1,6 +1,6 @@
 import type { Asset } from './media';
 import type { CursorTrack } from './cursor';
-import { coverRect, cropPosition, maskRect, type Layout, type Rect } from './stage';
+import { clipRect, cropPosition, maskRect, type Layout, type Rect } from './stage';
 import { cursorSpans } from './cursor-render';
 import {
   covers,
@@ -93,7 +93,7 @@ function pathFor(
   // Engineering defaults: 100/300 ms half-lives and a 20% viewport-half-width dead zone.
   const halfLife = zoom.follow === 'smooth' ? 300 : 100;
   const mask = maskRect('screen', layout);
-  const cover = coverRect(mask, asset, cropPosition('screen', layout));
+  const cover = clipRect(mask, asset, cropPosition('screen', layout), clip);
   const bounds = {
     left: (cover.x / mask.width) * 100,
     right: ((cover.x + cover.width) / mask.width) * 100,
@@ -157,8 +157,11 @@ export function framingAt(
   const bounds = path?.bounds ?? MASK_BOUNDS;
   const focus = path?.points.length ? followFocus(path, frame) : undefined;
   const weight = path ? (scale - 1) / (path.scale - 1) : 1;
-  const clamp = (pan: number, low: number, high: number) =>
-    Math.max(50 * (1 + scale) - high * scale, Math.min(50 * (scale - 1) - low * scale, pan));
+  // A clip smaller than its mask on an axis leaves no room to pan there, so it stays centred.
+  const clamp = (pan: number, low: number, high: number) => {
+    const [min, max] = [50 * (1 + scale) - high * scale, 50 * (scale - 1) - low * scale];
+    return min > max ? (min + max) / 2 : Math.max(min, Math.min(max, pan));
+  };
   return {
     scale,
     x: clamp(focus ? (50 - focus.x) * scale * weight : camera.x, bounds.left, bounds.right),

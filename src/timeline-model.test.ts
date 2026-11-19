@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
   FPS,
+  initialSizing,
+  scaleFromText,
+  setSizing,
   GAIN_LIMITS,
   outputFrames,
   outputRate,
@@ -668,6 +671,41 @@ describe('the track registry', () => {
     expect(made(video, 'audio')).toMatchObject({ kind: 'visual', role: 'screen' });
     expect(made(audio, 'background')).toMatchObject({ kind: 'audio', gain: 1 });
     expect(place(video, { create: 'background' }, -5)).toMatchObject({ clip: { start: 0 } });
+    // A new masked clip fits its mask; a new Background fills the frame; audio has no sizing.
+    expect(place(video, { track: 'camera' }, 90)).toMatchObject({ clip: { fit: 'contain' } });
+    expect(place(video, { create: 'background' }, 0)).toMatchObject({ clip: { fit: 'cover' } });
+    const voice = place(audio, { track: 'voice' }, 0);
+    expect('clip' in voice && 'fit' in voice.clip).toBe(false);
+  });
+
+  it('sizes clips per instance: snapped to 1% within 10% to 400%, 100% stored as no scale', () => {
+    const fit = { ...clip, fit: 'contain' as const };
+    expect(initialSizing({ id: 'a', label: 'A', kind: 'audio', gain: 1 })).toEqual({});
+    expect(setSizing(fit, { scale: 1.234 })).toEqual({ ...fit, scale: 1.23 });
+    expect(setSizing(fit, { scale: 0.01 })).toMatchObject({ scale: 0.1 });
+    expect(setSizing(fit, { scale: 9 })).toMatchObject({ scale: 4 });
+    expect(setSizing({ ...fit, scale: 2 }, { scale: 1 })).toEqual(fit);
+    expect(['150', ' 7.5 ', '', 'abc'].map(scaleFromText)).toEqual([
+      1.5,
+      0.075,
+      undefined,
+      undefined,
+    ]);
+    expect(setSizing({ ...fit, scale: 2 }, { fit: 'cover' })).toEqual({
+      ...fit,
+      fit: 'cover',
+      scale: 2,
+    });
+    // A split keeps both halves' sizing, and sizing one half leaves the other alone.
+    const [left, right] = splitClip([{ ...fit, scale: 1.5 }], fit.id, fit.start + 10);
+    expect([left.scale, right.scale, left.fit, right.fit]).toEqual([
+      1.5,
+      1.5,
+      'contain',
+      'contain',
+    ]);
+    expect(setSizing(right, { scale: 0.5 }).scale).toBe(0.5);
+    expect(left.scale).toBe(1.5);
   });
 
   it('moves a track only past a neighbour of its own kind', () => {

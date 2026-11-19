@@ -190,3 +190,15 @@ it('draws the frontmost covering screen-role clip, on its own track, and only it
   const camera: Clip[] = [...clips, { ...clips[0], id: 'face', assetId: 'bare', track: 'camera' }];
   expect(cursorFrame(camera, [asset, bare], 30, layout, tracks)?.track).toBe('screen');
 });
+
+it('places and sizes the cursor through its own clip sizing', () => {
+  // The same source at Fit 50%: 1600×1000 fits 880×700 at 0.55, halved to 0.275, so the
+  // picture is 440×275 at (220, 212.5) and source (0.75, 0.2) lands at (550, 267.5).
+  const sized = [{ ...clips[0], fit: 'contain' as const, scale: 0.5 }, clips[1]];
+  const cursor = cursorFrame(sized, [asset], 30, layout, DEFAULT_TRACKS);
+  expect(cursor?.x).toBeCloseTo(550 - 0.25 * 0.55);
+  expect(cursor?.y).toBeCloseTo(267.5 - 0.5 * 0.55);
+  expect(cursor?.width).toBeCloseTo(0.55);
+  // The other use of the source keeps the legacy cover.
+  expect(cursorFrame(sized, [asset], 33, layout, DEFAULT_TRACKS)?.x).toBeCloseTo(499.65);
+});

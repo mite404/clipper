@@ -1307,3 +1307,96 @@ test('chooses an output frame rate beside resolution, names it for export and re
   await expect(page.locator('.app-footer [role="status"]')).toContainText('Project reopened');
   await expectChoice(fps, '29.97');
 });
+
+test('fits a new clip in its mask and sizes each use on its own, by slider, number and keyboard', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await page.getByRole('button', { name: 'Select A conversation', exact: true }).click();
+  await choose(page.getByLabel('Insert onto track'), 'screen');
+  await page.getByRole('button', { name: 'Insert source at playhead' }).click();
+  const screen = page.getByTestId('track-screen');
+  const inserted = screen.getByRole('button', { name: 'A conversation at 0.0 seconds' });
+  await inserted.click();
+  const fit = page.getByRole('combobox', { name: 'Clip fit' });
+  const slider = page.getByLabel('Clip scale', { exact: true });
+  const percent = page.getByLabel('Clip scale percent');
+  const output = page.getByRole('group', { name: 'Clip size' }).locator('output');
+  const undo = page.getByRole('button', { name: 'Undo', exact: true });
+  // The picture's x, y and width in stage units of the 880×700 screen mask.
+  const picture = async () => {
+    const mask = (await page.getByTestId('screen-mask').boundingBox())!;
+    const box = (await page.locator('[data-testid="screen-mask"] video').first().boundingBox())!;
+    const unit = mask.height / 700;
+    return [box.x - mask.x, box.y - mask.y, box.width].map((v) => v / unit);
+  };
+  // Within a stage unit plus 0.5%, the rounding of a 1x render.
+  const near = async (expected: number[]) => {
+    const actual = await picture();
+    expect(
+      actual.every((v, i) => Math.abs(v - expected[i]) <= 1 + Math.abs(expected[i]) / 200),
+      actual.join(', '),
+    ).toBe(true);
+  };
+  // The 270×480 portrait fits whole: 393.75 wide, centred, no crop.
+  await expectChoice(fit, 'contain');
+  await expect(output).toHaveText('100% of Fit');
+  await near([243.125, 0, 393.75]);
+  await slider.fill('50');
+  await expect(output).toHaveText('50% of Fit');
+  await near([341.5625, 175, 196.875]);
+  await page.waitForTimeout(1200);
+  await percent.fill('150');
+  await percent.press('Enter');
+  await expect(output).toHaveText('150% of Fit');
+  await near([144.6875, -175, 590.625]);
+  await page.waitForTimeout(1200);
+  await slider.focus();
+  await page.keyboard.press('ArrowLeft');
+  await expect(output).toHaveText('149% of Fit');
+  await expect(percent).toHaveValue('149');
+  // Text that is not a number puts the scale back.
+  await percent.fill('');
+  await percent.press('Enter');
+  await expect(percent).toHaveValue('149');
+  // Each gesture is one undo step.
+  for (const shown of ['150% of Fit', '50% of Fit', '100% of Fit']) {
+    await undo.click();
+    await expect(output).toHaveText(shown);
+  }
+  await choose(fit, 'cover');
+  await expect(output).toHaveText('100% of Fill');
+  expect(Math.abs((await picture())[2] - 880)).toBeLessThanOrEqual(1);
+  await page.waitForTimeout(1200);
+  await percent.fill('75');
+  await percent.press('Enter');
+  await expect(output).toHaveText('75% of Fill');
+
+  // The demo's own screen clip is another instance: legacy Fill at 100%, untouched.
+  await screen.getByRole('button', { name: 'Flower study at 14.0 seconds' }).click();
+  await expectChoice(fit, 'cover');
+  await expect(output).toHaveText('100% of Fill');
+  await page.getByTestId('track-voice').getByRole('button').first().click();
+  await expect(page.getByRole('group', { name: 'Clip size' })).toHaveCount(0);
+
+  const saving = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const { readFile } = await import('node:fs/promises');
+  const saved = await readFile((await (await saving).path())!, 'utf8');
+  const clips = JSON.parse(saved).clips as { assetId: string; fit?: string; scale?: number }[];
+  expect(clips.filter((c) => c.fit || c.scale)).toEqual([
+    expect.objectContaining({ fit: 'cover', scale: 0.75 }),
+  ]);
+  await page.reload();
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'sizing.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(saved),
+  });
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Project reopened');
+  await inserted.click();
+  await expectChoice(fit, 'cover');
+  await expect(output).toHaveText('75% of Fill');
+});

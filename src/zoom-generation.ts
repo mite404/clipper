@@ -9,11 +9,11 @@ import {
   type TrackDef,
   type Zoom,
 } from './timeline-model';
-import { coverRect, cropPosition, maskRect, type Layout } from './stage';
+import { clipRect, cropPosition, maskRect, type Layout } from './stage';
 
-function focus(source: ZoomAnchor, asset: Asset, layout: Layout) {
+function focus(source: ZoomAnchor, asset: Asset, layout: Layout, clip: Clip) {
   const mask = maskRect('screen', layout);
-  const cover = coverRect(mask, asset, cropPosition('screen', layout));
+  const cover = clipRect(mask, asset, cropPosition('screen', layout), clip); // → this piece's rect
   return {
     x: Math.max(0, Math.min(100, ((cover.x + source.x * cover.width) / mask.width) * 100)),
     y: Math.max(0, Math.min(100, ((cover.y + source.y * cover.height) / mask.height) * 100)),
@@ -46,7 +46,7 @@ function sourcePieces(
       id: pieces.length ? `${zoom.id}/${clip.id}` : zoom.id,
       start: clip.start + start - clip.offset,
       duration: end - start,
-      ...focus(source, asset, layout),
+      ...focus(source, asset, layout, clip),
     });
   }
   return pieces;

@@ -1,4 +1,4 @@
-import type { VisualRole } from './timeline-model';
+import type { Clip, VisualRole } from './timeline-model';
 
 /** Picture-in-picture corners for the camera inset, in reading order. */
 export const CORNERS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const;
@@ -89,20 +89,29 @@ export function cropPosition(track: VisualRole, layout: Layout): Point {
 }
 
 /**
- * Rectangle a source occupies when it cover-fits a mask, in mask-local pixels.
- * `scale` is mask pixels per source pixel.
- * @param position crop position in percent: 0 keeps the left or top edge, 100 the right or bottom
+ * Rectangle a clip occupies in its mask, in mask-local pixels. Fill is the cover crop at the crop
+ * position; Fit is the whole source, centred. Scale then grows or shrinks it about the mask centre.
+ * `scale` in the result is mask pixels per source pixel.
  */
-export function coverRect(mask: Size, source: Size, position: Point): Rect & { scale: number } {
-  const scale = Math.max(mask.width / source.width, mask.height / source.height);
-  const width = source.width * scale;
-  const height = source.height * scale;
+export function clipRect(
+  mask: Size,
+  source: Size,
+  position: Point,
+  { fit, scale = 1 }: Pick<Clip, 'fit' | 'scale'>,
+): Rect & { scale: number } {
+  const base =
+    fit === 'contain'
+      ? Math.min(mask.width / source.width, mask.height / source.height) // → mask px per source px
+      : Math.max(mask.width / source.width, mask.height / source.height);
+  const at = fit === 'contain' ? CENTER : position;
+  const grow = (side: number, size: number, percent: number) =>
+    side / 2 + ((side - size * base) * (percent / 100) - side / 2) * scale;
   return {
-    x: ((mask.width - width) * position.x) / 100,
-    y: ((mask.height - height) * position.y) / 100,
-    width,
-    height,
-    scale,
+    x: grow(mask.width, source.width, at.x),
+    y: grow(mask.height, source.height, at.y),
+    width: source.width * base * scale,
+    height: source.height * base * scale,
+    scale: base * scale,
   };
 }
 
@@ -118,7 +127,7 @@ export function cameraTransform(mask: Rect, camera: Camera = STILL): Affine {
 /**
  * Stage position of a source point after cover crop and zoom.
  * @param point normalized source position, 0 to 1 on each axis
- * @param cover the source's `coverRect` in this mask
+ * @param cover the source's `clipRect` in this mask
  */
 export function sourceToStage(point: Point, mask: Rect, cover: Rect, camera: Camera): Point {
   const transform = cameraTransform(mask, camera); // → mask-local to stage affine

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cameraTransform, coverRect, cropPosition, maskRect, sourceToStage, STAGE } from './stage';
+import { cameraTransform, clipRect, cropPosition, maskRect, sourceToStage, STAGE } from './stage';
 
 const layout = { radius: 22, screenX: 20, screenY: 70, cameraX: 80, cameraY: 25 };
 
@@ -75,7 +75,7 @@ describe('laying out the stage', () => {
       const swapped = { ...layout, swapped: true };
       expect(maskRect('screen', swapped, { width, height })).toEqual(screen);
       expect(maskRect('camera', swapped, { width, height })).toEqual(camera);
-      const cover = coverRect(screen, { width: 1760, height: 700 }, { x: 25, y: 50 });
+      const cover = clipRect(screen, { width: 1760, height: 700 }, { x: 25, y: 50 }, {});
       const point = sourceToStage({ x: 0.5, y: 0.5 }, screen, cover, { scale: 2, x: 10, y: 0 });
       expect(point.x / width).toBeCloseTo(1358 / 1280);
       expect(point.y / height).toBeCloseTo(0.5);
@@ -90,10 +90,11 @@ describe('laying out the stage', () => {
 
   it('cover-fits a wide source by cropping its sides at the crop position', () => {
     // 1920x1080 into 362x700: height limits, scale 700/1080, width 1244.44, overflow 882.44
-    const cover = coverRect(
+    const cover = clipRect(
       { width: 362, height: 700 },
       { width: 1920, height: 1080 },
       { x: 80, y: 25 },
+      {},
     );
     expect(cover.scale).toBeCloseTo(700 / 1080, 10);
     expect(cover.width).toBeCloseTo(1244.444, 3);
@@ -104,10 +105,11 @@ describe('laying out the stage', () => {
 
   it('cover-fits a tall source by cropping top and bottom', () => {
     // 720x1280 into 880x700: width limits, scale 880/720, height 1564.44, overflow 864.44
-    const cover = coverRect(
+    const cover = clipRect(
       { width: 880, height: 700 },
       { width: 720, height: 1280 },
       { x: 20, y: 70 },
+      {},
     );
     expect(cover.x).toBeCloseTo(0, 10);
     expect(cover.y).toBeCloseTo(-605.111, 3);
@@ -133,7 +135,7 @@ describe('projecting through the zoom camera', () => {
 
   it('maps a normalized source point through crop and zoom to stage pixels', () => {
     // 1760x700 source in the 880x700 mask: scale 1, 880px overflow, crop position 25% shifts -220
-    const cover = coverRect(mask, { width: 1760, height: 700 }, { x: 25, y: 50 });
+    const cover = clipRect(mask, { width: 1760, height: 700 }, { x: 25, y: 50 }, {});
     const still = { scale: 1, x: 0, y: 0 };
     expect(sourceToStage({ x: 0.5, y: 0.5 }, mask, cover, still)).toEqual({ x: 1050, y: 360 });
     expect(sourceToStage({ x: 0.125, y: 0 }, mask, cover, still)).toEqual({ x: 390, y: 10 });
@@ -142,5 +144,49 @@ describe('projecting through the zoom camera', () => {
       x: 830 + (1050 - 830) * 2 + 88,
       y: 360,
     });
+  });
+});
+
+describe('sizing a clip in its mask', () => {
+  const mask = { width: 880, height: 700 };
+  const wide = { width: 1080, height: 720 }; // 3:2, wider than the mask
+  const crop = { x: 20, y: 70 };
+
+  it('fits the whole source, centred, whatever the crop position', () => {
+    // 880/1080 limits: 880 x 586.67, letterboxed 56.67 above and below.
+    const fit = clipRect(mask, wide, crop, { fit: 'contain' });
+    expect(fit.x).toBeCloseTo(0, 6);
+    expect(fit.y).toBeCloseTo(56.667, 3);
+    expect(fit.width).toBeCloseTo(880, 6);
+    expect(fit.height).toBeCloseTo(586.667, 3);
+    expect(fit.width / fit.height).toBeCloseTo(1.5, 9);
+    // Half size stays centred: 440 x 293.33 at (220, 203.33).
+    const half = clipRect(mask, wide, crop, { fit: 'contain', scale: 0.5 });
+    expect([half.x, half.y, half.width, half.height].map((v) => +v.toFixed(3))).toEqual([
+      220, 203.333, 440, 293.333,
+    ]);
+  });
+
+  it('scales Fill about the mask centre', () => {
+    // 1920x1080 into 362x700 at crop (80, 25): cover is 1244.44 x 700 at x -705.96. At 150% it
+    // grows about the mask centre (181, 350): x 181 + (-705.96 - 181) * 1.5, y 350 - 350 * 1.5.
+    const fill = clipRect(
+      { width: 362, height: 700 },
+      { width: 1920, height: 1080 },
+      { x: 80, y: 25 },
+      { fit: 'cover', scale: 1.5 },
+    );
+    expect(fill.x).toBeCloseTo(-1149.433, 3);
+    expect(fill.y).toBeCloseTo(-175, 6);
+    expect(fill.width).toBeCloseTo(1866.667, 3);
+    expect(fill.height).toBeCloseTo(1050, 6);
+  });
+
+  it('scales with the render size and never by its own scale twice', () => {
+    // The same fit at 1.5x (HD) is the normalized rect times 1.5.
+    const hd = clipRect({ width: 1320, height: 1050 }, wide, crop, { fit: 'contain', scale: 0.5 });
+    expect([hd.x, hd.y, hd.width, hd.height].map((v) => +v.toFixed(3))).toEqual([
+      330, 305, 660, 440,
+    ]);
   });
 });

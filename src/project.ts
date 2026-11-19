@@ -4,6 +4,7 @@ import {
   DEFAULT_TRACKS,
   FPS,
   GAIN_LIMITS,
+  SCALE_LIMITS,
   OUTPUT_FPS,
   MAX_CHAPTER_TITLE,
   MAX_FRAMES,
@@ -138,6 +139,17 @@ function outputFps(value: unknown): OutputFps {
   const choice = OUTPUT_FPS.find((fps) => fps !== 'auto' && fps === value);
   if (!choice) throw new Error('outputFps must be 24, 29.97, 60, 100 or 120.');
   return choice;
+}
+
+// Clip fit and scale, optional so legacy clips keep their cover crop; scale 1 is written as none.
+function clipSizing(item: Record<string, unknown>, at: string): Pick<Clip, 'fit' | 'scale'> {
+  if (item.fit !== undefined && item.fit !== 'contain' && item.fit !== 'cover')
+    throw new Error(`${at}.fit must be contain or cover.`);
+  const scale =
+    item.scale === undefined
+      ? 1
+      : number(item.scale, `${at}.scale`, SCALE_LIMITS.min, SCALE_LIMITS.max);
+  return { ...(item.fit !== undefined && { fit: item.fit }), ...(scale !== 1 && { scale }) };
 }
 
 // Optional, so files without chapters open unchanged. Titles are trimmed; the list is put in order.
@@ -309,6 +321,7 @@ export function parseProject(text: string): {
       offset,
       ...(item.originId === undefined ? {} : { originId: string(item.originId, 'clip.originId') }),
       ...clipGain(item.gain, `clips[${i}].gain`),
+      ...clipSizing(item, `clips[${i}]`),
     };
   });
   unique(

@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { prepareFraming, framingAt } from './framing';
-import { cameraTransform, coverRect, cropPosition, maskRect, sourceToStage } from './stage';
+import { cameraTransform, clipRect, cropPosition, maskRect, sourceToStage } from './stage';
 import { cursorFixture } from './cursor.fixture';
 import type { Asset } from './media';
 import { DEFAULT_TRACKS, zoomCamera, type Clip, type TrackDef, type Zoom } from './timeline-model';
@@ -120,7 +120,7 @@ it('follows the front screen-role clip where V1 and V3 overlap, and V1 elsewhere
 // The scaled source must cover its mask on every frame: no empty mask at any edge.
 function coversMask(camera: { scale: number; x: number; y: number }, source: Asset) {
   const mask = maskRect('screen', layout);
-  const cover = coverRect(mask, source, cropPosition('screen', layout));
+  const cover = clipRect(mask, source, cropPosition('screen', layout), {});
   const view = cameraTransform(mask, camera);
   const left = view.x + cover.x * view.scale;
   const top = view.y + cover.y * view.scale;
@@ -164,6 +164,26 @@ it('stops a fixed or follow zoom at the source edge instead of revealing empty m
   expect(wideHold.y).toBeCloseTo(-20);
 });
 
+it('keeps a clip that leaves bars centred in its mask, with equal margins, under any zoom', () => {
+  const edge: Zoom = { id: 'e', start: 0, duration: 120, scale: 1.4, x: 83, y: 87 };
+  const hold = (source: Asset, sizing: Pick<Clip, 'fit' | 'scale'>, zoom: Zoom) => {
+    const clips = [{ ...clip, ...sizing, assetId: source.id }];
+    return framingAt([zoom], prepareFraming([zoom], clips, [source], layout, DEFAULT_TRACKS), 60);
+  };
+  const wide: Asset = { ...asset, id: 'w', width: 1920, height: 1080, cursor: undefined };
+  const square: Asset = { ...asset, cursor: undefined };
+  // Fit leaves bars above and below, so only y centres; x still stops at the source edge.
+  const fitted = hold(wide, { fit: 'contain' }, edge);
+  expect(fitted.x).toBeCloseTo(-20);
+  expect(fitted.y).toBeCloseTo(0);
+  // At 50% the clip leaves bars on all sides, wherever the zoom is focused.
+  for (const zoom of [edge, { ...edge, x: 50, y: 50, scale: 1.25 }]) {
+    const half = hold(square, { scale: 0.5 }, zoom);
+    expect(half.x).toBeCloseTo(0);
+    expect(half.y).toBeCloseTo(0);
+  }
+});
+
 it('moves the clamp only where the owning clip changes between sources of different aspect', () => {
   const edge: Zoom = { id: 'e', start: 0, duration: 120, scale: 1.4, x: 83, y: 87 };
   const square: Asset = { ...asset, cursor: undefined };
@@ -192,7 +212,7 @@ it('marks the mouse focus on the unzoomed frame, so a press maps straight to the
   for (const frame of [0, 60, 119])
     expect(framingAt([], paths, frame)).toEqual(zoomCamera([], frame));
   const mask = maskRect('screen', layout);
-  const cover = coverRect(mask, asset, cropPosition('screen', layout));
+  const cover = clipRect(mask, asset, cropPosition('screen', layout), {});
   const press = { x: mask.x + 0.83 * mask.width, y: mask.y + 0.87 * mask.height };
   const source = {
     x: (0.83 * mask.width - cover.x) / cover.width,

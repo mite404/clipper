@@ -1157,3 +1157,51 @@ describe('clip gain', () => {
     }
   });
 });
+
+describe('clip sizing', () => {
+  const sized = (sizing: Record<string, unknown>) => {
+    const value = project();
+    Object.assign(value.clips[0], sizing);
+    return JSON.stringify(value);
+  };
+
+  it('reopens fit and scale, accepts both scale limits, and keeps no keys for a legacy clip', () => {
+    for (const scale of [0.1, 0.55, 4])
+      expect(parseProject(sized({ fit: 'contain', scale })).edit.clips[0]).toMatchObject({
+        fit: 'contain',
+        scale,
+      });
+    expect(parseProject(sized({ fit: 'cover' })).edit.clips[0].fit).toBe('cover');
+    const legacy = parseProject(JSON.stringify(project())).edit.clips[0];
+    expect('fit' in legacy || 'scale' in legacy).toBe(false);
+    expect('scale' in parseProject(sized({ scale: 1 })).edit.clips[0]).toBe(false);
+  });
+
+  it.each([
+    { fit: 'stretch' },
+    { fit: null },
+    { scale: 0.09 },
+    { scale: 4.01 },
+    { scale: 0 },
+    { scale: -1 },
+    { scale: '1.5' },
+    { scale: null },
+  ])('refuses %j', (sizing) => {
+    expect(() => parseProject(sized(sizing))).toThrow(/fit|scale/);
+  });
+
+  it('saves sizing and a second save is byte-identical', async () => {
+    const url = URL.createObjectURL(new Blob([new Uint8Array([0, 1])], { type: 'video/mp4' }));
+    try {
+      const next = { ...edit, clips: [{ ...edit.clips[0], fit: 'contain' as const, scale: 0.5 }] };
+      const first = await (await serializeProject(next, [{ ...asset, url }], [])).file.text();
+      expect(JSON.parse(first).clips[0]).toMatchObject({ fit: 'contain', scale: 0.5 });
+      const again = parseProject(first).edit;
+      expect(await (await serializeProject(again, [{ ...asset, url }], [])).file.text()).toBe(
+        first,
+      );
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  });
+});

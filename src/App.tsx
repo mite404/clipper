@@ -79,6 +79,10 @@ import {
   removeChapter,
   retitleChapter,
   setGain,
+  setSizing,
+  scaleFromText,
+  initialSizing,
+  SCALE_LIMITS,
   shownChapters,
   timecode,
   trackNumber,
@@ -673,6 +677,78 @@ const LAYOUTS = {
   pip: { name: 'Picture in picture', detail: 'Camera inset over the screen' },
 };
 
+// What a clip's fit is called, and what its scale is a percent of.
+const FITS = { contain: 'Fit', cover: 'Fill' };
+
+// The selected visual clip's fit and scale. The slider is one gesture through change's grouping;
+// the percent field commits on Enter or blur, and text that is not a number puts the scale back.
+function ClipSize({
+  clip,
+  onSize,
+}: {
+  clip: Clip;
+  onSize: (sizing: Pick<Clip, 'fit' | 'scale'>) => void;
+}) {
+  const percent = Math.round((clip.scale ?? 1) * 100);
+  const [draft, setDraft] = useState(String(percent));
+  const [previous, setPrevious] = useState(percent);
+  if (previous !== percent) {
+    setPrevious(percent);
+    setDraft(String(percent));
+  }
+  const fit = clip.fit ?? 'cover';
+  return (
+    <div className="inspector-section" role="group" aria-label="Clip size">
+      <h3>Clip size</h3>
+      <label className="slider-label">
+        Sizing
+        <Choice
+          label="Clip fit"
+          value={fit}
+          options={[
+            { value: 'contain', label: FITS.contain },
+            { value: 'cover', label: `${FITS.cover} (crop)` },
+          ]}
+          onChange={(next) => onSize({ fit: next })}
+        />
+      </label>
+      <label className="slider-label">
+        Scale{' '}
+        <output>
+          {percent}% of {FITS[fit]}
+        </output>
+        <input
+          aria-label="Clip scale"
+          type="range"
+          min={SCALE_LIMITS.min * 100}
+          max={SCALE_LIMITS.max * 100}
+          value={percent}
+          onChange={(e) => onSize({ scale: Number(e.target.value) / 100 })}
+        />
+      </label>
+      <div className="crop-controls">
+        <span>Scale (%)</span>
+        <input
+          aria-label="Clip scale percent"
+          type="number"
+          min={SCALE_LIMITS.min * 100}
+          max={SCALE_LIMITS.max * 100}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur();
+          }}
+          onBlur={() => {
+            const scale = scaleFromText(draft);
+            if (scale !== undefined && Math.round(scale * 100) !== percent) onSize({ scale });
+            setDraft(String(percent));
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 // The layout choice, and in Side by side the side swap; PiP keeps swapped but never applies it.
 function LayoutChoice({
   layout,
@@ -1019,6 +1095,7 @@ export function App() {
   const gainable =
     edit.tracks.find((t) => t.id === selectedClip?.track)?.kind === 'audio' &&
     !!assets.find((a) => a.id === selectedClip?.assetId)?.hasAudio;
+  const selectedVisual = edit.tracks.find((t) => t.id === selectedClip?.track)?.kind === 'visual';
   const selectedChapter = chapters.find((chapter) => chapterId(chapter) === selected);
   const cursorAsset = selectedClip
     ? screenTracks(edit.tracks).includes(selectedClip.track)
@@ -1560,6 +1637,7 @@ export function App() {
         start: frameRef.current,
         duration: length,
         offset,
+        ...initialSizing(edit.tracks.find((t) => t.id === track)!),
       };
       const next = { ...edit, clips: insertClip(edit.clips, clip, frameRef.current) };
       const failure = stillInsertionError(asset, next, assets);
@@ -2261,6 +2339,19 @@ export function App() {
                 }}
               />
             </section>
+          )}
+          {selectedClip && selectedVisual && (
+            <ClipSize
+              clip={selectedClip}
+              onSize={(sizing) =>
+                change({
+                  ...edit,
+                  clips: edit.clips.map((c) =>
+                    c.id === selectedClip.id ? setSizing(c, sizing) : c,
+                  ),
+                })
+              }
+            />
           )}
           {selectedClip && gainable && (
             <ClipGain

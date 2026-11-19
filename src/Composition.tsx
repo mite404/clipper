@@ -9,7 +9,7 @@ import {
 } from 'remotion';
 import { useMemo } from 'react';
 import type { Asset } from './media';
-import { cameraTransform, coverRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
+import { cameraTransform, clipRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
 import {
   gainFactor,
   paintOrder,
@@ -84,7 +84,7 @@ export function Composition({ clips, assets, zooms, layout, tracks, muted }: Com
                 .map((clip) => {
                   const asset = assets.find((a) => a.id === clip.assetId);
                   if (!asset) return null;
-                  const cover = coverRect(mask, asset, crop);
+                  const cover = clipRect(mask, asset, crop, clip);
                   const style = {
                     position: 'absolute' as const,
                     left: cover.x,

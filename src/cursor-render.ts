@@ -1,6 +1,6 @@
 import type { Asset } from './media';
 import { covers, paintOrder, sourceFrame, FPS, type Clip, type TrackDef } from './timeline-model';
-import { coverRect, cropPosition, maskRect, STAGE, type Layout, type Rect } from './stage';
+import { clipRect, cropPosition, maskRect, STAGE, type Layout, type Rect } from './stage';
 import { cursorAt, TOUCH_CURSOR_ASSET } from './cursor-motion';
 
 export type CursorFrame = Rect & {
@@ -98,7 +98,7 @@ export function cursorFrame(
     ? cursorAt(source.cursor, Math.max(range.startMs, sourceMs - 100), undefined, range)
     : undefined;
   const mask = maskRect('screen', layout, renderSize);
-  const cover = coverRect(mask, source, cropPosition('screen', layout));
+  const cover = clipRect(mask, source, cropPosition('screen', layout), clip);
   const size = cover.scale * (source.cursor.settings?.size ?? 1);
   return {
     track: clip.track,

@@ -16,7 +16,7 @@ import {
   type InputAudioTrack,
 } from 'mediabunny';
 import { openMedia, type Asset } from './media';
-import { cameraTransform, coverRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
+import { cameraTransform, clipRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
 import {
   DEFAULT_TRACKS,
   FPS,
@@ -146,7 +146,12 @@ const isVisual = (tracks: TrackDef[], clip: Clip) =>
   tracks.some((t) => t.id === clip.track && t.kind === 'visual');
 
 // A decoded picture for one video track at the frame being drawn.
-type Layer = { track: Track; image: HTMLCanvasElement | OffscreenCanvas | ImageBitmap };
+// A decoded picture with the sizing of the clip it came from, never looked up by source.
+type Layer = {
+  track: Track;
+  image: HTMLCanvasElement | OffscreenCanvas | ImageBitmap;
+  sizing: Pick<Clip, 'fit' | 'scale'>;
+};
 
 // Paint one composition frame in stage pixels: backdrop, then each visual track back to front in
 // its role's rect, crop and zoom. Anything that must move with the screen, such as a recorded
@@ -177,7 +182,7 @@ function drawFrame(
     context.scale(view.scale, view.scale);
     for (const layer of layers) {
       if (layer.track !== id) continue;
-      const cover = coverRect(mask, layer.image, cropPosition(role, layout)); // → local rect
+      const cover = clipRect(mask, layer.image, cropPosition(role, layout), layer.sizing); // → local rect
       context.drawImage(layer.image, cover.x, cover.y, cover.width, cover.height);
     }
     if (cursor?.track === id) {
@@ -314,7 +319,7 @@ export async function renderFrameImage({
     for (const clip of visible) {
       const image = await clipImage(inputs, images, assets, clip, frame);
       check();
-      if (image) layers.push({ track: clip.track, image });
+      if (image) layers.push({ track: clip.track, image, sizing: clip });
     }
     context.setTransform(width / STAGE.width, 0, 0, height / STAGE.height, 0, 0);
     const paths = prepareFraming(zooms, clips, assets, layout, tracks);
@@ -478,12 +483,12 @@ export async function renderVideo({
         const { clip } = visual;
         if (!covers(clip, frame)) continue;
         if (visual.kind === 'image') {
-          layers.push({ track: clip.track, image: visual.image });
+          layers.push({ track: clip.track, image: visual.image, sizing: clip });
           continue;
         }
         const sample = await nextCanvas(visual.iterator, assets, clip, frame);
         check();
-        if (sample) layers.push({ track: clip.track, image: sample.canvas });
+        if (sample) layers.push({ track: clip.track, image: sample.canvas, sizing: clip });
       }
       drawFrame(
         context,

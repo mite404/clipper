@@ -195,3 +195,15 @@ it('resizes a zoom from either edge over its neighbours, never under the minimum
     duration: 170,
   });
 });
+
+it('focuses each split piece through its own sizing, not one shared by the source', () => {
+  const [first, second] = splitClip(clips, 'take', 100);
+  const sized = [first, { ...second, fit: 'contain' as const, scale: 0.5 }];
+  const [before, after] = resolveZooms([anchored[0]], sized, [asset], layout, DEFAULT_TRACKS);
+  // The first piece keeps the legacy cover focus.
+  expect([before.x, before.y]).toEqual([anchored[0].x, anchored[0].y]);
+  // 1600×1000 fit in 880×700 is 880×550; at 50% it is 440×275 at (220, 212.5), so source
+  // (0.75, 0.2) lands at (550, 267.5): 62.5% and 38.21% of the mask.
+  expect(after.x).toBeCloseTo(62.5, 6);
+  expect(after.y).toBeCloseTo(38.2142857, 6);
+});

@@ -16,6 +16,10 @@ export type Clip = {
   originId?: string;
   /** Clip gain in dB, 0.5 dB steps within GAIN_LIMITS; absent means 0. */
   gain?: number;
+  /** Fit shows the whole source in its mask, cover fills and crops; absent is legacy cover. */
+  fit?: 'contain' | 'cover';
+  /** Size relative to the fit, within SCALE_LIMITS in 0.01 steps; absent means 1. */
+  scale?: number;
 };
 export type Zoom = {
   id: string;
@@ -111,6 +115,32 @@ export function setGain(clip: Clip, db: number): Clip {
   const { gain: _previous, ...rest } = clip;
   const snapped = snapGain(db);
   return snapped === 0 ? rest : { ...rest, gain: snapped };
+}
+
+/** The clip scale range and step, as a factor of the fit: 10% to 400% in 1% steps. */
+export const SCALE_LIMITS = { min: 0.1, max: 4, step: 0.01 };
+
+/** Sizing a new clip takes from its track: masked roles fit, Background fills, audio has none. */
+export function initialSizing(track: TrackDef): Pick<Clip, 'fit'> {
+  if (track.kind === 'audio') return {};
+  return { fit: track.role === 'background' ? 'cover' : 'contain' };
+}
+
+/** The clip scale a percent field's text names; undefined when it names no number. */
+export function scaleFromText(text: string): number | undefined {
+  const percent = text.trim() === '' ? NaN : Number(text);
+  return Number.isFinite(percent) ? percent / 100 : undefined;
+}
+
+/** The clip with new sizing; scale snaps to 1% within the limits, and 100% is stored as none. */
+export function setSizing(clip: Clip, sizing: Pick<Clip, 'fit' | 'scale'>): Clip {
+  const { scale: _previous, ...rest } = { ...clip, ...sizing };
+  const factor = sizing.scale ?? clip.scale ?? 1;
+  const snapped = Math.min(
+    SCALE_LIMITS.max,
+    Math.max(SCALE_LIMITS.min, Math.round(factor * 100) / 100),
+  );
+  return snapped === 1 ? rest : { ...rest, scale: snapped };
 }
 
 /** A named point on the timeline, listed in order and never two at one frame. */
@@ -582,6 +612,7 @@ export function placeMedia(
     start: Math.max(0, Math.round(frame)),
     duration: media.duration,
     offset: 0,
+    ...initialSizing(track),
   };
   // Save refuses an edit past the cap, so placement never reports success for one.
   if (clip.start + clip.duration > MAX_FRAMES)
