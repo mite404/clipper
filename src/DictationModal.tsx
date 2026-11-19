@@ -1,6 +1,6 @@
 // The assistant's dictation modal (CLIP-49), after yaklabs ADR-028: typing pauses behind a modal
 // with a centre-playhead waveform, a live transcript preview and a microphone picker. Esc cancels;
-// Enter or Done inserts. Words come from Whisper in the page (src/dictation.ts).
+// Enter or Done inserts. Words come from Whisper in the page (src/dictation.ts), next to this file.
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Choice } from './components';
 import { formatElapsed, record, type AudioDevice } from './dictation';

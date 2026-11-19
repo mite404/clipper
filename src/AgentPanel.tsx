@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { Mic, SendHorizontal, X } from 'lucide-react';
 import { Choice, IconButton } from './components';
-import { DictationModal } from './Dictation';
+import { DictationModal } from './DictationModal';
 import { appendDictation } from './dictation';
 import {
   agent,
