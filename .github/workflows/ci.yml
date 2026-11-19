@@ -14,7 +14,9 @@ env:
 jobs:
   quality:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # Headroom for the growing UI suite: CLIP-49's agent/transcribe specs took test:ui past 20
+    # minutes and the job died on this cap with every check green. Hang guards stay per step.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
