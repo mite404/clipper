@@ -52,22 +52,34 @@ export async function transcribe(
   signal.throwIfAborted();
   const total = samples.length / SAMPLE_RATE;
   onProgress('Loading transcription model', 0);
+  const chunks = await transcribeSamples(samples, signal, (seconds) =>
+    onProgress(`Transcribing ${clock(seconds)} of ${clock(total)}`, seconds / total),
+  );
+  return { model: WHISPER.label, segments: segmentsFrom(chunks, total) };
+}
+
+/**
+ * Transcribe 16 kHz mono samples in a fresh Whisper worker, which the samples move into.
+ * @param onProgress source seconds done, as each step finishes
+ * @throws the signal's reason when cancelled, or an Error when the model fails
+ */
+export async function transcribeSamples(
+  samples: Float32Array,
+  signal: AbortSignal,
+  onProgress: (seconds: number) => void = () => {},
+): Promise<TranscriptSegment[]> {
   const worker = new Worker(new URL('./transcribe.worker.ts', import.meta.url), { type: 'module' });
   try {
-    const chunks = await new Promise<TranscriptSegment[]>((resolve, reject) => {
+    return await new Promise<TranscriptSegment[]>((resolve, reject) => {
       signal.addEventListener('abort', () => reject(signal.reason), { once: true });
       worker.onerror = (event) => reject(new Error(event.message || 'The model failed to start.'));
       worker.onmessage = ({ data }: MessageEvent<WorkerMessage>) => {
         if (data.type === 'error') reject(new Error(data.message));
         else if (data.type === 'done') resolve(data.chunks);
-        else {
-          const seconds = data.type === 'progress' ? data.seconds : 0;
-          onProgress(`Transcribing ${clock(seconds)} of ${clock(total)}`, seconds / total);
-        }
+        else onProgress(data.type === 'progress' ? data.seconds : 0);
       };
       worker.postMessage(samples, [samples.buffer]);
     });
-    return { model: WHISPER.label, segments: segmentsFrom(chunks, total) };
   } finally {
     worker.terminate();
   }
