@@ -382,3 +382,51 @@ from the "Decisions for the owner" table in `docs/master-tickets.md`. Commit lin
   `x.com/intent/post`. Deploying needs the owner's go-ahead.
 - Why: A fragment never reaches the server, so sharing a preview stays upload-free (ADR-1, ADR-32).
 - Commit: pending PUB-2
+
+## ADR-35: No WebMCP actions for agent testing
+
+- Date: 2026-11-19
+- Decision: Clipper does not register WebMCP (in-page agent) actions such as "trim clip" or "add
+  zoom". Browser agents use the page as a person does. Revisit if agent-driven exploratory testing
+  becomes routine.
+- Why: Playwright specs stay the regression gate. An agent spends tokens on every run, reading a
+  snapshot, reasoning and acting at each step, while a spec costs tokens once to write. Named
+  actions also skip the real pointer path, where UI-15's drag and lost-capture bugs were found.
+  Agents still help with one-off exploratory passes on new features; turn what they find into specs.
+  Privacy is not a reason against it: the owner accepts a remote model seeing control labels and
+  visible text, since no licensed media pixels are involved.
+- Commit: pending the master update that records it
+
+## ADR-36: No Clipper MCP server for agent testing
+
+- Date: 2026-11-19
+- Decision: No MCP server is built to drive or inspect Clipper for agents. The verify-clipper skill
+  and verify.mjs remain the agent's way in. Revisit with ADR-35.
+- Why: Same trade-off as ADR-35. It would be a second test surface to build and maintain beside the
+  Playwright suite, with higher per-run token cost and no regression coverage the specs lack.
+- Commit: pending the master update that records it
+
+## ADR-37: Further chapter work is deferred
+
+- Date: 2026-11-19
+- Decision: CLIP-29 chapter markers stay as delivered. More chapter work, such as exporting chapters
+  into files or richer flag editing, gets no ticket or grant for now. Revisit when the owner raises
+  chapters again.
+- Why: The owner rates chapters a low-priority feature, so lane time goes to editing, composition
+  and export work first.
+- Commit: pending the master update that records it
+
+## ADR-38: An in-app assistant edits through ui-sdk's agent bridge
+
+- Date: 2026-11-19
+- Decision: Clipper gets an in-app editing assistant. It reads and acts through ui-sdk's
+  `createAgent` bridge in the page, and every edit goes through `App.tsx` `change()`, so locks apply
+  and each action is its own undo step. Models are reached through one OpenAI-compatible chat
+  endpoint: OpenRouter (Anthropic, OpenAI or Moonshot models) with the owner's spend-limited key, or
+  a local Ollama server on the same machine. The compose box takes dictation, transcribed in the
+  browser. ADR-35 and ADR-36 still hold: no WebMCP and no MCP server, and Playwright stays the
+  regression gate.
+- Why: The owner cuts demo and tutorial videos and wants to ask for edits in words. Media, frames,
+  audio and the project never leave the browser (ADR-1). The model sees only text: control names,
+  values and actions, plus transcript segments the owner sends with a request.
+- Commit: pending CLIP-49
