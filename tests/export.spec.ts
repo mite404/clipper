@@ -1320,6 +1320,142 @@ test.describe('no mask shadow', () => {
   });
 });
 
+// A red-to-blue gradient at 90 degrees runs left to right, so a stage x holds x / 1280 of blue. The
+// shadow's blur and drop scale with the render size, so 3840 must agree with 1920 at the same
+// stage points, and the exported frame with Copy frame.
+for (const width of [1920, 3840])
+  test(`a gradient backdrop and panel shadow agree across Copy frame and export at ${width}px`, async ({
+    page,
+  }, info) => {
+    test.setTimeout(240000);
+    await page.goto('/');
+    await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', {
+      timeout: 30000,
+    });
+    const result = await page.evaluate(
+      async ({ width, points }) => {
+        const mediaModule = '/src/media.ts',
+          exportModule = '/src/export.ts',
+          modelModule = '/src/timeline-model.ts';
+        const { readMedia } = await import(mediaModule);
+        const { renderFrameImage, renderVideo } = await import(exportModule);
+        const { DEFAULT_TRACKS } = await import(modelModule);
+        const canvas = document.createElement('canvas');
+        canvas.width = 320;
+        canvas.height = 180;
+        const g = canvas.getContext('2d')!;
+        g.fillStyle = '#ffffff';
+        g.fillRect(0, 0, 320, 180);
+        const png = await new Promise<Blob>((r) => canvas.toBlob((b) => r(b!), 'image/png'));
+        const asset = await readMedia(png, 'white.png');
+        const edit = {
+          tracks: DEFAULT_TRACKS,
+          clips: [
+            { id: 'w', assetId: asset.id, track: 'screen', start: 0, duration: 30, offset: 0 },
+          ],
+          zooms: [],
+          assets: [asset],
+        };
+        const layout = {
+          radius: 22,
+          screenX: 50,
+          screenY: 50,
+          cameraX: 50,
+          cameraY: 50,
+          fill: '#ff0000',
+          fillTo: '#0000ff',
+          fillAngle: 90,
+        };
+        const read = async (blob: Blob) => {
+          const bitmap = await createImageBitmap(blob);
+          const c = document.createElement('canvas');
+          c.width = bitmap.width;
+          c.height = bitmap.height;
+          const context = c.getContext('2d')!;
+          context.drawImage(bitmap, 0, 0);
+          const k = bitmap.width / 1280;
+          const pixels = points.map(([x, y]: number[]) =>
+            Array.from(context.getImageData(Math.round(x * k), Math.round(y * k), 1, 1).data).slice(
+              0,
+              3,
+            ),
+          );
+          bitmap.close();
+          return pixels;
+        };
+        const copy = async (shadow: number | undefined, size: number) =>
+          read(
+            await renderFrameImage({
+              ...edit,
+              layout: { ...layout, ...(shadow && { shadow }) },
+              width: size,
+              frame: 1,
+            }),
+          );
+        const video = await renderVideo({
+          ...edit,
+          layout: { ...layout, shadow: 100 },
+          muted: [],
+          width,
+          format: 'mp4',
+          onProgress: () => {},
+        });
+        return {
+          flat: await copy(undefined, width),
+          shaded: await copy(100, width),
+          reference: await copy(100, 1920),
+          video: Array.from(new Uint8Array(await video.arrayBuffer())),
+        };
+      },
+      { width, points: PROBES },
+    );
+    const file = info.outputPath('gradient-shadow.mp4');
+    writeFileSync(file, Buffer.from(result.video));
+    inspectExport(file, width, 'mp4', false);
+    const exported = PROBES.map(([x, y]) =>
+      Array.from(
+        execFileSync('ffmpeg', [
+          '-v',
+          'error',
+          '-ss',
+          '0.033',
+          '-i',
+          file,
+          '-frames:v',
+          '1',
+          '-vf',
+          `format=rgb24,crop=1:1:${Math.round((x * width) / 1280)}:${Math.round((y * width) / 1280)}`,
+          '-f',
+          'rawvideo',
+          '-',
+        ]),
+      ),
+    );
+    console.log(
+      `gradient-shadow ${width}`,
+      JSON.stringify(result.shaded),
+      JSON.stringify(exported),
+    );
+    const close = (a: number[], b: number[], tolerance: number) =>
+      a.every((value, i) => Math.abs(value - b[i]) <= tolerance);
+    PROBES.forEach(([x], i) => {
+      const expected = [255 * (1 - x / 1280), 0, (255 * x) / 1280];
+      expect(
+        close(result.flat[i], expected, 3),
+        `flat ${i} ${JSON.stringify(result.flat[i])}`,
+      ).toBe(true);
+      expect(close(result.shaded[i], result.reference[i], 6), `scale ${i}`).toBe(true);
+      expect(
+        close(exported[i], result.shaded[i], 14),
+        `export ${i} ${JSON.stringify(exported[i])}`,
+      ).toBe(true);
+    });
+    // The gap sits between two panels' shadows, which darken it by tens of levels.
+    expect(result.shaded[2][0] + result.shaded[2][2]).toBeLessThan(
+      result.flat[2][0] + result.flat[2][2] - 40,
+    );
+  });
+
 // Chrome blocks repeat downloads and Safari asks first unless the user has just acted, so the
 // rendered video must download from the user's own click, never from code after a long render.
 test('hands the rendered video over from a Save video click, with fresh user activation', async ({

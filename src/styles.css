@@ -1629,6 +1629,32 @@ p {
   color: var(--muted-foreground);
   font-size: 9px;
 }
+.backdrop-color {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--muted-foreground);
+  margin: 5px 0 14px;
+}
+.backdrop-color > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.backdrop-color input[type='color'] {
+  width: 28px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  background: none;
+  cursor: pointer;
+}
+.backdrop-color output {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+}
 .crop-controls {
   display: flex;
   align-items: center;

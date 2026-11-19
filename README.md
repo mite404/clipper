@@ -43,6 +43,8 @@ service holds 5173, so beside it run `npm run dev -- --port <free port>`.
   muted track stays silent. The timeline waveform grows and shrinks with it.
 - Chapter markers: `M` marks one at the playhead, shown as ruler flags you can click, rename in the
   Inspector, delete, save with the project and copy as a YouTube-style list.
+- Composition background: a solid colour or a gradient, and a soft shadow under the panels, in the
+  preview, Copy frame, export and saved project.
 - Timed screen zooms with editable scale, manually marked mouse focus, and smooth in/hold/out.
 - Portable project save/reopen with embedded original media and no relinking requirement.
 - Local rendered video export at 1920×1080 or 3840×2160 as MP4, MOV or WebM, chosen in the export

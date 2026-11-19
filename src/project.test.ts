@@ -224,6 +224,22 @@ describe('portable project parsing', () => {
     });
   });
 
+  it('reads the backdrop and panel shadow when present, and writes none by default', () => {
+    expect(parseProject(JSON.stringify(project())).edit.layout).toEqual(project().layout);
+    const solid = project();
+    Object.assign(solid.layout, { fill: '#336699', shadow: 40 });
+    expect(parseProject(JSON.stringify(solid)).edit.layout).toMatchObject({
+      fill: '#336699',
+      shadow: 40,
+    });
+    const gradient = project();
+    Object.assign(gradient.layout, { fill: '#3b2a6b', fillTo: '#172324', fillAngle: 360 });
+    expect(parseProject(JSON.stringify(gradient)).edit.layout).toMatchObject({
+      fillTo: '#172324',
+      fillAngle: 360,
+    });
+  });
+
   it('accepts zooms that touch without overlapping', () => {
     const value = project();
     value.zooms.push({ ...value.zooms[0], id: 'second', start: 30, duration: 6 });
@@ -397,6 +413,48 @@ describe('portable project parsing', () => {
         Object.assign(p.layout, { mode: 'pip', corner: 'middle' });
       },
       /layout\.corner/i,
+    ],
+    [
+      'invalid backdrop colour',
+      (p: ReturnType<typeof project>) => {
+        Object.assign(p.layout, { fill: 'red' });
+      },
+      /layout\.fill/i,
+    ],
+    [
+      'invalid gradient end',
+      (p: ReturnType<typeof project>) => {
+        Object.assign(p.layout, { fill: '#000000', fillTo: '#12345' });
+      },
+      /layout\.fillTo/i,
+    ],
+    [
+      'gradient end without a start',
+      (p: ReturnType<typeof project>) => {
+        Object.assign(p.layout, { fillTo: '#000000' });
+      },
+      /layout\.fillTo/i,
+    ],
+    [
+      'gradient angle without a gradient',
+      (p: ReturnType<typeof project>) => {
+        Object.assign(p.layout, { fill: '#000000', fillAngle: 90 });
+      },
+      /layout\.fillAngle/i,
+    ],
+    [
+      'gradient angle out of range',
+      (p: ReturnType<typeof project>) => {
+        Object.assign(p.layout, { fill: '#000000', fillTo: '#ffffff', fillAngle: 361 });
+      },
+      /layout\.fillAngle/i,
+    ],
+    [
+      'panel shadow out of range',
+      (p: ReturnType<typeof project>) => {
+        Object.assign(p.layout, { shadow: 101 });
+      },
+      /layout\.shadow/i,
     ],
     [
       'invalid zoom focus',

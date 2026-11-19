@@ -16,7 +16,19 @@ import {
   type InputAudioTrack,
 } from 'mediabunny';
 import { openMedia, type Asset } from './media';
-import { cameraTransform, clipRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
+import {
+  DEFAULT_FILL,
+  DEFAULT_GRADIENT,
+  STAGE,
+  cameraTransform,
+  clipRect,
+  cropPosition,
+  gradientLine,
+  maskRect,
+  panelShadow,
+  type Layout,
+  type Rect,
+} from './stage';
 import {
   DEFAULT_TRACKS,
   FPS,
@@ -32,6 +44,7 @@ import {
   type OutputFps,
   type Track,
   type TrackDef,
+  type VisualRole,
   type Zoom,
 } from './timeline-model';
 import { cursorDrawing, decodeCursorImages } from './cursor-render';
@@ -156,6 +169,47 @@ type Layer = {
 // Paint one composition frame in stage pixels: backdrop, then each visual track back to front in
 // its role's rect, crop and zoom. Anything that must move with the screen, such as a recorded
 // cursor, is drawn inside its clip.
+// The stage behind the panels: the layout's colour or gradient over the whole stage.
+function paintBackdrop(context: CanvasRenderingContext2D, layout: Layout): void {
+  const { fill = DEFAULT_FILL, fillTo, fillAngle = DEFAULT_GRADIENT.angle } = layout;
+  if (fillTo === undefined) context.fillStyle = fill;
+  else {
+    const { x0, y0, x1, y1 } = gradientLine(fillAngle, STAGE);
+    const gradient = context.createLinearGradient(x0, y0, x1, y1);
+    gradient.addColorStop(0, fill);
+    gradient.addColorStop(1, fillTo);
+    context.fillStyle = gradient;
+  }
+  context.fillRect(0, 0, STAGE.width, STAGE.height);
+}
+
+// A panel's drop shadow, only outside its rounded box as CSS `box-shadow` has it. Canvas shadow
+// sizes ignore the transform, so they take the render scale.
+function paintShadow(
+  context: CanvasRenderingContext2D,
+  role: VisualRole,
+  mask: Rect,
+  layout: Layout,
+): void {
+  const scale = context.getTransform().a; // → render pixels per stage pixel
+  const shadow = role === 'background' ? undefined : panelShadow(layout.shadow, scale);
+  if (!shadow) return;
+  const radius = Math.max(0, layout.radius);
+  context.save();
+  context.beginPath();
+  context.rect(0, 0, STAGE.width, STAGE.height);
+  context.roundRect(mask.x, mask.y, mask.width, mask.height, radius);
+  context.clip('evenodd');
+  context.beginPath();
+  context.roundRect(mask.x, mask.y, mask.width, mask.height, radius);
+  context.shadowColor = shadow.color;
+  context.shadowBlur = shadow.blur;
+  context.shadowOffsetY = shadow.offsetY;
+  context.fillStyle = '#000';
+  context.fill();
+  context.restore();
+}
+
 function drawFrame(
   context: CanvasRenderingContext2D,
   layout: Layout,
@@ -164,10 +218,10 @@ function drawFrame(
   layers: Layer[],
   cursor: ReturnType<typeof cursorDrawing>,
 ): void {
-  context.fillStyle = '#172324';
-  context.fillRect(0, 0, STAGE.width, STAGE.height);
+  paintBackdrop(context, layout);
   for (const { id, role, placeholder } of paintOrder(tracks, layout.mode === 'pip')) {
     const mask = maskRect(role, layout); // → stage rect
+    paintShadow(context, role, mask, layout);
     context.save();
     context.beginPath();
     const radius = role === 'background' ? 0 : Math.max(0, layout.radius);

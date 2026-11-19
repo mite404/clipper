@@ -1,4 +1,4 @@
-import { CORNERS, type Corner, type Layout } from './stage';
+import { CORNERS, SHADOW_MAX, type Corner, type Layout } from './stage';
 import { openMedia, type Asset } from './media';
 import {
   DEFAULT_TRACKS,
@@ -99,6 +99,31 @@ function range(start: number, duration: number, field: string) {
   if (start + duration > MAX_FRAMES) throw new Error(`${field} range exceeds 24 hours.`);
 }
 
+const HEX = /^#[0-9a-f]{6}$/i;
+
+function hex(value: unknown, field: string): string {
+  if (typeof value !== 'string' || !HEX.test(value)) throw new Error(`${field} must be #rrggbb.`);
+  return value;
+}
+
+// The optional backdrop and shadow: each absent means today's look, and a gradient's end and angle
+// need the start and the end before them.
+function backdropOf(settings: Record<string, unknown>): Partial<Layout> {
+  const { fill, fillTo, fillAngle, shadow } = settings;
+  if (fillTo !== undefined && fill === undefined)
+    throw new Error('layout.fillTo needs layout.fill.');
+  if (fillAngle !== undefined && fillTo === undefined)
+    throw new Error('layout.fillAngle needs layout.fillTo.');
+  return {
+    ...(fill !== undefined && { fill: hex(fill, 'layout.fill') }),
+    ...(fillTo !== undefined && { fillTo: hex(fillTo, 'layout.fillTo') }),
+    ...(fillAngle !== undefined && {
+      fillAngle: number(fillAngle, 'layout.fillAngle', 0, 360),
+    }),
+    ...(shadow !== undefined && { shadow: number(shadow, 'layout.shadow', 0, SHADOW_MAX) }),
+  };
+}
+
 // The composition settings. Older files omit swapped; Side by side is stored as no mode.
 function layoutOf(value: unknown): Layout {
   const settings = object(value, 'layout');
@@ -122,6 +147,7 @@ function layoutOf(value: unknown): Layout {
       throw new Error('layout.corner must be top-left, top-right, bottom-left or bottom-right.');
     layout.corner = settings.corner as Corner;
   }
+  Object.assign(layout, backdropOf(settings));
   return layout;
 }
 

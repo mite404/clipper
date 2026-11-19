@@ -9,7 +9,16 @@ import {
 } from 'remotion';
 import { useMemo } from 'react';
 import type { Asset } from './media';
-import { cameraTransform, clipRect, cropPosition, maskRect, STAGE, type Layout } from './stage';
+import {
+  cameraTransform,
+  clipRect,
+  cropPosition,
+  fillCss,
+  maskRect,
+  maskShadowCss,
+  STAGE,
+  type Layout,
+} from './stage';
 import {
   gainFactor,
   paintOrder,
@@ -46,7 +55,7 @@ export function Composition({ clips, assets, zooms, layout, tracks, muted }: Com
   return (
     <AbsoluteFill
       style={{
-        background: '#172324',
+        background: fillCss(layout),
         color: '#fff',
       }}
     >
@@ -67,6 +76,7 @@ export function Composition({ clips, assets, zooms, layout, tracks, muted }: Com
               height: mask.height,
               borderRadius: role === 'background' ? 0 : layout.radius * scale,
               overflow: 'hidden',
+              boxShadow: maskShadowCss(role, layout, scale),
               ...(placeholder && { background: '#10181b' }),
             }}
           >

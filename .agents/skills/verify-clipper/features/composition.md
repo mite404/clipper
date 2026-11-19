@@ -18,6 +18,15 @@ masks and screen-only zoom animations.
   preview, the export and a saved project all carry it, a muted track stays silent, and the timeline
   waveform scales with it. `all` runs `tests/clip-gain.spec.ts` and the decoded-audio check in
   `tests/export.spec.ts`.
+- The Inspector's Background sets the stage behind the panels: a solid colour (a native colour input
+  with its hex beside it) or a gradient with a start, an end and an angle, 135 degrees from
+  `#3b2a6b` to `#172324` when first chosen. Panel shadow, 0 to 100, drops a soft shadow under the
+  screen and camera panels, never the Background track. All of it appears in the preview, Copy frame
+  and export, and in a saved project only when changed. The layout stores four optional flat fields
+  (`fill`, `fillTo`, `fillAngle`, `shadow`) so a slider drag folds into one undo step, and there is
+  no version bump. Wallpapers and a background image control are not part of it (CLIP-20c,
+  CLIP-20d); `all` runs `tests/backdrop.spec.ts` and the gradient and shadow agreement test in
+  `tests/export.spec.ts` at 1920 and 3840 pixels.
 - Pressing on the screen video pauses and shows the unzoomed screen while held; release sets the
   focus.
 

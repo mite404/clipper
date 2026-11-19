@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { cameraTransform, clipRect, cropPosition, maskRect, sourceToStage, STAGE } from './stage';
+import {
+  cameraTransform,
+  clipRect,
+  cropPosition,
+  fillCss,
+  gradientLine,
+  maskRect,
+  maskShadowCss,
+  panelShadow,
+  sourceToStage,
+  STAGE,
+  withBackdropStyle,
+  withShadow,
+} from './stage';
 
 const layout = { radius: 22, screenX: 20, screenY: 70, cameraX: 80, cameraY: 25 };
 
@@ -188,5 +201,57 @@ describe('sizing a clip in its mask', () => {
     expect([hd.x, hd.y, hd.width, hd.height].map((v) => +v.toFixed(3))).toEqual([
       330, 305, 660, 440,
     ]);
+  });
+});
+
+describe('the stage backdrop', () => {
+  it("draws today's colour without a fill, a solid colour, or a gradient by its CSS angle", () => {
+    expect(fillCss(layout)).toBe('#172324');
+    expect(fillCss({ ...layout, fill: '#336699' })).toBe('#336699');
+    expect(fillCss({ ...layout, fill: '#3b2a6b', fillTo: '#172324' })).toBe(
+      'linear-gradient(135deg, #3b2a6b, #172324)',
+    );
+    expect(fillCss({ ...layout, fill: '#000000', fillTo: '#ffffff', fillAngle: 30 })).toBe(
+      'linear-gradient(30deg, #000000, #ffffff)',
+    );
+  });
+
+  it('runs the gradient line corner to corner like CSS, on a stage that is not square', () => {
+    const round = (line: ReturnType<typeof gradientLine>) =>
+      Object.fromEntries(Object.entries(line).map(([k, v]) => [k, Math.round(v * 10) / 10]));
+    // 0 points up and 90 right: the line is as long as the side it runs along.
+    expect(round(gradientLine(0, STAGE))).toEqual({ x0: 640, y0: 720, x1: 640, y1: 0 });
+    expect(round(gradientLine(90, STAGE))).toEqual({ x0: 0, y0: 360, x1: 1280, y1: 360 });
+    // 135 starts at the top-left corner's perpendicular and ends past the bottom-right one.
+    expect(round(gradientLine(135, STAGE))).toEqual({ x0: 140, y0: -140, x1: 1140, y1: 860 });
+    // 30: length 1280 sin 30 + 720 cos 30 = 1263.5, from lower left of centre to upper right.
+    expect(round(gradientLine(30, STAGE))).toEqual({ x0: 324.1, y0: 907.1, x1: 955.9, y1: -187.1 });
+  });
+
+  it('sizes the panel shadow from one strength, scaled to the render size, and has none at 0', () => {
+    expect(panelShadow(undefined, 1)).toBeUndefined();
+    expect(panelShadow(0, 2)).toBeUndefined();
+    expect(panelShadow(50, 1)).toEqual({ blur: 30, offsetY: 10, color: 'rgba(0, 0, 0, 0.5)' });
+    expect(panelShadow(50, 3)).toEqual({ blur: 90, offsetY: 30, color: 'rgba(0, 0, 0, 0.5)' });
+  });
+
+  it('shadows a masked panel but never the Background, and only when the layout has one', () => {
+    const shaded = { ...layout, shadow: 50 };
+    expect(maskShadowCss('screen', shaded, 1.5)).toBe('0 15px 45px rgba(0, 0, 0, 0.5)');
+    expect(maskShadowCss('camera', shaded, 1)).toBe('0 10px 30px rgba(0, 0, 0, 0.5)');
+    expect(maskShadowCss('background', shaded, 1)).toBeUndefined();
+    expect(maskShadowCss('screen', layout, 1)).toBeUndefined();
+  });
+
+  it('switches the backdrop style and the shadow without leaving stale fields', () => {
+    const gradient = withBackdropStyle(layout, 'gradient');
+    expect(gradient).toMatchObject({ fill: '#3b2a6b', fillTo: '#172324' });
+    // An existing start colour stays; going back to solid keeps it and drops the end and angle.
+    const edited = { ...gradient, fill: '#112233', fillAngle: 200 };
+    expect(withBackdropStyle(edited, 'solid')).toEqual({ ...layout, fill: '#112233' });
+    expect(withBackdropStyle({ ...layout, fill: '#445566' }, 'gradient').fill).toBe('#445566');
+    expect(withShadow(layout, 30)).toEqual({ ...layout, shadow: 30 });
+    expect(withShadow({ ...layout, shadow: 30 }, 0)).toEqual(layout);
+    expect('shadow' in withShadow({ ...layout, shadow: 30 }, 0)).toBe(false);
   });
 });

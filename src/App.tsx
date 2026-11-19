@@ -91,6 +91,7 @@ import {
   ZOOM_LIMITS,
   zoomsOverlap,
 } from './timeline-model';
+import { BackdropControls } from './BackdropControls';
 import { classifyChange, type Gesture } from './history';
 import { PREVIEW_DIVISORS, savePreviewQuality, savedPreviewQuality } from './preview-quality';
 import type { StepRange } from '@ui-sdk/core/number';
@@ -912,6 +913,7 @@ export function Inspector({
             onChange={(e) => onLayout({ ...layout, radius: Number(e.target.value) })}
           />
         </label>
+        <BackdropControls layout={layout} onLayout={onLayout} />
         <h3>Crop & framing</h3>
         {(['screen', 'camera'] as const).map((track) => (
           <div key={track} className="crop-controls">

@@ -9,6 +9,13 @@ export type Layout = {
   // The PiP inset's corner; bottom-right when absent.
   corner?: Corner;
   swapped?: boolean;
+  // The stage behind the panels: a solid colour, or with `fillTo` a gradient from `fill` to it.
+  // All absent is today's look. `fillAngle` is CSS's: 0 points up, 90 right; 135 when absent.
+  fill?: string;
+  fillTo?: string;
+  fillAngle?: number;
+  // The panels' shadow strength, 0 to 100; absent or 0 draws none.
+  shadow?: number;
   radius: number;
   screenX: number;
   screenY: number;
@@ -29,6 +36,66 @@ const CENTER: Point = { x: 50, y: 50 };
 
 /** Normalized edit coordinates. Actual composer and export dimensions are selected separately. */
 export const STAGE = { width: 1280, height: 720 };
+
+/** The stage colour with no fill chosen. */
+export const DEFAULT_FILL = '#172324';
+/** What switching to a gradient starts from. */
+export const DEFAULT_GRADIENT = { from: '#3b2a6b', to: DEFAULT_FILL, angle: 135 };
+export const SHADOW_MAX = 100;
+
+/** The stage's CSS `background` for a layout. */
+export function fillCss({
+  fill = DEFAULT_FILL,
+  fillTo,
+  fillAngle = DEFAULT_GRADIENT.angle,
+}: Layout) {
+  return fillTo === undefined ? fill : `linear-gradient(${fillAngle}deg, ${fill}, ${fillTo})`;
+}
+
+/**
+ * The gradient line CSS draws for an angle over a box: through the centre, long enough that the
+ * corners take the end colours, from the first colour's end to the second's.
+ */
+export function gradientLine(angle: number, size: Size) {
+  const radians = (angle * Math.PI) / 180;
+  const [dx, dy] = [Math.sin(radians), -Math.cos(radians)];
+  const half = (Math.abs(size.width * dx) + Math.abs(size.height * dy)) / 2;
+  const [cx, cy] = [size.width / 2, size.height / 2];
+  return { x0: cx - dx * half, y0: cy - dy * half, x1: cx + dx * half, y1: cy + dy * half };
+}
+
+/**
+ * The shadow under a masked panel, for a strength and the render size over the edit's:
+ * a soft black drop, as CSS `box-shadow` and a canvas shadow both take it. None at 0.
+ */
+export function panelShadow(strength = 0, scale = 1) {
+  if (!strength) return undefined;
+  return {
+    blur: 0.6 * strength * scale,
+    offsetY: 0.2 * strength * scale,
+    color: 'rgba(0, 0, 0, 0.5)',
+  };
+}
+
+/** A masked panel's CSS `box-shadow`; none for the full-frame Background or a layout without one. */
+export function maskShadowCss(role: VisualRole, layout: Layout, scale: number): string | undefined {
+  const shadow = role === 'background' ? undefined : panelShadow(layout.shadow, scale);
+  return shadow && `0 ${shadow.offsetY}px ${shadow.blur}px ${shadow.color}`;
+}
+
+/** The layout with its backdrop switched between a solid colour and a gradient. */
+export function withBackdropStyle(layout: Layout, style: 'solid' | 'gradient'): Layout {
+  if (style === 'gradient')
+    return { ...layout, fill: layout.fill ?? DEFAULT_GRADIENT.from, fillTo: DEFAULT_GRADIENT.to };
+  const { fillTo: _to, fillAngle: _angle, ...solid } = layout;
+  return solid;
+}
+
+/** The layout with a panel shadow strength; 0 removes the field, so the file is as it was. */
+export function withShadow(layout: Layout, strength: number): Layout {
+  const { shadow: _previous, ...rest } = layout;
+  return strength ? { ...rest, shadow: strength } : rest;
+}
 
 const MARGIN = 10;
 const GAP = 18;
