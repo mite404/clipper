@@ -435,7 +435,7 @@ export function MediaLibrary({
           aria-label="Import local media"
           type="file"
           multiple
-          accept="video/*,audio/*,.mov,.mp4,.png,.jpg,.jpeg,image/png,image/jpeg"
+          accept="video/*,audio/*,.mov,.mp4,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
           disabled={busy}
           onChange={(event) => {
             if (event.target.files) onImport(event.target.files);

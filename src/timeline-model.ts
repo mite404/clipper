@@ -333,6 +333,77 @@ export function trimBounds(clip: Clip, sourceFrames?: number): TrimBounds {
   };
 }
 
+/** What the Background image control sees on the lowest Background track. */
+export type BackgroundImage =
+  | { kind: 'none'; track?: Track } // nothing there; the track, if one exists, is empty
+  | { kind: 'image'; clip: Clip } // a lone still the control may replace or remove
+  | { kind: 'busy' }; // a video or several clips: the timeline's own
+
+/**
+ * The control's view of the lowest Background track: a lone still clip is its image, anything else
+ * on the track is left to the timeline, and no clip leaves the track (or none) to choose onto.
+ */
+export function backgroundImage(
+  tracks: TrackDef[],
+  clips: Clip[],
+  isStill: (assetId: string) => boolean,
+): BackgroundImage {
+  const track = tracks.find((t) => t.kind === 'visual' && t.role === 'background');
+  if (!track) return { kind: 'none' };
+  const held = clips.filter((c) => c.track === track.id);
+  if (!held.length) return { kind: 'none', track: track.id };
+  return held.length === 1 && isStill(held[0].assetId)
+    ? { kind: 'image', clip: held[0] }
+    : { kind: 'busy' };
+}
+
+/**
+ * Choose or replace the background image. Replacing swaps the clip's asset and keeps the rest of
+ * it; choosing puts a cover clip over the whole timeline on the empty Background track, made
+ * beneath the pair when there is none.
+ */
+export function setBackgroundImage(
+  tracks: TrackDef[],
+  clips: Clip[],
+  current: BackgroundImage,
+  assetId: string,
+  duration: number,
+): { tracks: TrackDef[]; clips: Clip[] } {
+  if (current.kind === 'image')
+    return {
+      tracks,
+      clips: clips.map((c) => (c.id === current.clip.id ? { ...c, assetId } : c)),
+    };
+  const made =
+    current.kind === 'none' && current.track
+      ? { tracks, id: current.track }
+      : createTrack(tracks, 'background');
+  const track = made.tracks.find((t) => t.id === made.id)!;
+  const clip: Clip = {
+    id: crypto.randomUUID(),
+    assetId,
+    track: made.id,
+    start: 0,
+    duration,
+    offset: 0,
+    ...initialSizing(track),
+  };
+  return { tracks: made.tracks, clips: [...clips, clip] };
+}
+
+/** The clips without the background image's. */
+export const removeBackgroundImage = (clips: Clip[], image: Clip): Clip[] =>
+  clips.filter((c) => c.id !== image.id);
+
+/**
+ * Whether an asset is in use by any of these edits' clips: the current edit and the history Undo
+ * can still bring back.
+ * ponytail: history keeps 50 edits, so an asset only an older, dropped edit used reads as
+ * unreferenced and can be released; Undo past that ceiling cannot restore it anyway.
+ */
+export const isReferenced = (assetId: string, edits: { clips: Clip[] }[]): boolean =>
+  edits.some((edit) => edit.clips.some((c) => c.assetId === assetId));
+
 /**
  * Put `placed` into `items` and overwrite what it lands on among the items `onLane` accepts: an
  * item it covers goes, one it overlaps loses that part, and one it lands inside splits in two, the

@@ -84,9 +84,9 @@ journeys cannot accidentally target a stale shared preview.
   `cursor-render.spec.ts`, `cursor-shapes.spec.ts`, `cursor-rotation.spec.ts`,
   `cursor-speeds.spec.ts`, `auto-zoom.spec.ts`, `framing.spec.ts`, `frame-image.spec.ts`,
   `icon-button.spec.ts`, `workspace-layout.spec.ts`, `cursor-inspector.spec.ts`,
-  `focused-controls.spec.ts`, `zoom-creation.spec.ts`, `source-scrub.spec.ts` and
-  `split-tools.spec.ts`. There are deliberately no narrower names for them; run `all` and read the
-  results by spec file.
+  `focused-controls.spec.ts`, `zoom-creation.spec.ts`, `source-scrub.spec.ts`, `backdrop.spec.ts`,
+  `background-image.spec.ts` and `split-tools.spec.ts`. There are deliberately no narrower names for
+  them; run `all` and read the results by spec file.
 
 The feature map defines coverage, not the command name. A named journey can run fewer checks than
 its feature file lists: `media` skips the mixed-import and stalled-download checks, `delivery` skips

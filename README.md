@@ -22,8 +22,8 @@ service holds 5173, so beside it run `npm run dev -- --port <free port>`.
 
 ## What works
 
-- Source preview, local video/audio, PNG/JPEG still and MP4/MOV import, in/out points or a still
-  duration, and target-track ripple insertion.
+- Source preview, local video/audio, PNG/JPEG/WebP still and MP4/MOV import, in/out points or a
+  still duration, and target-track ripple insertion.
 - Project media shows thumbnails or compact clip rows. The mouse or wheel over the selected video's
   thumbnail scrubs the source preview, and the preview bar only seeks. Set in and Set out mark the
   range, which the bar shows.
@@ -44,7 +44,8 @@ service holds 5173, so beside it run `npm run dev -- --port <free port>`.
 - Chapter markers: `M` marks one at the playhead, shown as ruler flags you can click, rename in the
   Inspector, delete, save with the project and copy as a YouTube-style list.
 - Composition background: a solid colour or a gradient, and a soft shadow under the panels, in the
-  preview, Copy frame, export and saved project.
+  preview, Copy frame, export and saved project. A background image (Choose, Replace, Remove) sits
+  on the Background track.
 - Timed screen zooms with editable scale, manually marked mouse focus, and smooth in/hold/out.
 - Portable project save/reopen with embedded original media and no relinking requirement.
 - Local rendered video export at 1920×1080 or 3840×2160 as MP4, MOV or WebM, chosen in the export
@@ -147,8 +148,9 @@ the user-facing preview. Restart the editor service after source changes to rebu
   browser that cannot encode the chosen format shows an error rather than downloading a mislabeled
   file. Only H.264 and AAC MP4/MOV imports are qualified; other codecs, EXIF-rotated JPEGs and real
   screen recordings are not.
-- Stills are PNG and JPEG only, placed on a visual track with a duration. There are no still
-  backgrounds or motion.
+- Stills are PNG, JPEG and WebP (an animated WebP shows its first frame), placed on a visual track
+  with a duration. The Inspector's Background image sets one as the composition background; there is
+  no motion.
 - Ordinary recordings contain no reliable cursor-position track. The mouse focus is marked by hand,
   by pressing and dragging on the screen video, one fixed focus point per zoom, not automatic cursor
   tracking. Edge focus can reveal background.

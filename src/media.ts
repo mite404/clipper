@@ -31,13 +31,28 @@ export const WAVE_RATE = 1000;
 /** Initial timeline duration for a still, not a limit on its source pixels. */
 export const DEFAULT_STILL_FRAMES = 5 * FPS;
 
+const ascii = (bytes: Uint8Array, at: number, text: string) =>
+  Array.from(text).every((letter, i) => bytes[at + i] === letter.charCodeAt(0));
+
+/**
+ * The image type a file's first bytes say it is, never its name: PNG, JPEG, or WebP, which is a RIFF
+ * file whose form is WEBP (a WAV is RIFF too). Animated WebP decodes to its first frame.
+ */
+export function imageMime(head: Uint8Array): 'image/png' | 'image/jpeg' | 'image/webp' | null {
+  if ([137, 80, 78, 71, 13, 10, 26, 10].every((byte, i) => head[i] === byte)) return 'image/png';
+  if (head[0] === 255 && head[1] === 216 && head[2] === 255) return 'image/jpeg';
+  return ascii(head, 0, 'RIFF') && ascii(head, 8, 'WEBP') ? 'image/webp' : null;
+}
+
 async function readImage(file: Blob, name: string, id: string, mime: string): Promise<Asset> {
   let bitmap: ImageBitmap;
   const source = file.slice(0, file.size, mime);
   try {
     bitmap = await createImageBitmap(source);
   } catch {
-    throw new Error('This PNG/JPEG image is corrupt or cannot be decoded. Try exporting it again.');
+    throw new Error(
+      'This PNG, JPEG or WebP image is corrupt or cannot be decoded. Try exporting it again.',
+    );
   }
   try {
     const canvas = document.createElement('canvas');
@@ -112,6 +127,17 @@ export function stillAt(asset: Asset, frame: number): Promise<string> {
   return still;
 }
 
+/**
+ * Read a picked file as the composition background: a PNG, JPEG or WebP, never video or audio.
+ * @throws When the file is not a decodable image of those types.
+ */
+export async function readBackgroundImage(file: File): Promise<Asset> {
+  const imported = await readMedia(file, file.name);
+  if (imported.kind === 'image') return imported;
+  URL.revokeObjectURL(imported.url);
+  throw new Error('Choose a PNG, JPEG or WebP image.');
+}
+
 /** Read metadata and decoded waveform locally. No media is uploaded.
  * @throws When the container or media codec cannot be decoded by this browser.
  */
@@ -122,15 +148,10 @@ export async function readMedia(
   cursor?: CursorTrack,
 ): Promise<Asset> {
   await validateCursorImages(cursor);
-  const bytes = new Uint8Array(await file.slice(0, 8).arrayBuffer());
-  const mime = [137, 80, 78, 71, 13, 10, 26, 10].every((byte, i) => bytes[i] === byte)
-    ? 'image/png'
-    : bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255
-      ? 'image/jpeg'
-      : null;
+  const mime = imageMime(new Uint8Array(await file.slice(0, 12).arrayBuffer()));
   if (mime) return readImage(file, name, id, mime);
-  if (file.type.startsWith('image/') || /\.(png|jpe?g)$/i.test(name))
-    throw new Error('Unsupported or corrupt image. Choose a valid PNG or JPEG file.');
+  if (file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(name))
+    throw new Error('Unsupported or corrupt image. Choose a valid PNG, JPEG or WebP file.');
   const input = new Input({ source: new BlobSource(file), formats: ALL_FORMATS });
   try {
     const [durationSeconds, video, audio] = await Promise.all([

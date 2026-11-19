@@ -24,9 +24,18 @@ masks and screen-only zoom animations.
   screen and camera panels, never the Background track. All of it appears in the preview, Copy frame
   and export, and in a saved project only when changed. The layout stores four optional flat fields
   (`fill`, `fillTo`, `fillAngle`, `shadow`) so a slider drag folds into one undo step, and there is
-  no version bump. Wallpapers and a background image control are not part of it (CLIP-20c,
-  CLIP-20d); `all` runs `tests/backdrop.spec.ts` and the gradient and shadow agreement test in
-  `tests/export.spec.ts` at 1920 and 3840 pixels.
+  no version bump. Wallpaper presets are not part of it (CLIP-20c); `all` runs
+  `tests/backdrop.spec.ts` and the gradient and shadow agreement test in `tests/export.spec.ts` at
+  1920 and 3840 pixels.
+- The Inspector's Background image (CLIP-20d) is Choose, Replace and Remove for a lone PNG, JPEG or
+  WebP still on the lowest Background track. Choose makes that track beneath the pair when there is
+  none and covers the whole timeline; Replace swaps the picture and keeps the clip; Remove deletes
+  only that clip. A track holding a video or several clips shows "Background track in use" and is
+  left to the timeline. A file is read before anything changes, so a corrupt one leaves the old
+  background. An image the control imported leaves the library, and its object URL is revoked, once
+  no edit in history uses it; a source the user imported is never released. `all` runs
+  `tests/background-image.spec.ts` (the history-ceiling release test takes about a minute) and the
+  WebP alpha test in `tests/export.spec.ts`.
 - Pressing on the screen video pauses and shows the unzoomed screen while held; release sets the
   focus.
 

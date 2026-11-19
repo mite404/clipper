@@ -48,7 +48,14 @@ import {
   Waveform,
   type TranscriptProps,
 } from './components';
-import { type Asset, DEFAULT_STILL_FRAMES, loadDemo, readMedia, unreadableNamesake } from './media';
+import {
+  type Asset,
+  DEFAULT_STILL_FRAMES,
+  loadDemo,
+  readBackgroundImage,
+  readMedia,
+  unreadableNamesake,
+} from './media';
 import { CREATE, Timeline } from './Timeline';
 import { transcribe, type Transcript } from './transcribe';
 import {
@@ -83,6 +90,10 @@ import {
   setSizing,
   scaleFromText,
   initialSizing,
+  backgroundImage,
+  isReferenced,
+  removeBackgroundImage,
+  setBackgroundImage,
   SCALE_LIMITS,
   shownChapters,
   timecode,
@@ -92,6 +103,7 @@ import {
   zoomsOverlap,
 } from './timeline-model';
 import { BackdropControls } from './BackdropControls';
+import { BackgroundImageControl } from './BackgroundImage';
 import { classifyChange, type Gesture } from './history';
 import { PREVIEW_DIVISORS, savePreviewQuality, savedPreviewQuality } from './preview-quality';
 import type { StepRange } from '@ui-sdk/core/number';
@@ -634,7 +646,7 @@ export function SourceMonitor({
             </span>
           </div>
         ) : (
-          <span className="empty-preview">Import video, audio or a PNG/JPEG image</span>
+          <span className="empty-preview">Import video, audio or a PNG, JPEG or WebP image</span>
         )}
       </div>
       <div className="source-description">
@@ -860,6 +872,7 @@ export function Inspector({
   duration,
   onScrubStart,
   onScrubEnd,
+  background,
   children,
 }: {
   zoom?: Zoom;
@@ -872,6 +885,8 @@ export function Inspector({
   /** A label drag starts and ends: its edits apply live and the app records them as one undo step. */
   onScrubStart?: () => void;
   onScrubEnd?: (canceled: boolean) => void;
+  /** The background image control, shown under the backdrop colours. */
+  background?: ReactNode;
   children?: ReactNode;
 }) {
   // Props that make a field's label draggable, from the field's value, bounds and setter.
@@ -916,6 +931,7 @@ export function Inspector({
           />
         </label>
         <BackdropControls layout={layout} onLayout={onLayout} />
+        {background}
         <h3>Crop & framing</h3>
         {(['screen', 'camera'] as const).map((track) => (
           <div key={track} className="crop-controls">
@@ -1195,6 +1211,11 @@ export function App() {
   const transcription = useTranscription(asset, setAssets, setMessage);
   const dragging = assets.find((a) => a.id === dragAsset);
   const selectedZoom = edit.zooms.find((z) => z.id === selected);
+  const background = backgroundImage(
+    edit.tracks,
+    edit.clips,
+    (id) => assets.find((a) => a.id === id)?.kind === 'image',
+  );
   const markingMouse = mark !== null;
   // A press on the screen video marks the selected zoom, else the one under the playhead.
   const markZoom =
@@ -1267,6 +1288,8 @@ export function App() {
     editRef.current = edit;
   }, [assets, edit]);
 
+  // Assets the Background image control imported, so only those are released when nothing uses them.
+  const backgroundOwned = useRef(new Set<string>());
   // The undo step still open: a drag or a held key folds into it instead of adding steps.
   const gesture = useRef<Gesture | null>(null);
   // Returns false when a lock refused the edit, so callers report nothing else. Locks guard new
@@ -1470,6 +1493,50 @@ export function App() {
   const removeMarked = useCallback(() => {
     if (selectedChapter) setChapters(removeChapter(edit.chapters ?? [], selectedChapter.frame));
   }, [edit, selectedChapter, setChapters]);
+  // Releases a background image this control imported once no edit, current or in history, uses it:
+  // dropped from the library, its object URL revoked after React has swapped it out. A source the
+  // user imported themselves is never in the set, so it stays.
+  useEffect(() => {
+    const edits = [edit, ...history];
+    const gone = assets.filter(
+      (a) => backgroundOwned.current.has(a.id) && !isReferenced(a.id, edits),
+    );
+    if (!gone.length) return;
+    gone.forEach((a) => backgroundOwned.current.delete(a.id));
+    const ids = new Set(gone.map((a) => a.id));
+    setAssets((previous) => previous.filter((a) => !ids.has(a.id)));
+    setSourceId((current) =>
+      ids.has(current) ? (assets.find((a) => !ids.has(a.id))?.id ?? '') : current,
+    );
+    setTimeout(() => gone.forEach((a) => URL.revokeObjectURL(a.url)), 0);
+  }, [assets, edit, history]);
+  // Choose or replace the background image: read the file first, so a corrupt one changes nothing.
+  const chooseBackground = async (file: File) => {
+    setBusy(true);
+    try {
+      const imported = await readBackgroundImage(file);
+      const next = setBackgroundImage(edit.tracks, edit.clips, background, imported.id, duration);
+      if (!change({ ...edit, ...next })) {
+        URL.revokeObjectURL(imported.url);
+        return;
+      }
+      backgroundOwned.current.add(imported.id);
+      setAssets((previous) => [...previous, imported]);
+      setMessage(`Background image ${imported.name} set.`);
+    } catch (error) {
+      setMessage(
+        `Could not use ${file.name}. ${error instanceof Error ? error.message : 'Unsupported file.'}`,
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  const removeBackground = () => {
+    if (background.kind !== 'image') return;
+    const next = { ...edit, clips: removeBackgroundImage(edit.clips, background.clip) };
+    if (!change(next)) return;
+    setMessage('Background image removed.');
+  };
   const removeSelected = useCallback(() => {
     if (selectedZoom) change({ ...edit, zooms: edit.zooms.filter((z) => z.id !== selected) });
     else if (selectedClip) change({ ...edit, clips: edit.clips.filter((c) => c.id !== selected) });
@@ -2442,6 +2509,19 @@ export function App() {
           onLayout={(layout) => inspect({ ...edit, layout })}
           onScrubStart={scrubStart}
           onScrubEnd={scrubEnd}
+          background={
+            <BackgroundImageControl
+              current={background}
+              asset={
+                background.kind === 'image'
+                  ? assets.find((a) => a.id === background.clip.assetId)
+                  : undefined
+              }
+              busy={busy}
+              onChoose={(file) => void chooseBackground(file)}
+              onRemove={removeBackground}
+            />
+          }
           onAddZoom={addZoom}
           onRemoveZoom={removeSelected}
           onZoom={(zoom) => {

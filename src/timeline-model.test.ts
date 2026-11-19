@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   FPS,
+  backgroundImage,
+  isReferenced,
+  removeBackgroundImage,
+  setBackgroundImage,
   initialSizing,
   scaleFromText,
   setSizing,
@@ -989,5 +993,108 @@ describe('output frame rates', () => {
     expect(outputTick(3, outputRate('24'))).toBe(3.75);
     expect(outputTick(1000, outputRate('29.97'))).toBeCloseTo(1001, 9);
     expect(outputTick(7, outputRate('auto'))).toBe(7);
+  });
+});
+
+describe('the background image', () => {
+  const still = (id: string) => id.startsWith('img');
+  const bg = {
+    id: 'bg',
+    label: 'Background · Full frame',
+    kind: 'visual' as const,
+    role: 'background' as const,
+  };
+  const clip = (id: string, assetId: string, track: string, start = 0, duration = 100) => ({
+    id,
+    assetId,
+    track,
+    start,
+    duration,
+    offset: 0,
+  });
+
+  it('has none without a Background track, or on an empty one, and says where one would go', () => {
+    expect(backgroundImage(DEFAULT_TRACKS, [], still)).toEqual({ kind: 'none' });
+    expect(backgroundImage([bg, ...DEFAULT_TRACKS], [], still)).toEqual({
+      kind: 'none',
+      track: 'bg',
+    });
+  });
+
+  it('claims a lone still on the lowest Background track, and nothing else', () => {
+    const tracks = [bg, ...DEFAULT_TRACKS];
+    const lone = clip('c', 'img1', 'bg');
+    expect(backgroundImage(tracks, [lone], still)).toEqual({ kind: 'image', clip: lone });
+    // A video, a second clip, or a clip on a masked track is the timeline's, not the control's.
+    expect(backgroundImage(tracks, [clip('v', 'landscape', 'bg')], still)).toEqual({
+      kind: 'busy',
+    });
+    expect(backgroundImage(tracks, [lone, clip('d', 'img2', 'bg', 100)], still)).toEqual({
+      kind: 'busy',
+    });
+    expect(backgroundImage(tracks, [clip('s', 'img1', 'screen')], still)).toEqual({
+      kind: 'none',
+      track: 'bg',
+    });
+    // A higher Background track is not the lowest: only the lowest is read.
+    const upper = { ...bg, id: 'bg2', label: 'Background 2 · Full frame' };
+    expect(
+      backgroundImage([bg, upper, ...DEFAULT_TRACKS], [clip('u', 'img1', 'bg2')], still),
+    ).toEqual({
+      kind: 'none',
+      track: 'bg',
+    });
+  });
+
+  it('chooses by making the Background track beneath the pair and a cover clip for the timeline', () => {
+    const base = [clip('s', 'landscape', 'screen', 0, 360)];
+    const next = setBackgroundImage(DEFAULT_TRACKS, base, { kind: 'none' }, 'img1', 360);
+    expect(next.tracks[0]).toMatchObject({ kind: 'visual', role: 'background' });
+    expect(next.tracks).toHaveLength(DEFAULT_TRACKS.length + 1);
+    const made = next.clips.find((c) => c.assetId === 'img1')!;
+    expect(made).toMatchObject({
+      track: next.tracks[0].id,
+      start: 0,
+      duration: 360,
+      offset: 0,
+      fit: 'cover',
+    });
+    // An empty Background track is used as it is.
+    const empty = setBackgroundImage(
+      [bg, ...DEFAULT_TRACKS],
+      base,
+      { kind: 'none', track: 'bg' },
+      'img1',
+      360,
+    );
+    expect(empty.tracks).toHaveLength(DEFAULT_TRACKS.length + 1);
+    expect(empty.clips.find((c) => c.assetId === 'img1')?.track).toBe('bg');
+  });
+
+  it('replaces by swapping the asset and keeping the clip as it was, and removes only that clip', () => {
+    const lone = { ...clip('c', 'img1', 'bg', 30, 200), fit: 'contain' as const, scale: 1.5 };
+    const others = [clip('s', 'landscape', 'screen', 0, 360)];
+    const tracks = [bg, ...DEFAULT_TRACKS];
+    const swapped = setBackgroundImage(
+      tracks,
+      [lone, ...others],
+      { kind: 'image', clip: lone },
+      'img2',
+      360,
+    );
+    expect(swapped.tracks).toBe(tracks);
+    expect(swapped.clips).toEqual([{ ...lone, assetId: 'img2' }, ...others]);
+    expect(removeBackgroundImage([lone, ...others], lone)).toEqual(others);
+  });
+
+  it('knows an asset is referenced by the edit or by any edit in history', () => {
+    const now = [clip('a', 'img1', 'bg')];
+    const before = [clip('b', 'img2', 'bg')];
+    const older = [clip('c', 'img3', 'screen')];
+    expect(isReferenced('img1', [{ clips: now }, { clips: before }, { clips: older }])).toBe(true);
+    expect(isReferenced('img2', [{ clips: now }, { clips: before }, { clips: older }])).toBe(true);
+    expect(isReferenced('img3', [{ clips: now }, { clips: before }, { clips: older }])).toBe(true);
+    expect(isReferenced('img4', [{ clips: now }, { clips: before }, { clips: older }])).toBe(false);
+    expect(isReferenced('img1', [])).toBe(false);
   });
 });

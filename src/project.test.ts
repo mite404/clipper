@@ -588,6 +588,21 @@ describe('portable project parsing', () => {
     expect(() => parseProject(JSON.stringify(value))).toThrow(message);
   });
 
+  it('reads a WebP still like a PNG or JPEG: kind image, version 3, bytes intact', () => {
+    const webp = 'data:image/webp;base64,UklGRgAAAABXRUJQ';
+    const value = project();
+    Object.assign(value, { version: 3 });
+    Object.assign(value.media[0], { kind: 'image', data: webp });
+    expect(parseProject(JSON.stringify(value)).media[0]).toMatchObject({
+      kind: 'image',
+      data: webp,
+    });
+    // Without the image kind or the version it is refused, naming WebP among the image types.
+    const bare = project();
+    Object.assign(bare.media[0], { data: webp });
+    expect(() => parseProject(JSON.stringify(bare))).toThrow(/PNG, JPEG or WebP/);
+  });
+
   it.each([
     'blob:old-session',
     'https://example.com/video.mp4',

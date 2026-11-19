@@ -8,8 +8,10 @@ still duration, and insert them onto the selected track without uploading source
 - Import H.264 video and WAV audio, and decode metadata, thumbnail and waveform. MP4 and MOV
   containers with H.264, with or without AAC audio, play, insert, export and reopen (CLIP-20b,
   delivered at `6156fb4` with exact-SHA CI 44022990182).
-- Import PNG and JPEG stills. A file with an uppercase extension or no MIME type is accepted when
-  its bytes decode. A still has no source in/out; it has a duration, five seconds by default.
+- Import PNG, JPEG and WebP stills. A file is told by its first bytes, never its name or MIME type:
+  a WebP is a RIFF file whose form is WEBP, and a WAV is not one. An animated WebP shows its first
+  frame. A file with an uppercase extension or no MIME type is accepted when its bytes decode. A
+  still has no source in/out; it has a duration, five seconds by default.
 - A still inserts onto the screen or camera track only. Its duration is editable before insertion
   (Still duration seconds) and after (Selected still duration seconds), from one frame to 24 hours.
   A value outside that range, or one that would overlap the next clip on the track, is refused with

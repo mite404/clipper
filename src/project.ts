@@ -243,10 +243,10 @@ function zoomSource(
 }
 
 function imageKind(kind: unknown, data: string, version: unknown): { kind?: 'image' } {
-  const image = /^data:image\/(png|jpeg);base64,/.test(data);
+  const image = /^data:image\/(png|jpeg|webp);base64,/.test(data);
   if (!image && kind === undefined) return {};
   if (typeof version !== 'number' || version < 3 || !image || kind !== 'image')
-    throw new Error('Image kind and PNG/JPEG MIME require version 3 or later.');
+    throw new Error('Image kind and PNG, JPEG or WebP MIME require version 3 or later.');
   return { kind: 'image' };
 }
 
@@ -301,11 +301,13 @@ export function parseProject(text: string): {
     const data = string(item.data, `media[${i}].data`);
     const kind = imageKind(item.kind, data, root.version);
     const match =
-      /^data:(?:image\/(?:png|jpeg)|video\/[a-z0-9.+-]+|audio\/[a-z0-9.+-]+|application\/(?:octet-stream|ogg));base64,([A-Za-z0-9+/]+={0,2})$/.exec(
+      /^data:(?:image\/(?:png|jpeg|webp)|video\/[a-z0-9.+-]+|audio\/[a-z0-9.+-]+|application\/(?:octet-stream|ogg));base64,([A-Za-z0-9+/]+={0,2})$/.exec(
         data,
       );
     if (!match || match[1].length % 4 !== 0)
-      throw new Error(`media[${i}].data must be a base64 audio/video or PNG/JPEG data URL.`);
+      throw new Error(
+        `media[${i}].data must be a base64 audio/video or PNG, JPEG or WebP data URL.`,
+      );
     try {
       if (btoa(atob(match[1])) !== match[1]) throw new Error('Noncanonical base64');
     } catch {
@@ -470,7 +472,7 @@ async function dataUrl(blob: Blob): Promise<string> {
   let binary = '';
   for (let i = 0; i < bytes.length; i += 32768)
     binary += String.fromCharCode(...bytes.subarray(i, i + 32768));
-  const mime = /^(?:(?:video|audio)\/[a-z0-9.+-]+|image\/(?:png|jpeg))$/.test(blob.type)
+  const mime = /^(?:(?:video|audio)\/[a-z0-9.+-]+|image\/(?:png|jpeg|webp))$/.test(blob.type)
     ? blob.type
     : 'application/octet-stream';
   return `data:${mime};base64,${btoa(binary)}`;

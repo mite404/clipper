@@ -1456,6 +1456,128 @@ for (const width of [1920, 3840])
     );
   });
 
+// A WebP background with a transparent right half, over a red-to-blue gradient stage, through the
+// same helpers as a PNG: opaque pixels show the picture, transparent ones let the stage through.
+test('a WebP background with alpha composites over the gradient in Copy frame and export at 1920px', async ({
+  page,
+}, info) => {
+  test.setTimeout(120000);
+  const width = 1920;
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  // Stage points in the left margin (the picture, opaque green) and the right margin (transparent).
+  const probes: [number, number][] = [
+    [5, 360],
+    [635, 5],
+    [1275, 360],
+    [645, 715],
+  ];
+  const result = await page.evaluate(
+    async ({ width, points }) => {
+      const mediaModule = '/src/media.ts',
+        exportModule = '/src/export.ts',
+        modelModule = '/src/timeline-model.ts';
+      const { readMedia } = await import(mediaModule);
+      const { renderFrameImage, renderVideo } = await import(exportModule);
+      const { DEFAULT_TRACKS } = await import(modelModule);
+      const canvas = document.createElement('canvas');
+      canvas.width = 320;
+      canvas.height = 180;
+      const g = canvas.getContext('2d')!;
+      g.fillStyle = '#00ff00';
+      g.fillRect(0, 0, 160, 180); // the right half stays transparent
+      const webp = await new Promise<Blob>((r) => canvas.toBlob((b) => r(b!), 'image/webp', 1));
+      const head = new Uint8Array(await webp.slice(0, 12).arrayBuffer());
+      const asset = await readMedia(webp, 'wall.webp');
+      const edit = {
+        tracks: [
+          { id: 'bg', label: 'Background · Full frame', kind: 'visual', role: 'background' },
+          ...DEFAULT_TRACKS,
+        ],
+        clips: [{ id: 'w', assetId: asset.id, track: 'bg', start: 0, duration: 30, offset: 0 }],
+        zooms: [],
+        assets: [asset],
+        layout: {
+          radius: 22,
+          screenX: 50,
+          screenY: 50,
+          cameraX: 50,
+          cameraY: 50,
+          fill: '#ff0000',
+          fillTo: '#0000ff',
+          fillAngle: 90,
+        },
+      };
+      const bitmap = await createImageBitmap(await renderFrameImage({ ...edit, width, frame: 1 }));
+      canvas.width = bitmap.width;
+      canvas.height = bitmap.height;
+      g.drawImage(bitmap, 0, 0);
+      const k = bitmap.width / 1280;
+      const copy = points.map(([x, y]: number[]) =>
+        Array.from(g.getImageData(Math.round(x * k), Math.round(y * k), 1, 1).data).slice(0, 3),
+      );
+      bitmap.close();
+      const video = await renderVideo({
+        ...edit,
+        muted: [],
+        width,
+        format: 'mp4',
+        onProgress: () => {},
+      });
+      return {
+        kind: asset.kind,
+        riff:
+          String.fromCharCode(...head.subarray(0, 4)) +
+          String.fromCharCode(...head.subarray(8, 12)),
+        copy,
+        video: Array.from(new Uint8Array(await video.arrayBuffer())),
+      };
+    },
+    { width, points: probes },
+  );
+  expect(result).toMatchObject({ kind: 'image', riff: 'RIFFWEBP' });
+  const file = info.outputPath('webp-background.mp4');
+  writeFileSync(file, Buffer.from(result.video));
+  inspectExport(file, width, 'mp4', false);
+  const exported = probes.map(([x, y]) =>
+    Array.from(
+      execFileSync('ffmpeg', [
+        '-v',
+        'error',
+        '-ss',
+        '0.033',
+        '-i',
+        file,
+        '-frames:v',
+        '1',
+        '-vf',
+        `format=rgb24,crop=1:1:${Math.round((x * width) / 1280)}:${Math.round((y * width) / 1280)}`,
+        '-f',
+        'rawvideo',
+        '-',
+      ]),
+    ),
+  );
+  console.log('webp-background', JSON.stringify(result.copy), JSON.stringify(exported));
+  const close = (a: number[], b: number[], tolerance: number) =>
+    a.every((value, i) => Math.abs(value - b[i]) <= tolerance);
+  // Cover fit of a 16:9 picture on the 16:9 stage is exact, so its left half is the left 640 px.
+  for (const [name, pixels, tolerance] of [
+    ['copy', result.copy, 3],
+    ['export', exported, 14],
+  ] as const) {
+    expect(
+      close(pixels[0], [0, 255, 0], tolerance),
+      `${name} left ${JSON.stringify(pixels[0])}`,
+    ).toBe(true);
+    // Transparent: the gradient shows, mostly blue at the right edge and mid-red-blue at the middle.
+    expect(close(pixels[2], [0, 0, 255], 12), `${name} right ${JSON.stringify(pixels[2])}`).toBe(
+      true,
+    );
+    expect(pixels[3][1], `${name} lower centre ${JSON.stringify(pixels[3])}`).toBeLessThan(40);
+  }
+});
+
 // Chrome blocks repeat downloads and Safari asks first unless the user has just acted, so the
 // rendered video must download from the user's own click, never from code after a long render.
 test('hands the rendered video over from a Save video click, with fresh user activation', async ({

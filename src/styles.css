@@ -1658,6 +1658,53 @@ p {
   color: var(--muted-foreground);
   font-size: 9px;
 }
+.backdrop-image {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 9px;
+  color: var(--muted-foreground);
+  margin: 5px 0 14px;
+}
+.backdrop-image-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.backdrop-image-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.backdrop-image-actions .text-button {
+  position: relative;
+  padding: 3px 7px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+.backdrop-image-actions .text-button:disabled,
+.backdrop-image-actions .text-button[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+.backdrop-image-actions input[type='file'] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  cursor: pointer;
+}
+.backdrop-image-actions .text-button:focus-within {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
 .backdrop-color {
   display: flex;
   align-items: center;
