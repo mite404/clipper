@@ -1102,7 +1102,6 @@ export function Timeline({
           aria-valuetext={`${(scale / minScale).toFixed(1)} times fit`}
           onChange={(event) => setScale(Number(event.target.value))}
         />
-        <output>{Number(scale.toFixed(2))} px/s</output>
       </label>
       <div
         className="timeline-scroll"

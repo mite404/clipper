@@ -1069,10 +1069,6 @@ p {
 .zoom-action {
   color: #b2a0d6;
 }
-.timeline-toolbar-hint {
-  font-size: 8px;
-  color: var(--muted-foreground);
-}
 .timeline-scroll {
   --timeline-gutter: 22px;
   padding: 0 var(--timeline-gutter);
@@ -2077,9 +2073,6 @@ p {
   }
   .asset-image-audio {
     height: 54px;
-  }
-  .timeline-toolbar-hint {
-    display: none;
   }
   .transport {
     padding: 0 18px;

@@ -2517,7 +2517,6 @@ export function App() {
                 <ZoomIn size={15} /> Add zoom <kbd>B</kbd>
               </button>
             </div>
-            <span className="timeline-toolbar-hint">Double-click a track to seek</span>
           </div>
           <ClipEditContext value={agentEdit}>
             <Timeline
