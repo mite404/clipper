@@ -86,7 +86,7 @@ test('B creates once per press, ignores editable targets and modifier chords, an
   const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
   const add = page.getByRole('button', { name: 'Add zoom at playhead', exact: true }).first();
   await playhead.fill('30');
-  await page.getByLabel('Source in seconds', { exact: true }).press('b');
+  await page.getByLabel('Place at seconds', { exact: true }).press('b');
   await page.getByLabel('Insert onto track', { exact: true }).press('b');
   await add.focus();
   for (const key of ['Control+b', 'Meta+b', 'Alt+b', 'Shift+B']) await page.keyboard.press(key);

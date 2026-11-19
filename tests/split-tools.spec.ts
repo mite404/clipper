@@ -116,7 +116,7 @@ for (const [platform, cut, ignored] of [
       await page.keyboard.press(chord);
       expect(await lanes(page)).toEqual(ORIGINAL);
     }
-    await page.getByLabel('Source in seconds').focus();
+    await page.getByLabel('Place at seconds').focus();
     await page.keyboard.press(cut);
     expect(await lanes(page)).toEqual(ORIGINAL);
     await page.locator('.app-header').click({ position: { x: 4, y: 4 } });
@@ -142,7 +142,7 @@ test('C picks Razor and V picks Selection; Razor cuts at the clicked frame, snap
   const razor = toggle(page, 'Razor tool');
   const selection = toggle(page, 'Selection tool');
   await expect(selection).toHaveAttribute('aria-pressed', 'true');
-  await page.getByLabel('Source in seconds').focus();
+  await page.getByLabel('Place at seconds').focus();
   await page.keyboard.press('c');
   await expect(selection).toHaveAttribute('aria-pressed', 'true');
   await page.locator('.app-header').click({ position: { x: 4, y: 4 } });

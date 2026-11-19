@@ -3,6 +3,7 @@ import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { choiceLabels, choose, expectChoice } from './choice';
+import { markRange, rangeIn, rangeOut } from './source-range';
 
 type MediaWindow = Window & { liveMediaUrls: Set<string> };
 
@@ -487,8 +488,7 @@ test('pauses source video and audio while export blocks the workspace without re
   for (const kind of ['video', 'audio']) {
     if (kind === 'audio')
       await page.getByRole('button', { name: 'Select Voiceover', exact: true }).click();
-    await page.getByLabel('Source in seconds').fill('1');
-    await page.getByLabel('Source out seconds').fill('3');
+    await markRange(page, 30, 90);
     const target = kind === 'video' ? 'camera' : 'music';
     await choose(page.getByLabel('Insert onto track'), target);
     const source = page.locator(`.source-preview ${kind}`);
@@ -513,8 +513,8 @@ test('pauses source video and audio while export blocks the workspace without re
     expect(held).toBeGreaterThanOrEqual(before);
     await page.getByRole('button', { name: 'Cancel export', exact: true }).click();
     await expect(page.getByRole('progressbar', { name: 'Video export progress' })).toHaveCount(0);
-    await expect(page.getByLabel('Source in seconds')).toHaveValue('1');
-    await expect(page.getByLabel('Source out seconds')).toHaveValue('3');
+    await expect(rangeIn(page)).toHaveText('1 s');
+    await expect(rangeOut(page)).toHaveText('3 s');
     await expectChoice(page.getByLabel('Insert onto track'), target);
     await expect(source).toHaveJSProperty('paused', true);
     await expect(source).toHaveJSProperty('currentTime', held);
@@ -682,14 +682,12 @@ test('imports local video and audio without uploading them', async ({ page }) =>
     ]);
   await expect(page.getByTestId('media-status')).toHaveText('6 assets ready', { timeout: 30000 });
   await page.getByRole('button', { name: 'Select landscape.mp4' }).click();
-  await page.getByLabel('Source in seconds').fill('2');
-  await page.getByLabel('Source out seconds').fill('4');
+  await markRange(page, 60, 120);
   await page.getByRole('button', { name: 'Insert source at playhead' }).click();
   await expect(page.getByTestId('track-screen').getByRole('button')).toHaveCount(3);
   await page.getByRole('button', { name: 'Select music.wav' }).click();
   await choose(page.getByLabel('Insert onto track'), 'music');
-  await page.getByLabel('Source in seconds').fill('0.5');
-  await page.getByLabel('Source out seconds').fill('2');
+  await markRange(page, 15, 60);
   await page.getByRole('button', { name: 'Insert source at playhead' }).click();
   await expect(page.getByTestId('track-music').getByRole('button')).toHaveCount(2);
   await expect(page.locator('[role="status"]')).toContainText('Inserted');

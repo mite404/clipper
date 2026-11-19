@@ -24,6 +24,9 @@ service holds 5173, so beside it run `npm run dev -- --port <free port>`.
 
 - Source preview, local video/audio, PNG/JPEG still and MP4/MOV import, in/out points or a still
   duration, and target-track ripple insertion.
+- Project media shows thumbnails or compact clip rows. The mouse or wheel over the selected video's
+  thumbnail scrubs the source preview, and the preview bar only seeks. Set in and Set out mark the
+  range, which the bar shows.
 - Two video tracks, two audio tracks, waveform display, timeline scrubbing, split/delete/undo.
 - Remotion-synchronized video/audio, J/K/L shuttle, Space play/pause, and track mute.
 - Landscape-left and portrait-right cover crops with shared 22px masks by default.

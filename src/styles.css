@@ -390,6 +390,53 @@ p {
   font-size: 8px;
   border-radius: 3px;
 }
+.library-view {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.library-view .icon-button {
+  width: 22px;
+  height: 22px;
+}
+.library-view .icon-button[aria-pressed='true'] {
+  background: #ffffff14;
+  color: #c5d6bb;
+}
+.library-view .count {
+  margin-left: 6px;
+}
+/* The selected video's face: the mouse and wheel over it scrub the source preview. */
+.asset-face {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  cursor: ew-resize;
+}
+.asset-face ~ span {
+  pointer-events: none;
+}
+.asset-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: #fff;
+  box-shadow: 0 0 0 1px #0008;
+  pointer-events: none;
+}
+.asset.compact {
+  padding: 2px 0;
+}
+.asset.compact.selected {
+  outline: 1px solid #c5d6bb;
+  outline-offset: 3px;
+}
+.asset.compact .asset-name {
+  margin-top: 0;
+}
 .asset-name {
   display: flex;
   align-items: center;
@@ -531,6 +578,54 @@ p {
 }
 .source-controls input[type='range'] {
   margin: 0;
+}
+.source-bar {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+/* The In/Out range behind the bar; dragging the bar only seeks and never moves it. */
+.source-bar-range {
+  position: absolute;
+  top: 50%;
+  z-index: 1;
+  height: 9px;
+  margin-top: -4px;
+  background: #c5d6bb4d;
+  border-left: 2px solid #c5d6bb;
+  border-right: 2px solid #c5d6bb;
+  border-radius: 2px;
+  pointer-events: none;
+}
+.source-audio > .source-bar {
+  display: block;
+  height: 9px;
+  margin-top: 6px;
+  background: #ffffff0d;
+}
+.source-position {
+  display: block;
+  margin-top: 4px;
+  font:
+    8px 'IBM Plex Mono',
+    monospace;
+  color: #98a08f;
+}
+.source-marks {
+  align-items: center;
+}
+.source-marks .text-button {
+  padding: 3px 7px;
+  border: 1px solid #484b43;
+  border-radius: 4px;
+  font-size: 9px;
+}
+.source-marks output {
+  flex: 1;
+  font:
+    9px 'IBM Plex Mono',
+    monospace;
+  color: #98a08f;
 }
 .source-error {
   position: absolute;

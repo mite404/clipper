@@ -134,6 +134,7 @@ function LibraryRecord({ view, worst = false }: { view: string; worst?: boolean 
   );
   const [selected, setSelected] = useState('s1');
   const [frame, setFrame] = useState(90);
+  const [time, setTime] = useState(0);
   const [clips, setClips] = useState(INITIAL_EDIT.clips);
   const [layout, setLayout] = useState(INITIAL_EDIT.layout);
   const [zoom, setZoom] = useState({
@@ -233,13 +234,21 @@ function LibraryRecord({ view, worst = false }: { view: string; worst?: boolean 
           onSelect={setSelected}
           onImport={() => {}}
           busy={!assets.length && mode !== 'empty'}
+          time={time}
+          onSeek={setTime}
         />
       </div>
     );
   if (view === 'source')
     return (
       <div style={{ width: 300, padding: 20 }}>
-        <SourceMonitor asset={data[0]} tracks={INITIAL_EDIT.tracks} onInsert={() => {}} />
+        <SourceMonitor
+          asset={data[0]}
+          tracks={INITIAL_EDIT.tracks}
+          onInsert={() => {}}
+          time={time}
+          onTime={setTime}
+        />
       </div>
     );
   if (view === 'inspector')

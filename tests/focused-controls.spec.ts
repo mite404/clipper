@@ -150,7 +150,7 @@ test('checkbox Enter toggles, select Enter opens its picker, and Space stays tra
   await spaceToggles(page, instant, false);
   await expect(instant).toBeChecked();
 
-  const source = page.getByLabel('Source in seconds');
+  const source = page.getByLabel('Place at seconds');
   await tabTo(page, source);
   await page.keyboard.press('Space');
   await expect(state).toHaveText('Paused');

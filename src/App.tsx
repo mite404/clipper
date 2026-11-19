@@ -433,15 +433,75 @@ function useTranscription(
   return { row, running: job !== null, cancel: () => job?.controller.abort() };
 }
 
+// A frame count as seconds to the millisecond, as the source range shows it.
+const seconds = (frames: number) => Number((frames / FPS).toFixed(3));
+
+type SourceRange = { start: number; end: number };
+
+// The In point at a frame: never at or past the Out point.
+const markIn = (range: SourceRange, frame: number): SourceRange => ({
+  ...range,
+  start: Math.max(0, Math.min(range.end - 1, frame)),
+});
+
+// The Out point includes the frame it is set on, so the end is the frame after it: the range
+// keeps at least one frame and never runs past the source.
+const markOut = (range: SourceRange, frame: number, length: number): SourceRange => ({
+  ...range,
+  end: Math.min(length, Math.max(range.start + 1, frame + 1)),
+});
+
+/** The source's mini playback bar: dragging it only seeks, and the In/Out range shows behind it. */
+function SourceBar({
+  duration,
+  range,
+  time,
+  onTime,
+}: {
+  duration: number;
+  range: SourceRange;
+  /** The preview position and how to move it; without them the bar only shows the range. */
+  time?: number;
+  onTime?: (seconds: number) => void;
+}) {
+  const last = Math.max(1, duration - 1); // the slider stops a frame short of the end
+  const at = (frame: number) => `${Math.min(100, (frame / last) * 100)}%`;
+  return (
+    <span className="source-bar">
+      {onTime && (
+        <input
+          type="range"
+          aria-label="Source preview position"
+          min={0}
+          max={(duration - 1) / FPS}
+          step={1 / FPS}
+          value={time}
+          onChange={(e) => onTime(Number(e.target.value))}
+        />
+      )}
+      <span
+        className="source-bar-range"
+        data-testid="source-bar-range"
+        style={{ left: at(range.start), right: `calc(100% - ${at(range.end)})` }}
+      />
+    </span>
+  );
+}
+
 /** Source preview with explicit in/out points and track-targeted ripple insertion. */
 export function SourceMonitor({
   asset,
   tracks,
   onInsert,
+  time,
+  onTime,
   blocked = false,
   transcript,
 }: {
   asset?: Asset;
+  /** The preview position in seconds, owned by the caller so the library can move it too. */
+  time: number;
+  onTime: (seconds: number) => void;
   /** The edit's registry, so the target list follows created and reordered tracks. */
   tracks: TrackDef[];
   onInsert: (track: Track, offset: number, duration: number) => void;
@@ -456,10 +516,23 @@ export function SourceMonitor({
   const targets = sourceTracks(tracks, asset?.kind);
   const track = targets.some((t) => t.id === choice) ? choice : defaultTrack(tracks, asset?.kind);
   const [range, setRange] = useState(() => ({ start: 0, end: sourceRangeEnd(asset) }));
-  const [preview, setPreview] = useState({ playing: false, time: 0, error: '' });
+  const [preview, setPreview] = useState({ playing: false, error: '' });
   const video = useRef<HTMLVideoElement>(null);
   const audio = useRef<HTMLAudioElement>(null);
   const playRequest = useRef<symbol | null>(null);
+  // The last position the media itself reported. A position that differs was moved from outside,
+  // by the library or a drag, and reaches the media; playback's own updates never seek it back.
+  const reported = useRef(0);
+  const played = (seconds: number) => {
+    reported.current = seconds;
+    onTime(seconds);
+  };
+  useLayoutEffect(() => {
+    const media = video.current ?? audio.current;
+    if (!media || time === reported.current) return;
+    reported.current = time;
+    media.currentTime = time;
+  }, [time, asset?.url]);
   useLayoutEffect(() => {
     playRequest.current = null;
     if (!blocked) return;
@@ -481,7 +554,7 @@ export function SourceMonitor({
     setSourceUrl(asset?.url);
     setRange({ start: 0, end: sourceRangeEnd(asset) });
     setChoice(defaultTrack(tracks, asset?.kind));
-    setPreview({ playing: false, time: 0, error: '' });
+    setPreview({ playing: false, error: '' });
   }
   return (
     <section className="source-panel">
@@ -500,10 +573,7 @@ export function SourceMonitor({
               preload="auto"
               onPlay={() => setPreview((p) => ({ ...p, playing: true }))}
               onPause={() => setPreview((p) => ({ ...p, playing: false }))}
-              onTimeUpdate={(e) => {
-                const time = e.currentTarget.currentTime;
-                setPreview((p) => ({ ...p, time }));
-              }}
+              onTimeUpdate={(e) => played(e.currentTarget.currentTime)}
             />
             <div className="source-controls">
               <IconButton
@@ -526,20 +596,8 @@ export function SourceMonitor({
               >
                 {preview.playing ? <Pause size={13} /> : <Play size={13} />}
               </IconButton>
-              <input
-                type="range"
-                aria-label="Source preview position"
-                min={0}
-                max={(asset.duration - 1) / FPS}
-                step={1 / FPS}
-                value={preview.time}
-                onChange={(e) => {
-                  const time = Number(e.target.value);
-                  setPreview((p) => ({ ...p, time }));
-                  if (video.current) video.current.currentTime = time;
-                }}
-              />
-              <span>{clock(Math.round(preview.time * FPS))}</span>
+              <SourceBar duration={asset.duration} time={time} range={range} onTime={onTime} />
+              <span data-testid="source-position">{clock(Math.round(time * FPS))}</span>
             </div>
             {preview.error && (
               <span className="source-error" role="status">
@@ -552,7 +610,16 @@ export function SourceMonitor({
         ) : asset ? (
           <div className="source-audio">
             <Waveform peaks={asset.peaks} />
-            <audio ref={audio} src={asset.url} controls />
+            <audio
+              ref={audio}
+              src={asset.url}
+              controls
+              onTimeUpdate={(e) => played(e.currentTarget.currentTime)}
+            />
+            <SourceBar duration={asset.duration} range={range} />
+            <span className="source-position" data-testid="source-position">
+              {clock(Math.round(time * FPS))}
+            </span>
           </div>
         ) : (
           <span className="empty-preview">Import video, audio or a PNG/JPEG image</span>
@@ -575,46 +642,29 @@ export function SourceMonitor({
           }}
         />
       ) : (
-        <div className="source-range">
-          <label>
-            In{' '}
-            <input
-              aria-label="Source in seconds"
-              type="number"
-              min="0"
-              max={Math.max(0, (range.end - 1) / FPS)}
-              step={1 / FPS}
-              value={Number((range.start / FPS).toFixed(3))}
-              onChange={(e) => {
-                const start = Math.max(
-                  0,
-                  Math.min(range.end - 1, Math.round(Number(e.target.value) * FPS)),
-                );
-                setRange({ ...range, start });
-                if (video.current) video.current.currentTime = start / FPS;
-              }}
-            />
-          </label>
-          <label>
-            Out{' '}
-            <input
-              aria-label="Source out seconds"
-              type="number"
-              min={(range.start + 1) / FPS}
-              max={(asset?.duration ?? 0) / FPS}
-              step={1 / FPS}
-              value={Number((range.end / FPS).toFixed(3))}
-              onChange={(e) =>
-                setRange({
-                  ...range,
-                  end: Math.min(
-                    asset?.duration ?? 0,
-                    Math.max(range.start + 1, Math.round(Number(e.target.value) * FPS)),
-                  ),
-                })
-              }
-            />
-          </label>
+        <div className="source-range source-marks">
+          <button
+            type="button"
+            className="text-button"
+            disabled={!asset}
+            onClick={() => setRange(markIn(range, Math.round(time * FPS)))}
+          >
+            Set in
+          </button>
+          <output aria-label="Source in" aria-live="off">
+            {seconds(range.start)} s
+          </output>
+          <button
+            type="button"
+            className="text-button"
+            disabled={!asset}
+            onClick={() => setRange(markOut(range, Math.round(time * FPS), asset?.duration ?? 0))}
+          >
+            Set out
+          </button>
+          <output aria-label="Source out" aria-live="off">
+            {seconds(range.end)} s
+          </output>
         </div>
       )}
       <div className="source-insert">
@@ -641,16 +691,7 @@ export function SourceMonitor({
           <Plus size={15} />
         </IconButton>
       </div>
-      {transcript && (
-        <TranscriptPanel
-          {...transcript}
-          onSeek={(seconds) => {
-            const media = video.current ?? audio.current;
-            if (media) media.currentTime = seconds;
-            setPreview((p) => ({ ...p, time: seconds }));
-          }}
-        />
-      )}
+      {transcript && <TranscriptPanel {...transcript} onSeek={onTime} />}
     </section>
   );
 }
@@ -1063,6 +1104,8 @@ export function App() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [busy, setBusy] = useState(true);
   const [sourceId, setSourceId] = useState('landscape');
+  // The source preview's position, kept with the source it belongs to so a new one starts at 0.
+  const [sourceSeek, setSourceSeek] = useState({ url: '', time: 0 });
   // The pool item a pointer is dragging, for lanes to preview; drops read the drag's own data.
   const [dragAsset, setDragAsset] = useState<string | null>(null);
   const [edit, setEdit] = useState<Edit>(INITIAL_EDIT);
@@ -1129,6 +1172,11 @@ export function App() {
   const rewinding = useRef(false);
   const duration = Math.max(1, ...edit.clips.map((c) => c.start + c.duration));
   const asset = assets.find((a) => a.id === sourceId);
+  const sourceTime = sourceSeek.url === asset?.url ? sourceSeek.time : 0;
+  const seekSource = useCallback(
+    (time: number) => setSourceSeek({ url: asset?.url ?? '', time }),
+    [asset?.url],
+  );
   const transcription = useTranscription(asset, setAssets, setMessage);
   const dragging = assets.find((a) => a.id === dragAsset);
   const selectedZoom = edit.zooms.find((z) => z.id === selected);
@@ -1916,6 +1964,8 @@ export function App() {
         onImport={importFiles}
         onDrag={setDragAsset}
         busy={busy}
+        time={sourceTime}
+        onSeek={seekSource}
       >
         <PlaceOnTimeline
           asset={asset}
@@ -1926,7 +1976,7 @@ export function App() {
         />
       </MediaLibrary>
     ),
-    [assets, asset, sourceId, busy, edit.tracks, place],
+    [assets, asset, sourceId, busy, edit.tracks, place, sourceTime, seekSource],
   );
   const sourceView = useMemo(
     () => (
@@ -1934,11 +1984,13 @@ export function App() {
         asset={asset}
         tracks={edit.tracks}
         onInsert={insert}
+        time={sourceTime}
+        onTime={seekSource}
         blocked={sourceBlocked}
         transcript={transcription.row}
       />
     ),
-    [asset, edit.tracks, insert, sourceBlocked, transcription.row],
+    [asset, edit.tracks, insert, sourceTime, seekSource, sourceBlocked, transcription.row],
   );
   // The preview is laid out at most 1920 wide, and at a fraction of that, then scaled to the pane:
   // a 4K export must not make it a 3840 layout. Copy frame and export always render the full output.

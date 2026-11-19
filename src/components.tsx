@@ -8,7 +8,17 @@ import {
   type ButtonHTMLAttributes,
   type ReactNode,
 } from 'react';
-import { Check, ChevronDown, Film, Image, Music2, Plus, Upload } from 'lucide-react';
+import {
+  Check,
+  ChevronDown,
+  Film,
+  Image,
+  LayoutGrid,
+  List,
+  Music2,
+  Plus,
+  Upload,
+} from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -231,6 +241,126 @@ export function Waveform({
 /** Drag type of a media-pool item. A drop without it, such as a desktop file, is never placed. */
 export const ASSET_DRAG = 'application/x-clipper-asset';
 
+// Wheel pixels that make one step. A notch is 100 px on Windows, about 53 on Linux and halved on a
+// high-density screen, so the bar sits below all of them; a trackpad's small deltas add up to it.
+const NOTCH = 40;
+
+/**
+ * The selected video's thumbnail face. The mouse over it, or the wheel, seeks the source preview;
+ * a wheel that cannot seek (at either end) is left to scroll the panel.
+ */
+function ScrubFace({
+  last,
+  time,
+  onSeek,
+  children,
+}: {
+  /** The last seekable frame of the source. */
+  last: number;
+  /** The preview position, in seconds. */
+  time: number;
+  onSeek: (seconds: number) => void;
+  children: ReactNode;
+}) {
+  const face = useRef<HTMLDivElement>(null);
+  const latest = useRef({ last, time, onSeek });
+  useLayoutEffect(() => {
+    latest.current = { last, time, onSeek };
+  });
+  useLayoutEffect(() => {
+    const element = face.current!;
+    let pending = 0; // → wheel pixels not yet enough for a step
+    const wheel = (event: WheelEvent) => {
+      const { last, time, onSeek } = latest.current;
+      const frame = Math.round(time * FPS);
+      const direction = event.deltaY < 0 ? 1 : -1; // up is ahead
+      const next = Math.min(last, Math.max(0, frame + direction * FPS)); // → frames
+      if (next === frame || event.deltaY === 0) {
+        pending = 0; // at an end: the wheel scrolls the panel
+        return;
+      }
+      event.preventDefault();
+      pending += event.deltaY * (event.deltaMode === 1 ? NOTCH / 3 : 1);
+      if (Math.abs(pending) < NOTCH) return;
+      pending = 0;
+      onSeek(next / FPS);
+    };
+    // Not React's onWheel, which is passive and cannot hold the panel still.
+    element.addEventListener('wheel', wheel, { passive: false });
+    return () => element.removeEventListener('wheel', wheel);
+  }, []);
+  return (
+    <div
+      ref={face}
+      className="asset-face"
+      onPointerMove={(event) => {
+        if (event.pointerType !== 'mouse') return;
+        const box = event.currentTarget.getBoundingClientRect();
+        const share = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
+        onSeek(Math.round(share * last) / FPS);
+      }}
+    >
+      {children}
+      <span
+        className="asset-playhead"
+        data-testid="asset-playhead"
+        style={{ left: `${last ? Math.min(100, ((time * FPS) / last) * 100) : 0}%` }}
+      />
+    </div>
+  );
+}
+
+/** An asset's thumbnail, waveform or placeholder with its length and number. */
+function AssetImage({
+  asset,
+  index,
+  scrub,
+}: {
+  asset: Asset;
+  index: number;
+  /** Present for the selected video: its preview position and how to move it. */
+  scrub?: { time: number; onSeek: (seconds: number) => void };
+}) {
+  const picture =
+    asset.kind !== 'audio' ? (
+      asset.thumbnail ? (
+        <img src={asset.thumbnail} alt="" />
+      ) : (
+        <Film size={28} role="img" aria-label="Video preview unavailable" />
+      )
+    ) : (
+      <Waveform peaks={asset.peaks} />
+    );
+  const badges = (
+    <>
+      <span className="asset-duration">
+        {asset.kind === 'image' ? 'STILL' : clock(asset.duration)}
+      </span>
+      <span className="asset-number">{String(index + 1).padStart(2, '0')}</span>
+    </>
+  );
+  return (
+    <div className={`asset-image asset-image-${asset.kind}`}>
+      {scrub && asset.kind === 'video' ? (
+        <ScrubFace last={asset.duration - 1} {...scrub}>
+          {picture}
+        </ScrubFace>
+      ) : (
+        picture
+      )}
+      {badges}
+    </div>
+  );
+}
+
+type LibraryView = 'thumbnails' | 'clips';
+
+// The compact row's second line: resolution and length, or what a source without them is.
+const compactMeta = (asset: Asset) =>
+  asset.kind === 'audio'
+    ? `Audio · ${clock(asset.duration)}`
+    : `${asset.width} × ${asset.height} · ${asset.kind === 'image' ? 'Still image' : clock(asset.duration)}`;
+
 /** Media library with local-file import, source selection and drags onto the timeline. */
 export function MediaLibrary({
   assets,
@@ -239,6 +369,8 @@ export function MediaLibrary({
   onImport,
   onDrag,
   busy,
+  time = 0,
+  onSeek,
   children,
 }: {
   assets: Asset[];
@@ -248,14 +380,36 @@ export function MediaLibrary({
   /** The asset being dragged, then null once the drag ends however it ends. */
   onDrag?: (id: string | null) => void;
   busy: boolean;
+  /** The selected source's preview position in seconds; its thumbnail shows it as a line. */
+  time?: number;
+  /** Moves the selected video's preview, from the mouse or wheel over its thumbnail. */
+  onSeek?: (seconds: number) => void;
   /** Controls for the selected source, below the list. */
   children?: ReactNode;
 }) {
+  const [view, setView] = useState<LibraryView>('thumbnails');
   return (
     <aside className="library">
       <div className="section-title">
         <span>Project media</span>
-        <span className="count">{assets.length}</span>
+        <span className="library-view" role="group" aria-label="Media view">
+          {(
+            [
+              ['thumbnails', 'Thumbnail view', LayoutGrid],
+              ['clips', 'Clip view', List],
+            ] as const
+          ).map(([value, label, Icon]) => (
+            <IconButton
+              key={value}
+              label={label}
+              aria-pressed={view === value}
+              onClick={() => setView(value)}
+            >
+              <Icon size={13} />
+            </IconButton>
+          ))}
+          <span className="count">{assets.length}</span>
+        </span>
       </div>
       <label className="import-button">
         <Upload size={15} /> Import media
@@ -277,7 +431,7 @@ export function MediaLibrary({
         {assets.map((asset, index) => (
           <button
             key={asset.id}
-            className={`asset ${selected === asset.id ? 'selected' : ''}`}
+            className={`asset ${view === 'clips' ? 'compact' : ''} ${selected === asset.id ? 'selected' : ''}`}
             aria-label={`Select ${asset.name}`}
             aria-pressed={selected === asset.id}
             onClick={() => onSelect(asset.id)}
@@ -289,21 +443,17 @@ export function MediaLibrary({
             }}
             onDragEnd={() => onDrag?.(null)}
           >
-            <div className={`asset-image asset-image-${asset.kind}`}>
-              {asset.kind !== 'audio' ? (
-                asset.thumbnail ? (
-                  <img src={asset.thumbnail} alt="" />
-                ) : (
-                  <Film size={28} role="img" aria-label="Video preview unavailable" />
-                )
-              ) : (
-                <Waveform peaks={asset.peaks} />
-              )}
-              <span className="asset-duration">
-                {asset.kind === 'image' ? 'STILL' : clock(asset.duration)}
-              </span>
-              <span className="asset-number">{String(index + 1).padStart(2, '0')}</span>
-            </div>
+            {view === 'thumbnails' && (
+              <AssetImage
+                asset={asset}
+                index={index}
+                scrub={
+                  selected === asset.id && asset.kind === 'video' && onSeek
+                    ? { time, onSeek }
+                    : undefined
+                }
+              />
+            )}
             <div className="asset-name">
               {
                 {
@@ -316,9 +466,11 @@ export function MediaLibrary({
               <Plus size={13} />
             </div>
             <div className="asset-meta">
-              {asset.kind !== 'audio'
-                ? `${asset.width} × ${asset.height} · ${{ image: 'Still image', video: 'Video' }[asset.kind]}`
-                : 'Audio · decoded waveform'}
+              {view === 'clips'
+                ? compactMeta(asset)
+                : asset.kind !== 'audio'
+                  ? `${asset.width} × ${asset.height} · ${{ image: 'Still image', video: 'Video' }[asset.kind]}`
+                  : 'Audio · decoded waveform'}
             </div>
           </button>
         ))}

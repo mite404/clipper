@@ -433,7 +433,8 @@ test('fit scale follows the viewport and stays finite for empty and one-frame se
   const emptyMax = Number(await scale.getAttribute('max'));
   expect(Number.isFinite(emptyMin) && emptyMin > 0).toBe(true);
   expect(emptyMax / emptyMin).toBeCloseTo(32);
-  await page.getByRole('spinbutton', { name: 'Source out seconds' }).fill(String(1 / 30));
+  // Out at the first frame leaves the one-frame range.
+  await page.getByRole('button', { name: 'Set out', exact: true }).click();
   await page.getByRole('button', { name: 'Insert source at playhead' }).click();
   await expect(scale).toBeEnabled();
   expect(Number(await scale.getAttribute('min'))).toBeCloseTo(emptyMin);

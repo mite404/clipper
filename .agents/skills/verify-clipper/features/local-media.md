@@ -15,7 +15,13 @@ still duration, and insert them onto the selected track without uploading source
   A value outside that range, or one that would overlap the next clip on the track, is refused with
   a message and leaves the timeline unchanged. A still splits, trims, deletes and undoes like video,
   and keeps its transparency.
-- Preview source; set Source in seconds and Source out seconds for video and audio.
+- Preview source; mark its range with Set in and Set out at the preview position, for video and
+  audio. Out includes the frame it is set on and the range keeps one frame. The mini preview bar
+  only seeks and shows the range; there are no numeric in/out fields.
+- Project media has a Thumbnail view and a Clip view. Clip rows show resolution and length only; no
+  frame rate is shown, because the app does not read the source's rate. The mouse over the selected
+  video's thumbnail seeks the preview and draws a line; the wheel steps one second, up ahead, and
+  scrolls the panel when it cannot seek (UI-8).
 - Target V1, V2, A1, or A2 and insert at the current playhead.
 - Reject a corrupt file, and an MP4/MOV whose video codec the browser cannot decode (ProRes), while
   keeping existing edits usable. A multi-file import names every file it could not read.
@@ -23,9 +29,10 @@ still duration, and insert them onto the selected track without uploading source
 
 ## How to get to it (user POV)
 
-Choose Import media in Project media, then select a source card. Use the source monitor fields,
-Insert onto track selector, and plus button named Insert source at playhead. A still shows Still
-duration seconds in place of the in/out fields.
+Choose Import media in Project media, then select a source card. Move the mouse over the selected
+video's thumbnail or turn the wheel there, or drag the source preview bar, to seek. Use Set in and
+Set out, the Insert onto track selector, and the plus button named Insert source at playhead. A
+still shows Still duration seconds in place of Set in and Set out.
 
 ## Driving it with Playwright
 
@@ -46,8 +53,8 @@ waits for four loaded demo assets, and runs the four `editor.spec.ts` tests whos
   assets and an unsupported-codec status for the ProRes file, plays and inserts each file, saves a
   version 2 project, reopens it, exports it, and requires 120 H.264 frames and AAC audio.
 - `imports local video and audio without uploading them` inserts `landscape.mp4` and `music.wav`
-  with source in/out set and requires zero non-GET requests. Require six assets after the two valid
-  imports, three screen clips, and two music clips.
+  with the range marked by Set in and Set out and requires zero non-GET requests. Require six assets
+  after the two valid imports, three screen clips, and two music clips.
 - `keeps all tracks on screen and survives realistic difficult imports` imports a corrupt `.mp4` and
   a very long filename, then requires no horizontal overflow at 320 px.
 
@@ -73,3 +80,13 @@ Media never leaves this browser. Unsupported codecs report an import error. Larg
 decoded in full for waveform generation and may consume substantial time/memory. Imports retain
 object URLs until tab close or project replacement. Portable projects embed source bytes, so
 reopening needs no relinking. There is no resumable import.
+
+## Media pool scrubbing (UI-8)
+
+`all` runs `tests/source-scrub.spec.ts` on a real mouse and wheel. It requires that the mouse over
+the selected thumbnail seeks the preview and draws one playhead line, that an unselected thumbnail
+neither seeks nor selects, that a wheel notch moves one second and is cancelled only when it moved
+the preview, that dragging the bar never changes the range, that Set in and Set out keep a one-frame
+range and stop Out at the source's end, and that Clip view lists rows without thumbnails and shows
+no frame rate. `tests/source-range.ts` marks a range for the specs that insert a source. Audible
+playback, touch and a pointer-captured seek leaving a peeked drawer are not covered.

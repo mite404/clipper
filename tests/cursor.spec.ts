@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
 import { cursorFixture } from '../src/cursor.fixture';
 import { choose, expectChoice } from './choice';
+import { markRange, rangeIn, rangeOut } from './source-range';
 
 test('attaches source-local cursor telemetry, rejects bad replacements and restores it after reload', async ({
   page,
@@ -13,16 +14,15 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
     if (request.method() !== 'GET') uploads.push(request.url());
   });
   const attach = page.getByLabel('Attach cursor sidecar');
-  await page.getByLabel('Source in seconds').fill('2');
-  await page.getByLabel('Source out seconds').fill('12');
+  await markRange(page, 60, 360);
   await attach.setInputFiles({
     name: 'synthetic.mp4.cursor.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify(cursorFixture)),
   });
   await expect(page.getByTestId('cursor-status')).toHaveText('5 samples · 1 cursor asset');
-  await expect(page.getByLabel('Source in seconds')).toHaveValue('2');
-  await expect(page.getByLabel('Source out seconds')).toHaveValue('12');
+  await expect(rangeIn(page)).toHaveText('2 s');
+  await expect(rangeOut(page)).toHaveText('12 s');
   await page.getByText('Source data', { exact: true }).click();
   await expect(page.getByLabel('Cursor time offset (ms)')).toHaveValue('0');
   await page.getByLabel('Cursor time offset (ms)').fill('-78');
