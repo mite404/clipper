@@ -1020,9 +1020,9 @@ p {
 }
 .timeline-toolbar {
   height: 55px;
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   padding: 0 22px;
   gap: 12px;
 }
@@ -1044,6 +1044,8 @@ p {
   display: flex;
   align-items: center;
   gap: 8px;
+  /* the toolbar's empty third track keeps the tools centered in the row */
+  grid-column: 2;
 }
 .divider {
   width: 1px;
