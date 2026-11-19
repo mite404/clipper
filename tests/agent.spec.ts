@@ -169,6 +169,8 @@ test('dictation transcribes a fake microphone in the page and inserts the words'
 }) => {
   test.slow();
   const outside: string[] = [];
+  const pageErrors: string[] = [];
+  page.on('pageerror', (error) => pageErrors.push(error.message));
   await page.route(
     (url) => !['127.0.0.1', 'localhost'].includes(url.hostname),
     (route) => {
@@ -200,4 +202,6 @@ test('dictation transcribes a fake microphone in the page and inserts the words'
   await page.keyboard.press('Escape');
   await expect(modal).toHaveCount(0);
   await expect(request).toHaveValue(draft);
+  // Done-then-cleanup used to reject with "Cannot close a closed AudioContext".
+  expect(pageErrors).toEqual([]);
 });

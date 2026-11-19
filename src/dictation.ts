@@ -141,6 +141,9 @@ export function record(deviceId: string, sink: DictationSink) {
   }
 
   const stop = () => {
+    // finish then React cleanup (or Esc twice) lands here again; close() on a closed
+    // AudioContext rejects.
+    if (stopped) return;
     stopped = true;
     cancelAnimationFrame(frame);
     stream?.getTracks().forEach((t) => t.stop());
