@@ -1,6 +1,6 @@
 # CLIP-20c
 
-Authoritative state: [master ticket](../master-tickets.md#clip-20). This is the solid colour,
+Authoritative state: [master ticket](../master-tickets.md#clip-20c). This is the solid colour,
 gradient and panel shadow part of CLIP-20. Wallpaper presets, WebP backgrounds and a
 choose/replace/remove background image control are not part of it (CLIP-20d).
 
