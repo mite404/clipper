@@ -22,6 +22,8 @@ service holds 5173, so beside it run `npm run dev -- --port <free port>`.
 
 ## What works
 
+- The Assistant trims and splits clips on request, typed or dictated; see
+  [docs/agent.md](docs/agent.md).
 - Source preview, local video/audio, PNG/JPEG/WebP still and MP4/MOV import, in/out points or a
   still duration, and target-track ripple insertion.
 - Project media shows thumbnails or compact clip rows. The mouse or wheel over the selected video's
