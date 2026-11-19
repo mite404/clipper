@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#171819" />
+    <!-- CLIP-49: fetches reach only this origin, local blobs, OpenRouter and a local Ollama, so a
+         key typed into the Assistant cannot be sent anywhere else. Workers and scripts are unchanged. -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="connect-src 'self' blob: data: https://openrouter.ai http://localhost:11434 http://127.0.0.1:11434"
+    />
     <title>Clipper - the developer's cutting room</title>
     <!-- The first screen's body and heading faces, fetched with the HTML instead of after the CSS. -->
     <link
