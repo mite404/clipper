@@ -234,8 +234,6 @@ function LibraryRecord({ view, worst = false }: { view: string; worst?: boolean 
           onSelect={setSelected}
           onImport={() => {}}
           busy={!assets.length && mode !== 'empty'}
-          time={time}
-          onSeek={setTime}
         />
       </div>
     );

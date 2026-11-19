@@ -2079,15 +2079,17 @@ export function App() {
       <MediaLibrary
         assets={assets}
         selected={sourceId}
-        onSelect={(id) => {
+        onSelect={(id, seconds) => {
           setSourceId(id);
           setSelected('');
+          // A scrubbed card's position is adopted into the source preview on this deliberate
+          // click; hovering the pool never moves it.
+          const chosen = assets.find((a) => a.id === id);
+          if (seconds !== undefined && chosen) setSourceSeek({ url: chosen.url, time: seconds });
         }}
         onImport={importFiles}
         onDrag={setDragAsset}
         busy={busy}
-        time={sourceTime}
-        onSeek={seekSource}
       >
         <PlaceOnTimeline
           asset={asset}
@@ -2098,7 +2100,7 @@ export function App() {
         />
       </MediaLibrary>
     ),
-    [assets, asset, sourceId, busy, edit.tracks, place, sourceTime, seekSource],
+    [assets, asset, sourceId, busy, edit.tracks, place],
   );
   const sourceView = useMemo(
     () => (

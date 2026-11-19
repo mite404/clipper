@@ -11,78 +11,133 @@ const asset = (page: Page, name: string) =>
 const position = (page: Page) => page.getByTestId('source-position');
 const seconds = (page: Page) =>
   page.locator('.source-preview video').evaluate((video: HTMLVideoElement) => video.currentTime);
-// The demo's Flower study is 14 s, so its last seekable frame is 419 of 420.
-const FLOWER_LAST = 14 - 1 / 30;
 
-test('the mouse over the selected thumbnail seeks the source preview and draws a line; others stay still', async ({
+test('the mouse over any thumbnail scrubs that card only; the source preview never moves', async ({
   page,
 }) => {
   await openEditor(page);
-  const face = asset(page, 'Flower study').locator('.asset-face');
+  const card = asset(page, 'Flower study');
+  const face = card.locator('.asset-face');
+  const image = face.locator('img');
+  const thumbnail = await image.getAttribute('src');
   const box = (await face.boundingBox())!;
   await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2);
-  await expect(position(page)).toHaveText('00:07');
-  await expect.poll(() => seconds(page)).toBeCloseTo(7, 0);
-  const line = asset(page, 'Flower study').getByTestId('asset-playhead');
+  // The hovered card's face visibly scrubs to the frame under the pointer, line at its middle.
+  await expect.poll(() => image.getAttribute('src')).not.toBe(thumbnail);
+  const line = card.getByTestId('asset-playhead');
   const lineBox = (await line.boundingBox())!;
   expect(lineBox.x + lineBox.width / 2 - box.x).toBeCloseTo(box.width * 0.5, 0);
-  await page.mouse.move(box.x + 1, box.y + box.height / 2);
+  // The source preview keeps its own playhead, and the range is untouched.
   await expect(position(page)).toHaveText('00:00');
-  // An unselected thumbnail neither seeks nor selects, and shows no line.
-  const other = (await asset(page, 'A conversation').boundingBox())!;
-  await page.mouse.move(box.x + box.width * 0.9, box.y + box.height / 2);
-  await expect(position(page)).toHaveText('00:12');
-  await page.mouse.move(other.x + other.width / 2, other.y + 40);
-  await expect(position(page)).toHaveText('00:12');
-  await expect(asset(page, 'A conversation')).toHaveAttribute('aria-pressed', 'false');
-  await expect(page.getByTestId('asset-playhead')).toHaveCount(1);
+  await expect.poll(() => seconds(page)).toBe(0);
   await expect(rangeIn(page)).toHaveText('0 s');
   await expect(rangeOut(page)).toHaveText('14 s');
+  await page.mouse.move(box.x + 1, box.y + box.height / 2);
+  const startBox = (await line.boundingBox())!;
+  expect(startBox.x + startBox.width / 2 - box.x).toBeLessThan(box.width * 0.1);
+  await expect(position(page)).toHaveText('00:00');
+  // An unselected card scrubs itself too, without being selected or moving the source.
+  const otherCard = asset(page, 'A conversation');
+  const otherFace = otherCard.locator('.asset-face');
+  const otherThumbnail = await otherFace.locator('img').getAttribute('src');
+  const other = (await otherFace.boundingBox())!;
+  await page.mouse.move(other.x + other.width * 0.9, other.y + 40);
+  await expect.poll(() => otherFace.locator('img').getAttribute('src')).not.toBe(otherThumbnail);
+  await expect(otherCard.getByTestId('asset-playhead')).toBeVisible();
+  await expect(otherCard).toHaveAttribute('aria-pressed', 'false');
+  await expect(position(page)).toHaveText('00:00');
+  await expect.poll(() => seconds(page)).toBe(0);
+  // Each scrubbed card keeps its own line where the pointer left it.
+  await expect(page.getByTestId('asset-playhead')).toHaveCount(2);
 });
 
-test('the wheel over the selected thumbnail steps a second, up ahead, and scrolls the panel at either end', async ({
+test('the wheel steps the card itself a second, up ahead, and scrolls the panel at either end', async ({
   page,
 }) => {
   await openEditor(page);
-  const box = (await asset(page, 'Flower study').locator('.asset-face').boundingBox())!;
+  const card = asset(page, 'Flower study');
+  const face = card.locator('.asset-face');
+  const line = card.getByTestId('asset-playhead');
+  const box = (await face.boundingBox())!;
+  // The line's rendered position, the percentage the card's frame drives. The card's own box
+  // drifts with the panel's scrollbar, so pixel boxes mismeasure it across the run.
+  const share = async () => parseFloat(await line.evaluate((el) => (el as HTMLElement).style.left));
+  // The demo's Flower study is 14 s at 30 fps: 420 frames, the last seekable is 419.
+  const atFrame = (frame: number) => (frame / 419) * 100;
+  // A hover at the left edge lands below 10 frames, so one wheel notch back parks the card at
+  // frame 0. Wheeling further would scroll the panel: a wheel that cannot step is left to it.
   await page.mouse.move(box.x + 2, box.y + box.height / 2);
-  await expect(position(page)).toHaveText('00:00');
-  await page.mouse.wheel(0, -100);
-  await expect(position(page)).toHaveText('00:01');
-  await page.mouse.wheel(0, -100);
-  await page.mouse.wheel(0, -100);
-  await expect(position(page)).toHaveText('00:03');
+  await expect(line).toBeVisible();
   await page.mouse.wheel(0, 100);
-  await expect(position(page)).toHaveText('00:02');
-  // A trackpad's small deltas add up to a step (a high-density screen halves them): one alone
-  // moves nothing, a swipe moves at least a second.
-  await page.mouse.wheel(0, -10);
+  await expect.poll(share).toBeCloseTo(atFrame(0), 3);
+  await page.mouse.wheel(0, -100);
+  await expect.poll(share).toBeCloseTo(atFrame(30), 3);
+  await page.mouse.wheel(0, -100);
+  await page.mouse.wheel(0, -100);
+  await expect.poll(share).toBeCloseTo(atFrame(90), 3);
+  await page.mouse.wheel(0, 100);
+  await expect.poll(share).toBeCloseTo(atFrame(60), 3);
+  // The source preview never stepped with any of them.
+  await expect(position(page)).toHaveText('00:00');
+  // A trackpad's small deltas add up to a step: one alone moves nothing, and the nine of a swipe
+  // cross the notch twice for two seconds. Synthetic ticks: a trusted small wheel's deltaY
+  // halves on a high-density screen, so only a synthetic one is exact at any density.
+  const tick = (deltaY: number) =>
+    face.evaluate((face, dy) => {
+      const event = new WheelEvent('wheel', { deltaY: dy, bubbles: true, cancelable: true });
+      face.dispatchEvent(event);
+      return event.defaultPrevented;
+    }, deltaY);
+  expect(await tick(-10)).toBe(true);
   await page.waitForTimeout(200);
-  await expect(position(page)).toHaveText('00:02');
-  for (let i = 0; i < 8; i++) await page.mouse.wheel(0, -10);
-  await expect.poll(() => seconds(page)).toBeGreaterThanOrEqual(3);
-  // A consumed wheel is cancelled so the panel holds still; one that cannot seek is left alone.
-  const cancelled = (deltaY: number) =>
-    asset(page, 'Flower study')
-      .locator('.asset-face')
-      .evaluate((face, dy) => {
-        const event = new WheelEvent('wheel', { deltaY: dy, bubbles: true, cancelable: true });
-        face.dispatchEvent(event);
-        return event.defaultPrevented;
-      }, deltaY);
+  await expect.poll(share).toBeCloseTo(atFrame(60), 3);
+  for (let i = 0; i < 8; i++) await tick(-10);
+  await expect.poll(share).toBeCloseTo(atFrame(120), 3);
+  // A consumed wheel is cancelled so the panel holds still; one that cannot step is left alone.
+  const cancelled = tick;
+  // The synthetic wheel really steps (it is the same handler), so park at 0 again after it.
   expect(await cancelled(-100)).toBe(true);
-  await page.getByRole('slider', { name: 'Source preview position' }).fill('0');
+  for (let i = 0; i < 5; i++) await page.mouse.wheel(0, 100);
+  await expect.poll(share).toBeCloseTo(atFrame(0), 3);
   expect(await cancelled(100)).toBe(false);
-  await page.getByRole('slider', { name: 'Source preview position' }).fill(String(FLOWER_LAST));
+  for (let i = 0; i < 14; i++) await page.mouse.wheel(0, -100);
+  await expect.poll(share).toBeCloseTo(100, 3);
   expect(await cancelled(-100)).toBe(false);
-  // Another thumbnail and the audio rows keep normal scrolling.
+  // The compact Clip view rows and the audio rows keep normal scrolling.
   const other = asset(page, 'A conversation').locator('.asset-image');
   const consumed = await other.evaluate((element) => {
     const event = new WheelEvent('wheel', { deltaY: -100, bubbles: true, cancelable: true });
     element.dispatchEvent(event);
     return event.defaultPrevented;
-  });
+  }, -100);
   expect(consumed).toBe(false);
+});
+
+test('clicking a scrubbed card selects it and adopts the position; Set in and Set out follow it', async ({
+  page,
+}) => {
+  await openEditor(page);
+  const card = asset(page, 'A conversation');
+  const face = card.locator('.asset-face');
+  const box = (await face.boundingBox())!;
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2);
+  await expect(card.getByTestId('asset-playhead')).toBeVisible();
+  await expect(position(page)).toHaveText('00:00');
+  await card.click();
+  await expect(card).toHaveAttribute('aria-pressed', 'true');
+  await expect(position(page)).toHaveText('00:07');
+  await expect.poll(() => seconds(page)).toBeCloseTo(7, 0);
+  await page.getByRole('button', { name: 'Set in', exact: true }).click();
+  await expect(rangeIn(page)).toHaveText('7 s');
+  // Scrubbing the other card afterwards moves nothing the source holds.
+  const other = asset(page, 'Flower study');
+  const otherBox = (await other.locator('.asset-face').boundingBox())!;
+  await page.mouse.move(otherBox.x + otherBox.width * 0.9, otherBox.y + 40);
+  await expect(position(page)).toHaveText('00:07');
+  await expect(rangeIn(page)).toHaveText('7 s');
+  // A card never scrubbed selects as before: the fresh source starts at 0.
+  await asset(page, 'Voiceover').click();
+  await expect(position(page)).toHaveText('00:00');
 });
 
 test('dragging the mini bar only seeks; Set in and Set out mark the range, never leaving it empty', async ({

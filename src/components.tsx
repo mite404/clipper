@@ -1,5 +1,6 @@
 import {
   useCallback,
+  useEffect,
   useId,
   useLayoutEffect,
   useMemo,
@@ -29,7 +30,7 @@ import {
   SelectValue,
 } from '@ui-sdk/react/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui-sdk/react/tooltip';
-import { WAVE_RATE, type Asset } from './media';
+import { WAVE_RATE, stillAt, type Asset } from './media';
 import type { Transcript } from './transcribe';
 import { FPS, clock } from './timeline-model';
 
@@ -264,36 +265,57 @@ export const ASSET_DRAG = 'application/x-clipper-asset';
 const NOTCH = 40;
 
 /**
- * The selected video's thumbnail face. The mouse over it, or the wheel, seeks the source preview;
- * a wheel that cannot seek (at either end) is left to scroll the panel.
+ * A video card's face. The mouse over it, or the wheel, scrubs the card's own position: the face
+ * shows the frame there and the playhead line follows. The source preview is never moved; the
+ * position is reported so selecting the card can adopt it. A wheel that cannot step (at either
+ * end) is left to scroll the panel.
  */
 function ScrubFace({
-  last,
-  time,
-  onSeek,
+  asset,
+  onPosition,
   children,
 }: {
-  /** The last seekable frame of the source. */
-  last: number;
-  /** The preview position, in seconds. */
-  time: number;
-  onSeek: (seconds: number) => void;
+  asset: Extract<Asset, { kind: 'video' | 'audio' }>;
+  /** Reports the card's own scrub position in seconds as the pointer or wheel moves it. */
+  onPosition: (seconds: number) => void;
   children: ReactNode;
 }) {
+  // The last seekable source frame.
+  const last = asset.duration - 1;
+  // The card's own scrub position in source frames; nothing until the first hover.
+  const [frame, setFrame] = useState<number | null>(null);
+  const [still, setStill] = useState<string>();
   const face = useRef<HTMLDivElement>(null);
-  const latest = useRef({ last, time, onSeek });
+  const frameRef = useRef(0);
+  const latest = useRef(onPosition);
   useLayoutEffect(() => {
-    latest.current = { last, time, onSeek };
+    latest.current = onPosition;
   });
+  const move = useCallback((next: number) => {
+    frameRef.current = next;
+    setFrame(next);
+    latest.current(next / FPS);
+  }, []);
+  // ponytail: one decode per scrub step with stale results dropped, so a fast scrub lags a frame
+  // behind the pointer - prefetch a filmstrip if that ever feels slow.
+  useEffect(() => {
+    if (frame === null) return;
+    let live = true;
+    void stillAt(asset, frame).then((url) => {
+      if (live) setStill(url);
+    });
+    return () => {
+      live = false;
+    };
+  }, [asset, frame]);
   useLayoutEffect(() => {
     const element = face.current!;
     let pending = 0; // → wheel pixels not yet enough for a step
     const wheel = (event: WheelEvent) => {
-      const { last, time, onSeek } = latest.current;
-      const frame = Math.round(time * FPS);
+      const current = frameRef.current;
       const direction = event.deltaY < 0 ? 1 : -1; // up is ahead
-      const next = Math.min(last, Math.max(0, frame + direction * FPS)); // → frames
-      if (next === frame || event.deltaY === 0) {
+      const next = Math.min(last, Math.max(0, current + direction * FPS)); // → frames
+      if (next === current || event.deltaY === 0) {
         pending = 0; // at an end: the wheel scrolls the panel
         return;
       }
@@ -301,12 +323,12 @@ function ScrubFace({
       pending += event.deltaY * (event.deltaMode === 1 ? NOTCH / 3 : 1);
       if (Math.abs(pending) < NOTCH) return;
       pending = 0;
-      onSeek(next / FPS);
+      move(next);
     };
     // Not React's onWheel, which is passive and cannot hold the panel still.
     element.addEventListener('wheel', wheel, { passive: false });
     return () => element.removeEventListener('wheel', wheel);
-  }, []);
+  }, [last, move]);
   return (
     <div
       ref={face}
@@ -315,15 +337,17 @@ function ScrubFace({
         if (event.pointerType !== 'mouse') return;
         const box = event.currentTarget.getBoundingClientRect();
         const share = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
-        onSeek(Math.round(share * last) / FPS);
+        move(Math.round(share * last));
       }}
     >
-      {children}
-      <span
-        className="asset-playhead"
-        data-testid="asset-playhead"
-        style={{ left: `${last ? Math.min(100, ((time * FPS) / last) * 100) : 0}%` }}
-      />
+      {still ? <img src={still} alt="" /> : children}
+      {frame !== null && (
+        <span
+          className="asset-playhead"
+          data-testid="asset-playhead"
+          style={{ left: `${last ? Math.min(100, (frame / last) * 100) : 0}%` }}
+        />
+      )}
     </div>
   );
 }
@@ -332,12 +356,12 @@ function ScrubFace({
 function AssetImage({
   asset,
   index,
-  scrub,
+  onPosition,
 }: {
   asset: Asset;
   index: number;
-  /** Present for the selected video: its preview position and how to move it. */
-  scrub?: { time: number; onSeek: (seconds: number) => void };
+  /** A video card reports its own scrub position here, for adoption on select. */
+  onPosition?: (seconds: number) => void;
 }) {
   const picture =
     asset.kind !== 'audio' ? (
@@ -359,8 +383,8 @@ function AssetImage({
   );
   return (
     <div className={`asset-image asset-image-${asset.kind}`}>
-      {scrub && asset.kind === 'video' ? (
-        <ScrubFace last={asset.duration - 1} {...scrub}>
+      {asset.kind === 'video' ? (
+        <ScrubFace asset={asset} onPosition={(seconds) => onPosition?.(seconds)}>
           {picture}
         </ScrubFace>
       ) : (
@@ -387,25 +411,22 @@ export function MediaLibrary({
   onImport,
   onDrag,
   busy,
-  time = 0,
-  onSeek,
   children,
 }: {
   assets: Asset[];
   selected: string;
-  onSelect: (id: string) => void;
+  /** Selects a source; with the card's own scrub position in seconds when it was scrubbed. */
+  onSelect: (id: string, seconds?: number) => void;
   onImport: (files: FileList) => void;
   /** The asset being dragged, then null once the drag ends however it ends. */
   onDrag?: (id: string | null) => void;
   busy: boolean;
-  /** The selected source's preview position in seconds; its thumbnail shows it as a line. */
-  time?: number;
-  /** Moves the selected video's preview, from the mouse or wheel over its thumbnail. */
-  onSeek?: (seconds: number) => void;
   /** Controls for the selected source, below the list. */
   children?: ReactNode;
 }) {
   const [view, setView] = useState<LibraryView>('thumbnails');
+  // Each card's own scrub position, kept so a select can adopt it. Never the source preview's.
+  const positions = useRef(new Map<string, number>());
   return (
     <aside className="library">
       <div className="section-title">
@@ -452,7 +473,7 @@ export function MediaLibrary({
             className={`asset ${view === 'clips' ? 'compact' : ''} ${selected === asset.id ? 'selected' : ''}`}
             aria-label={`Select ${asset.name}`}
             aria-pressed={selected === asset.id}
-            onClick={() => onSelect(asset.id)}
+            onClick={() => onSelect(asset.id, positions.current.get(asset.id))}
             draggable
             onDragStart={(event) => {
               event.dataTransfer.setData(ASSET_DRAG, asset.id);
@@ -465,11 +486,7 @@ export function MediaLibrary({
               <AssetImage
                 asset={asset}
                 index={index}
-                scrub={
-                  selected === asset.id && asset.kind === 'video' && onSeek
-                    ? { time, onSeek }
-                    : undefined
-                }
+                onPosition={(seconds) => positions.current.set(asset.id, seconds)}
               />
             )}
             <div className="asset-name">

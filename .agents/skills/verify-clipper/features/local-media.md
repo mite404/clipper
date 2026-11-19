@@ -21,9 +21,10 @@ still duration, and insert them onto the selected track without uploading source
   audio. Out includes the frame it is set on and the range keeps one frame. The mini preview bar
   only seeks and shows the range; there are no numeric in/out fields.
 - Project media has a Thumbnail view and a Clip view. Clip rows show resolution and length only; no
-  frame rate is shown, because the app does not read the source's rate. The mouse over the selected
-  video's thumbnail seeks the preview and draws a line; the wheel steps one second, up ahead, and
-  scrolls the panel when it cannot seek (UI-8).
+  frame rate is shown, because the app does not read the source's rate. The mouse over a video's
+  thumbnail scrubs that card itself, frame and line, and never moves the source preview; the wheel
+  steps the card one second, up ahead, and scrolls the panel when it cannot step. Selecting a
+  scrubbed card adopts its position into the source preview (UI-8, REF-69).
 - Target V1, V2, A1, or A2 and insert at the current playhead.
 - Reject a corrupt file, and an MP4/MOV whose video codec the browser cannot decode (ProRes), while
   keeping existing edits usable. A multi-file import names every file it could not read.
@@ -31,10 +32,11 @@ still duration, and insert them onto the selected track without uploading source
 
 ## How to get to it (user POV)
 
-Choose Import media in Project media, then select a source card. Move the mouse over the selected
-video's thumbnail or turn the wheel there, or drag the source preview bar, to seek. Use Set in and
-Set out, the Insert onto track selector, and the plus button named Insert source at playhead. A
-still shows Still duration seconds in place of Set in and Set out.
+Choose Import media in Project media, then select a source card. Move the mouse over a video's
+thumbnail or turn the wheel there to scrub the card itself; select the card to adopt that position
+into the source preview, or drag the source preview bar, to seek. Use Set in and Set out, the Insert
+onto track selector, and the plus button named Insert source at playhead. A still shows Still
+duration seconds in place of Set in and Set out.
 
 ## Driving it with Playwright
 
@@ -83,12 +85,14 @@ decoded in full for waveform generation and may consume substantial time/memory.
 object URLs until tab close or project replacement. Portable projects embed source bytes, so
 reopening needs no relinking. There is no resumable import.
 
-## Media pool scrubbing (UI-8)
+## Media pool scrubbing (UI-8, REF-69)
 
 `all` runs `tests/source-scrub.spec.ts` on a real mouse and wheel. It requires that the mouse over
-the selected thumbnail seeks the preview and draws one playhead line, that an unselected thumbnail
-neither seeks nor selects, that a wheel notch moves one second and is cancelled only when it moved
-the preview, that dragging the bar never changes the range, that Set in and Set out keep a one-frame
-range and stop Out at the source's end, and that Clip view lists rows without thumbnails and shows
-no frame rate. `tests/source-range.ts` marks a range for the specs that insert a source. Audible
-playback, touch and a pointer-captured seek leaving a peeked drawer are not covered.
+any video thumbnail scrubs that card itself - its face shows the frame under the pointer and its
+playhead line follows - while the source preview, its position and the marked range never move, that
+a wheel notch steps the card one second and is cancelled only when it stepped, that selecting a
+scrubbed card adopts its position into the source preview where Set in and Set out read it, that
+dragging the bar never changes the range, that Set in and Set out keep a one-frame range and stop
+Out at the source's end, and that Clip view lists rows without thumbnails and shows no frame rate.
+`tests/source-range.ts` marks a range for the specs that insert a source. Audible playback, touch
+and a pointer-captured seek leaving a peeked drawer are not covered.
