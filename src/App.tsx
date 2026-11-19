@@ -815,10 +815,12 @@ function LayoutChoice({
   const mode = layout.mode ?? 'side';
   return (
     <>
-      <label className="slider-label">
+      <label className="slider-label choice-row">
         Layout
         <Choice
           label="Composition layout"
+          steady
+          align="end"
           value={mode}
           options={(['side', 'pip'] as const).map((value) => ({
             value,

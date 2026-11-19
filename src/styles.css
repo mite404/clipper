@@ -928,6 +928,15 @@ p {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.select-steady {
+  display: grid;
+}
+.select-steady > * {
+  grid-area: 1 / 1;
+}
+.select-steady > [aria-hidden] {
+  visibility: hidden;
+}
 .select > svg {
   opacity: 0.6;
   transition: rotate 160ms cubic-bezier(0.23, 1, 0.32, 1);
@@ -1654,6 +1663,9 @@ p {
 .backdrop-color output {
   font-family: 'IBM Plex Mono', monospace;
   font-size: 9px;
+}
+.slider-label.choice-row {
+  align-items: center;
 }
 .crop-controls {
   display: flex;

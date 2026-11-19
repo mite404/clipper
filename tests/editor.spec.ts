@@ -1227,8 +1227,17 @@ test('picture in picture insets the camera in the corner picked on the live prev
     );
   };
   await expect(corner('top left')).toHaveCount(0);
-  await choose(page.getByLabel('Composition layout'), 'pip');
+  // The Layout trigger keeps its width across values, and its list lines up with its end edge.
+  const layout = page.getByRole('combobox', { name: 'Composition layout' });
+  const sideWidth = (await layout.boundingBox())!.width;
+  await choose(layout, 'pip');
   await expect(page.getByText('Picture in picture').first()).toBeVisible();
+  const trigger = (await layout.boundingBox())!;
+  expect(trigger.width).toBe(sideWidth);
+  await layout.click();
+  const list = (await page.locator('.select-menu[data-open]').boundingBox())!;
+  expect(Math.round(list.x + list.width)).toBe(Math.round(trigger.x + trigger.width));
+  await page.keyboard.press('Escape');
   // A 420-wide 16:9 inset, 10 px inside the screen's bottom-right corner by default.
   expect(await camera()).toEqual([840, 464, 420]);
   await expect(corner('bottom right')).toHaveAttribute('aria-pressed', 'true');

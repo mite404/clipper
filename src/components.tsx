@@ -123,6 +123,8 @@ export function Choice<V extends string>({
   className = '',
   id,
   describedBy,
+  steady,
+  align,
 }: {
   /** Accessible name of the trigger. */
   label?: string;
@@ -134,6 +136,10 @@ export function Choice<V extends string>({
   /** For an external `<label htmlFor>`. */
   id?: string;
   describedBy?: string;
+  /** Size the trigger to its longest option, so changing the value never shifts the row. */
+  steady?: boolean;
+  /** Which trigger edge the list lines up with; `end` for a trigger that ends its row. */
+  align?: 'start' | 'end';
 }) {
   // Out of any surrounding <label>, whose activation would reopen the list on an option click,
   // but inside a modal <dialog>, which leaves everything outside it unclickable.
@@ -166,10 +172,22 @@ export function Choice<V extends string>({
           if (event.key === ' ') event.preventDefault();
         }}
       >
-        <SelectValue />
+        {steady ? (
+          // Every label shares one grid cell; only the current one shows, the rest only take room.
+          <span className="select-steady">
+            <SelectValue />
+            {options.map((option) => (
+              <span key={option.value} aria-hidden="true">
+                {option.label}
+              </span>
+            ))}
+          </span>
+        ) : (
+          <SelectValue />
+        )}
         <ChevronDown size={12} aria-hidden="true" />
       </SelectTrigger>
-      <SelectContent className="select-menu" sideOffset={4} collisionPadding={8}>
+      <SelectContent className="select-menu" sideOffset={4} collisionPadding={8} align={align}>
         {options.map((option) => (
           <SelectItem key={option.value} value={option.value} data-value={option.value}>
             <SelectItemText>{option.label}</SelectItemText>
