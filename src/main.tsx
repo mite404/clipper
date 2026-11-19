@@ -2,6 +2,11 @@ import { createRoot } from 'react-dom/client';
 import { CircleAlert, CircleCheck, X } from 'lucide-react';
 import { Toast, ToastClose, ToastRegion, ToastTitle } from '@ui-sdk/react/toast';
 import { App } from './App';
+import { agent } from './agent';
+
+// Specs drive the bridge directly, as the model would, with no model in the loop.
+if (import.meta.env.DEV || new URLSearchParams(location.search).has('agent-test'))
+  Object.assign(window, { clipperAgent: agent });
 
 const root = document.getElementById('root');
 if (root)

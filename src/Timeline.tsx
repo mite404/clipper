@@ -30,6 +30,7 @@ import {
 } from 'react';
 import { bindDrag, createAutoScroll } from '@ui-sdk/core';
 import { stillAt, type Asset } from './media';
+import { AgentClip } from './clip-primitive';
 import { moveZoom, resizeZoom } from './zoom-generation';
 import {
   FPS,
@@ -1008,8 +1009,13 @@ export function Timeline({
                   ? trimClip(originalClip, drag.edge, drag.delta, bounds)
                   : originalClip;
               return (
-                <button
+                <AgentClip
                   key={clip.id}
+                  clipId={clip.id}
+                  track={clip.track}
+                  start={clip.start}
+                  duration={clip.duration}
+                  offset={clip.offset}
                   className={`timeline-clip ${selected === clip.id ? 'selected' : ''}`}
                   aria-label={`${asset?.name ?? 'Missing media'} at ${(clip.start / FPS).toFixed(1)} seconds`}
                   aria-pressed={selected === clip.id}
@@ -1074,7 +1080,7 @@ export function Timeline({
                         onPreview={setDrag}
                       />
                     ))}
-                </button>
+                </AgentClip>
               );
             })}
         </DropZone>
