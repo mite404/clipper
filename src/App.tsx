@@ -1217,6 +1217,10 @@ export function App() {
     (id) => assets.find((a) => a.id === id)?.kind === 'image',
   );
   const markingMouse = mark !== null;
+  const gainEdit = (db: number): Edit => ({
+    ...edit,
+    clips: edit.clips.map((c) => (c.id === selected ? setGain(c, db) : c)),
+  });
   // A press on the screen video marks the selected zoom, else the one under the playhead.
   const markZoom =
     selectedZoom ?? edit.zooms.find((z) => frame >= z.start && frame < z.start + z.duration);
@@ -1331,6 +1335,12 @@ export function App() {
     drag.latest = proposed;
     setEdit(proposed);
   };
+  // The Clip gain label drags like the layout fields, except on a locked lane: a drag edits live,
+  // past the lock that change() enforces.
+  const gainScrub =
+    selectedClip && !locked.includes(selectedClip.track)
+      ? { onScrub: (db: number) => inspect(gainEdit(db)), onStart: scrubStart, onEnd: scrubEnd }
+      : undefined;
   // ponytail: history keeps 50 steps, so undoing all of a longer session reads as saved.
   // Add a saved marker to the edit itself if that ever costs someone work.
   const unsaved =
@@ -2573,12 +2583,8 @@ export function App() {
           {selectedClip && gainable && (
             <ClipGain
               gain={selectedClip.gain ?? 0}
-              onGain={(db) =>
-                change({
-                  ...edit,
-                  clips: edit.clips.map((c) => (c.id === selectedClip.id ? setGain(c, db) : c)),
-                })
-              }
+              onGain={(db) => change(gainEdit(db))}
+              drag={gainScrub}
             />
           )}
           <ChapterControls

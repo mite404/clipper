@@ -1658,6 +1658,14 @@ p {
   color: var(--muted-foreground);
   font-size: 9px;
 }
+.gain-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.gain-field input[type='number'] {
+  width: 64px;
+}
 .backdrop-image {
   display: flex;
   align-items: center;

@@ -1,12 +1,26 @@
 import { useState } from 'react';
+import { scrub } from './scrub';
 import { GAIN_LIMITS, gainFromText } from './timeline-model';
 
 /**
- * The Inspector's gain for the selected audio clip, in dB. A value commits on Enter or blur as one
- * undo step, snapped to 0.5 dB and held inside the limits; text that is not a number puts back the
- * clip's gain.
+ * The Inspector's gain for the selected audio clip, in dB, as one row: the label, then a compact
+ * number field. A value commits on Enter or blur as one undo step, snapped to 0.5 dB and held
+ * inside the limits; text that is not a number puts back the clip's gain.
+ * @param drag When given, the label scrubs the gain by dragging, through these callbacks.
  */
-export function ClipGain({ gain, onGain }: { gain: number; onGain: (db: number) => void }) {
+export function ClipGain({
+  gain,
+  onGain,
+  drag,
+}: {
+  gain: number;
+  onGain: (db: number) => void;
+  drag?: {
+    onScrub: (db: number) => void;
+    onStart: () => void;
+    onEnd: (canceled: boolean) => void;
+  };
+}) {
   const [draft, setDraft] = useState(String(gain));
   const [previous, setPrevious] = useState(gain);
   if (previous !== gain) {
@@ -14,28 +28,33 @@ export function ClipGain({ gain, onGain }: { gain: number; onGain: (db: number) 
     setDraft(String(gain));
   }
   return (
-    <section className="cursor-controls" aria-label="Clip gain">
-      <h3>Clip gain</h3>
-      <label>
-        Gain (dB){' '}
-        <input
-          aria-label="Clip gain dB"
-          type="number"
-          min={GAIN_LIMITS.min}
-          max={GAIN_LIMITS.max}
-          step={GAIN_LIMITS.step}
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') event.currentTarget.blur();
-          }}
-          onBlur={() => {
-            const db = gainFromText(draft);
-            if (db !== undefined && db !== gain) onGain(db);
-            setDraft(String(gain)); // a committed change re-syncs the draft through the new gain
-          }}
-        />
+    <div className="inspector-section" role="group" aria-label="Clip gain">
+      <label
+        className="slider-label"
+        {...(drag && scrub({ ...GAIN_LIMITS, value: gain, ...drag }))}
+      >
+        Gain
+        <span className="gain-field">
+          <input
+            aria-label="Clip gain dB"
+            type="number"
+            min={GAIN_LIMITS.min}
+            max={GAIN_LIMITS.max}
+            step={GAIN_LIMITS.step}
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') event.currentTarget.blur();
+            }}
+            onBlur={() => {
+              const db = gainFromText(draft);
+              if (db !== undefined && db !== gain) onGain(db);
+              setDraft(String(gain)); // a committed change re-syncs the draft through the new gain
+            }}
+          />
+          dB
+        </span>
       </label>
-    </section>
+    </div>
   );
 }
