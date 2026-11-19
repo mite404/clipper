@@ -237,7 +237,8 @@ test('long sequences scroll in both axes with every video and audio lane reachab
     await page.getByRole('button', { name: 'Insert source at playhead' }).click();
   }
   expect(Number(await scale.getAttribute('min')) / initialMin).toBeCloseTo(12 / 152);
-  expect(Number(await scale.getAttribute('max')) / initialMax).toBeCloseTo(12 / 152);
+  // The fit scale follows the duration, but the deepest zoom is anchored to the frame rate.
+  expect(Number(await scale.getAttribute('max')) / initialMax).toBeCloseTo(1);
   await scale.fill((await scale.getAttribute('max'))!);
   const scroll = page.getByTestId('timeline-scroll');
   await expect
@@ -297,7 +298,8 @@ test('scale bounds follow duration, retaining valid scale and clamping only outs
   const bounds = () =>
     scale.evaluate((el: HTMLInputElement) => ({ min: Number(el.min), max: Number(el.max) }));
   const initial = await bounds();
-  expect(initial.max / initial.min).toBeCloseTo(32);
+  // The deepest zoom is the frame-resolving scale, independent of viewport and duration.
+  expect(initial.max).toBeCloseTo(4800, 3);
   const chosen = (initial.min * 2).toFixed(3);
   await scale.fill(chosen);
   await page.getByRole('button', { name: 'Insert source at playhead' }).click();
@@ -306,16 +308,15 @@ test('scale bounds follow duration, retaining valid scale and clamping only outs
     '779',
   );
   await expect.poll(async () => (await bounds()).min / initial.min).toBeCloseTo(12 / 26);
-  expect((await bounds()).max / initial.max).toBeCloseTo(12 / 26);
+  expect((await bounds()).max).toBeCloseTo(initial.max);
   await expect(scale).toHaveValue(chosen);
   await scale.fill(String((await bounds()).min));
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect.poll(async () => Number(await scale.inputValue())).toBeCloseTo(initial.min);
+  // The frame-anchored maximum does not move when the sequence grows, so a deep zoom survives inserts.
   await scale.fill(String(initial.max));
   await page.getByRole('button', { name: 'Insert source at playhead' }).click();
-  await expect
-    .poll(async () => Number(await scale.inputValue()))
-    .toBeCloseTo((initial.max * 12) / 26);
+  await expect.poll(async () => Number(await scale.inputValue())).toBeCloseTo(initial.max);
   const clamped = await scale.inputValue();
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(scale).toHaveValue(clamped);
@@ -347,7 +348,8 @@ test('fit scale follows the viewport and stays finite for empty and one-frame se
       min: Number(element.getAttribute('min')),
       max: Number(element.getAttribute('max')),
     }));
-    expect(max / min).toBeCloseTo(32);
+    // The fit scale follows the viewport; the frame-anchored maximum does not.
+    expect(max).toBeCloseTo(4800, 3);
     const lane = (await page.getByTestId('track-screen').boundingBox())!;
     expect(lane.width / 12).toBeCloseTo(min, 1);
     const ticks = page.locator('.ruler > span');
@@ -405,16 +407,8 @@ test('fit scale follows the viewport and stays finite for empty and one-frame se
   await expect(scale).toHaveValue(chosen);
   await scale.fill((await scale.getAttribute('max'))!);
   await page.setViewportSize({ width: 390, height: 800 });
-  const narrowMaximum = await scroll.evaluate((el) => {
-    const style = getComputedStyle(el);
-    const label = el.querySelector('.ruler-label')!.getBoundingClientRect().width;
-    return (
-      ((el.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight) - label) /
-        12) *
-      32
-    );
-  });
-  await expect.poll(async () => Number(await scale.getAttribute('max'))).toBeCloseTo(narrowMaximum);
+  // The maximum no longer follows the viewport: 12 s resolve frames at 4800 px/s at any width.
+  await expect.poll(async () => Number(await scale.getAttribute('max'))).toBeCloseTo(4800, 3);
   await expect
     .poll(async () => Number(await scale.inputValue()) / Number(await scale.getAttribute('max')))
     .toBeCloseTo(1);
@@ -422,7 +416,7 @@ test('fit scale follows the viewport and stays finite for empty and one-frame se
   await page.setViewportSize({ width: 1280, height: 800 });
   await expect
     .poll(async () => Number(await scale.getAttribute('max')))
-    .toBeGreaterThan(Number(clamped));
+    .toBeCloseTo(Number(clamped));
   await expect(scale).toHaveValue(clamped);
   for (let clip = 0; clip < 5; clip++) {
     await page.locator('.timeline-clip').first().click();
@@ -503,6 +497,69 @@ test('the ruler and readouts stay readable at 105 minutes and at the 24-hour cap
       return scroll.evaluate((el) => el.scrollWidth - el.clientWidth);
     })
     .toBeLessThanOrEqual(1);
+});
+
+test('deep zoom resolves frames on an hour timeline and stays inside the browser cap at 24 hours', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const png = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 40;
+    canvas.height = 20;
+    canvas.getContext('2d')!.fillRect(0, 0, 40, 20);
+    return canvas.toDataURL('image/png').split(',')[1];
+  });
+  await page.getByLabel('Import local media').setInputFiles({
+    name: 'still.png',
+    mimeType: 'image/png',
+    buffer: Buffer.from(png, 'base64'),
+  });
+  await expect(page.getByTestId('media-status')).toHaveText('5 assets ready', { timeout: 30000 });
+  const screen = page.getByTestId('track-screen').locator('.timeline-clip');
+  while (await screen.count()) {
+    await screen.first().click();
+    await page.getByRole('button', { name: 'Delete selected clip or zoom' }).click();
+  }
+  await page.getByRole('button', { name: 'Select still.png', exact: true }).click();
+  const field = page.getByLabel('Still duration seconds', { exact: true });
+  const scale = page.getByRole('slider', { name: 'Timeline scale' });
+  // One hour: the frame-resolving scale binds, and the ruler steps one frame per mark.
+  await field.fill('3600');
+  await field.press('Enter');
+  await page.getByRole('button', { name: 'Insert source at playhead', exact: true }).click();
+  await expect(page.locator('.transport-readout')).toContainText('/ 1:00:00:00');
+  await expect.poll(async () => Number(await scale.getAttribute('max'))).toBeCloseTo(4800, 3);
+  await scale.fill('4800');
+  let labels = await page.locator('.ruler > span').allInnerTexts();
+  expect(labels[0]).toBe('00:00');
+  expect(labels[1]).toBe('00:00:01');
+  expect(labels[2]).toBe('00:00:02');
+  // 108,000 frames of sequence, but only the visible window renders.
+  expect(labels.length).toBeLessThan(100);
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  // 24 hours: the browser's ~33.5M px layout cap binds instead, at ~382 px/s, 15 frames a mark.
+  await field.fill('86400');
+  await field.press('Enter');
+  await page.getByRole('button', { name: 'Insert source at playhead', exact: true }).click();
+  await expect(page.locator('.transport-readout')).toContainText('/ 24:00:00:00');
+  const cap = 33_000_000 / 86400;
+  await expect.poll(async () => Number(await scale.getAttribute('max'))).toBeCloseTo(cap, 1);
+  await scale.fill(String(cap));
+  labels = await page.locator('.ruler > span').allInnerTexts();
+  expect(labels[0]).toBe('00:00');
+  expect(labels[1]).toBe('00:00:15');
+  expect(labels[2]).toBe('00:01');
+  expect(labels.length).toBeLessThan(100);
+  // The track content lays out under the cap: the scroll width matches the capped scale.
+  const scroll = page.getByTestId('timeline-scroll');
+  const grid = await scroll.evaluate((el) => ({
+    content: el.scrollWidth,
+    viewport: el.clientWidth,
+  }));
+  expect(grid.content).toBeLessThan(33_554_428);
+  expect(grid.content / grid.viewport).toBeGreaterThan(20);
 });
 
 test('timeline resizing remembers custom height across default, hide and viewport clamps', async ({

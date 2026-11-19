@@ -546,14 +546,38 @@ const RULER_FRAME_STEPS = [1, 2, 3, 5, 10, 15];
 /** A last mark nearer the end than this is dropped: its label would overhang the ruler padding. */
 const RULER_END_PIXELS = 20;
 
+/** The scale at which the ruler's one-frame step engages: its refined gap at the frame rate. */
+const FRAME_SCALE = FPS * RULER_REFINED_PIXELS;
+/** Widest a timeline may lay out: Chromium clamps element width at 33,554,428 px (measured). */
+const MAX_TRACK_PIXELS = 33_000_000;
+
+/**
+ * The deepest timeline display scale: REF-60's 32x fit, or the frame-resolving scale when that is
+ * deeper, never wider than the browser's layout cap allows. Below ~1.9 h the cap never binds and
+ * the ruler always reaches one frame per mark; at the 24 h extreme the cap holds the deepest zoom
+ * to ~12.7 px per frame.
+ * @param seconds Sequence length in seconds.
+ * @param minScale The fit scale: one sequence exactly fills the viewport.
+ */
+export function maxTimelineScale(seconds: number, minScale: number): number {
+  return Math.max(minScale * 32, Math.min(FRAME_SCALE, MAX_TRACK_PIXELS / seconds));
+}
+
 /**
  * The frames a ruler labels: from frame 0 at the smallest round step that keeps the marks
  * `RULER_GAP_PIXELS` apart and at most `RULER_MAX_MARKS` of them, so no two labels read alike. Zoomed
  * in far enough that the marks would be sparse, the step refines to frames instead.
  * @param duration Sequence length in frames.
  * @param scale Timeline pixels per second.
+ * @param visible When given, only marks inside this frame range are returned, so a frame-stepped
+ * ruler over a long sequence stays a handful of nodes. Positions are unchanged: a mark keeps the
+ * same frame whether or not its neighbors render.
  */
-export function rulerMarks(duration: number, scale: number): number[] {
+export function rulerMarks(
+  duration: number,
+  scale: number,
+  visible?: { from: number; to: number },
+): number[] {
   const step =
     RULER_STEPS.find(
       (seconds) =>
@@ -565,11 +589,21 @@ export function rulerMarks(duration: number, scale: number): number[] {
         (candidate) => (candidate / FPS) * scale >= RULER_REFINED_PIXELS,
       )! // → frames between marks; the whole-second step above always qualifies
     : step * FPS;
-  const marks = Array.from({ length: Math.floor(duration / frames) + 1 }, (_, i) => i * frames);
+  const last = Math.floor(duration / frames); // → highest mark index on the sequence
+  const first = visible ? Math.max(0, Math.ceil(visible.from / frames)) : 0;
+  const end = visible ? Math.min(last, Math.floor(visible.to / frames)) : last;
+  const marks = Array.from(
+    { length: Math.max(0, end - first + 1) },
+    (_, i) => (first + i) * frames,
+  );
+  // The sequence anchors always render, windowed or not: the ruler never loses its ends.
+  if (visible && first > 0) marks.unshift(0);
+  if (visible && end < last) marks.push(last * frames);
   // The wider h:mm:ss labels overhang the ruler padding at fit scale and make the timeline
   // scroll, so a last mark that is not the end and sits close to it is left out.
   return marks.filter(
-    (mark, i) => !i || mark === duration || ((duration - mark) / FPS) * scale >= RULER_END_PIXELS,
+    (mark) =>
+      mark === 0 || mark === duration || ((duration - mark) / FPS) * scale >= RULER_END_PIXELS,
   );
 }
 

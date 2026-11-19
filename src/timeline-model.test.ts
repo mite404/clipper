@@ -31,6 +31,7 @@ import {
   DEFAULT_TRACKS,
   insertClip,
   lockedChange,
+  maxTimelineScale,
   moveTrack,
   overwrite,
   rulerMarks,
@@ -287,6 +288,35 @@ describe('editing a timeline in frames', () => {
       }
     expect(faults).toEqual([]);
     expect(rulerMarks(1, 3000)).toEqual([0]);
+  });
+
+  it('anchors the deepest timeline zoom to the frame rate, capped by the browser track width', () => {
+    // A short sequence keeps REF-60's 32x fit bound.
+    expect(maxTimelineScale(5, 200)).toBe(6400);
+    // From a few seconds up, the deepest zoom is where the ruler's one-frame step engages.
+    expect(maxTimelineScale(12, 83)).toBe(4800);
+    expect(maxTimelineScale(3600, 0.26)).toBe(4800);
+    // Past ~1.9 h the browser's 33.5M px layout cap binds instead: 24 h resolves ~12.7 px/frame.
+    expect(maxTimelineScale(86400, 0.011)).toBeCloseTo(33_000_000 / 86400, 5);
+  });
+
+  it('windows ruler marks to a visible frame range when one is given', () => {
+    // 1 h at 4800 px/s refines to one mark per frame; windowed, only the range renders, plus the
+    // sequence anchors: the ruler never loses its ends.
+    const duration = 3600 * FPS;
+    expect(rulerMarks(duration, 4800, { from: 3000, to: 3300 })).toEqual([
+      0,
+      ...Array.from({ length: 301 }, (_, i) => 3000 + i),
+      duration,
+    ]);
+    // A window covering the whole sequence matches the unwindowed result exactly.
+    expect(rulerMarks(duration, 4800, { from: 0, to: duration })).toEqual(
+      rulerMarks(duration, 4800),
+    );
+    // The end rule still applies inside a window: a last mark near the end is dropped.
+    expect(rulerMarks(3610 * FPS, 3, { from: 0, to: 3610 * FPS }).at(-1)).toBe(3600 * FPS);
+    // A window past the end renders only the frame-0 anchor.
+    expect(rulerMarks(180, 150, { from: 200, to: 300 })).toEqual([0]);
   });
 
   it('drops a last mark that is not the end and sits within 20 px of it', () => {

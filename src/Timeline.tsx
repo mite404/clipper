@@ -36,6 +36,7 @@ import {
   FPS,
   MAX_FRAMES,
   gainFactor,
+  maxTimelineScale,
   moveTrack,
   placeMedia,
   rulerMarks,
@@ -422,7 +423,7 @@ function useTimelineScale(seconds: number) {
   const [dimensions, setDimensions] = useState({ width: 0, label: 152 });
   const [chosenScale, setScale] = useState(40);
   const minScale = dimensions.width ? (dimensions.width - dimensions.label) / seconds : 20;
-  const maxScale = minScale * 32;
+  const maxScale = maxTimelineScale(seconds, minScale);
   const scale = Math.max(minScale, Math.min(maxScale, chosenScale));
   if (scale !== chosenScale) setScale(scale);
   // Where the playhead sits in the viewport, in px, which a key step keeps through the new scale.
@@ -464,6 +465,22 @@ function useTimelineScale(seconds: number) {
     observer.observe(heading);
     return () => observer.disconnect();
   }, []);
+  // The ruler renders only the frames near the viewport, one viewport of margin each side, so a
+  // frame-stepped ruler over a long sequence stays a handful of nodes.
+  const [scrollLeft, setScrollLeft] = useState(0);
+  useEffect(() => {
+    const scroll = viewport.current!;
+    const follow = () => setScrollLeft(scroll.scrollLeft);
+    scroll.addEventListener('scroll', follow, { passive: true });
+    return () => scroll.removeEventListener('scroll', follow);
+  }, []);
+  const visible = {
+    from: Math.max(0, ((scrollLeft - dimensions.label - dimensions.width) / scale) * FPS),
+    to: Math.min(
+      seconds * FPS,
+      ((scrollLeft - dimensions.label + 2 * dimensions.width) / scale) * FPS,
+    ),
+  };
   return {
     viewport,
     label,
@@ -472,6 +489,7 @@ function useTimelineScale(seconds: number) {
     scale,
     setScale,
     zoom,
+    visible,
     width: dimensions.label + seconds * scale,
   };
 }
@@ -935,7 +953,7 @@ export function Timeline({
   const { registry, tracks, onToggleTrack, onMoveTrack } = headers;
   const { cut: onRazor, hover: onRazorHover } = razor;
   const seconds = duration / FPS;
-  const { viewport, label, minScale, maxScale, scale, setScale, zoom, width } =
+  const { viewport, label, minScale, maxScale, scale, setScale, zoom, visible, width } =
     useTimelineScale(seconds);
   const zoomable = clips.length > 0;
   useLayoutEffect(() => {
@@ -1132,7 +1150,7 @@ export function Timeline({
             <span>TRACKS</span>
           </div>
           <div className="ruler">
-            {rulerMarks(duration, scale).map((mark) => (
+            {rulerMarks(duration, scale, visible).map((mark) => (
               <span
                 key={mark}
                 data-end={mark === duration || undefined}

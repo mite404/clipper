@@ -220,7 +220,7 @@ test('- and = zoom the timeline display one step at a time without editing the s
   // Zooming in at a late frame, from a focused slider, keeps the playhead on screen.
   for (let press = 0; press < 12; press++) await page.keyboard.press('-');
   await playhead.fill('340');
-  for (let press = 0; press < 10; press++) await page.keyboard.press('=');
+  for (let press = 0; press < 12; press++) await page.keyboard.press('=');
   expect(await value()).toBeCloseTo(max, 3);
   // The lane area starts where the sticky track labels end, so a playhead under them is hidden.
   const port = (await viewport.boundingBox())!;
@@ -272,9 +272,29 @@ test('the ruler keeps labelling frames at the deepest zoom', async ({ page }) =>
         })
         .map((span) => span.textContent!);
     });
+  // The ruler re-renders for the new scroll position before the labels are read.
+  await expect.poll(async () => (await visible()).length).toBeGreaterThanOrEqual(2);
   const labels = await visible();
-  expect(labels.length).toBeGreaterThanOrEqual(2);
   // Between whole seconds a label is a frame timecode, matching the readout's mm:ss:ff.
   expect(labels.every((label) => /^\d\d:\d\d(:\d\d)?$/.test(label))).toBe(true);
   expect(labels.some((label) => /^\d\d:\d\d:\d\d$/.test(label))).toBe(true);
+});
+
+test('the deepest zoom resolves single frames and renders only the visible ruler window', async ({
+  page,
+}) => {
+  await openEditor(page);
+  const scale = page.getByRole('slider', { name: 'Timeline scale' });
+  // The 12 s demo tops out where the ruler's one-frame step engages, not at REF-60's 32x fit.
+  const max = Number(await scale.getAttribute('max'));
+  expect(max).toBeCloseTo(4800, 3);
+  for (let press = 0; press < 40; press++) await page.keyboard.press('=');
+  expect(Number(await scale.inputValue())).toBeCloseTo(max, 3);
+  const labels = await page.locator('.ruler > span').allInnerTexts();
+  // Marks step one frame at a time from the sequence start, reading as mm:ss:ff between seconds.
+  expect(labels[0]).toBe('00:00');
+  expect(labels[1]).toBe('00:00:01');
+  expect(labels[2]).toBe('00:00:02');
+  // 12 s hold 360 frames, but only the window around the viewport renders.
+  expect(labels.length).toBeLessThan(100);
 });
