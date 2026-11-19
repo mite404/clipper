@@ -29,7 +29,7 @@ import {
   type ReactNode,
 } from 'react';
 import { bindDrag, createAutoScroll } from '@ui-sdk/core';
-import type { Asset } from './media';
+import { stillAt, type Asset } from './media';
 import { moveZoom, resizeZoom } from './zoom-generation';
 import {
   FPS,
@@ -874,6 +874,23 @@ function ChapterFlags({
   ));
 }
 
+// The source frame at a video region's in-point, at one fixed size under its title band. Until
+// that frame decodes it shows the frame it showed before, so a trim never flashes empty.
+function ClipStill({ asset, frame }: { asset: Asset; frame: number }) {
+  const [decoded, setDecoded] = useState(asset.thumbnail);
+  useEffect(() => {
+    if (asset.kind !== 'video' || !asset.url) return;
+    let live = true;
+    void stillAt(asset, frame).then((url) => live && setDecoded(url));
+    return () => {
+      live = false;
+    };
+  }, [asset, frame]);
+  return (
+    <img className="clip-still" src={asset.kind === 'video' ? decoded : asset.thumbnail} alt="" />
+  );
+}
+
 /** Multitrack timeline with a frame-accurate ruler and waveform playback highlighting. */
 export function Timeline({
   clips,
@@ -1026,8 +1043,8 @@ export function Timeline({
                   }}
                 >
                   <span className="clip-title">
-                    {audio ? <Music2 size={12} /> : <Film size={12} />}
-                    {asset?.name ?? 'Missing media'}
+                    <span className="clip-name">{asset?.name ?? 'Missing media'}</span>
+                    <span className="clip-length">{clock(clip.duration)}</span>
                   </span>
                   {audio ? (
                     <Waveform
@@ -1038,16 +1055,8 @@ export function Timeline({
                       progress={(frame - clip.start) / clip.duration}
                     />
                   ) : (
-                    <div className="filmstrip">
-                      {Array.from(
-                        {
-                          length: Math.min(12, Math.max(1, Math.ceil(clip.duration / FPS / 2))),
-                        },
-                        (_, i) => (
-                          <img key={i} src={asset?.thumbnail} alt="" />
-                        ),
-                      )}
-                    </div>
+                    // A start-trim drag keeps the committed frame; release swaps it once.
+                    asset?.thumbnail && <ClipStill asset={asset} frame={originalClip.offset} />
                   )}
                   {!tracks.locked.includes(id) &&
                     (['left', 'right'] as const).map((edge) => (

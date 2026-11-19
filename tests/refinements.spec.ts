@@ -444,7 +444,7 @@ test('a clip body drag draws over its neighbours, overwrites on release and chan
   // Nothing of s2 shows through s1: across s1's title band where it covers s2's label, every pixel
   // matches s1's own plain background in that row over the empty lane just before s2.
   const [front, back] = [(await held.boundingBox())!, (await under.boundingBox())!];
-  const band = (await held.locator('.filmstrip').boundingBox())!.y - front.y - 2;
+  const band = (await held.locator('.clip-still').boundingBox())!.y - front.y - 2;
   const shot = await page.screenshot({
     clip: { x: back.x - 20, y: front.y + 1, width: 120, height: band },
     scale: 'css',
@@ -625,6 +625,92 @@ test('pressing or selecting a clip, a trim grip or a zoom block never changes it
     expect(await item.boundingBox(), `${name} while its grip is held`).toEqual(idle);
     await page.mouse.up();
   }
+});
+
+test('each region reads as one card: a dark band, one fixed head still swapped by a start trim', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 1100 });
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const lane = (id: string) => page.getByTestId(`track-${id}`);
+  const clip = (id: string, n = 0) => lane(id).locator('.timeline-clip').nth(n);
+  const still = (id: string, n = 0) => clip(id, n).locator('.clip-still');
+  const size = async (id: string, n = 0) => {
+    const box = (await still(id, n).boundingBox())!;
+    return [Math.round(box.width * 10) / 10, box.height];
+  };
+  // The band's colour as painted: its own background over the region's.
+  const band = (id: string, n = 0) =>
+    clip(id, n)
+      .locator('.clip-title')
+      .evaluate((el) => getComputedStyle(el).backgroundColor);
+  const box = (id: string, n = 0) => clip(id, n).boundingBox();
+
+  // Video regions carry one 56.9×32 still under a 14 px band; audio carries none, only a waveform.
+  for (const id of ['screen', 'camera']) expect(await size(id)).toEqual([56.9, 32]);
+  // Audio has no still, and its waveform starts below the band, so it never draws over the name.
+  for (const id of ['voice', 'music']) {
+    await expect(clip(id).locator('.clip-still')).toHaveCount(0);
+    const wave = (await clip(id).locator('svg[data-waveform]').boundingBox())!;
+    const name = (await clip(id).locator('.clip-name').boundingBox())!;
+    expect(name.y + name.height, `${id} name clears its waveform`).toBeLessThanOrEqual(wave.y);
+  }
+  await expect(clip('screen').locator('.clip-title')).toHaveCSS('height', '14px');
+  await expect(clip('screen').locator('.clip-length')).toHaveText('00:06');
+  await expect(page.locator('.filmstrip')).toHaveCount(0);
+
+  // s1 (in at 0) and s2 (in at 7 s) show the frames at their own in-points.
+  await expect.poll(() => still('screen', 1).getAttribute('src')).toMatch(/^data:image\/jpeg/);
+  const before = await still('screen', 1).getAttribute('src');
+  expect(before).not.toBe(await still('screen', 0).getAttribute('src'));
+
+  // Hover, select and keyboard focus change colour only, never position or size, and the band
+  // stays the same dark band.
+  const idle = await box('screen', 1);
+  const dark = await band('screen', 1);
+  await clip('screen', 1).hover();
+  expect(await box('screen', 1)).toEqual(idle);
+  await clip('screen', 1).click();
+  await expect(clip('screen', 1)).toHaveClass(/selected/);
+  expect(await box('screen', 1)).toEqual(idle);
+  expect(await band('screen', 1)).toBe(dark);
+  await page.mouse.move(0, 0);
+  await clip('screen', 0).focus();
+  await page.keyboard.press('Tab');
+  expect(await box('screen', 1)).toEqual(idle);
+  expect(await size('screen', 1)).toEqual([56.9, 32]);
+
+  // A start trim swaps the head frame at the same size; an end trim and a body move keep it.
+  const head = clip('screen', 1).getByRole('slider', { name: 'Trim left edge' });
+  await head.focus();
+  for (let i = 0; i < 3; i++) await page.keyboard.press('Shift+ArrowRight');
+  await expect.poll(() => still('screen', 1).getAttribute('src')).not.toBe(before);
+  expect(await size('screen', 1)).toEqual([56.9, 32]);
+  const tail = clip('screen', 0).getByRole('slider', { name: 'Trim right edge' });
+  const kept = await still('screen', 0).getAttribute('src');
+  await tail.focus();
+  for (let i = 0; i < 3; i++) await page.keyboard.press('Shift+ArrowLeft');
+  expect(await still('screen', 0).getAttribute('src')).toBe(kept);
+  expect(await size('screen', 0)).toEqual([56.9, 32]);
+  // A real drag of the voice region's tail: the audio region keeps no still and its waveform.
+  const grip = (await clip('voice')
+    .getByRole('slider', { name: 'Trim right edge' })
+    .boundingBox())!;
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(grip.x - 200, grip.y + grip.height / 2, { steps: 6 });
+  await expect(clip('voice').locator('.clip-still')).toHaveCount(0);
+  await page.mouse.up();
+  await expect(clip('voice').locator('svg[data-waveform]')).toBeVisible();
+  // A body drag on the camera region keeps its still at the same size, mid-gesture and after.
+  const body = (await box('camera'))!;
+  await page.mouse.move(body.x + body.width / 2, body.y + body.height - 6);
+  await page.mouse.down();
+  await page.mouse.move(body.x + body.width / 2 + 120, body.y + body.height - 6, { steps: 6 });
+  expect(await size('camera')).toEqual([56.9, 32]);
+  await page.mouse.up();
+  expect(await size('camera')).toEqual([56.9, 32]);
 });
 
 test('a cancelled mark restores the focus with no undo step, and the playhead zoom is the fallback', async ({

@@ -899,9 +899,7 @@ test.describe('default layout shows the whole timeline', () => {
         .locator('.timeline-clip')
         .first()
         .evaluate((clip) => {
-          const text = Array.from(clip.querySelector('.clip-title')!.childNodes).find(
-            (node) => node.nodeType === Node.TEXT_NODE,
-          )!;
+          const text = clip.querySelector('.clip-title .clip-name')!;
           const range = document.createRange();
           range.selectNodeContents(text);
           return {

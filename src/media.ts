@@ -64,6 +64,54 @@ async function readImage(file: Blob, name: string, id: string, mime: string): Pr
   }
 }
 
+// A decoded frame as a small JPEG data URL, for an <img>.
+function jpeg(source: HTMLCanvasElement | OffscreenCanvas): string {
+  const canvas = document.createElement('canvas');
+  canvas.width = source.width;
+  canvas.height = source.height;
+  canvas.getContext('2d')?.drawImage(source, 0, 0);
+  return canvas.toDataURL('image/jpeg', 0.75);
+}
+
+// One frame decoder per source URL, and each decoded still by URL and source frame.
+// ponytail: both caches only grow, by one small JPEG per distinct in-point; evict on asset
+// removal if long sessions with many trims need it.
+const sinks = new Map<string, Promise<{ sink: CanvasSink; first: number } | null>>();
+const stills = new Map<string, Promise<string>>();
+
+/**
+ * A video source's frame at `frame` (source frames) as an image URL the size of its thumbnail,
+ * decoded locally once per source and frame. Falls back to the thumbnail when it cannot decode.
+ */
+export function stillAt(asset: Asset, frame: number): Promise<string> {
+  const key = `${asset.url}#${frame}`;
+  let still = stills.get(key);
+  if (!still) {
+    let sink = sinks.get(asset.url);
+    if (!sink) {
+      sink = (async () => {
+        const blob = await (await fetch(asset.url)).blob();
+        const input = new Input({ source: new BlobSource(blob), formats: ALL_FORMATS });
+        const track = await input.getPrimaryVideoTrack();
+        if (!track || !(await track.canDecode())) return null;
+        return {
+          sink: new CanvasSink(track, { width: 240 }),
+          first: await track.getFirstTimestamp(),
+        };
+      })();
+      sinks.set(asset.url, sink);
+    }
+    still = sink
+      .then(async (video) => {
+        const sample = await video?.sink.getCanvas(Math.max(video.first, frame / FPS));
+        return sample ? jpeg(sample.canvas) : asset.thumbnail;
+      })
+      .catch(() => asset.thumbnail);
+    stills.set(key, still);
+  }
+  return still;
+}
+
 /** Read metadata and decoded waveform locally. No media is uploaded.
  * @throws When the container or media codec cannot be decoded by this browser.
  */
@@ -113,13 +161,7 @@ export async function readMedia(
     let thumbnail = '';
     if (video) {
       const sample = await new CanvasSink(video, { width: 240 }).getCanvas(0);
-      if (sample) {
-        const canvas = document.createElement('canvas');
-        canvas.width = sample.canvas.width;
-        canvas.height = sample.canvas.height;
-        canvas.getContext('2d')?.drawImage(sample.canvas, 0, 0);
-        thumbnail = canvas.toDataURL('image/jpeg', 0.75);
-      }
+      if (sample) thumbnail = jpeg(sample.canvas);
     }
     return {
       id,

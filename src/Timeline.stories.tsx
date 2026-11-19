@@ -11,7 +11,15 @@ const CASES = {
   Empty: { count: 0, duration: 1, length: 1 },
   One: { count: 1, duration: 1, length: 1 },
   '1,000 clips': { count: 1000, duration: 3000, length: 12 },
+  // UI-14: per lane a long region, a start-trimmed one and one- and two-frame slivers.
+  Regions: { count: 16, duration: 900, length: 0 },
 };
+const REGIONS = [
+  { start: 0, duration: 420, offset: 0 },
+  { start: 420, duration: 300, offset: 1800 },
+  { start: 720, duration: 1, offset: 0 },
+  { start: 760, duration: 2, offset: 0 },
+];
 const NAMES = [
   'Q3_Board_Review_Platform_Infrastructure_Walkthrough_v12_approved_by_legal.mp4',
   'J',
@@ -55,6 +63,7 @@ function TimelineOverflow() {
     start: Math.floor(index / 4) * length,
     duration: length,
     offset: 0,
+    ...(mode === CASES.Regions && REGIONS[Math.floor(index / 4)]),
   }));
   return (
     <>

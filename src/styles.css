@@ -1390,8 +1390,10 @@ p {
   height: 47px;
   min-width: 3px;
   border-radius: 4px;
+  --clip: #30394d;
+  --lift: 0%;
   border: 1px solid #6d779758;
-  background: #30394d;
+  background: color-mix(in oklch, var(--clip), white var(--lift));
   color: #bac4e1;
   padding: 0;
   text-align: left;
@@ -1400,10 +1402,11 @@ p {
   isolation: isolate;
 }
 /* Selection is a colour step, never a size change: the border keeps its 1px and nothing paints
-   outside the box. Hover brightens by a smaller step, and by a larger one on a selected item. */
+   outside the box. Hover lifts the body by a smaller step, and by a larger one on a selected item;
+   only the body lifts, so the title band, still and waveform read the same in every state. */
 .timeline-clip.selected {
+  --lift: 14%;
   border: 1px solid #d3d7ed;
-  filter: brightness(1.4);
   z-index: 1;
 }
 /* A press never scales a timeline item. :active also reaches the grips inside a clip, so without
@@ -1412,48 +1415,65 @@ p {
 .zoom-block:active:not(:disabled) {
   transform: none;
 }
+/* UI-14: each region is one card. A dark band carries the name and, shrinking first, the length;
+   one source still sits at its head and the rest is plain track colour. */
 .clip-title {
-  position: relative;
+  position: absolute;
+  inset: 0 0 auto;
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 8px;
+  height: 14px;
+  /* The right inset keeps the length clear of the end grip. */
+  padding: 0 9px 0 5px;
+  background: #00000040;
+  font-size: 9px;
   font-weight: 500;
-  padding: 5px 7px;
+  line-height: 1;
   white-space: nowrap;
-  overflow: hidden;
-  height: 23px;
-  text-overflow: ellipsis;
   z-index: 2;
   pointer-events: none;
 }
-.filmstrip {
+.clip-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.clip-length {
+  flex: 0 10000 auto;
+  min-width: 0;
+  margin-left: auto;
+  overflow: hidden;
+  font:
+    8px 'IBM Plex Mono',
+    monospace;
+  opacity: 0.65;
+}
+/* Fixed 16:9 at the region's head: a narrow region crops it, a wide one never stretches it. */
+.clip-still {
   position: absolute;
-  inset: 21px 0 0;
-  display: flex;
-  gap: 1px;
-  opacity: 0.4;
+  top: 14px;
+  left: 0;
+  height: 32px;
+  aspect-ratio: 16 / 9;
+  max-width: none;
+  object-fit: cover;
+  box-shadow: 1px 0 #0005;
   pointer-events: none;
 }
-.filmstrip img {
-  height: 100%;
-  width: 70px;
-  flex: 1;
-  object-fit: cover;
-  min-width: 0;
-}
 .track-camera .timeline-clip {
-  background: #4c3f33;
+  --clip: #4c3f33;
   color: #d6bea6;
   border-color: #82684c;
 }
 .track-voice .timeline-clip {
-  background: #254239;
+  --clip: #254239;
   color: #9fcfba;
   border-color: #42705c;
 }
 .track-music .timeline-clip {
-  background: #2d4143;
+  --clip: #2d4143;
   color: #9fc7c5;
   border-color: #46666a;
 }
@@ -1463,9 +1483,9 @@ p {
   border-color: #d7e9d6;
 }
 .timeline-clip > svg[data-waveform] {
-  height: 25px;
+  height: 28px;
   position: absolute;
-  bottom: 1px;
+  top: 16px;
   left: 0;
   width: 100%;
   pointer-events: none;
@@ -1889,10 +1909,10 @@ p {
     background: color-mix(in oklch, var(--primary) 85%, var(--background));
   }
   .timeline-clip:hover {
-    filter: brightness(1.12);
+    --lift: 6%;
   }
   .timeline-clip.selected:hover {
-    filter: brightness(1.52);
+    --lift: 18%;
   }
   .zoom-block:hover .zoom-grip {
     opacity: 1;
@@ -2404,13 +2424,8 @@ p {
   .zoom-block {
     top: 3px;
   }
-  .filmstrip {
-    inset: 18px 0 0;
-  }
-  .clip-title {
-    height: 20px;
-    font-size: 7px;
-    padding-top: 3px;
+  .clip-still {
+    height: 22px;
   }
 }
 @media (min-width: 961px) and (max-height: 950px) {
