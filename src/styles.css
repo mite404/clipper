@@ -3474,3 +3474,242 @@ input[type='number'],
     opacity: 0;
   }
 }
+
+/* The Assistant drawer (CLIP-49): it slides over the right edge below the header, so opening it
+   never resizes the preview, and closed it sits off-screen and inert, clear of the Inspector. */
+.assistant {
+  position: fixed;
+  /* Over the sticky footer (20), under Choice menus (30) so its own model list opens on top. */
+  z-index: 25;
+  top: 73px;
+  right: 0;
+  bottom: 0;
+  width: min(340px, 100vw);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 14px 14px;
+  background: var(--card);
+  border-left: 1px solid var(--line);
+  box-shadow: -12px 0 30px #0006;
+  transform: translateX(100%);
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    transform 220ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 160ms ease-out,
+    visibility 0s 220ms;
+}
+.assistant[data-open] {
+  transform: none;
+  opacity: 1;
+  visibility: visible;
+  transition:
+    transform 220ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 160ms ease-out;
+}
+.assistant .section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+}
+.assistant-model {
+  display: grid;
+  gap: 6px;
+}
+.assistant-model input {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+.assistant-log {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+.assistant-log li {
+  overflow-wrap: anywhere;
+}
+.assistant-you {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: 6px 9px;
+  border-radius: var(--radius);
+  background: var(--secondary);
+}
+.assistant-step,
+.assistant-empty {
+  color: var(--muted-foreground);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+}
+.assistant-empty {
+  font-family: inherit;
+  font-size: 12px;
+}
+.assistant-error {
+  color: var(--destructive);
+}
+.assistant-optin {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+.assistant-note {
+  margin: -4px 0 0;
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+.assistant-compose {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+}
+.assistant-compose textarea {
+  flex: 1;
+  min-width: 0;
+  resize: none;
+  padding: 7px 8px;
+  font: inherit;
+  font-size: 12px;
+  color: var(--foreground);
+  background: var(--secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+.assistant-compose textarea:disabled {
+  opacity: 0.5;
+}
+
+/* Dictation takes over the drawer as a modal: typing is paused while recording (yaklabs ADR-028). */
+.dictation {
+  width: min(100vw - 32px, 520px);
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) + 6px);
+  background: var(--card);
+  color: var(--foreground);
+}
+.dictation::backdrop {
+  background: #0009;
+  backdrop-filter: blur(2px);
+}
+.dictation-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.dictation-header > p {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.dictation-header .select {
+  height: 28px;
+  max-width: 220px;
+  font-size: 12px;
+}
+.dictation-time {
+  font-weight: 400;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.rec-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--destructive);
+  animation: rec-pulse 1.4s ease-in-out infinite;
+}
+.dictation-wave {
+  display: block;
+  width: 100%;
+  height: 104px;
+  margin: 14px 0 12px;
+  border-radius: var(--radius);
+  background: var(--secondary);
+}
+/* Fixed height, so new words never make the dialog grow. */
+.dictation-text {
+  height: 4.65em;
+  margin: 0;
+  overflow-y: auto;
+  font-size: 14px;
+  line-height: 1.55;
+}
+.dictation-text.muted,
+.dictation-footer > span {
+  color: var(--muted-foreground);
+}
+.dictation-notice {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--destructive);
+}
+.dictation-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  font-size: 11px;
+}
+.dictation-footer > span {
+  margin-right: auto;
+}
+.dictation-footer .secondary-button {
+  width: auto;
+}
+.dictation-done {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: 12px;
+  font-weight: 600;
+}
+.stop-square {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: currentColor;
+}
+@keyframes rec-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .assistant,
+  .assistant[data-open] {
+    transform: none;
+    transition:
+      opacity 120ms linear,
+      visibility 0s;
+  }
+  .assistant:not([data-open]) {
+    transition:
+      opacity 120ms linear,
+      visibility 0s 120ms;
+  }
+  .rec-dot {
+    animation: none;
+  }
+}

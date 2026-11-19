@@ -38,6 +38,7 @@ import {
   Slice,
   Trash2,
   ZoomIn,
+  Sparkles,
 } from 'lucide-react';
 import { Composition } from './Composition';
 import {
@@ -57,6 +58,7 @@ import {
   unreadableNamesake,
 } from './media';
 import { CREATE, Timeline } from './Timeline';
+import { ClipEditContext } from './clip-primitive';
 import { transcribe, type Transcript } from './transcribe';
 import {
   DEFAULT_TRACKS,
@@ -124,7 +126,11 @@ import { screenTracks } from './cursor-render';
 import { CORNERS, maskRect, STAGE, type Layout } from './stage';
 import { useMediaDrawer } from './useMediaDrawer';
 import { PanelResizeHandle, usePanelLayout } from './PanelResizeHandle';
+import { AgentPanel } from './AgentPanel';
+import { timelineLines } from './agent';
 import './styles.css';
+
+const assistantToggle = () => document.querySelector<HTMLElement>('.assistant-toggle');
 
 // Cmd+K cuts every unlocked track on a Mac; Alt+K does elsewhere, leaving Ctrl+K to the browser.
 const MAC = /Mac|iP(hone|ad|od)/.test(navigator.platform);
@@ -1124,6 +1130,18 @@ export function Inspector({
   );
 }
 
+// An agent's cut, as the Razor makes it; → the new clips, or null at an edge or a gap.
+function agentCut(clips: Clip[], id: string, at: number): Clip[] | null {
+  const next = splitClip(clips, id, at);
+  return next.length === clips.length ? null : next;
+}
+
+// An agent's trim, as [ and ] make it; → the new clips, or null when it would not shorten the clip.
+function agentTrim(clips: Clip[], target: Clip, action: 'trimStart' | 'trimEnd', at: number) {
+  const next = trimTo(target, action === 'trimStart' ? 'left' : 'right', at);
+  return next && overwrite(clips, next, (c) => c.track === next.track, 1, clipPiece);
+}
+
 /** @throws when this browser cannot write an image to the clipboard. */
 function assertImageClipboard(): void {
   if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined')
@@ -1141,6 +1159,7 @@ export function App() {
   const [dragAsset, setDragAsset] = useState<string | null>(null);
   const [edit, setEdit] = useState<Edit>(INITIAL_EDIT);
   const [history, setHistory] = useState<Edit[]>([]);
+  const [assistantOpen, setAssistantOpen] = useState(false);
   // The edit the last Save wrote, compared by identity: undoing back to it is saved again.
   const [savedEdit, setSavedEdit] = useState<Edit | null>(null);
   const [selected, setSelected] = useState('s1');
@@ -1485,6 +1504,22 @@ export function App() {
       if (next) putClip(next, true);
     },
     [selectedClip, putClip],
+  );
+  // An agent's trim or cut (CLIP-49): the [ ] and Razor model functions, one discrete undo step
+  // each, so two agent edits in a row never fold into one. False when nothing changed.
+  const agentEdit = useCallback(
+    (id: string, action: 'trimStart' | 'trimEnd' | 'split', at: number) => {
+      const target = edit.clips.find((c) => c.id === id && !locked.includes(c.track));
+      if (!target) return false;
+      const clips =
+        action === 'split'
+          ? agentCut(edit.clips, id, at)
+          : agentTrim(edit.clips, target, action, at);
+      if (!clips) return false;
+      setSpeed(0);
+      return change({ ...edit, clips }, true);
+    },
+    [edit, locked, change],
   );
   // Up and Down step the playhead to the previous and next edit point.
   const jumpEdit = useCallback(
@@ -2142,6 +2177,14 @@ export function App() {
           />
         </label>
         <div className="header-actions">
+          <button
+            className="text-button assistant-toggle"
+            aria-expanded={assistantOpen}
+            aria-controls="assistant-pane"
+            onClick={() => setAssistantOpen((v) => !v)}
+          >
+            <Sparkles size={14} aria-hidden="true" /> Assistant
+          </button>
           <div className="export-controls">
             <Choice
               label="Export resolution"
@@ -2476,35 +2519,37 @@ export function App() {
             </div>
             <span className="timeline-toolbar-hint">Double-click a track to seek</span>
           </div>
-          <Timeline
-            headers={{
-              registry: edit.tracks,
-              tracks: trackToggles,
-              onToggleTrack: toggleTrackIn,
-              onMoveTrack: moveTrackBy,
-            }}
-            drop={dragging && { media: placed(dragging), onDrop: place }}
-            clips={edit.clips}
-            assets={assets}
-            zooms={edit.zooms}
-            frame={frame}
-            duration={duration}
-            selected={selected}
-            onSelect={(id) => {
-              setSelected(id);
-            }}
-            onSeek={seek}
-            zoomRef={timelineZoom}
-            chapters={chapters}
-            onTrim={putClip}
-            razor={tool === 'razor' ? { cut: razor, hover: razorHover } : undefined}
-            zoomEdits={{
-              move: (id, start) =>
-                change({ ...edit, zooms: moveZoom(edit.zooms, id, start, duration) }),
-              resize: (id, edge, frame) =>
-                change({ ...edit, zooms: resizeZoom(edit.zooms, id, edge, frame, duration) }),
-            }}
-          />
+          <ClipEditContext value={agentEdit}>
+            <Timeline
+              headers={{
+                registry: edit.tracks,
+                tracks: trackToggles,
+                onToggleTrack: toggleTrackIn,
+                onMoveTrack: moveTrackBy,
+              }}
+              drop={dragging && { media: placed(dragging), onDrop: place }}
+              clips={edit.clips}
+              assets={assets}
+              zooms={edit.zooms}
+              frame={frame}
+              duration={duration}
+              selected={selected}
+              onSelect={(id) => {
+                setSelected(id);
+              }}
+              onSeek={seek}
+              zoomRef={timelineZoom}
+              chapters={chapters}
+              onTrim={putClip}
+              razor={tool === 'razor' ? { cut: razor, hover: razorHover } : undefined}
+              zoomEdits={{
+                move: (id, start) =>
+                  change({ ...edit, zooms: moveZoom(edit.zooms, id, start, duration) }),
+                resize: (id, edge, frame) =>
+                  change({ ...edit, zooms: resizeZoom(edit.zooms, id, edge, frame, duration) }),
+              }}
+            />
+          </ClipEditContext>
           <div className="sequence-footer">
             <span>
               <kbd>J</kbd> Rewind <kbd>K</kbd> Pause <kbd>L</kbd> Play / faster
@@ -2620,6 +2665,21 @@ export function App() {
             </p>
           </section>
         </Inspector>
+        {/* Inside the workspace: fixed, so out of flow, and not counted as chrome when the
+            panes measure the height left for them. */}
+        <AgentPanel
+          open={assistantOpen}
+          onClose={() => {
+            setAssistantOpen(false);
+            assistantToggle()?.focus();
+          }}
+          lines={() =>
+            timelineLines(edit.clips, assets, (c) => {
+              const name = assets.find((a) => a.id === c.assetId)?.name ?? 'Missing media';
+              return `${name} at ${(c.start / FPS).toFixed(1)} seconds`;
+            })
+          }
+        />
       </div>
       <footer className="app-footer">
         {!timelineOpen && (
