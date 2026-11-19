@@ -456,6 +456,10 @@ p {
   margin-left: auto;
   color: var(--muted-foreground);
 }
+/* The compact row's resolution and frame speed hold their width; the name takes the ellipsis. */
+.asset-specs {
+  flex-shrink: 0;
+}
 .asset-meta {
   font-size: 8px;
   color: var(--muted-foreground);

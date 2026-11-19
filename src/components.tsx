@@ -397,11 +397,19 @@ function AssetImage({
 
 type LibraryView = 'thumbnails' | 'clips';
 
-// The compact row's second line: resolution and length, or what a source without them is.
+// The compact row's first line, right of the icon: resolution and frame speed, when they exist.
+const compactSpecs = (asset: Asset) =>
+  asset.kind === 'audio'
+    ? ''
+    : `${asset.width} × ${asset.height}${asset.kind === 'video' && asset.fps ? ` · ${asset.fps} fps` : ''}`;
+
+// The compact row's second line: length, or what a source without one is.
 const compactMeta = (asset: Asset) =>
   asset.kind === 'audio'
     ? `Audio · ${clock(asset.duration)}`
-    : `${asset.width} × ${asset.height} · ${asset.kind === 'image' ? 'Still image' : clock(asset.duration)}`;
+    : asset.kind === 'image'
+      ? 'Still image'
+      : clock(asset.duration);
 
 /** Media library with local-file import, source selection and drags onto the timeline. */
 export function MediaLibrary({
@@ -497,6 +505,9 @@ export function MediaLibrary({
                   audio: <Music2 size={13} />,
                 }[asset.kind]
               }
+              {view === 'clips' && compactSpecs(asset) && (
+                <span className="asset-specs">{compactSpecs(asset)}</span>
+              )}
               <span title={asset.name}>{asset.name}</span>
               <Plus size={13} />
             </div>

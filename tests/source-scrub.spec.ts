@@ -206,10 +206,17 @@ test('Clip view lists sources compactly, selects like the thumbnails, and goes b
     'true',
   );
   await expect(page.locator('.asset-image')).toHaveCount(0);
-  await expect(asset(page, 'Flower study')).toContainText('960 × 540');
-  await expect(asset(page, 'Flower study')).toContainText('00:14');
-  await expect(asset(page, 'Voiceover')).toContainText('Audio · 00:14');
-  await expect(asset(page, 'Flower study')).not.toContainText('fps');
+  // Resolution and frame speed sit on the icon row right of the icon; length alone on line two.
+  await expect(asset(page, 'Flower study').locator('.asset-specs')).toHaveText(
+    '960 × 540 · 30 fps',
+  );
+  await expect(asset(page, 'Flower study').locator('.asset-meta')).toHaveText('00:14');
+  await expect(asset(page, 'A conversation').locator('.asset-specs')).toHaveText(
+    '270 × 481 · 24 fps',
+  );
+  // Audio rows have no resolution or frame speed to show.
+  await expect(asset(page, 'Voiceover').locator('.asset-specs')).toHaveCount(0);
+  await expect(asset(page, 'Voiceover').locator('.asset-meta')).toHaveText('Audio · 00:14');
   await asset(page, 'A conversation').click();
   await expect(asset(page, 'A conversation')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('.source-preview video')).toBeVisible();

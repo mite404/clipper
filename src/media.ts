@@ -18,7 +18,13 @@ export type Asset = {
   cursor?: CursorTrack;
   transcript?: Transcript;
 } & (
-  | { kind: 'video' | 'audio'; duration: number; hasAudio: boolean }
+  | {
+      kind: 'video' | 'audio';
+      duration: number;
+      hasAudio: boolean;
+      // A video's best-guess frame rate from its packet timestamps, when one was found.
+      fps?: number;
+    }
   | { kind: 'image'; duration?: never; hasAudio: false }
 );
 
@@ -193,6 +199,9 @@ export async function readMedia(
       duration: Math.max(1, Math.floor(durationSeconds * FPS)),
       width: video ? await video.getDisplayWidth() : 0,
       height: video ? await video.getDisplayHeight() : 0,
+      ...(video && {
+        fps: Math.round((await video.computeFrameRateMetrics()).bestGuessFrameRate),
+      }),
       peaks,
       hasAudio: Boolean(audio),
       thumbnail,
