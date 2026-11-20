@@ -66,6 +66,8 @@ export type RenderVideoOptions = {
   format?: 'mp4' | 'mov' | 'webm';
   /** Output rate; Auto, the default, is the 30 fps project cadence. The edit grid never changes. */
   fps?: OutputFps;
+  /** The whole-recording gain in dB, matching the preview mix. Omit for unity. */
+  gain?: number;
   onProgress: (progress: number) => void;
   signal?: AbortSignal;
 };
@@ -421,6 +423,7 @@ export async function renderVideo({
   width,
   format,
   fps = 'auto',
+  gain = 0,
   onProgress,
   signal,
 }: RenderVideoOptions): Promise<Blob> {
@@ -432,7 +435,10 @@ export async function renderVideo({
   const height = (width * 9) / 16;
   const rate = outputRate(fps); // → exact p/q
   const samples = outputFrames(frames, rate);
-  const gains = new Map(tracks.flatMap((t) => (t.kind === 'audio' ? [[t.id, t.gain]] : [])));
+  const master = gainFactor(gain);
+  const gains = new Map(
+    tracks.flatMap((t) => (t.kind === 'audio' ? [[t.id, t.gain * master]] : [])),
+  );
   const audioClips = clips.filter(
     (clip) =>
       gains.has(clip.track) &&

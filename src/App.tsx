@@ -1172,7 +1172,15 @@ export function App() {
   const [selectedTracks, setSelectedTracks] = useState<Track[]>([]);
   // Saved with the project like the track toggles, outside undo. Resolution is not saved.
   const [outputFps, setOutputFps] = useState<OutputFps>('auto');
-  const [savedTracks, setSavedTracks] = useState({ muted, locked, selectedTracks, outputFps });
+  // The whole-recording gain in dB, saved with the project like outputFps, outside undo.
+  const [recordingGain, setRecordingGain] = useState(0);
+  const [savedTracks, setSavedTracks] = useState({
+    muted,
+    locked,
+    selectedTracks,
+    outputFps,
+    recordingGain,
+  });
   // Transcripts live on assets, outside the edit history, so saving records which ones it held.
   const [savedTranscripts, setSavedTranscripts] = useState<Asset['transcript'][]>([]);
   const [tool, setTool] = useState<'select' | 'razor'>('select');
@@ -1272,8 +1280,8 @@ export function App() {
     return () => window.removeEventListener('keydown', cancel);
   }, [markingMouse]);
   const compositionProps = useMemo(
-    () => ({ ...edit, zooms: markingMouse ? [] : edit.zooms, assets, muted }),
-    [edit, assets, muted, markingMouse],
+    () => ({ ...edit, zooms: markingMouse ? [] : edit.zooms, assets, muted, gain: recordingGain }),
+    [edit, assets, muted, markingMouse, recordingGain],
   );
 
   useEffect(() => {
@@ -1369,6 +1377,7 @@ export function App() {
     !sameTracks(locked, savedTracks.locked) ||
     !sameTracks(selectedTracks, savedTracks.selectedTracks) ||
     outputFps !== savedTracks.outputFps ||
+    recordingGain !== savedTracks.recordingGain ||
     assets.some((a) => a.transcript && !savedTranscripts.includes(a.transcript)) ||
     transcription.running;
   const working = unsaved || exportProgress !== null || (readyVideo !== null && !readyVideo.saved);
@@ -1407,10 +1416,17 @@ export function App() {
       setFrame(target);
       if (sound)
         playSlices(
-          mixAt(target, editRef.current.clips, editRef.current.tracks, muted, assetsRef.current),
+          mixAt(
+            target,
+            editRef.current.clips,
+            editRef.current.tracks,
+            muted,
+            assetsRef.current,
+            recordingGain,
+          ),
         );
     },
-    [duration, muted],
+    [duration, muted, recordingGain],
   );
   // Cut every unlocked clip `target` accepts at the playhead as one undo step; none is no step.
   const cutAt = useCallback(
@@ -1920,11 +1936,11 @@ export function App() {
     setBusy(true);
     setSpeed(0);
     try {
-      const tracks = { locked, selectedTracks, outputFps };
+      const tracks = { locked, selectedTracks, outputFps, gain: recordingGain };
       const { file, omitted } = await serializeProject(edit, assets, muted, tracks);
       downloadBlob(file, 'developer-walkthrough.clipper.json');
       setSavedEdit(edit);
-      setSavedTracks({ muted, ...tracks });
+      setSavedTracks({ muted, locked, selectedTracks, outputFps, recordingGain });
       setSavedTranscripts(assets.map((a) => a.transcript));
       // The next change starts a new step, so Undo can return to exactly what was saved.
       gesture.current = null;
@@ -1975,12 +1991,14 @@ export function App() {
       setLocked(project.locked);
       setSelectedTracks(project.selectedTracks);
       setOutputFps(project.outputFps);
+      setRecordingGain(project.gain);
       setSavedTranscripts(imported.map((a) => a.transcript));
       setSavedTracks({
         muted: project.muted,
         locked: project.locked,
         selectedTracks: project.selectedTracks,
         outputFps: project.outputFps,
+        recordingGain: project.gain,
       });
       setHistory([]);
       setSelected(project.edit.clips[0]?.id ?? '');
@@ -2014,6 +2032,7 @@ export function App() {
         width: exportWidth,
         format: exportFormat,
         fps: outputFps,
+        gain: recordingGain,
         onProgress: (value) => {
           const next = Math.round(value * 100) / 100;
           if (next === progress) return;
@@ -2602,6 +2621,8 @@ export function App() {
             });
           }}
         >
+          {/* The whole recording's level, always visible above the clip and composition rows. */}
+          <ClipGain label="Recording gain" gain={recordingGain} onGain={setRecordingGain} />
           {selectedClip && assets.find((a) => a.id === selectedClip.assetId)?.kind === 'image' && (
             <section className="cursor-controls" aria-label="Still image clip">
               <h3>Still image</h3>

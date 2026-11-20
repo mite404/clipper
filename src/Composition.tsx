@@ -38,10 +38,20 @@ export type CompositionProps = {
   /** The ordered registry: visual tracks paint back to front, audio tracks mix at their gains. */
   tracks: TrackDef[];
   muted: Track[];
+  /** The whole-recording gain in dB; absent plays at unity. */
+  gain?: number;
 };
 
 /** Frame-driven video masks, source trims, audio and camera motion share Remotion's clock. */
-export function Composition({ clips, assets, zooms, layout, tracks, muted }: CompositionProps) {
+export function Composition({
+  clips,
+  assets,
+  zooms,
+  layout,
+  tracks,
+  muted,
+  gain,
+}: CompositionProps) {
   const frame = useCurrentFrame();
   const size = useVideoConfig();
   const scale = size.width / STAGE.width;
@@ -51,7 +61,10 @@ export function Composition({ clips, assets, zooms, layout, tracks, muted }: Com
   );
   const camera = framingAt(zooms, paths, frame);
   const cursor = cursorFrame(clips, assets, frame, layout, tracks, size);
-  const gains = new Map(tracks.flatMap((t) => (t.kind === 'audio' ? [[t.id, t.gain]] : [])));
+  const master = gainFactor(gain ?? 0);
+  const gains = new Map(
+    tracks.flatMap((t) => (t.kind === 'audio' ? [[t.id, t.gain * master]] : [])),
+  );
   return (
     <AbsoluteFill
       style={{

@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
 
 type Spy = {
   nodes: { node: GainNode }[];
@@ -24,6 +25,14 @@ async function spyOnAudio(page: Page) {
         super(options);
         spy.contexts.push(this);
       }
+    };
+    // The scrub slice pool builds its nodes with the factory, not the constructor.
+    // oxlint-disable-next-line typescript/unbound-method -- the spy holds the original to wrap it, calling it with the receiver
+    const createGain = Context.prototype.createGain;
+    Context.prototype.createGain = function () {
+      const node = createGain.call(this);
+      spy.nodes.push({ node });
+      return node;
     };
   });
 }
@@ -155,4 +164,88 @@ test('the preview plays a boosted clip through Web Audio at the same factor as e
     .poll(async () => (await contextStates(page)).every((state) => state !== 'running'))
     .toBe(true);
   expect(warnings).toEqual([]);
+});
+
+test('the recording gain scales preview and paused scrub by one factor, and mute still wins', async ({
+  page,
+}) => {
+  await spyOnAudio(page);
+  await openEditor(page);
+  const recording = page.getByRole('spinbutton', { name: 'Recording gain dB' });
+  // The row is always visible, no clip selected.
+  await expect(recording).toHaveValue('0');
+  await recording.fill('6');
+  await recording.press('Enter');
+  const factor = 10 ** (6 / 20);
+  // Preview: every clip node carries track x clip x recording, the 0.22 music lane included.
+  await expect.poll(async () => has(await gains(page), factor)).toBe(true);
+  expect(has(await gains(page), 0.22 * factor)).toBe(true);
+  // Saved with the project, never an undo step.
+  await expect(undo(page)).toBeDisabled();
+  // Mute still wins over the recording gain: the voice node drops to 0.
+  await page.getByRole('button', { name: 'Mute Voiceover', exact: true }).click();
+  await expect.poll(async () => has(await gains(page), factor)).toBe(false);
+  expect(has(await gains(page), 0)).toBe(true);
+  await page.getByRole('button', { name: 'Unmute Voiceover', exact: true }).click();
+  await expect.poll(async () => has(await gains(page), factor)).toBe(true);
+  // A paused seek pools one new slice node per clip under the head, at the same product.
+  const carrying = (values: number[], wanted: number) =>
+    values.filter((value) => Math.abs(value - wanted) < 1e-3).length;
+  const before = await gains(page);
+  await page.keyboard.press('ArrowRight');
+  await expect
+    .poll(async () => carrying(await gains(page), factor))
+    .toBe(carrying(before, factor) + 1);
+  expect(carrying(await gains(page), 0.22 * factor)).toBe(carrying(before, 0.22 * factor) + 1);
+});
+
+test('export scales the whole mix by the recording gain', async ({ page }, info) => {
+  test.setTimeout(240000);
+  await openEditor(page);
+  const recording = page.getByRole('spinbutton', { name: 'Recording gain dB' });
+  await recording.fill('-6');
+  await recording.press('Enter');
+  await page.getByRole('button', { name: 'Export video', exact: true }).click();
+  await page.getByRole('button', { name: 'Render video', exact: true }).click();
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Video exported', {
+    timeout: 180000,
+  });
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Save video', exact: true }).click();
+  const download = await downloaded;
+  const file = info.outputPath(download.suggestedFilename());
+  await download.saveAs(file);
+  const pcm = (args: string[]) =>
+    execFileSync(
+      'ffmpeg',
+      ['-v', 'error', ...args, '-f', 'f32le', '-ac', '2', '-ar', '48000', '-'],
+      { maxBuffer: 64 * 1024 * 1024 },
+    );
+  const audio = pcm(['-i', file]);
+  let energy = 0;
+  for (let i = 0; i + 4 <= audio.length; i += 4) energy += audio.readFloatLE(i) ** 2;
+  expect(Math.sqrt(energy / (audio.length / 4))).toBeGreaterThan(0.001);
+  // Voice and Music span the 12 s demo timeline at full length; the reference is the same mix at
+  // the recording gain (-6 dB), the way the preview played it. The demo sources are mono, so the
+  // pan duplicates each at full gain: ffmpeg's own mono-to-stereo upmix would halve the power.
+  const cut = 10 ** (-6 / 20);
+  const reference = pcm([
+    '-i',
+    'public/media/voice.wav',
+    '-i',
+    'public/media/music.wav',
+    '-filter_complex',
+    `[0:a]atrim=start=0:end=12,asetpts=PTS-STARTPTS,volume=${cut},pan=stereo|c0=c0|c1=c0[v];` +
+      `[1:a]atrim=start=0:end=12,asetpts=PTS-STARTPTS,volume=${0.22 * cut},pan=stereo|c0=c0|c1=c0[m];` +
+      '[v][m]amix=inputs=2:normalize=0:duration=longest',
+  ]);
+  let squaredError = 0,
+    referenceEnergy = 0;
+  for (let i = 0; i + 4 <= Math.min(audio.length, reference.length); i += 4) {
+    const expected = reference.readFloatLE(i);
+    squaredError += (audio.readFloatLE(i) - expected) ** 2;
+    referenceEnergy += expected ** 2;
+  }
+  console.log(`recording gain audio error ${Math.sqrt(squaredError / referenceEnergy)}`);
+  expect(Math.sqrt(squaredError / referenceEnergy)).toBeLessThan(0.12);
 });

@@ -10,7 +10,9 @@ export const RESTART_MS = 70;
 
 /**
  * The playback mix at `frame`, mirrored from Composition: only clips on audio tracks sound, each at
- * its track's gain times the clip's gain, and a muted track is silent.
+ * its track's gain times the clip's gain times the whole-recording gain, and a muted track is
+ * silent.
+ * @param master The whole-recording gain in dB; 0 leaves the mix untouched.
  */
 export function mixAt(
   frame: number,
@@ -18,9 +20,13 @@ export function mixAt(
   tracks: TrackDef[],
   muted: Track[],
   assets: Asset[],
+  master = 0,
 ): Slice[] {
+  const factor = gainFactor(master);
   const gains = new Map(
-    tracks.flatMap((track) => (track.kind === 'audio' ? [[track.id, track.gain] as const] : [])),
+    tracks.flatMap((track) =>
+      track.kind === 'audio' ? [[track.id, track.gain * factor] as const] : [],
+    ),
   );
   return clips.flatMap((clip) => {
     const gain = gains.get(clip.track); // → number | undefined

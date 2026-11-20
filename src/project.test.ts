@@ -204,10 +204,13 @@ describe('portable project parsing', () => {
       locked: [],
       selectedTracks: [],
       outputFps: 'auto',
+      gain: 0,
     });
     expect(parseProject(JSON.stringify({ ...project(), outputFps: '29.97' })).outputFps).toBe(
       '29.97',
     );
+    // Without a gain the recording plays at unity; a saved cut reopens as dB.
+    expect(parseProject(JSON.stringify({ ...project(), gain: -6 })).gain).toBe(-6);
     const toggled = { ...project(), locked: ['voice'], selectedTracks: ['screen', 'camera'] };
     expect(parseProject(JSON.stringify(toggled))).toMatchObject({
       locked: ['voice'],
@@ -297,6 +300,11 @@ describe('portable project parsing', () => {
     [JSON.stringify({ ...project(), outputFps: 'auto' }), /outputFps/],
     [JSON.stringify({ ...project(), outputFps: 29.97 }), /outputFps/],
     [JSON.stringify({ ...project(), outputFps: null }), /outputFps/],
+    // The whole-recording gain is a dB number inside the same limits as a clip's.
+    [JSON.stringify({ ...project(), gain: 'loud' }), /gain/],
+    [JSON.stringify({ ...project(), gain: 13 }), /gain/],
+    [JSON.stringify({ ...project(), gain: -25 }), /gain/],
+    [JSON.stringify({ ...project(), gain: null }), /gain/],
   ])('rejects malformed or incompatible input: %s', (text, message) => {
     expect(() => parseProject(text)).toThrow(message);
   });
@@ -782,6 +790,7 @@ describe('portable project serialization', () => {
           locked: ['voice', 'screen'],
           selectedTracks: ['camera'],
           outputFps: '60',
+          gain: -6,
         })
       ).file;
     } finally {
@@ -799,6 +808,7 @@ describe('portable project serialization', () => {
       locked: ['voice', 'screen'],
       selectedTracks: ['camera'],
       outputFps: '60',
+      gain: -6,
     });
     const reopened = parseProject(text);
     expect(reopened).toEqual({
@@ -808,9 +818,36 @@ describe('portable project serialization', () => {
       locked: ['voice', 'screen'],
       selectedTracks: ['camera'],
       outputFps: '60',
+      gain: -6,
     });
     const blob = await (await fetch(reopened.media[0].data)).blob();
     expect(Array.from(new Uint8Array(await blob.arrayBuffer()))).toEqual([0, 1, 2, 255]);
+  });
+
+  it('writes the whole-recording gain only when it cuts or boosts', async () => {
+    const url = URL.createObjectURL(
+      new Blob([new Uint8Array([0, 1, 2, 255])], { type: 'video/mp4' }),
+    );
+    try {
+      const assets = [{ ...asset, url }];
+      // Unity gain keeps the file byte-stable: no key, the way a file without it always read.
+      const unity = await serializeProject(edit, assets, [], {
+        locked: [],
+        selectedTracks: [],
+        gain: 0,
+      });
+      expect(await unity.file.text()).not.toContain('gain');
+      const cut = await serializeProject(edit, assets, [], {
+        locked: [],
+        selectedTracks: [],
+        gain: -6,
+      });
+      const text = await cut.file.text();
+      expect(JSON.parse(text).gain).toBe(-6);
+      expect(parseProject(text).gain).toBe(-6);
+    } finally {
+      URL.revokeObjectURL(url);
+    }
   });
 
   it('preserves unused library media and untyped bytes of every size around a chunk edge', async () => {

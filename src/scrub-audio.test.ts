@@ -57,6 +57,14 @@ describe('mixAt', () => {
     expect(slice.gain).toBeCloseTo(0.22, 6);
   });
 
+  it('scales every slice by the whole-recording gain, mute still silent', () => {
+    const clips = [clip('voice'), clip('music', { track: 'music' })];
+    const slices = mixAt(0, clips, TRACKS, [], ASSETS, 6);
+    expect(slices[0].gain).toBeCloseTo(10 ** (6 / 20), 6);
+    expect(slices[1].gain).toBeCloseTo(0.22 * 10 ** (6 / 20), 6);
+    expect(mixAt(0, clips, TRACKS, ['voice'], ASSETS, 6)).toEqual([slices[1]]);
+  });
+
   it('is silent outside the clip window, at its end frame included', () => {
     const clips = [clip('voice', { start: 60, duration: 30 })];
     expect(mixAt(59, clips, TRACKS, [], ASSETS)).toEqual([]);

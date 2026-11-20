@@ -158,6 +158,13 @@ function clipGain(value: unknown, field: string): { gain?: number } {
   return db === 0 ? {} : { gain: db };
 }
 
+// The whole-recording gain in dB. A file without one plays at unity, and 0 is never written, so
+// only a real boost or cut appears in the file.
+function recordingGain(value: unknown): number {
+  if (value === undefined) return 0;
+  return number(value, 'gain', GAIN_LIMITS.min, GAIN_LIMITS.max);
+}
+
 // The export rate. A file without one exports at Auto, the cadence it always had; Auto itself is
 // never written, so only the five explicit rates are valid here.
 function outputFps(value: unknown): OutputFps {
@@ -272,6 +279,7 @@ export function parseProject(text: string): {
   locked: Track[];
   selectedTracks: Track[];
   outputFps: OutputFps;
+  gain: number;
 } {
   let value: unknown;
   try {
@@ -410,6 +418,7 @@ export function parseProject(text: string): {
     locked: toggles('locked', []),
     selectedTracks: toggles('selectedTracks', []),
     outputFps: outputFps(root.outputFps),
+    gain: recordingGain(root.gain),
   };
 }
 
@@ -510,7 +519,7 @@ export async function serializeProject(
   edit: Omit<Edit, 'tracks'> & Partial<Pick<Edit, 'tracks'>>,
   assets: Asset[],
   muted: Track[],
-  toggles: { locked: Track[]; selectedTracks: Track[]; outputFps?: OutputFps } = {
+  toggles: { locked: Track[]; selectedTracks: Track[]; outputFps?: OutputFps; gain?: number } = {
     locked: [],
     selectedTracks: [],
   },
@@ -523,6 +532,7 @@ export async function serializeProject(
     locked: listed(toggles.locked),
     selectedTracks: listed(toggles.selectedTracks),
     ...(toggles.outputFps && toggles.outputFps !== 'auto' && { outputFps: toggles.outputFps }),
+    ...(toggles.gain && { gain: toggles.gain }),
   };
   validateSources(snapshot, assets);
   const usedIds = new Set(snapshot.clips.map((clip) => clip.assetId));
@@ -563,6 +573,7 @@ export async function serializeProject(
         locked: parsed.locked,
         selectedTracks: parsed.selectedTracks,
         ...(parsed.outputFps !== 'auto' && { outputFps: parsed.outputFps }),
+        ...(parsed.gain !== 0 && { gain: parsed.gain }),
       }),
     ],
     { type: 'application/json' },

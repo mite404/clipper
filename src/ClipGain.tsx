@@ -7,11 +7,13 @@ import { GAIN_LIMITS, gainFromText } from './timeline-model';
  * number field. A value commits on Enter or blur as one undo step, snapped to 0.5 dB and held
  * inside the limits; text that is not a number puts back the clip's gain.
  * @param drag When given, the label scrubs the gain by dragging, through these callbacks.
+ * @param label The row's accessible name; the clip row keeps its polished short "Gain" text.
  */
 export function ClipGain({
   gain,
   onGain,
   drag,
+  label = 'Clip gain',
 }: {
   gain: number;
   onGain: (db: number) => void;
@@ -20,6 +22,7 @@ export function ClipGain({
     onStart: () => void;
     onEnd: (canceled: boolean) => void;
   };
+  label?: string;
 }) {
   const [draft, setDraft] = useState(String(gain));
   const [previous, setPrevious] = useState(gain);
@@ -28,15 +31,15 @@ export function ClipGain({
     setDraft(String(gain));
   }
   return (
-    <div className="inspector-section" role="group" aria-label="Clip gain">
+    <div className="inspector-section" role="group" aria-label={label}>
       <label
         className="slider-label"
         {...(drag && scrub({ ...GAIN_LIMITS, value: gain, ...drag }))}
       >
-        Gain
+        {label === 'Clip gain' ? 'Gain' : label}
         <span className="gain-field">
           <input
-            aria-label="Clip gain dB"
+            aria-label={`${label} dB`}
             type="number"
             min={GAIN_LIMITS.min}
             max={GAIN_LIMITS.max}
