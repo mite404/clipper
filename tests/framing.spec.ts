@@ -396,6 +396,24 @@ const placements: ReadonlyArray<{
     ],
   },
   {
+    name: 'custom screen and camera mask bounds',
+    layout: {
+      screenMask: { x: 40, y: 40, width: 700, height: 500 },
+      cameraMask: { x: 900, y: 100, width: 340, height: 500 },
+    },
+    sizing: {},
+    // The screen mask at (40, 40), 700 × 500; the camera at (900, 100), 340 × 500.
+    mask: { x: 40, y: 40, height: 500 },
+    probes: [
+      [400, 300, 'red'],
+      [1000, 300, 'blue'],
+      [20, 300, 'dark'],
+      [800, 300, 'dark'],
+      [400, 600, 'dark'],
+      [1000, 650, 'dark'],
+    ],
+  },
+  {
     name: 'padding 40 with a 60% screen share',
     layout: { padding: 40, screenShare: 0.6 },
     sizing: {},
