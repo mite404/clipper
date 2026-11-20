@@ -991,7 +991,12 @@ test('the transport stays within the viewport from 320 to 1440 px', async ({ pag
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
   const mixer = page.getByRole('button', { name: 'Audio mixer', exact: true });
-  for (const width of [1440, 1251, 1250, 960, 626, 625, 622, 621, 620, 619, 390, 320]) {
+  // 361-380 watch the ≤360-to-≤620 band handoff: leaving the small-width band there used to
+  // overflow until 380 (the 377.22px content edge on Chrome 157).
+  for (const width of [
+    1440, 1251, 1250, 960, 626, 625, 622, 621, 620, 619, 390, 380, 379, 378, 377, 376, 375, 370,
+    365, 361, 360, 320,
+  ]) {
     await page.setViewportSize({ width, height: 800 });
     // Viewport emulation returns before resize/ResizeObserver updates the layout.
     await page.evaluate(

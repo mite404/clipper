@@ -2647,21 +2647,26 @@ p {
     max-width: calc(max(170px, 100dvh - 690px) * 1.7778);
   }
 }
-@media (max-width: 360px) {
+/* The small-width transport tightening holds until 390px: leaving it at 361px brought back the
+   total-duration readout and 11px padding together, so the content edge sat past the viewport until
+   380px (377.22px on Chrome 157). At 391px the <=620px band takes over and fits. */
+@media (max-width: 390px) {
   .transport {
     /* 4px keeps ~3px of right-edge slack at 320px in the worst-measured browser build (Chrome 157
        reads 0.2px of hit-area overflow with 7px); a flush edge clips when font metrics shift. */
     padding: 0 4px;
   }
+  .transport-readout > span:last-child {
+    display: none;
+  }
+}
+@media (max-width: 360px) {
   .app-header .save-button {
     font-size: 8px;
     padding: 7px 6px;
   }
   .app-header {
     gap: 10px;
-  }
-  .transport-readout > span:last-child {
-    display: none;
   }
   .source-range {
     gap: 4px;
