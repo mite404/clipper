@@ -16,6 +16,11 @@ export type Layout = {
   fillAngle?: number;
   // The panels' shadow strength, 0 to 100; absent or 0 draws none.
   shadow?: number;
+  // The stage geometry, all absent is today's look: the padding around the panels in edit px, the
+  // screen's share of the side-by-side width, and the PiP inset's share of the stage width.
+  padding?: number;
+  screenShare?: number;
+  pipSize?: number;
   radius: number;
   screenX: number;
   screenY: number;
@@ -97,27 +102,48 @@ export function withShadow(layout: Layout, strength: number): Layout {
   return strength ? { ...rest, shadow: strength } : rest;
 }
 
-const MARGIN = 10;
 const GAP = 18;
-const MASK_WIDTH = { screen: 880, camera: STAGE.width - 2 * MARGIN - GAP - 880 };
-// The PiP screen fills the stage inside the margin; the camera is a 16:9 third of it.
-const FULL: Rect = {
-  x: MARGIN,
-  y: MARGIN,
-  width: STAGE.width - 2 * MARGIN,
-  height: STAGE.height - 2 * MARGIN,
-};
-const INSET = { width: FULL.width / 3, height: ((FULL.width / 3) * 9) / 16 };
+/** The padding around the panels in edit px, and its bound; absent is today's 10. */
+export const DEFAULT_PADDING = 10;
+export const PADDING_MAX = 120;
+/** The screen's share of the side-by-side width; absent is today's 880 of 1242. */
+export const SCREEN_SHARE_LIMITS = { min: 0.5, max: 0.8 };
+export const DEFAULT_SCREEN_SHARE = 880 / (STAGE.width - 2 * DEFAULT_PADDING - GAP);
+/** The PiP inset's share of the stage width; absent is today's third. */
+export const PIP_SIZE_LIMITS = { min: 0.2, max: 0.5 };
+export const DEFAULT_PIP_SIZE = 1 / 3;
 
-// The PiP camera inset, MARGIN inside the screen's corner, in edit coordinates.
-function insetRect(corner: Corner = 'bottom-right'): Rect {
+// A layout's panel geometry in edit coordinates: the panels' bounds, their side-by-side widths,
+// and the PiP inset's 16:9 size.
+function geometry({
+  padding = DEFAULT_PADDING,
+  screenShare = DEFAULT_SCREEN_SHARE,
+  pipSize = DEFAULT_PIP_SIZE,
+}: Layout) {
+  const full: Rect = {
+    x: padding,
+    y: padding,
+    width: STAGE.width - 2 * padding,
+    height: STAGE.height - 2 * padding,
+  };
+  const screen = screenShare * (full.width - GAP);
+  const insetWidth = full.width * pipSize;
+  const inset = { width: insetWidth, height: (insetWidth * 9) / 16 };
+  return { padding, full, maskWidth: { screen, camera: full.width - GAP - screen }, inset };
+}
+
+// The PiP camera inset, the padding inside the screen's corner, in edit coordinates.
+function insetRect(
+  corner: Corner = 'bottom-right',
+  { padding, full, inset }: ReturnType<typeof geometry>,
+): Rect {
   const [vertical, horizontal] = corner.split('-');
-  const near = (start: number, length: number, inset: number, far: boolean) =>
-    far ? start + length - MARGIN - inset : start + MARGIN;
+  const near = (start: number, length: number, size: number, far: boolean) =>
+    far ? start + length - padding - size : start + padding;
   return {
-    x: near(FULL.x, FULL.width, INSET.width, horizontal === 'right'),
-    y: near(FULL.y, FULL.height, INSET.height, vertical === 'bottom'),
-    ...INSET,
+    x: near(full.x, full.width, inset.width, horizontal === 'right'),
+    y: near(full.y, full.height, inset.height, vertical === 'bottom'),
+    ...inset,
   };
 }
 
@@ -130,8 +156,9 @@ export function maskRect(track: VisualRole, layout: Layout, size: Size = STAGE):
   const first: VideoTrack = layout.swapped ? 'camera' : 'screen';
   const scaleX = size.width / STAGE.width;
   const scaleY = size.height / STAGE.height;
+  const panels = geometry(layout); // → panels, mask widths and inset in edit coordinates
   if (layout.mode === 'pip') {
-    const rect = track === 'screen' ? FULL : insetRect(layout.corner); // → edit rect
+    const rect = track === 'screen' ? panels.full : insetRect(layout.corner, panels); // → edit rect
     return {
       x: rect.x * scaleX,
       y: rect.y * scaleY,
@@ -140,10 +167,10 @@ export function maskRect(track: VisualRole, layout: Layout, size: Size = STAGE):
     };
   }
   return {
-    x: (track === first ? MARGIN : MARGIN + MASK_WIDTH[first] + GAP) * scaleX,
-    y: MARGIN * scaleY,
-    width: MASK_WIDTH[track] * scaleX,
-    height: (STAGE.height - 2 * MARGIN) * scaleY,
+    x: (track === first ? panels.padding : panels.padding + panels.maskWidth[first] + GAP) * scaleX,
+    y: panels.padding * scaleY,
+    width: panels.maskWidth[track] * scaleX,
+    height: panels.full.height * scaleY,
   };
 }
 

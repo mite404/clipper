@@ -123,7 +123,18 @@ import { CursorControls } from './CursorControls';
 import { ZoomMotionControls } from './ZoomMotionControls';
 import { moveZoom, resizeZoom, resolveZooms } from './zoom-generation';
 import { screenTracks } from './cursor-render';
-import { CORNERS, maskRect, STAGE, type Layout } from './stage';
+import {
+  CORNERS,
+  DEFAULT_PADDING,
+  DEFAULT_PIP_SIZE,
+  DEFAULT_SCREEN_SHARE,
+  maskRect,
+  PADDING_MAX,
+  PIP_SIZE_LIMITS,
+  SCREEN_SHARE_LIMITS,
+  STAGE,
+  type Layout,
+} from './stage';
 import { useMediaDrawer } from './useMediaDrawer';
 import { PanelResizeHandle, usePanelLayout } from './PanelResizeHandle';
 import { AgentPanel } from './AgentPanel';
@@ -868,6 +879,101 @@ function LayoutChoice({
 // Bounds of the 0 to 100 percent fields, which a label drag stays inside.
 const PERCENT = { min: 0, max: 100, step: 1 };
 
+// The stage geometry fields: padding, screen share and PiP size. A value set back to the default
+// removes the field, so the saved file keeps today's look (like mode above).
+function StageGeometry({
+  layout,
+  onLayout,
+  drag,
+}: {
+  layout: Layout;
+  onLayout: (layout: Layout) => void;
+  drag: (
+    value: number,
+    range: StepRange,
+    onScrub: (value: number) => void,
+  ) => Record<string, unknown>;
+}) {
+  const padding = layout.padding ?? DEFAULT_PADDING;
+  const sharePercent = Math.round((layout.screenShare ?? DEFAULT_SCREEN_SHARE) * 100);
+  const pipPercent = Math.round((layout.pipSize ?? DEFAULT_PIP_SIZE) * 100);
+  const defaultShare = Math.round(DEFAULT_SCREEN_SHARE * 100);
+  const defaultPip = Math.round(DEFAULT_PIP_SIZE * 100);
+  const setPadding = (px: number) =>
+    onLayout({ ...layout, padding: px === DEFAULT_PADDING ? undefined : px });
+  const setShare = (percent: number) =>
+    onLayout({ ...layout, screenShare: percent === defaultShare ? undefined : percent / 100 });
+  const setPip = (percent: number) =>
+    onLayout({ ...layout, pipSize: percent === defaultPip ? undefined : percent / 100 });
+  const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
+  return (
+    <div className="crop-controls">
+      <span>Stage</span>
+      <label
+        {...drag(padding, { min: 0, max: PADDING_MAX, step: 1 }, (value) =>
+          setPadding(Math.round(value)),
+        )}
+      >
+        Pad
+        <input
+          aria-label="stage padding"
+          type="number"
+          min="0"
+          max={PADDING_MAX}
+          value={padding}
+          onChange={(e) => setPadding(clamp(Number(e.target.value), 0, PADDING_MAX))}
+        />
+      </label>
+      <label
+        {...drag(
+          sharePercent,
+          { min: SCREEN_SHARE_LIMITS.min * 100, max: SCREEN_SHARE_LIMITS.max * 100, step: 1 },
+          (value) => setShare(Math.round(value)),
+        )}
+      >
+        Share
+        <input
+          aria-label="screen share percent"
+          type="number"
+          min={SCREEN_SHARE_LIMITS.min * 100}
+          max={SCREEN_SHARE_LIMITS.max * 100}
+          value={sharePercent}
+          onChange={(e) =>
+            setShare(
+              clamp(
+                Number(e.target.value),
+                SCREEN_SHARE_LIMITS.min * 100,
+                SCREEN_SHARE_LIMITS.max * 100,
+              ),
+            )
+          }
+        />
+      </label>
+      <label
+        {...drag(
+          pipPercent,
+          { min: PIP_SIZE_LIMITS.min * 100, max: PIP_SIZE_LIMITS.max * 100, step: 1 },
+          (value) => setPip(Math.round(value)),
+        )}
+      >
+        PiP
+        <input
+          aria-label="pip size percent"
+          type="number"
+          min={PIP_SIZE_LIMITS.min * 100}
+          max={PIP_SIZE_LIMITS.max * 100}
+          value={pipPercent}
+          onChange={(e) =>
+            setPip(
+              clamp(Number(e.target.value), PIP_SIZE_LIMITS.min * 100, PIP_SIZE_LIMITS.max * 100),
+            )
+          }
+        />
+      </label>
+    </div>
+  );
+}
+
 /** Editing controls for a selected zoom and the two composition masks. */
 export function Inspector({
   zoom,
@@ -937,6 +1043,7 @@ export function Inspector({
             onChange={(e) => onLayout({ ...layout, radius: Number(e.target.value) })}
           />
         </label>
+        <StageGeometry layout={layout} onLayout={onLayout} drag={drag} />
         <BackdropControls layout={layout} onLayout={onLayout} />
         {background}
         <h3>Crop & framing</h3>

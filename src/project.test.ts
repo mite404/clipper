@@ -243,6 +243,17 @@ describe('portable project parsing', () => {
     });
   });
 
+  it('reads the geometry fields when present, and writes none by default', () => {
+    expect(parseProject(JSON.stringify(project())).edit.layout).toEqual(project().layout);
+    const geometry = project();
+    Object.assign(geometry.layout, { padding: 40, screenShare: 0.6, pipSize: 0.25 });
+    expect(parseProject(JSON.stringify(geometry)).edit.layout).toMatchObject({
+      padding: 40,
+      screenShare: 0.6,
+      pipSize: 0.25,
+    });
+  });
+
   it('accepts zooms that touch without overlapping', () => {
     const value = project();
     value.zooms.push({ ...value.zooms[0], id: 'second', start: 30, duration: 6 });
@@ -260,9 +271,17 @@ describe('portable project parsing', () => {
       y: 100,
     });
     edges.layout = { radius: 60, screenX: 100, screenY: 0, cameraX: 0, cameraY: 100 };
+    Object.assign(edges.layout, { padding: 0, screenShare: 0.5, pipSize: 0.2 });
     const opened = parseProject(JSON.stringify(edges)).edit;
     expect(opened.zooms[0]).toMatchObject({ scale: 1, x: 0, y: 100, duration: 6 });
     expect(opened.layout).toEqual(edges.layout);
+    const high = project();
+    Object.assign(high.layout, { padding: 120, screenShare: 0.8, pipSize: 0.5 });
+    expect(parseProject(JSON.stringify(high)).edit.layout).toMatchObject({
+      padding: 120,
+      screenShare: 0.8,
+      pipSize: 0.5,
+    });
     const top = project();
     Object.assign(top.zooms[0], { scale: 3, x: 100, y: 0 });
     expect(parseProject(JSON.stringify(top)).edit.zooms[0]).toMatchObject({
@@ -421,6 +440,34 @@ describe('portable project parsing', () => {
         Object.assign(p.layout, { mode: 'pip', corner: 'middle' });
       },
       /layout\.corner/i,
+    ],
+    [
+      'excessive padding',
+      (p: ReturnType<typeof project>) => {
+        Object.assign(p.layout, { padding: 121 });
+      },
+      /layout\.padding/i,
+    ],
+    [
+      'non-number padding',
+      (p: ReturnType<typeof project>) => {
+        Object.assign(p.layout, { padding: 'wide' });
+      },
+      /layout\.padding/i,
+    ],
+    [
+      'screen share past its bound',
+      (p: ReturnType<typeof project>) => {
+        Object.assign(p.layout, { screenShare: 0.9 });
+      },
+      /layout\.screenShare/i,
+    ],
+    [
+      'PiP size below its bound',
+      (p: ReturnType<typeof project>) => {
+        Object.assign(p.layout, { pipSize: 0.1 });
+      },
+      /layout\.pipSize/i,
     ],
     [
       'invalid backdrop colour',

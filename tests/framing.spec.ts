@@ -358,7 +358,14 @@ for (const { title, zoom, frame, source, smooth } of [
   });
 
 // Stage points and what each shows: the camera's blue, the screen's red, or the dark empty mask.
-const placements = [
+const placements: ReadonlyArray<{
+  name: string;
+  layout: Record<string, unknown>;
+  sizing: { fit?: 'contain' | 'cover'; scale?: number };
+  // The screen mask's stage rect, to locate the stage on screen; today's geometry when absent.
+  mask?: { x: number; y: number; height: number };
+  probes: ReadonlyArray<readonly [number, number, string]>;
+}> = [
   {
     name: 'a top-left PiP camera inset',
     layout: { mode: 'pip', corner: 'top-left' },
@@ -388,9 +395,45 @@ const placements = [
       [1100, 600, 'blue'],
     ],
   },
-] as const;
+  {
+    name: 'padding 40 with a 60% screen share',
+    layout: { padding: 40, screenShare: 0.6 },
+    sizing: {},
+    // Usable 1182: screen 709.2 at (40, 40), camera 472.8 at (767.2, 40), both 640 tall.
+    mask: { x: 40, y: 40, height: 640 },
+    probes: [
+      [20, 360, 'dark'],
+      [400, 360, 'red'],
+      [758, 360, 'dark'],
+      [1000, 360, 'blue'],
+      [1260, 60, 'dark'],
+      [400, 20, 'dark'],
+    ],
+  },
+  {
+    name: 'a 50% PiP inset with padding 20',
+    layout: { mode: 'pip', corner: 'top-left', padding: 20, pipSize: 0.5 },
+    sizing: {},
+    // Usable 1240x680: the inset is 620 × 348.75 at (40, 40) over the screen's (20, 20).
+    mask: { x: 20, y: 20, height: 680 },
+    probes: [
+      [10, 360, 'dark'],
+      [100, 100, 'blue'],
+      [600, 340, 'blue'],
+      [700, 100, 'red'],
+      [100, 500, 'red'],
+      [1200, 660, 'red'],
+    ],
+  },
+];
 
-for (const { name, layout: placed, sizing, probes } of placements)
+for (const {
+  name,
+  layout: placed,
+  sizing,
+  probes,
+  mask: located = { x: 10, y: 10, height: 700 },
+} of placements)
   test(`${name} lands in the same place in preview, Copy frame and export`, async ({ page }) => {
     test.setTimeout(90000);
     await page.goto('/');
@@ -533,13 +576,13 @@ for (const { name, layout: placed, sizing, probes } of placements)
     await page.getByLabel('Timeline playhead', { exact: true }).fill('6');
     await expect(page.getByTestId('camera-mask').locator('video')).toHaveCount(1);
     await page.waitForTimeout(500);
-    // The screen mask is 700 tall at (10, 10) in both layouts, so it locates the stage on screen.
+    // The screen mask's stage rect locates the stage on screen.
     const screen = (await page.getByTestId('screen-mask').boundingBox())!;
-    const unit = screen.height / 700;
+    const unit = screen.height / located.height;
     const shot = await page.screenshot({
       clip: {
-        x: screen.x - 10 * unit,
-        y: screen.y - 10 * unit,
+        x: screen.x - located.x * unit,
+        y: screen.y - located.y * unit,
         width: 1280 * unit,
         height: 720 * unit,
       },

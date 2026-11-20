@@ -1767,6 +1767,19 @@ p {
   padding: 5px 3px;
   font-size: 8px;
   text-align: center;
+  min-width: 22px;
+}
+.crop-controls input[type='number'] {
+  -webkit-appearance: textfield;
+  appearance: textfield;
+}
+.crop-controls input[type='number']::-webkit-outer-spin-button,
+.crop-controls input[type='number']::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  display: none;
+}
+.crop-controls:has(> label:nth-of-type(3)) > span {
+  min-width: 24px;
 }
 .zoom-heading {
   display: flex;

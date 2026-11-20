@@ -58,6 +58,36 @@ describe('laying out the stage', () => {
     });
   });
 
+  it('pads the stage and re-splits the side-by-side masks by the layout geometry', () => {
+    // Padding 40: usable 1280-80-18 = 1182; share 1/2 splits it 591/591.
+    const padded = { ...layout, padding: 40, screenShare: 0.5 };
+    expect(maskRect('screen', padded)).toEqual({ x: 40, y: 40, width: 591, height: 640 });
+    expect(maskRect('camera', padded)).toEqual({ x: 649, y: 40, width: 591, height: 640 });
+    const swapped = { ...padded, swapped: true };
+    expect(maskRect('screen', swapped)).toEqual({ x: 649, y: 40, width: 591, height: 640 });
+    expect(maskRect('camera', swapped)).toEqual({ x: 40, y: 40, width: 591, height: 640 });
+    // Share 3/4 at today's padding: usable 1242, so 931.5/310.5.
+    const wide = { ...layout, screenShare: 0.75 };
+    expect(maskRect('screen', wide)).toEqual({ x: 10, y: 10, width: 931.5, height: 700 });
+    expect(maskRect('camera', wide)).toEqual({ x: 959.5, y: 10, width: 310.5, height: 700 });
+  });
+
+  it('sizes the PiP inset from the stage share, padding inside the fuller stage', () => {
+    // Padding 20: usable 1240x680; a 1/2 inset is 620 x 348.75, 20 inside the screen's corner.
+    const pip = { ...layout, mode: 'pip' as const, padding: 20, pipSize: 0.5 };
+    const inset = { width: 620, height: 348.75 };
+    expect(maskRect('screen', pip)).toEqual({ x: 20, y: 20, width: 1240, height: 680 });
+    expect(maskRect('camera', pip)).toEqual({ x: 620, y: 331.25, ...inset });
+    expect(maskRect('camera', { ...pip, corner: 'top-left' })).toEqual({ x: 40, y: 40, ...inset });
+    // Actual pixels scale the same geometry.
+    expect(maskRect('camera', pip, { width: 1920, height: 1080 })).toEqual({
+      x: 930,
+      y: 496.875,
+      width: 930,
+      height: 523.125,
+    });
+  });
+
   it('gives a background the whole actual stage and a centered crop, whatever the layout', () => {
     for (const size of [STAGE, { width: 1920, height: 1080 }, { width: 3840, height: 2160 }])
       for (const swapped of [false, true])

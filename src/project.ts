@@ -1,4 +1,12 @@
-import { CORNERS, SHADOW_MAX, type Corner, type Layout } from './stage';
+import {
+  CORNERS,
+  PADDING_MAX,
+  PIP_SIZE_LIMITS,
+  SCREEN_SHARE_LIMITS,
+  SHADOW_MAX,
+  type Corner,
+  type Layout,
+} from './stage';
 import { openMedia, type Asset } from './media';
 import {
   DEFAULT_TRACKS,
@@ -125,6 +133,27 @@ function backdropOf(settings: Record<string, unknown>): Partial<Layout> {
 }
 
 // The composition settings. Older files omit swapped; Side by side is stored as no mode.
+// The optional stage geometry: each field absent means today's look, so legacy files keep their
+// appearance byte-for-byte.
+function geometryOf(settings: Record<string, unknown>): Partial<Layout> {
+  return {
+    ...(settings.padding !== undefined && {
+      padding: number(settings.padding, 'layout.padding', 0, PADDING_MAX),
+    }),
+    ...(settings.screenShare !== undefined && {
+      screenShare: number(
+        settings.screenShare,
+        'layout.screenShare',
+        SCREEN_SHARE_LIMITS.min,
+        SCREEN_SHARE_LIMITS.max,
+      ),
+    }),
+    ...(settings.pipSize !== undefined && {
+      pipSize: number(settings.pipSize, 'layout.pipSize', PIP_SIZE_LIMITS.min, PIP_SIZE_LIMITS.max),
+    }),
+  };
+}
+
 function layoutOf(value: unknown): Layout {
   const settings = object(value, 'layout');
   const layout: Layout = {
@@ -133,6 +162,7 @@ function layoutOf(value: unknown): Layout {
     screenY: number(settings.screenY, 'layout.screenY', 0, 100),
     cameraX: number(settings.cameraX, 'layout.cameraX', 0, 100),
     cameraY: number(settings.cameraY, 'layout.cameraY', 0, 100),
+    ...geometryOf(settings),
   };
   if (settings.swapped !== undefined) {
     if (typeof settings.swapped !== 'boolean') throw new Error('layout.swapped must be boolean.');
