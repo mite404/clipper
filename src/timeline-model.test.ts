@@ -32,6 +32,7 @@ import {
   insertClip,
   lockedChange,
   maxTimelineScale,
+  nextTimelineScale,
   moveTrack,
   overwrite,
   rulerMarks,
@@ -298,6 +299,18 @@ describe('editing a timeline in frames', () => {
     expect(maxTimelineScale(3600, 0.26)).toBe(4800);
     // Past ~1.9 h the browser's 33.5M px layout cap binds instead: 24 h resolves ~12.7 px/frame.
     expect(maxTimelineScale(86400, 0.011)).toBeCloseTo(33_000_000 / 86400, 5);
+  });
+
+  it('steps the timeline zoom by √2, fits to the viewport floor and clamps at both ends', () => {
+    expect(nextTimelineScale(1, 40, 20, 6400)).toBeCloseTo(40 * Math.SQRT2, 5);
+    expect(nextTimelineScale(-1, 40, 20, 6400)).toBeCloseTo(40 / Math.SQRT2, 5);
+    // 'fit' is all the way out: the fit scale, from any current scale.
+    expect(nextTimelineScale('fit', 400, 20, 6400)).toBe(20);
+    expect(nextTimelineScale('fit', 20, 20, 6400)).toBe(20);
+    // Steps clamp at the bounds and report no movement when already there.
+    expect(nextTimelineScale(1, 6390, 20, 6400)).toBe(6400);
+    expect(nextTimelineScale(1, 6400, 20, 6400)).toBe(6400);
+    expect(nextTimelineScale(-1, 20, 20, 6400)).toBe(20);
   });
 
   it('windows ruler marks to a visible frame range when one is given', () => {

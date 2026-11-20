@@ -37,6 +37,7 @@ import {
   MAX_FRAMES,
   gainFactor,
   maxTimelineScale,
+  nextTimelineScale,
   moveTrack,
   placeMedia,
   rulerMarks,
@@ -434,11 +435,7 @@ function useTimelineScale(seconds: number) {
   // One keyboard step of the display scale, √2 per step, clamped like the slider. The playhead
   // stays where it is on screen, or moves to the middle of the lanes when it was out of view.
   const zoom = (command: 1 | -1 | 'fit') => {
-    // 'fit' is all the way out: one sequence exactly fills the viewport, the scale's own floor.
-    const next =
-      command === 'fit'
-        ? minScale
-        : Math.max(minScale, Math.min(maxScale, scale * Math.SQRT2 ** command));
+    const next = nextTimelineScale(command, scale, minScale, maxScale);
     if (next === scale) return;
     const scroll = viewport.current!;
     const lanes =

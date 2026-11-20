@@ -564,6 +564,25 @@ export function maxTimelineScale(seconds: number, minScale: number): number {
 }
 
 /**
+ * The display scale after one timeline zoom command: 'fit' goes all the way out so one sequence
+ * exactly fills the viewport, 1 and -1 step by √2, always clamped to the scale's own bounds.
+ * Returns the current scale when the command cannot move it, so the caller can skip the render.
+ * @param command The zoom direction, or 'fit' for the whole-sequence view.
+ * @param scale The current display scale in pixels per second.
+ * @param minScale The fit scale: one sequence exactly fills the viewport.
+ * @param maxScale The deepest scale from maxTimelineScale.
+ */
+export function nextTimelineScale(
+  command: 1 | -1 | 'fit',
+  scale: number,
+  minScale: number,
+  maxScale: number,
+): number {
+  const stepped = command === 'fit' ? minScale : scale * Math.SQRT2 ** command; // → number
+  return Math.max(minScale, Math.min(maxScale, stepped)); // → number
+}
+
+/**
  * The frames a ruler labels: from frame 0 at the smallest round step that keeps the marks
  * `RULER_GAP_PIXELS` apart and at most `RULER_MAX_MARKS` of them, so no two labels read alike. Zoomed
  * in far enough that the marks would be sparse, the step refines to frames instead.
