@@ -539,11 +539,14 @@ export function SourceMonitor({
   onTime,
   blocked = false,
   transcript,
+  markRef,
 }: {
   asset?: Asset;
   /** The preview position in seconds, owned by the caller so the library can move it too. */
   time: number;
   onTime: (seconds: number) => void;
+  /** Filled with the in/out marking the Set buttons do, for the editor's `i` and `o` keys. */
+  markRef?: { current: ((which: 'in' | 'out') => void) | null };
   /** The edit's registry, so the target list follows created and reordered tracks. */
   tracks: TrackDef[];
   onInsert: (track: Track, offset: number, duration: number) => void;
@@ -558,6 +561,18 @@ export function SourceMonitor({
   const targets = sourceTracks(tracks, asset?.kind);
   const track = targets.some((t) => t.id === choice) ? choice : defaultTrack(tracks, asset?.kind);
   const [range, setRange] = useState(() => ({ start: 0, end: sourceRangeEnd(asset) }));
+  useEffect(() => {
+    if (!markRef) return;
+    markRef.current = (which) =>
+      setRange((current) =>
+        which === 'in'
+          ? markIn(current, Math.round(time * FPS))
+          : markOut(current, Math.round(time * FPS), asset?.duration ?? 0),
+      );
+    return () => {
+      markRef.current = null;
+    };
+  }, [markRef, time, asset?.duration]);
   const [preview, setPreview] = useState({ playing: false, error: '' });
   const video = useRef<HTMLVideoElement>(null);
   const audio = useRef<HTMLAudioElement>(null);
@@ -599,7 +614,7 @@ export function SourceMonitor({
     setPreview({ playing: false, error: '' });
   }
   return (
-    <section className="source-panel">
+    <section className="source-panel" id="source-pane">
       <div className="monitor-title">
         <span>Source</span>
         {asset?.kind === 'audio' && <span className="muted-text">AUDIO</span>}
@@ -1831,11 +1846,20 @@ export function App() {
   // Delete follows the last panel the user pressed or focused, not document.activeElement, which
   // drops to the body whenever the app removes or disables the focused control.
   const inTimeline = useRef(false);
+  const inSource = useRef(false);
   const timelineZoom = useRef<((command: 1 | -1 | 'fit') => void) | null>(null);
+  const sourceMark = useRef<((which: 'in' | 'out') => void) | null>(null);
+  // The timeline's in/out points: display state only - in memory, not saved, no undo. Setting a
+  // point again moves it.
+  const [points, setPoints] = useState<{ in: number | null; out: number | null }>({
+    in: null,
+    out: null,
+  });
   useEffect(() => {
     const track = (event: Event) => {
-      inTimeline.current =
-        event.target instanceof Element && !!event.target.closest('#sequence-pane');
+      const element = event.target instanceof Element ? event.target : null;
+      inTimeline.current = !!element?.closest('#sequence-pane');
+      inSource.current = !!element?.closest('#source-pane');
     };
     // A pool drop lands in the timeline, so it hands Delete to the clip it selects.
     const events = ['pointerdown', 'focusin', 'drop'];
@@ -1940,6 +1964,20 @@ export function App() {
       if (key === '\\') {
         event.preventDefault();
         timelineZoom.current?.('fit');
+        return;
+      }
+      // In and out points follow the panel that owns the keys, like Delete: the source's drive
+      // insertion; the timeline's are display state nothing consumes yet.
+      if (key === 'i' || key === 'o') {
+        if (event.repeat || event.shiftKey) return;
+        const which = key === 'i' ? ('in' as const) : ('out' as const);
+        if (inSource.current) {
+          event.preventDefault();
+          sourceMark.current?.(which);
+        } else if (inTimeline.current) {
+          event.preventDefault();
+          setPoints((points) => ({ ...points, [which]: frameRef.current }));
+        }
         return;
       }
       // Deletion belongs to the timeline: after a press or focus anywhere else the keys are left alone.
@@ -2255,6 +2293,7 @@ export function App() {
         onTime={seekSource}
         blocked={sourceBlocked}
         transcript={transcription.row}
+        markRef={sourceMark}
       />
     ),
     [asset, edit.tracks, insert, sourceTime, seekSource, sourceBlocked, transcription.row],
@@ -2683,7 +2722,7 @@ export function App() {
               }}
               onSeek={seek}
               zoomRef={timelineZoom}
-              chapters={chapters}
+              ruler={{ chapters, points }}
               onTrim={putClip}
               razor={tool === 'razor' ? { cut: razor, hover: razorHover } : undefined}
               zoomEdits={{

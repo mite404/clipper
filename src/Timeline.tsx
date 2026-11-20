@@ -897,6 +897,45 @@ function ChapterFlags({
   ));
 }
 
+/** Hands the editor's `-`/`=`/`\` keys the scale step while clips exist, through the given ref. */
+function useZoomRef(
+  zoomRef: { current: ((command: 1 | -1 | 'fit') => void) | null } | undefined,
+  zoomable: boolean,
+  zoom: (command: 1 | -1 | 'fit') => void,
+) {
+  useLayoutEffect(() => {
+    if (!zoomRef) return;
+    zoomRef.current = zoomable ? zoom : null;
+    return () => {
+      zoomRef.current = null;
+    };
+  });
+}
+
+// The timeline's in/out points as ticks on the ruler. Display state only: nothing consumes the
+// range yet, so the ticks are not interactive.
+function RangePoints({
+  points,
+  duration,
+}: {
+  points?: { in: number | null; out: number | null };
+  duration: number;
+}) {
+  return (['in', 'out'] as const).map((which) => {
+    const at = points?.[which];
+    if (at == null) return null;
+    return (
+      <span
+        key={which}
+        className={`range-point ${which}`}
+        data-testid={`timeline-${which}-point`}
+        aria-label={`Timeline ${which} at ${timecode(at)}`}
+        style={{ left: `${(at / duration) * 100}%` }}
+      />
+    );
+  });
+}
+
 // The source frame at a video region's in-point, at one fixed size under its title band. Until
 // that frame decodes it shows the frame it showed before, so a trim never flashes empty.
 function ClipStill({ asset, frame }: { asset: Asset; frame: number }) {
@@ -930,7 +969,7 @@ export function Timeline({
   drop,
   zoomEdits,
   zoomRef,
-  chapters,
+  ruler = {},
 }: {
   clips: Clip[];
   assets: Asset[];
@@ -951,22 +990,18 @@ export function Timeline({
   zoomEdits?: ZoomEdits;
   /** Filled with the keyboard scale step while clips exist, for the editor's `-` and `=` keys. */
   zoomRef?: { current: ((command: 1 | -1 | 'fit') => void) | null };
-  /** The chapters inside the sequence, drawn as flags on the ruler. */
-  chapters?: Chapter[];
+  /** What the ruler draws besides its marks: chapter flags, and the timeline's in/out points,
+   * which nothing consumes yet. */
+  ruler?: { chapters?: Chapter[]; points?: { in: number | null; out: number | null } };
 }) {
+  const { chapters, points } = ruler;
   const { registry, tracks, onToggleTrack, onMoveTrack } = headers;
   const { cut: onRazor, hover: onRazorHover } = razor;
   const seconds = duration / FPS;
   const { viewport, label, minScale, maxScale, scale, setScale, zoom, visible, width } =
     useTimelineScale(seconds);
   const zoomable = clips.length > 0;
-  useLayoutEffect(() => {
-    if (!zoomRef) return;
-    zoomRef.current = zoomable ? zoom : null;
-    return () => {
-      zoomRef.current = null;
-    };
-  });
+  useZoomRef(zoomRef, zoomable, zoom);
   // A drag names its clip by ID and trims the clip as it is now, so a split, undo or delete made
   // while a grip is held is never overwritten by a copy taken at pointerdown.
   const [drag, setDrag] = useState<{ clipId: string; edge: 'left' | 'right'; delta: number }>();
@@ -1170,6 +1205,7 @@ export function Timeline({
               onSeek={onSeek}
               onSelect={onSelect}
             />
+            <RangePoints points={points} duration={duration} />
             <div
               className="ruler-playhead"
               aria-hidden="true"

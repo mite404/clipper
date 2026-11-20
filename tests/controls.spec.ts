@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { rangeIn, rangeOut, seekSource } from './source-range';
 
 async function openEditor(page: Page) {
   await page.goto('/');
@@ -266,6 +267,53 @@ test('the backslash key zooms all the way out to the fit window', async ({ page 
   await place.focus();
   await place.press('\\');
   expect(await value()).toBe(zoomed);
+});
+
+test('i and o set in/out points in the panel that has focus', async ({ page }) => {
+  await openEditor(page);
+  // Source panel: park the preview, then i and o mark its range like the Set buttons.
+  await seekSource(page, 60);
+  await page.locator('.source-panel .monitor-title').click();
+  await page.keyboard.press('i');
+  await expect(rangeIn(page)).toHaveText('2 s');
+  await seekSource(page, 149);
+  await page.keyboard.press('o');
+  await expect(rangeOut(page)).toHaveText('5 s');
+  // The scrub bar's range strip shows both marks between its edges.
+  await expect(page.getByTestId('source-bar-range')).toBeVisible();
+
+  // Timeline panel: a clip press hands the keys to it, and the ruler draws the points.
+  const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
+  await playhead.fill('90');
+  await page.getByTestId('track-screen').getByRole('button').first().click();
+  await page.keyboard.press('i');
+  await expect(page.getByTestId('timeline-in-point')).toHaveAttribute(
+    'aria-label',
+    'Timeline in at 00:03:00',
+  );
+  await playhead.fill('240');
+  await page.keyboard.press('o');
+  await expect(page.getByTestId('timeline-out-point')).toHaveAttribute(
+    'aria-label',
+    'Timeline out at 00:08:00',
+  );
+  // Setting a point again moves it.
+  await playhead.fill('120');
+  await page.keyboard.press('i');
+  await expect(page.getByTestId('timeline-in-point')).toHaveAttribute(
+    'aria-label',
+    'Timeline in at 00:04:00',
+  );
+
+  // A form control keeps the keys for itself.
+  const place = page.getByRole('spinbutton', { name: 'Place at seconds' });
+  await place.focus();
+  await page.keyboard.press('o');
+  await expect(page.getByTestId('timeline-out-point')).toHaveAttribute(
+    'aria-label',
+    'Timeline out at 00:08:00',
+  );
+  await expect(rangeOut(page)).toHaveText('5 s');
 });
 
 test('the ruler keeps labelling frames at the deepest zoom', async ({ page }) => {

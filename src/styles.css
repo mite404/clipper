@@ -3257,6 +3257,19 @@ html[data-panel-drag='row'] * {
   border-radius: 1px;
   background: var(--green);
 }
+.range-point {
+  position: absolute;
+  top: 0;
+  z-index: 8;
+  width: 7px;
+  height: 11px;
+  background: var(--primary);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+.range-point.out {
+  margin-left: -5px;
+  clip-path: polygon(100% 0, 0 50%, 100% 100%);
+}
 .chapter-title {
   display: flex;
   flex: 1 1 100%;
