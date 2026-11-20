@@ -10,6 +10,7 @@ import {
   panelShadow,
   sourceToStage,
   STAGE,
+  stageValueFromText,
   withBackdropStyle,
   withShadow,
 } from './stage';
@@ -283,5 +284,15 @@ describe('the stage backdrop', () => {
     expect(withShadow(layout, 30)).toEqual({ ...layout, shadow: 30 });
     expect(withShadow({ ...layout, shadow: 30 }, 0)).toEqual(layout);
     expect('shadow' in withShadow({ ...layout, shadow: 30 }, 0)).toBe(false);
+  });
+
+  it('parses a stage field as a rounded number clamped at commit, undefined when no number', () => {
+    expect(stageValueFromText('60', 50, 80)).toBe(60);
+    expect(stageValueFromText('500', 50, 80)).toBe(80);
+    expect(stageValueFromText('3', 50, 80)).toBe(50);
+    expect(stageValueFromText(' 71 ', 50, 80)).toBe(71);
+    expect(stageValueFromText('60.6', 0, 120)).toBe(61);
+    expect(stageValueFromText('', 50, 80)).toBeUndefined();
+    expect(stageValueFromText('abc', 50, 80)).toBeUndefined();
   });
 });

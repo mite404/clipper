@@ -134,6 +134,7 @@ import {
   PIP_SIZE_LIMITS,
   SCREEN_SHARE_LIMITS,
   STAGE,
+  stageValueFromText,
   type Layout,
 } from './stage';
 import { useMediaDrawer } from './useMediaDrawer';
@@ -895,6 +896,55 @@ function LayoutChoice({
 // Bounds of the 0 to 100 percent fields, which a label drag stays inside.
 const PERCENT = { min: 0, max: 100, step: 1 };
 
+// One Stage row field: the label scrubs live by dragging, while the number field types as a draft
+// and commits on blur (Enter blurs), clamped then, so a multi-digit entry is not clamped per
+// keystroke. Text that names no number puts the current value back. ClipGain's draft/commit split.
+function StageField({
+  label,
+  aria,
+  value,
+  min,
+  max,
+  onCommit,
+  drag,
+}: {
+  label: string;
+  aria: string;
+  value: number;
+  min: number;
+  max: number;
+  onCommit: (value: number) => void;
+  drag: Record<string, unknown>;
+}) {
+  const [draft, setDraft] = useState(String(value));
+  const [previous, setPrevious] = useState(value);
+  if (previous !== value) {
+    setPrevious(value);
+    setDraft(String(value));
+  }
+  return (
+    <label {...drag}>
+      {label}
+      <input
+        aria-label={aria}
+        type="number"
+        min={min}
+        max={max}
+        value={draft}
+        onChange={(event) => setDraft(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') event.currentTarget.blur();
+        }}
+        onBlur={() => {
+          const next = stageValueFromText(draft, min, max);
+          if (next !== undefined && next !== value) onCommit(next);
+          setDraft(String(value)); // a committed change re-syncs the draft through the new value
+        }}
+      />
+    </label>
+  );
+}
+
 // The stage geometry fields: padding, screen share and PiP size. A value set back to the default
 // removes the field, so the saved file keeps today's look (like mode above).
 function StageGeometry({
@@ -921,71 +971,46 @@ function StageGeometry({
     onLayout({ ...layout, screenShare: percent === defaultShare ? undefined : percent / 100 });
   const setPip = (percent: number) =>
     onLayout({ ...layout, pipSize: percent === defaultPip ? undefined : percent / 100 });
-  const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
   return (
     <div className="crop-controls">
       <span>Stage</span>
-      <label
-        {...drag(padding, { min: 0, max: PADDING_MAX, step: 1 }, (value) =>
+      <StageField
+        label="Pad"
+        aria="stage padding"
+        value={padding}
+        min={0}
+        max={PADDING_MAX}
+        onCommit={setPadding}
+        drag={drag(padding, { min: 0, max: PADDING_MAX, step: 1 }, (value) =>
           setPadding(Math.round(value)),
         )}
-      >
-        Pad
-        <input
-          aria-label="stage padding"
-          type="number"
-          min="0"
-          max={PADDING_MAX}
-          value={padding}
-          onChange={(e) => setPadding(clamp(Number(e.target.value), 0, PADDING_MAX))}
-        />
-      </label>
-      <label
-        {...drag(
+      />
+      <StageField
+        label="Share"
+        aria="screen share percent"
+        value={sharePercent}
+        min={SCREEN_SHARE_LIMITS.min * 100}
+        max={SCREEN_SHARE_LIMITS.max * 100}
+        onCommit={setShare}
+        drag={drag(
           sharePercent,
           { min: SCREEN_SHARE_LIMITS.min * 100, max: SCREEN_SHARE_LIMITS.max * 100, step: 1 },
           (value) => setShare(Math.round(value)),
         )}
-      >
-        Share
-        <input
-          aria-label="screen share percent"
-          type="number"
-          min={SCREEN_SHARE_LIMITS.min * 100}
-          max={SCREEN_SHARE_LIMITS.max * 100}
-          value={sharePercent}
-          onChange={(e) =>
-            setShare(
-              clamp(
-                Number(e.target.value),
-                SCREEN_SHARE_LIMITS.min * 100,
-                SCREEN_SHARE_LIMITS.max * 100,
-              ),
-            )
-          }
-        />
-      </label>
-      <label
-        {...drag(
+      />
+      <StageField
+        label="PiP"
+        aria="pip size percent"
+        value={pipPercent}
+        min={PIP_SIZE_LIMITS.min * 100}
+        max={PIP_SIZE_LIMITS.max * 100}
+        onCommit={setPip}
+        drag={drag(
           pipPercent,
           { min: PIP_SIZE_LIMITS.min * 100, max: PIP_SIZE_LIMITS.max * 100, step: 1 },
           (value) => setPip(Math.round(value)),
         )}
-      >
-        PiP
-        <input
-          aria-label="pip size percent"
-          type="number"
-          min={PIP_SIZE_LIMITS.min * 100}
-          max={PIP_SIZE_LIMITS.max * 100}
-          value={pipPercent}
-          onChange={(e) =>
-            setPip(
-              clamp(Number(e.target.value), PIP_SIZE_LIMITS.min * 100, PIP_SIZE_LIMITS.max * 100),
-            )
-          }
-        />
-      </label>
+      />
     </div>
   );
 }

@@ -1460,3 +1460,52 @@ test('fits a new clip in its mask and sizes each use on its own, by slider, numb
   await expectChoice(fit, 'cover');
   await expect(output).toHaveText('75% of Fill');
 });
+
+// The Stage fields type as drafts and commit on blur, so a multi-digit entry is clamped once at
+// the commit, not per keystroke. The preview owner's repro: Share 71, select all, type 6 then 0,
+// Tab - the old per-keystroke commit clamped 6 to 50 and 60-over-50 to 80; the commit must be 60.
+test('stage fields commit typed text on blur, clamped then', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const pad = page.getByLabel('stage padding');
+  const share = page.getByLabel('screen share percent');
+  const pip = page.getByLabel('pip size percent');
+  await expect(share).toHaveValue('71');
+
+  // The exact repro.
+  await share.click();
+  await share.press('Control+a');
+  await share.pressSequentially('60');
+  await share.press('Tab');
+  await expect(share).toHaveValue('60');
+
+  // Clamping waits for the commit: 500 becomes 80 and 3 becomes 50, plus one PiP and one Pad
+  // bound each.
+  await share.click();
+  await share.press('Control+a');
+  await share.pressSequentially('500');
+  await share.press('Tab');
+  await expect(share).toHaveValue('80');
+  await share.click();
+  await share.press('Control+a');
+  await share.pressSequentially('3');
+  await share.press('Tab');
+  await expect(share).toHaveValue('50');
+  await pip.click();
+  await pip.press('Control+a');
+  await pip.pressSequentially('1');
+  await pip.press('Tab');
+  await expect(pip).toHaveValue('20');
+  await pad.click();
+  await pad.press('Control+a');
+  await pad.pressSequentially('999');
+  await pad.press('Tab');
+  await expect(pad).toHaveValue('120');
+
+  // Text that names no number (an emptied field) restores the committed value on blur.
+  await share.click();
+  await share.press('Control+a');
+  await share.press('Delete');
+  await share.press('Tab');
+  await expect(share).toHaveValue('50');
+});

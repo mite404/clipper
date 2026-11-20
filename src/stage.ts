@@ -106,6 +106,15 @@ const GAP = 18;
 /** The padding around the panels in edit px, and its bound; absent is today's 10. */
 export const DEFAULT_PADDING = 10;
 export const PADDING_MAX = 120;
+
+/**
+ * The value a stage field's text commits: a rounded number held inside the field's bounds, or
+ * undefined when the text names no number, so the field puts its current value back.
+ */
+export function stageValueFromText(text: string, min: number, max: number): number | undefined {
+  const value = text.trim() === '' ? NaN : Number(text);
+  return Number.isFinite(value) ? Math.min(max, Math.max(min, Math.round(value))) : undefined;
+}
 /** The screen's share of the side-by-side width; absent is today's 880 of 1242. */
 export const SCREEN_SHARE_LIMITS = { min: 0.5, max: 0.8 };
 export const DEFAULT_SCREEN_SHARE = 880 / (STAGE.width - 2 * DEFAULT_PADDING - GAP);
