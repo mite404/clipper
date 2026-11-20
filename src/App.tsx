@@ -38,6 +38,7 @@ import {
   SkipForward,
   Slice,
   Trash2,
+  Volume2,
   ZoomIn,
   Sparkles,
 } from 'lucide-react';
@@ -64,6 +65,7 @@ import { transcribe, type Transcript } from './transcribe';
 import {
   DEFAULT_TRACKS,
   FPS,
+  GAIN_LIMITS,
   OUTPUT_FPS,
   type Clip,
   type DropTarget,
@@ -2792,6 +2794,22 @@ export function App() {
                     ? `Rewinding · ${-speed}×`
                     : 'Paused'}
               </span>
+            </div>
+            <div className="transport-audio">
+              <label className="master-gain">
+                <Volume2 size={13} />
+                <input
+                  aria-label="Master gain"
+                  type="range"
+                  min={GAIN_LIMITS.min}
+                  max={GAIN_LIMITS.max}
+                  step={GAIN_LIMITS.step}
+                  value={recordingGain}
+                  aria-valuetext={`${recordingGain} dB`}
+                  onChange={(event) => setRecordingGain(Number(event.target.value))}
+                />
+                <output>{recordingGain} dB</output>
+              </label>
             </div>
           </div>
           <div className="timeline-toolbar">

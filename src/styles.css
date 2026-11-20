@@ -1056,6 +1056,30 @@ p {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+.transport-audio {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-left: auto;
+}
+.master-gain {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted-foreground);
+}
+.master-gain input {
+  width: 90px;
+  accent-color: #c0d9ac;
+}
+.master-gain output {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--muted-foreground);
+  min-width: 38px;
+  text-align: right;
+}
 .timeline-toolbar {
   height: 55px;
   display: grid;
@@ -2248,6 +2272,9 @@ p {
     height: 62px;
     padding: 0 12px;
     gap: 16px;
+  }
+  .master-gain {
+    display: none;
   }
   .save-button {
     font-size: 9px;
