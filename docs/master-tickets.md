@@ -55,7 +55,7 @@ and CLIP-47, conditional REF-24/29/34 and the CLIP-31 umbrella are not counted.
 | Delivered (REF-71)         | Source footer keeps only the asset count at `589a0e1`, plus the owner-directed toolbar-centering follow-up `91b230b`; pushed 2026-11-19, green exact-SHA CI44623097400                                            |
 | Delivered (REF-69)         | Pool-local source scrub at `1407036`; pushed 2026-11-19, green exact-SHA CI44630820804                                                                                                                            |
 | Delivered (REF-70)         | Resolution and fps on compact pool rows at `7544b6c`; pushed 2026-11-19, green exact-SHA CI44638639368 (after one apt-mirror rerun)                                                                               |
-| Delivered (REF-72)         | Timeline zoom anchored to the frame rate at `1079b47`; pushed 2026-11-20, green exact-SHA CI44655367769                                                                                                           |
+| Delivered (REF-72)         | Timeline zoom anchored to the frame rate at `1079b47`; pushed 2026-11-20, green exact-SHA CI44655367769; owner-directed `\` zoom-to-fit hotkey follow-up granted to the small lane 2026-11-20                     |
 | Delivered (CLIP-15)        | Audio scrub on paused seeks at `671df17`; pushed 2026-11-20, green exact-SHA CI44668548403                                                                                                                        |
 | Delivered (CLIP-17)        | Whole-recording gain at `ae555b9`, closing the ticket; pushed 2026-11-20, green exact-SHA CI44682071464                                                                                                           |
 | Partly delivered           | CLIP-11 (synthetic scope), CLIP-22 (hide, mirror, size, roundness), CLIP-41 (power saving), CLIP-9b (full ramps)                                                                                                  |
@@ -96,7 +96,7 @@ pushes and full/performance acceptance remain coordinator-serialized; no review 
 | Lane                 | Worker                                                                                | Current grant                                                                                                           |
 | -------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | Main implementation  | [T-2a7c5d23](https://ampcode.com/threads/T-2a7c5d23-64d3-4375-ba55-68cd48570f8d)      | CLIP-19 padding + mask proportions granted 2026-11-20, scope approved; arbitrary crop bounds follow as a separate unit. |
-| Small implementation | [T-01a1f45a-296f](https://ampcode.com/threads/T-01a1f45a-296f-7511-96f2-7e665d921cda) | REF-71 delivered at `91b230b`; lane idle, awaiting the next grant.                                                      |
+| Small implementation | [T-01a1f45a-296f](https://ampcode.com/threads/T-01a1f45a-296f-7511-96f2-7e665d921cda) | Owner-directed `\` timeline zoom-to-fit hotkey granted 2026-11-20 (REF-72 follow-up).                                   |
 | Design and UI SDK    | [T-01a1f45a-212a](https://ampcode.com/threads/T-01a1f45a-212a-738f-ad28-f5ee679393cb) | CLIP-49 phase 1 delivered at `a8848cb`; no active assignment.                                                           |
 
 ### Current state, 2026-11-19
