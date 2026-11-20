@@ -1239,9 +1239,6 @@ export function Timeline({
           <div className="playhead-area">
             <div className="playhead" style={{ left: `${(frame / duration) * 100}%` }} />
           </div>
-          <div className="timeline-end">
-            {seconds.toFixed(1)} seconds · Stereo · Local workspace
-          </div>
         </div>
       </div>
     </>

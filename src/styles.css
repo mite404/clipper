@@ -1084,10 +1084,9 @@ p {
 .timeline-grid {
   display: grid;
   grid-template-columns: 152px minmax(0, 1fr);
-  /* Rows after the ruler and zooms are one per track, plus slim creation rows and the end note. */
+  /* Rows after the ruler and zooms are one per track, plus slim creation rows. */
   grid-template-rows: 30px 32px;
   --track-height: 58px;
-  --end-height: 12px;
   position: relative;
   min-width: 560px;
 }
@@ -1537,15 +1536,6 @@ p {
   width: 1px;
   background: var(--green);
   box-shadow: 0 0 3px #12121288;
-}
-.timeline-end {
-  grid-column: 2;
-  height: var(--end-height);
-  color: var(--muted-foreground);
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: 7px;
-  letter-spacing: 0.3px;
-  padding-top: 3px;
 }
 .sequence-footer {
   height: 39px;
@@ -2016,7 +2006,6 @@ p {
   .timeline-grid {
     grid-template-rows: 34px 36px;
     --track-height: 68px;
-    --end-height: 12px;
   }
   .timeline-clip {
     height: 57px;
@@ -2479,7 +2468,6 @@ p {
   .timeline-grid {
     grid-template-rows: 28px 29px;
     --track-height: 46px;
-    --end-height: 12px;
   }
   .timeline-clip {
     height: 38px;
