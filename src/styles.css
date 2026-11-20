@@ -452,9 +452,14 @@ p {
   overflow: hidden;
   min-width: 0;
 }
+/* The card's add hint stays out of the way until the row is pointed at or has focus inside. */
 .asset-name > svg:last-child {
   margin-left: auto;
   color: var(--muted-foreground);
+  opacity: 0;
+}
+.asset:is(:hover, :focus-within) .asset-name > svg:last-child {
+  opacity: 1;
 }
 /* The compact row's resolution and frame speed hold their width; the name takes the ellipsis. */
 .asset-specs {
