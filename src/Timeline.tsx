@@ -160,9 +160,11 @@ const TrackHeader = memo(function TrackHeader({
   );
 });
 
-// An audio track's mix toggles: mute and solo. Solo shows its pressed state; mute never looked
-// pressed, so it keeps the icon swap alone.
-function AudioToggles({
+/**
+ * An audio track's mix toggles: mute and solo, shared by the lane header and the mixer. Solo
+ * shows its pressed state; mute never looked pressed, so it keeps the icon swap alone.
+ */
+export function AudioToggles({
   track,
   tracks,
   onToggleTrack,

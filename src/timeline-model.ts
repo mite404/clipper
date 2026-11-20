@@ -118,6 +118,13 @@ export function gainFromText(text: string): number | undefined {
   return Number.isFinite(db) ? snapGain(db) : undefined;
 }
 
+/** The dB a linear track gain shows on a fader; silence sits at the bottom stop. */
+export const gainDb = (gain: number): number =>
+  gain > 0 ? 20 * Math.log10(gain) : GAIN_LIMITS.min;
+
+/** The linear track gain a fader position in dB sets, snapped to the 0.5 dB grid. */
+export const trackGain = (db: number): number => Math.round(gainFactor(snapGain(db)) * 1e4) / 1e4;
+
 /** The clip with its gain set to `db`, snapped and held inside the limits. 0 drops it. */
 export function setGain(clip: Clip, db: number): Clip {
   const { gain: _previous, ...rest } = clip;

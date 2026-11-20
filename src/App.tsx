@@ -37,6 +37,7 @@ import {
   SkipBack,
   SkipForward,
   Slice,
+  SlidersHorizontal,
   Trash2,
   Volume2,
   ZoomIn,
@@ -93,6 +94,7 @@ import {
   retitleChapter,
   setGain,
   setSizing,
+  trackGain,
   scaleFromText,
   initialSizing,
   backgroundImage,
@@ -108,6 +110,7 @@ import {
   zoomsOverlap,
 } from './timeline-model';
 import { BackdropControls } from './BackdropControls';
+import { Mixer } from './Mixer';
 import { BackgroundImageControl } from './BackgroundImage';
 import { classifyChange, type Gesture } from './history';
 import { PREVIEW_DIVISORS, savePreviewQuality, savedPreviewQuality } from './preview-quality';
@@ -1337,6 +1340,8 @@ export function App() {
   // Transcripts live on assets, outside the edit history, so saving records which ones it held.
   const [savedTranscripts, setSavedTranscripts] = useState<Asset['transcript'][]>([]);
   const [tool, setTool] = useState<'select' | 'razor'>('select');
+  // The sequence pane shows the timeline or the audio mixer; view state, never saved.
+  const [mixer, setMixer] = useState(false);
   const [message, setMessage] = useState('Ready for your next story.');
   const [help, setHelp] = useState(false);
   // The mouse focus being dragged on the screen video, committed to its zoom on release.
@@ -1547,6 +1552,14 @@ export function App() {
     drag.latest = proposed;
     setEdit(proposed);
   };
+  // A mixer fader sets its track's registry gain in dB, live during a drag, one undo step after.
+  const trackGainAt = (id: Track, db: number) =>
+    inspect({
+      ...edit,
+      tracks: edit.tracks.map((t) =>
+        t.id === id && t.kind === 'audio' ? { ...t, gain: trackGain(db) } : t,
+      ),
+    });
   // The Clip gain label drags like the layout fields, except on a locked lane: a drag edits live,
   // past the lock that change() enforces.
   const gainScrub =
@@ -2810,6 +2823,14 @@ export function App() {
                 />
                 <output>{recordingGain} dB</output>
               </label>
+              <IconButton
+                label="Audio mixer"
+                aria-pressed={mixer}
+                aria-controls="sequence-pane"
+                onClick={() => setMixer((open) => !open)}
+              >
+                <SlidersHorizontal size={15} />
+              </IconButton>
             </div>
           </div>
           <div className="timeline-toolbar">
@@ -2869,37 +2890,49 @@ export function App() {
               </button>
             </div>
           </div>
-          <ClipEditContext value={agentEdit}>
-            <Timeline
-              headers={{
-                registry: edit.tracks,
-                tracks: trackToggles,
-                onToggleTrack: toggleTrackIn,
-                onMoveTrack: moveTrackBy,
-              }}
-              drop={dragging && { media: placed(dragging), onDrop: place }}
-              clips={edit.clips}
-              assets={assets}
-              zooms={edit.zooms}
-              frame={frame}
-              duration={duration}
-              selected={selected}
-              onSelect={(id) => {
-                setSelected(id);
-              }}
-              onSeek={seek}
-              zoomRef={timelineZoom}
-              ruler={{ chapters, points }}
-              onTrim={putClip}
-              razor={tool === 'razor' ? { cut: razor, hover: razorHover } : undefined}
-              zoomEdits={{
-                move: (id, start) =>
-                  change({ ...edit, zooms: moveZoom(edit.zooms, id, start, duration) }),
-                resize: (id, edge, frame) =>
-                  change({ ...edit, zooms: resizeZoom(edit.zooms, id, edge, frame, duration) }),
-              }}
+          {mixer ? (
+            <Mixer
+              tracks={edit.tracks}
+              toggles={trackToggles}
+              locked={locked}
+              onToggleTrack={toggleTrackIn}
+              onGain={trackGainAt}
+              onScrubStart={scrubStart}
+              onScrubEnd={scrubEnd}
             />
-          </ClipEditContext>
+          ) : (
+            <ClipEditContext value={agentEdit}>
+              <Timeline
+                headers={{
+                  registry: edit.tracks,
+                  tracks: trackToggles,
+                  onToggleTrack: toggleTrackIn,
+                  onMoveTrack: moveTrackBy,
+                }}
+                drop={dragging && { media: placed(dragging), onDrop: place }}
+                clips={edit.clips}
+                assets={assets}
+                zooms={edit.zooms}
+                frame={frame}
+                duration={duration}
+                selected={selected}
+                onSelect={(id) => {
+                  setSelected(id);
+                }}
+                onSeek={seek}
+                zoomRef={timelineZoom}
+                ruler={{ chapters, points }}
+                onTrim={putClip}
+                razor={tool === 'razor' ? { cut: razor, hover: razorHover } : undefined}
+                zoomEdits={{
+                  move: (id, start) =>
+                    change({ ...edit, zooms: moveZoom(edit.zooms, id, start, duration) }),
+                  resize: (id, edge, frame) =>
+                    change({ ...edit, zooms: resizeZoom(edit.zooms, id, edge, frame, duration) }),
+                }}
+              />
+            </ClipEditContext>
+          )}
           <div className="sequence-footer">
             <span>
               <kbd>J</kbd> Rewind <kbd>K</kbd> Pause <kbd>L</kbd> Play / faster

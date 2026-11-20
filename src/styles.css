@@ -1080,6 +1080,44 @@ p {
   min-width: 38px;
   text-align: right;
 }
+.mixer {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 23px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.mixer-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.mixer-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+  color: var(--foreground);
+  min-width: 80px;
+}
+.mixer-gain {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+.mixer-gain input {
+  flex: 1;
+  max-width: 320px;
+  accent-color: #c0d9ac;
+}
+.mixer-gain output {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 9px;
+  color: var(--muted-foreground);
+  min-width: 48px;
+  text-align: right;
+}
 .timeline-toolbar {
   height: 55px;
   display: grid;
@@ -2170,12 +2208,15 @@ p {
     height: 54px;
   }
   .transport {
-    padding: 0 18px;
+    padding: 0 12px;
+    gap: 6px;
+  }
+  .transport-audio {
     gap: 6px;
   }
   .playback-state {
     font-size: 7px;
-    min-width: 55px;
+    min-width: 40px;
   }
   .transport-readout {
     font-size: 10px;
@@ -2353,7 +2394,7 @@ p {
   .transport {
     height: 54px;
     min-height: 54px;
-    padding: 0 13px;
+    padding: 0 11px;
   }
   .transport-buttons {
     gap: 1px;
@@ -2367,7 +2408,7 @@ p {
   }
   .playback-state {
     font-size: 7px;
-    min-width: 55px;
+    min-width: 40px;
   }
   .play-button {
     width: 29px;
@@ -2583,6 +2624,9 @@ p {
   }
 }
 @media (max-width: 360px) {
+  .transport {
+    padding: 0 7px;
+  }
   .app-header .save-button {
     font-size: 8px;
     padding: 7px 6px;

@@ -65,3 +65,80 @@ test('the master gain slider drives the recording gain and stays outside undo', 
   // The value persists through the project file like the field always did.
   expect((await savedProject(page)).gain).toBe(2);
 });
+
+test('the transport toggles the timeline into an audio mixer in place', async ({ page }) => {
+  await spyOnAudio(page);
+  await openEditor(page);
+  const toggle = page.getByRole('button', { name: 'Audio mixer', exact: true });
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+  // The mixer takes the timeline's place: both audio lanes, no timeline grid.
+  await expect(page.getByTestId('mixer-voice')).toBeVisible();
+  await expect(page.getByTestId('mixer-music')).toBeVisible();
+  await expect(page.getByTestId('timeline-scroll')).toHaveCount(0);
+
+  // A fader drag edits live and commits one undo step on release.
+  const fader = page.getByRole('slider', { name: 'Music gain' });
+  await expect(fader).toHaveAttribute('aria-valuetext', '-13.2 dB');
+  const box = (await fader.boundingBox())!;
+  const thumb = box.x + ((-13.2 + 24) / 36) * box.width;
+  await page.mouse.move(thumb, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(thumb + box.width * 0.2, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.up();
+  const readout = await page.getByTestId('mixer-music').locator('output').textContent();
+  const db = Number(readout!.replace(' dB', ''));
+  expect(db).toBeGreaterThan(-13.2);
+  const marker = 10 ** (db / 20);
+  await expect.poll(async () => has(await gains(page), marker)).toBe(true);
+
+  // The mixer's mute and solo are the header's: solo Voiceover silences the music node.
+  await page.getByTestId('mixer-voice').getByRole('button', { name: 'Solo Voiceover' }).click();
+  await expect.poll(async () => has(await gains(page), marker)).toBe(false);
+  await page.getByTestId('mixer-voice').getByRole('button', { name: 'Unsolo Voiceover' }).click();
+  await expect.poll(async () => has(await gains(page), marker)).toBe(true);
+  // Mute wins the same way.
+  await page.getByTestId('mixer-music').getByRole('button', { name: 'Mute Music' }).click();
+  await expect.poll(async () => has(await gains(page), marker)).toBe(false);
+  await page.getByTestId('mixer-music').getByRole('button', { name: 'Unmute Music' }).click();
+  await expect.poll(async () => has(await gains(page), marker)).toBe(true);
+
+  // The toggles left no undo steps: one Undo restores only the fader's 0.22.
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(fader).toHaveAttribute('aria-valuetext', '-13.2 dB');
+  await expect.poll(async () => has(await gains(page), 0.22)).toBe(true);
+
+  // Toggling back restores the timeline.
+  await toggle.click();
+  await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+  await expect(page.getByTestId('timeline-scroll')).toBeVisible();
+  await expect(page.getByTestId('mixer')).toHaveCount(0);
+});
+
+test('a locked lane refuses the mixer fader by keyboard and by drag', async ({ page }) => {
+  await spyOnAudio(page);
+  await openEditor(page);
+  await page.getByRole('button', { name: 'Lock Music', exact: true }).click();
+  await page.getByRole('button', { name: 'Audio mixer', exact: true }).click();
+  const fader = page.getByRole('slider', { name: 'Music gain' });
+  await expect(fader).toBeDisabled();
+  await expect(fader).toHaveAttribute('aria-valuetext', '-13.2 dB');
+
+  // Keyboard: focus() no-ops on a disabled control, so the key lands nowhere.
+  await fader.focus();
+  await page.keyboard.press('ArrowUp');
+  await expect(fader).toHaveAttribute('aria-valuetext', '-13.2 dB');
+
+  // Drag: the same gesture that moves an unlocked fader.
+  const box = (await fader.boundingBox())!;
+  const thumb = box.x + ((-13.2 + 24) / 36) * box.width;
+  await page.mouse.move(thumb, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(thumb + box.width * 0.2, box.y + box.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await expect(fader).toHaveAttribute('aria-valuetext', '-13.2 dB');
+
+  // Neither attempt left an undo step, and the lane's gain node is untouched (0.22).
+  await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeDisabled();
+  expect(has(await gains(page), 0.22)).toBe(true);
+});
