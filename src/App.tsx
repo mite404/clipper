@@ -143,13 +143,17 @@ import {
   DEFAULT_PADDING,
   DEFAULT_PIP_SIZE,
   DEFAULT_SCREEN_SHARE,
+  defaultMaskRect,
   maskRect,
   PADDING_MAX,
   PIP_SIZE_LIMITS,
   SCREEN_SHARE_LIMITS,
   STAGE,
   stageValueFromText,
+  withMaskBounds,
   type Layout,
+  type Rect,
+  type VideoTrack,
 } from './stage';
 import { useMediaDrawer } from './useMediaDrawer';
 import { PanelResizeHandle, usePanelLayout } from './PanelResizeHandle';
@@ -994,6 +998,46 @@ function StageGeometry({
   const setPip = (percent: number) =>
     onLayout({ ...layout, pipSize: percent === defaultPip ? undefined : percent / 100 });
   return (
+    <>
+      <StageRow
+        padding={padding}
+        sharePercent={sharePercent}
+        pipPercent={pipPercent}
+        setPadding={setPadding}
+        setShare={setShare}
+        setPip={setPip}
+        drag={drag}
+      />
+      {(['screen', 'camera'] as const).map((track) => (
+        <MaskBounds key={track} track={track} layout={layout} onLayout={onLayout} drag={drag} />
+      ))}
+    </>
+  );
+}
+
+// The proportional Stage row: padding, screen share and PiP size.
+function StageRow({
+  padding,
+  sharePercent,
+  pipPercent,
+  setPadding,
+  setShare,
+  setPip,
+  drag,
+}: {
+  padding: number;
+  sharePercent: number;
+  pipPercent: number;
+  setPadding: (px: number) => void;
+  setShare: (percent: number) => void;
+  setPip: (percent: number) => void;
+  drag: (
+    value: number,
+    range: StepRange,
+    onScrub: (value: number) => void,
+  ) => Record<string, unknown>;
+}) {
+  return (
     <div className="crop-controls">
       <span>Stage</span>
       <StageField
@@ -1033,6 +1077,59 @@ function StageGeometry({
           (value) => setPip(Math.round(value)),
         )}
       />
+    </div>
+  );
+}
+
+// One mask's bounds row: X, Y, W and H in edit px, typing as drafts and scrubbing live like the
+// Stage row. Committing the proportional geometry removes the custom bounds, so a mask set back
+// to its place saves as if it was never moved.
+function MaskBounds({
+  track,
+  layout,
+  onLayout,
+  drag,
+}: {
+  track: VideoTrack;
+  layout: Layout;
+  onLayout: (layout: Layout) => void;
+  drag: (
+    value: number,
+    range: StepRange,
+    onScrub: (value: number) => void,
+  ) => Record<string, unknown>;
+}) {
+  const custom = track === 'screen' ? layout.screenMask : layout.cameraMask; // → bounds | undefined
+  const current = custom ?? defaultMaskRect(track, layout); // → edit rect
+  const shown = {
+    x: Math.round(current.x),
+    y: Math.round(current.y),
+    width: Math.round(current.width),
+    height: Math.round(current.height),
+  };
+  const setSide = (side: keyof Rect) => (value: number) =>
+    onLayout(withMaskBounds(layout, track, { ...shown, [side]: value }));
+  const sides = [
+    ['x', 'X', STAGE.width],
+    ['y', 'Y', STAGE.height],
+    ['width', 'W', STAGE.width],
+    ['height', 'H', STAGE.height],
+  ] as const;
+  return (
+    <div className="crop-controls">
+      <span>{track === 'screen' ? 'Screen' : 'Camera'}</span>
+      {sides.map(([side, label, max]) => (
+        <StageField
+          key={side}
+          label={label}
+          aria={`${track} mask ${side}`}
+          value={shown[side]}
+          min={0}
+          max={max}
+          onCommit={setSide(side)}
+          drag={drag(shown[side], { min: 0, max, step: 1 }, setSide(side))}
+        />
+      ))}
     </div>
   );
 }
