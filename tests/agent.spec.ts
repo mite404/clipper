@@ -127,6 +127,9 @@ test('a mocked model cuts through the drawer, sending only text, transcript only
     },
     { content: 'Split A conversation at 6 seconds.' },
   ];
+  await page.route('https://openrouter.ai/api/v1/auth/key', (route) =>
+    route.fulfill({ json: { data: { label: 'clipper' } } }),
+  );
   await page.route('https://openrouter.ai/api/v1/chat/completions', async (route) => {
     const request = route.request();
     expect(request.headers()['content-type']).toBe('application/json');
@@ -141,6 +144,9 @@ test('a mocked model cuts through the drawer, sending only text, transcript only
   await expect(page.getByRole('textbox', { name: 'Request' })).toBeFocused();
   await expect(page.getByText('Sends control names only to OpenRouter.')).toBeVisible();
   await page.getByLabel('OpenRouter key').fill('sk-test');
+  // CLIP-51: a request runs only inside a connected session.
+  await page.getByRole('button', { name: 'Connect', exact: true }).click();
+  await expect(page.getByRole('button', { name: /Claude Sonnet 5\.5/ })).toBeVisible();
   await page.getByRole('textbox', { name: 'Request' }).fill('Cut the talking head at 6 seconds');
   await page.getByRole('textbox', { name: 'Request' }).press('Enter');
   await expect(page.locator('.assistant-model')).toBeVisible();
@@ -158,10 +164,10 @@ test('a mocked model cuts through the drawer, sending only text, transcript only
   await expect(page.getByText('Sends transcript text and control names')).toBeVisible();
   expect(outside).toEqual([]);
 
-  // Esc inside the drawer closes it and returns focus to its toggle.
+  // Esc inside the drawer closes it and returns focus to its toggle, now the presence chip.
   await page.getByRole('textbox', { name: 'Request' }).press('Escape');
   await expect(page.locator('#assistant-pane')).not.toHaveAttribute('data-open');
-  await expect(page.getByRole('button', { name: 'Assistant', exact: true })).toBeFocused();
+  await expect(page.getByRole('button', { name: /Claude Sonnet 5\.5/ })).toBeFocused();
 });
 
 test('dictation transcribes a fake microphone in the page and inserts the words', async ({

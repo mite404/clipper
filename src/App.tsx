@@ -49,6 +49,7 @@ import {
   Choice,
   IconButton,
   MediaLibrary,
+  PresenceChip,
   TranscriptPanel,
   Waveform,
   type TranscriptProps,
@@ -158,7 +159,7 @@ import {
 import { useMediaDrawer } from './useMediaDrawer';
 import { PanelResizeHandle, usePanelLayout } from './PanelResizeHandle';
 import { AgentPanel } from './AgentPanel';
-import { timelineLines } from './agent';
+import { timelineLines, useSession } from './agent';
 import { mixAt, playSlices, stopSlices } from './scrub-audio';
 import './styles.css';
 
@@ -1459,6 +1460,7 @@ export function App() {
   const [edit, setEdit] = useState<Edit>(INITIAL_EDIT);
   const [history, setHistory] = useState<Edit[]>([]);
   const [assistantOpen, setAssistantOpen] = useState(false);
+  const session = useSession();
   // The edit the last Save wrote, compared by identity: undoing back to it is saved again.
   const [savedEdit, setSavedEdit] = useState<Edit | null>(null);
   const [selected, setSelected] = useState('s1');
@@ -2627,14 +2629,22 @@ export function App() {
           />
         </label>
         <div className="header-actions">
-          <button
-            className="text-button assistant-toggle"
-            aria-expanded={assistantOpen}
-            aria-controls="assistant-pane"
-            onClick={() => setAssistantOpen((v) => !v)}
-          >
-            <Sparkles size={14} aria-hidden="true" /> Assistant
-          </button>
+          {session ? (
+            <PresenceChip
+              name={session.name}
+              calls={session.calls}
+              onOpenAssistant={() => setAssistantOpen(true)}
+            />
+          ) : (
+            <button
+              className="text-button assistant-toggle"
+              aria-expanded={assistantOpen}
+              aria-controls="assistant-pane"
+              onClick={() => setAssistantOpen((v) => !v)}
+            >
+              <Sparkles size={14} aria-hidden="true" /> Assistant
+            </button>
+          )}
           <div className="export-controls">
             <Choice
               label="Export resolution"

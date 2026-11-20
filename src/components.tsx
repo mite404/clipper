@@ -19,6 +19,7 @@ import {
   List,
   Music2,
   Plus,
+  Sparkles,
   Upload,
 } from 'lucide-react';
 import {
@@ -31,6 +32,13 @@ import {
   SelectValue,
 } from '@ui-sdk/react/select';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui-sdk/react/tooltip';
+import {
+  Popover,
+  PopoverClose,
+  PopoverContent,
+  PopoverTitle,
+  PopoverTrigger,
+} from '@ui-sdk/react/popover';
 import { WAVE_RATE, stillAt, type Asset } from './media';
 import type { Transcript } from './transcribe';
 import { FPS, clock } from './timeline-model';
@@ -77,6 +85,51 @@ export function InfoNote({ label, children }: { label: string; children: ReactNo
         {children}
       </TooltipContent>
     </Tooltip>
+  );
+}
+
+// The agent's avatar with its presence dot; decorative, the chip's name carries the meaning.
+function PresenceAvatar() {
+  return (
+    <span className="presence-avatar" aria-hidden="true">
+      <Sparkles size={11} />
+      <span className="presence-dot" />
+    </span>
+  );
+}
+
+/**
+ * The connected agent's entry point (CLIP-51): a presence chip - avatar, live dot and the
+ * agent's name - whose popover shows the session's name card and live tool-call count.
+ */
+export function PresenceChip({
+  name,
+  calls,
+  onOpenAssistant,
+}: {
+  name: string;
+  calls: number;
+  onOpenAssistant: () => void;
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger type="button" className="text-button assistant-toggle presence-chip">
+        <PresenceAvatar />
+        <span className="presence-name">{name}</span>
+      </PopoverTrigger>
+      <PopoverContent className="presence-popover" sideOffset={8} collisionPadding={8}>
+        <PopoverTitle className="presence-title">
+          <PresenceAvatar />
+          {name} (AI)
+        </PopoverTitle>
+        <p className="presence-calls" aria-live="polite">
+          {calls === 1 ? '1 call' : `${calls} calls`}
+        </p>
+        <PopoverClose type="button" className="text-button" onClick={onOpenAssistant}>
+          Open assistant
+        </PopoverClose>
+      </PopoverContent>
+    </Popover>
   );
 }
 

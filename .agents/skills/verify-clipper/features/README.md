@@ -17,6 +17,8 @@ after shared editor, timeline, composition, or media changes.
 - [Frame copy](frame-copy.md) covers Copy frame, the held output frame as a clipboard PNG.
 - [Icon button tooltips](tooltips.md) covers the shared IconButton tooltip and its Storybook
   records.
+- [Assistant presence](assistant-presence.md) covers the connected agent's presence chip, its live
+  session popover, and connect/disconnect.
 - [Shared library](shared-library.md) covers Storybook and worst-case layouts.
 
 ## Delivered and pending

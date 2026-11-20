@@ -1,6 +1,7 @@
 // The in-app assistant (CLIP-49, ADR-38): ui-sdk's agent bridge run in the page, and one
 // OpenAI-compatible chat client. A model reads and edits only through the bridge, and is sent
 // text only: the bridge's snapshot, and transcript lines when the person opts in per request.
+import { useSyncExternalStore } from 'react';
 import { agentTools, createAgent } from '@ui-sdk/react/agent';
 import type { Asset } from './media';
 import { FPS, type Clip } from './timeline-model';
@@ -164,3 +165,97 @@ const parseInput = (text: string): unknown => {
     return {};
   }
 };
+
+// The connected session (CLIP-51): which agent is present, and its finished tool calls, live.
+// Module-level so the header chip and the drawer read the same session without prop drilling.
+type Session = { name: string; calls: number };
+
+let session: Session | null = null;
+const sessionListeners = new Set<() => void>();
+const emitSession = () => sessionListeners.forEach((listener) => listener());
+
+export function subscribeSession(listener: () => void) {
+  sessionListeners.add(listener);
+  return () => {
+    sessionListeners.delete(listener);
+  };
+}
+export const getSession = () => session;
+
+/** The session as React state: null until an agent connects, then its name and live call count. */
+export function useSession() {
+  return useSyncExternalStore(subscribeSession, getSession);
+}
+
+/** Marks the agent present, starting a fresh count. */
+export function connectSession(name: string) {
+  session = { name, calls: 0 };
+  emitSession();
+}
+
+/** Ends the session: the entry point reverts to the plain Assistant button. */
+export function disconnectSession() {
+  session = null;
+  emitSession();
+}
+
+/** Counts one finished tool call in the live session. */
+export function noteSessionCall() {
+  if (!session) return;
+  session = { ...session, calls: session.calls + 1 };
+  emitSession();
+}
+
+/** The agent's display name from its model id: "anthropic/claude-sonnet-5.5" → "Claude Sonnet 5.5". */
+export function agentName(model: string) {
+  const short = model.split('/').pop() || model;
+  return short
+    .split('-')
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+/** The message of any thrown value. */
+export function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/** False while a probe runs or a hosted server has no key to check. */
+export function canConnect(connecting: boolean, hosted: boolean, key: string) {
+  return !connecting && !(hosted && !key.trim());
+}
+
+/** False while the request is empty, one is running, or no agent is connected. */
+export function canSend(request: string, running: boolean, connected: boolean) {
+  return !!request && !running && connected;
+}
+
+/**
+ * Probes the configured server, then marks the agent present with its display name.
+ * @throws when the server can't be reached or refuses the key
+ */
+export async function connectAgent(provider: Provider, hosted: boolean) {
+  await probeProvider(provider, hosted);
+  connectSession(agentName(provider.model));
+}
+
+// Checks the configured model server answers before presence shows: a hosted server with the
+// person's key, a local one by listing its models. Throws when it can't be reached or refuses.
+async function probeProvider(provider: Provider, hosted: boolean, signal?: AbortSignal) {
+  const base = provider.baseUrl.replace(/\/+$/, '');
+  const response = await fetch(`${base}${hosted ? '/auth/key' : '/models'}`, {
+    signal,
+    headers: provider.key ? { Authorization: `Bearer ${provider.key}` } : {},
+  }).catch((error: unknown) => {
+    if (signal?.aborted) throw error;
+    throw new Error(
+      `Could not reach ${base}. Check the address, or that the model server is running.`,
+    );
+  });
+  if (!response.ok)
+    throw new Error(
+      hosted
+        ? 'The model server refused the key.'
+        : `The model server answered ${response.status}.`,
+    );
+}

@@ -7,9 +7,16 @@ import { DictationModal } from './DictationModal';
 import { appendDictation } from './dictation';
 import {
   agent,
+  canConnect,
+  canSend,
+  connectAgent,
+  disconnectSession,
+  errorMessage,
+  noteSessionCall,
   OPENROUTER_MODELS,
   PRESETS,
   runRequest,
+  useSession,
   type Progress,
   type Provider,
   type TimelineLine,
@@ -64,7 +71,10 @@ function useAgentRun(lines: () => TimelineLine[]) {
     add({ kind: 'you', text: request });
     const options = {
       transcript,
-      onStep: (step: Progress) => add({ kind: 'step', step }),
+      onStep: (step: Progress) => {
+        add({ kind: 'step', step });
+        noteSessionCall();
+      },
       run: toolRunner(transcript, lines),
     };
     try {
@@ -184,6 +194,44 @@ function composeKey(event: KeyboardEvent, send: () => void) {
   send();
 }
 
+// Connect checks the server answers before the agent shows as present (CLIP-51); a refusal says
+// why and keeps the plain button. Disconnect ends the session.
+function ConnectSection({ provider }: { provider: Provider }) {
+  const session = useSession();
+  const [connecting, setConnecting] = useState(false);
+  const [connectError, setConnectError] = useState('');
+  if (session)
+    return (
+      <div className="assistant-connect">
+        <button type="button" className="text-button" onClick={() => disconnectSession()}>
+          Disconnect
+        </button>
+      </div>
+    );
+  const hosted = provider.baseUrl === PRESETS.openrouter.baseUrl;
+  const connect = () => {
+    setConnectError('');
+    setConnecting(true);
+    connectAgent(provider, hosted)
+      .catch((error) => setConnectError(errorMessage(error)))
+      .finally(() => setConnecting(false));
+  };
+  return (
+    <div className="assistant-connect">
+      <button
+        type="button"
+        className="secondary-button"
+        disabled={!canConnect(connecting, hosted, provider.key)}
+        aria-busy={connecting}
+        onClick={connect}
+      >
+        Connect
+      </button>
+      {connectError && <p role="alert">{connectError}</p>}
+    </div>
+  );
+}
+
 /**
  * The Assistant drawer. Its key lives only in this component's memory and is gone on reload.
  * @param lines the transcript lines on the timeline, sent only when the person ticks the box
@@ -203,6 +251,7 @@ export function AgentPanel({
   const [draft, setDraft] = useState('');
   const [transcript, setTranscript] = useState(false);
   const [dictating, setDictating] = useState(false);
+  const session = useSession();
   const { log, running, run } = useAgentRun(lines);
   const input = useRef<HTMLTextAreaElement>(null);
 
@@ -213,7 +262,7 @@ export function AgentPanel({
 
   const send = () => {
     const request = draft.trim();
-    if (!request || running) return;
+    if (!canSend(request, running !== null, session !== null)) return;
     setDraft('');
     void run({ baseUrl: PRESETS[preset].baseUrl, model, key }, request, transcript);
   };
@@ -243,12 +292,20 @@ export function AgentPanel({
         model={model}
         apiKey={key}
         onPreset={(next) => {
+          disconnectSession();
           setPreset(next);
           setModel(next === 'openrouter' ? OPENROUTER_MODELS[0] : 'llama3.2');
         }}
-        onModel={setModel}
-        onKey={setKey}
+        onModel={(next) => {
+          disconnectSession();
+          setModel(next);
+        }}
+        onKey={(next) => {
+          disconnectSession();
+          setKey(next);
+        }}
       />
+      <ConnectSection provider={{ baseUrl: PRESETS[preset].baseUrl, model, key }} />
       <AgentLog log={log} running={!!running} />
       <TranscriptOptIn
         checked={transcript}
@@ -279,7 +336,11 @@ export function AgentPanel({
             <X size={14} aria-hidden="true" />
           </IconButton>
         ) : (
-          <IconButton label="Send" type="submit" disabled={!draft.trim()}>
+          <IconButton
+            label="Send"
+            type="submit"
+            disabled={!canSend(draft.trim(), false, !!session)}
+          >
             <SendHorizontal size={14} aria-hidden="true" />
           </IconButton>
         )}

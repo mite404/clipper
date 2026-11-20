@@ -1,5 +1,16 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { runRequest, timelineLines, toolsFor, type ToolRunner } from './agent';
+import {
+  agentName,
+  connectSession,
+  disconnectSession,
+  getSession,
+  noteSessionCall,
+  runRequest,
+  subscribeSession,
+  timelineLines,
+  toolsFor,
+  type ToolRunner,
+} from './agent';
 import type { Asset } from './media';
 import type { Clip } from './timeline-model';
 
@@ -27,6 +38,30 @@ describe('timelineLines', () => {
       { clip: 'A', start: 10, end: 11, text: 'hello' },
       { clip: 'A', start: 13, end: 14, text: 'tail' },
     ]);
+  });
+});
+
+describe('session', () => {
+  afterEach(() => disconnectSession());
+
+  it('names an agent from its model id', () => {
+    expect(agentName('anthropic/claude-sonnet-5.5')).toBe('Claude Sonnet 5.5');
+    expect(agentName('llama3.2')).toBe('Llama3.2');
+  });
+
+  it('counts calls live from connect to disconnect and notifies listeners', () => {
+    const seen: (number | null)[] = [];
+    const stop = subscribeSession(() => seen.push(getSession()?.calls ?? null));
+    expect(getSession()).toBeNull();
+    connectSession('Claude Sonnet 5.5');
+    noteSessionCall();
+    noteSessionCall();
+    expect(getSession()).toEqual({ name: 'Claude Sonnet 5.5', calls: 2 });
+    disconnectSession();
+    noteSessionCall();
+    expect(getSession()).toBeNull();
+    expect(seen).toEqual([0, 1, 2, null]);
+    stop();
   });
 });
 

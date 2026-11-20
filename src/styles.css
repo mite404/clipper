@@ -3768,6 +3768,91 @@ input[type='number'],
   color: var(--muted-foreground);
   font-size: 10px;
 }
+.assistant-connect {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.assistant-connect [role='alert'] {
+  margin: 0;
+  color: var(--destructive);
+  font-size: 10px;
+}
+.presence-chip {
+  max-width: 220px;
+  color: var(--foreground);
+}
+.presence-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.presence-avatar {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.presence-dot {
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  /* the page background ring keeps the dot readable over the avatar's edge */
+  box-shadow: 0 0 0 1.5px var(--background);
+}
+.presence-popover {
+  max-width: min(280px, calc(100vw - 16px));
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--secondary);
+  color: var(--foreground);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+  box-shadow: 0 3px 12px #0006;
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 125ms cubic-bezier(0.23, 1, 0.32, 1),
+    scale 125ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.presence-popover:is([data-starting-style], [data-ending-style]) {
+  opacity: 0;
+  scale: 0.97;
+}
+.presence-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 550;
+}
+.presence-calls {
+  margin: 6px 0;
+  color: var(--muted-foreground);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px;
+}
+.presence-popover > .text-button {
+  padding-left: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .presence-popover,
+  .presence-popover:is([data-starting-style], [data-ending-style]) {
+    transition-property: opacity;
+    scale: none;
+  }
+}
 .assistant-compose {
   display: flex;
   align-items: flex-end;
