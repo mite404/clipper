@@ -24,3 +24,12 @@ test('keeps the final forward frame when fast playback ends', async ({ page }) =
   }
   expect(ended).toEqual(Array.from({ length: 8 }, () => ({ shown: 359, camera: 359 })));
 });
+
+test('the go-to-end button seeks to the final frame', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
+  await page.getByRole('button', { name: 'Go to end', exact: true }).click();
+  await expect(page.getByTestId('timecode')).toHaveText('00:11:29');
+  expect(Number(await playhead.inputValue())).toBe(359);
+});

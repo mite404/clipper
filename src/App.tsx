@@ -35,6 +35,7 @@ import {
   Plus,
   Scissors,
   SkipBack,
+  SkipForward,
   Slice,
   Trash2,
   ZoomIn,
@@ -2634,6 +2635,9 @@ export function App() {
               </button>
               <IconButton label="Next frame" onClick={() => seek(frameRef.current + 1)}>
                 <ArrowRight size={15} />
+              </IconButton>
+              <IconButton label="Go to end" onClick={() => seek(duration - 1)}>
+                <SkipForward size={16} />
               </IconButton>
               <span
                 className={speed ? 'playback-state' : 'playback-state idle'}
