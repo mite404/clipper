@@ -2328,14 +2328,18 @@ p {
     display: none;
   }
 }
+/* In the ≤1250px band the transport's content needs ~625px: hide the master gain a few px before
+   the tighter 620px rules take over, so the audio block's right edge keeps its hit area on screen. */
+@media (max-width: 625px) {
+  .master-gain {
+    display: none;
+  }
+}
 @media (max-width: 620px) {
   .app-header {
     height: 62px;
     padding: 0 12px;
     gap: 16px;
-  }
-  .master-gain {
-    display: none;
   }
   .save-button {
     font-size: 9px;

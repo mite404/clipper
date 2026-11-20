@@ -980,3 +980,30 @@ test.describe('default layout shows the whole timeline', () => {
     });
   }
 });
+
+// The transport's min content width must never exceed the viewport: the audio block's rightmost
+// button keeps its hit area on screen at every width, across the 1250, 625 and 620 band edges.
+// Strictly inside: an edge flush with the viewport has lost the designed right padding, and a few
+// px of font-metric jitter between platforms then clips the hit area (the 621px regression).
+test('the transport stays within the viewport from 320 to 1440 px', async ({ page }) => {
+  test.setTimeout(120000);
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const mixer = page.getByRole('button', { name: 'Audio mixer', exact: true });
+  for (const width of [1440, 1251, 1250, 960, 626, 625, 622, 621, 620, 619, 390, 320]) {
+    await page.setViewportSize({ width, height: 800 });
+    // Viewport emulation returns before resize/ResizeObserver updates the layout.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+    const box = (await mixer.boundingBox())!;
+    expect(box.x + box.width, `mixer right edge at ${width}px`).toBeLessThan(width);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+      `document scrollWidth at ${width}px`,
+    ).toBeLessThanOrEqual(width);
+  }
+});
