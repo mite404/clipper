@@ -433,8 +433,12 @@ function useTimelineScale(seconds: number) {
     viewport.current!.getBoundingClientRect().left;
   // One keyboard step of the display scale, √2 per step, clamped like the slider. The playhead
   // stays where it is on screen, or moves to the middle of the lanes when it was out of view.
-  const zoom = (step: 1 | -1) => {
-    const next = Math.max(minScale, Math.min(maxScale, scale * Math.SQRT2 ** step));
+  const zoom = (command: 1 | -1 | 'fit') => {
+    // 'fit' is all the way out: one sequence exactly fills the viewport, the scale's own floor.
+    const next =
+      command === 'fit'
+        ? minScale
+        : Math.max(minScale, Math.min(maxScale, scale * Math.SQRT2 ** command));
     if (next === scale) return;
     const scroll = viewport.current!;
     const lanes =
@@ -946,7 +950,7 @@ export function Timeline({
   /** Move a zoom, or one of its edges, to a timeline frame; it overwrites the zooms it covers. */
   zoomEdits?: ZoomEdits;
   /** Filled with the keyboard scale step while clips exist, for the editor's `-` and `=` keys. */
-  zoomRef?: { current: ((step: 1 | -1) => void) | null };
+  zoomRef?: { current: ((command: 1 | -1 | 'fit') => void) | null };
   /** The chapters inside the sequence, drawn as flags on the ruler. */
   chapters?: Chapter[];
 }) {

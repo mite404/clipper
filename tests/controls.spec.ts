@@ -246,6 +246,28 @@ test('- and = zoom the timeline display one step at a time without editing the s
   expect(await value()).toBe(before);
 });
 
+test('the backslash key zooms all the way out to the fit window', async ({ page }) => {
+  await openEditor(page);
+  const scale = page.getByRole('slider', { name: 'Timeline scale' });
+  const value = async () => Number(await scale.inputValue());
+  const min = Number(await scale.getAttribute('min'));
+  for (let press = 0; press < 4; press++) await page.keyboard.press('=');
+  expect(await value()).toBeGreaterThan(min);
+  await page.keyboard.press('\\');
+  expect(await value()).toBeCloseTo(min, 3);
+  await expect(scale).toHaveAttribute('aria-valuetext', '1.0 times fit');
+  // Already at fit: pressing again is a no-op.
+  await page.keyboard.press('\\');
+  expect(await value()).toBeCloseTo(min, 3);
+  // A text field keeps the key for typing.
+  for (let press = 0; press < 4; press++) await page.keyboard.press('=');
+  const zoomed = await value();
+  const place = page.getByRole('spinbutton', { name: 'Place at seconds' });
+  await place.focus();
+  await place.press('\\');
+  expect(await value()).toBe(zoomed);
+});
+
 test('the ruler keeps labelling frames at the deepest zoom', async ({ page }) => {
   await openEditor(page);
   const scale = page.getByRole('slider', { name: 'Timeline scale' });

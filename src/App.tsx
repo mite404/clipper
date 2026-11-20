@@ -1831,7 +1831,7 @@ export function App() {
   // Delete follows the last panel the user pressed or focused, not document.activeElement, which
   // drops to the body whenever the app removes or disables the focused control.
   const inTimeline = useRef(false);
-  const timelineZoom = useRef<((step: 1 | -1) => void) | null>(null);
+  const timelineZoom = useRef<((command: 1 | -1 | 'fit') => void) | null>(null);
   useEffect(() => {
     const track = (event: Event) => {
       inTimeline.current =
@@ -1935,6 +1935,11 @@ export function App() {
       if (key === '-' || key === '=') {
         event.preventDefault();
         timelineZoom.current?.(key === '=' ? 1 : -1);
+        return;
+      }
+      if (key === '\\') {
+        event.preventDefault();
+        timelineZoom.current?.('fit');
         return;
       }
       // Deletion belongs to the timeline: after a press or focus anywhere else the keys are left alone.
