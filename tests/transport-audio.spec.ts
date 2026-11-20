@@ -3,13 +3,14 @@ import { readFileSync } from 'node:fs';
 
 type Spy = {
   nodes: { node: GainNode }[];
+  analysers: AnalyserNode[];
 };
 
-// Records every GainNode the page makes, so a test can read what the preview's audio path really
-// holds: the Web Audio gain each clip plays at.
+// Records every GainNode and AnalyserNode the page makes, so a test can read what the preview's
+// audio path really holds: the Web Audio gain each clip plays at, and the meter's tap.
 async function spyOnAudio(page: Page) {
   await page.addInitScript(() => {
-    const spy: Spy = { nodes: [] };
+    const spy: Spy = { nodes: [], analysers: [] };
     Object.assign(window, { audioSpy: spy });
     const Gain = window.GainNode;
     window.GainNode = class extends Gain {
@@ -18,12 +19,26 @@ async function spyOnAudio(page: Page) {
         spy.nodes.push({ node: this });
       }
     };
-    // The scrub slice pool builds its nodes with the factory, not the constructor.
+    const Analyser = window.AnalyserNode;
+    window.AnalyserNode = class extends Analyser {
+      constructor(context: BaseAudioContext, options?: AnalyserOptions) {
+        super(context, options);
+        spy.analysers.push(this);
+      }
+    };
+    // The scrub slice pool and the meter tap build their nodes with factories, not constructors.
     // oxlint-disable-next-line typescript/unbound-method -- the spy holds the original to wrap it, calling it with the receiver
     const createGain = AudioContext.prototype.createGain;
     AudioContext.prototype.createGain = function () {
       const node = createGain.call(this);
       spy.nodes.push({ node });
+      return node;
+    };
+    // oxlint-disable-next-line typescript/unbound-method -- the spy holds the original to wrap it, calling it with the receiver
+    const createAnalyser = AudioContext.prototype.createAnalyser;
+    AudioContext.prototype.createAnalyser = function () {
+      const node = createAnalyser.call(this);
+      spy.analysers.push(node);
       return node;
     };
   });
@@ -141,4 +156,35 @@ test('a locked lane refuses the mixer fader by keyboard and by drag', async ({ p
   // Neither attempt left an undo step, and the lane's gain node is untouched (0.22).
   await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeDisabled();
   expect(has(await gains(page), 0.22)).toBe(true);
+});
+
+test('the transport meter taps the preview mix and holds peaks five seconds', async ({ page }) => {
+  test.setTimeout(60000);
+  await spyOnAudio(page);
+  await openEditor(page);
+  const meter = page.locator('.audio-meter');
+  await expect(meter).toBeVisible();
+  const lit = () =>
+    page
+      .locator('.audio-meter i')
+      .evaluateAll((leds) => leds.filter((led) => getComputedStyle(led).opacity === '1').length);
+  expect(await lit()).toBe(0);
+
+  await page.getByRole('button', { name: 'Play composition', exact: true }).click();
+  await expect(page.getByTestId('transport-state')).toHaveText('Playing · 1×');
+  // The Composition tapped the player mix's shared path with an AnalyserNode.
+  await expect
+    .poll(async () =>
+      page.evaluate(() => (window as unknown as { audioSpy: Spy }).audioSpy.analysers.length),
+    )
+    .toBeGreaterThan(0);
+  await expect.poll(lit).toBeGreaterThan(0);
+  await expect(meter).toHaveAttribute('aria-label', /Audio level -?\d+ dB/);
+
+  // Pausing reads silence at once, but the held peak keeps one LED lit.
+  await page.getByRole('button', { name: 'Pause playback', exact: true }).click();
+  await expect(page.getByTestId('transport-state')).toHaveText('Paused');
+  expect(await lit()).toBeGreaterThan(0);
+  // ...and the bar empties once the five-second hold lapses.
+  await expect.poll(lit, { timeout: 9000 }).toBe(0);
 });

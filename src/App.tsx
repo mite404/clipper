@@ -8,6 +8,7 @@ import {
   type Dispatch,
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
+  type RefObject,
   type SetStateAction,
 } from 'react';
 import { Player, type PlayerRef } from '@remotion/player';
@@ -111,6 +112,14 @@ import {
 } from './timeline-model';
 import { BackdropControls } from './BackdropControls';
 import { Mixer } from './Mixer';
+import {
+  SILENCE,
+  holdPeak,
+  nextMeterState,
+  sampleMeter,
+  type MeterState,
+  type Peak,
+} from './audio-meter';
 import { BackgroundImageControl } from './BackgroundImage';
 import { classifyChange, type Gesture } from './history';
 import { PREVIEW_DIVISORS, savePreviewQuality, savedPreviewQuality } from './preview-quality';
@@ -1303,6 +1312,44 @@ function assertImageClipboard(): void {
     throw new Error('This browser cannot copy images to the clipboard.');
 }
 
+// The transport's LED dB meter, reinstating the old L/R bar on the AnalyserNode tap: twelve LEDs
+// over -60 to 0 dBFS of the preview mix, the loudest one held five seconds after the level drops.
+// Paused playback freezes the tapped context's data, so silence is read as silence, not the last
+// frame the analyser caught.
+function TransportMeter({
+  analyser,
+  playing,
+}: {
+  analyser: RefObject<AnalyserNode | null>;
+  playing: boolean;
+}) {
+  const [level, setLevel] = useState<MeterState>({ lit: 0, peak: 0, db: -60 });
+  // The hold lives outside the sampling effect: a play/pause toggle must not wipe a held peak.
+  const held = useRef<Peak>({ index: 0, at: 0 });
+  const scratch = useRef<Float32Array<ArrayBuffer> | undefined>(undefined);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const node = playing ? analyser.current : null;
+      const live = node ? sampleMeter(node, scratch) : SILENCE;
+      held.current = holdPeak(held.current, live.lit, Date.now());
+      setLevel((was) => nextMeterState(was, live, held.current));
+    }, 100);
+    return () => clearInterval(timer);
+  }, [analyser, playing]);
+  return (
+    <div className="audio-meter" aria-label={`Audio level ${level.db} dB`}>
+      <span>L</span>
+      {Array.from({ length: 12 }, (_, i) => (
+        <i
+          key={i}
+          style={{ opacity: i < level.lit || (level.peak > 0 && i === level.peak - 1) ? 1 : 0.18 }}
+        />
+      ))}
+      <span>R</span>
+    </div>
+  );
+}
+
 /** Local-first video editing workspace. The Remotion player is the single forward playback clock. */
 export function App() {
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -1461,6 +1508,11 @@ export function App() {
     return () => window.removeEventListener('keydown', exit);
   }, [stageFullscreen]);
 
+  // The transport meter's tap on the preview mix, set by the Composition's MeterTap.
+  const meter = useRef<AnalyserNode | null>(null);
+  const meterTap = useCallback((analyser: AnalyserNode | null) => {
+    meter.current = analyser;
+  }, []);
   const compositionProps = useMemo(
     () => ({
       ...edit,
@@ -1469,8 +1521,9 @@ export function App() {
       muted,
       solo,
       gain: recordingGain,
+      onMeter: meterTap,
     }),
-    [edit, assets, muted, solo, markingMouse, recordingGain],
+    [edit, assets, muted, solo, markingMouse, recordingGain, meterTap],
   );
 
   useEffect(() => {
@@ -2809,6 +2862,7 @@ export function App() {
               </span>
             </div>
             <div className="transport-audio">
+              <TransportMeter analyser={meter} playing={speed > 0} />
               <label className="master-gain">
                 <Volume2 size={13} />
                 <input

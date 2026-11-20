@@ -1063,6 +1063,23 @@ p {
   gap: 12px;
   margin-left: auto;
 }
+.audio-meter {
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.audio-meter i {
+  width: 3px;
+  height: 13px;
+  background: #c0d9ac;
+  border-radius: 1px;
+}
+.audio-meter span {
+  color: #727b78;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 7px;
+  margin: 0 5px;
+}
 .master-gain {
   display: flex;
   align-items: center;
@@ -2213,6 +2230,9 @@ p {
   }
   .transport-audio {
     gap: 6px;
+  }
+  .audio-meter {
+    display: none;
   }
   .playback-state {
     font-size: 7px;

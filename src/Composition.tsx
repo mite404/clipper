@@ -2,12 +2,13 @@ import {
   AbsoluteFill,
   Audio,
   Img,
+  Internals,
   Sequence,
   Video,
   useCurrentFrame,
   useVideoConfig,
 } from 'remotion';
-import { useMemo } from 'react';
+import { useContext, useEffect, useMemo } from 'react';
 import type { Asset } from './media';
 import {
   cameraTransform,
@@ -30,6 +31,7 @@ import {
 } from './timeline-model';
 import { cursorFrame } from './cursor-render';
 import { prepareFraming, framingAt } from './framing';
+import { tapMeter } from './audio-meter';
 
 export type CompositionProps = {
   clips: Clip[];
@@ -43,7 +45,18 @@ export type CompositionProps = {
   solo?: Track[];
   /** The whole-recording gain in dB; absent plays at unity. */
   gain?: number;
+  /** Receives the meter's tap on the preview mix, null when it lets go. */
+  onMeter?: (analyser: AnalyserNode | null) => void;
 };
+
+// The meter's ear on the preview's shared audio path: one AnalyserNode listening on the player
+// mix's master gain. Listening changes nothing about routing, and a rendering pass has no audio
+// context to tap.
+function MeterTap({ onMeter }: { onMeter?: (analyser: AnalyserNode | null) => void }) {
+  const shared = useContext(Internals.SharedAudioContext);
+  useEffect(() => tapMeter(shared?.audioContext, shared?.gainNode, onMeter), [onMeter, shared]);
+  return null;
+}
 
 /** Frame-driven video masks, source trims, audio and camera motion share Remotion's clock. */
 export function Composition({
@@ -55,6 +68,7 @@ export function Composition({
   muted,
   solo = [],
   gain,
+  onMeter,
 }: CompositionProps) {
   const frame = useCurrentFrame();
   const size = useVideoConfig();
@@ -76,6 +90,7 @@ export function Composition({
         color: '#fff',
       }}
     >
+      <MeterTap onMeter={onMeter} />
       {paintOrder(tracks, layout.mode === 'pip').map(({ id, role, placeholder }) => {
         const mask = maskRect(role, layout, size); // → actual render-pixel rect
         const view = cameraTransform(mask, role === 'screen' ? camera : undefined); // → affine

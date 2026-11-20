@@ -852,13 +852,11 @@ test.describe('obsolete labels stay removed', () => {
     });
   });
 
-  test('removed labels, tags and the L/R meter stay gone', async ({ page }) => {
+  test('removed labels and tags stay gone', async ({ page }) => {
     const title = page.locator('.source-panel .monitor-title');
     await expect(title).toHaveText('Source');
     await page.getByRole('button', { name: 'Select Ambient bed' }).click();
     await expect(title).toHaveText('SourceAUDIO');
-    await expect(page.locator('.audio-meter')).toHaveCount(0);
-    await expect(page.locator('[aria-label^="Audio level"]')).toHaveCount(0);
     for (const text of [
       'EDIT WORKSPACE',
       'On your device',
@@ -891,7 +889,7 @@ test.describe('obsolete labels stay removed', () => {
     expect(await clip()).toBe('inset(50%)');
   });
 
-  test('wide transport controls stay centered without the meter', async ({ page }) => {
+  test('wide transport controls stay centered', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 });
     const center = async (selector: string) => {
       const box = (await page.locator(selector).boundingBox())!;
