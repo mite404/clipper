@@ -32,7 +32,6 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   await expect(page.getByLabel('Cursor size', { exact: true })).toHaveValue('2.5');
   await page.getByLabel('Hide cursor', { exact: true }).check();
   await choose(page.getByLabel('Cursor style', { exact: true }), 'touch');
-  await page.getByText('Advanced cursor', { exact: true }).click();
   const animation = page.getByLabel('Cursor animation style', { exact: true });
   await expectChoice(animation, 'smooth');
   await expect(animation).toBeDisabled();
@@ -40,7 +39,6 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   await choose(animation, 'rapid');
   await choose(page.getByLabel('Cursor motion', { exact: true }), 'raw');
   await page.getByLabel('Hide when idle (1 s)', { exact: true }).check();
-  await page.getByText('Cleanup', { exact: true }).click();
   await page.getByLabel('Remove small shakes', { exact: true }).check();
   await page.getByLabel('Stabilize recorded shapes', { exact: true }).check();
   await expect(page.getByLabel('Rotate with movement', { exact: true })).not.toBeChecked();
@@ -143,9 +141,7 @@ test('attaches source-local cursor telemetry, rejects bad replacements and resto
   await expect(page.getByLabel('Cursor size', { exact: true })).toHaveValue('2.5');
   await expect(page.getByLabel('Hide cursor', { exact: true })).toBeChecked();
   await expectChoice(page.getByLabel('Cursor style', { exact: true }), 'touch');
-  await page.getByText('Advanced cursor', { exact: true }).click();
   await expect(page.getByLabel('Hide when idle (1 s)', { exact: true })).toBeChecked();
-  await page.getByText('Cleanup', { exact: true }).click();
   await expect(page.getByLabel('Remove small shakes', { exact: true })).toBeChecked();
   await expect(page.getByLabel('Stabilize recorded shapes', { exact: true })).toBeChecked();
   await expect(page.getByLabel('Rotate with movement', { exact: true })).toBeChecked();
@@ -196,12 +192,10 @@ test('cursor controls retain actions with long filenames, empty telemetry and la
       ).toBeInViewport();
       await page.getByRole('button', { name: 'Remove cursor sidecar' }).scrollIntoViewIfNeeded();
       await expect(page.getByRole('button', { name: 'Remove cursor sidecar' })).toBeInViewport();
-      await page.getByText('Advanced cursor', { exact: true }).click();
       await choose(page.getByLabel('Cursor style', { exact: true }), 'touch');
       await choose(page.getByLabel('Cursor ending', { exact: true }), 'stop');
       await page.getByLabel('Hide when idle (1 s)', { exact: true }).scrollIntoViewIfNeeded();
       await expect(page.getByLabel('Hide when idle (1 s)', { exact: true })).toBeInViewport();
-      await page.getByText('Cleanup', { exact: true }).click();
       await page.getByLabel('Remove small shakes', { exact: true }).scrollIntoViewIfNeeded();
       await expect(page.getByLabel('Remove small shakes', { exact: true })).toBeInViewport();
       const stabilize = page.getByLabel('Stabilize recorded shapes', { exact: true });

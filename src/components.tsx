@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Film,
   Image,
+  Info,
   LayoutGrid,
   List,
   Music2,
@@ -56,6 +57,24 @@ export function IconButton({
       </TooltipTrigger>
       <TooltipContent className="icon-button-tooltip" sideOffset={8} collisionPadding={8}>
         {label}
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
+/**
+ * An info button whose toggleable tooltip replaces a visible note (UI-10), following UI-1's
+ * tooltip pattern: a press opens or closes it, outside press and Escape close it, and its text is
+ * announced on open.
+ */
+export function InfoNote({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <Tooltip toggleable>
+      <TooltipTrigger type="button" className="info-note" aria-label={label}>
+        <Info aria-hidden="true" />
+      </TooltipTrigger>
+      <TooltipContent className="icon-button-tooltip" sideOffset={8} collisionPadding={8}>
+        {children}
       </TooltipContent>
     </Tooltip>
   );

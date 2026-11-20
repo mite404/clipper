@@ -11,20 +11,58 @@ test('screen selection edits its recording in a scrolling inspector without disp
   const inspector = page.locator('.inspector');
   const controls = inspector.getByRole('region', { name: 'Source cursor data' });
   await expect(controls).toBeVisible();
-  await expect(controls).toContainText('Recording settings · affects all uses');
+  // UI-10: no scope line, and no visible legend; the group keeps its accessible name.
+  await expect(controls).not.toContainText('Recording settings');
   await page.getByLabel('Attach cursor sidecar').setInputFiles({
     name: 'synthetic.cursor.json',
     mimeType: 'application/json',
     buffer: Buffer.from(JSON.stringify(cursorFixture)),
   });
-  await expect(controls.getByLabel('Cursor animation style', { exact: true })).toBeVisible();
+  const group = controls.getByRole('group', { name: 'Appearance & behavior' });
+  await expect(group).toBeVisible();
+  await expect(group.locator('legend')).toHaveCount(0);
+  // Every control is visible without opening anything: basics first, then behavior.
+  const names = [
+    'Cursor animation style',
+    'Cursor style',
+    'Cursor size',
+    'Hide cursor',
+    'Cursor motion',
+    'Hide when idle (1 s)',
+    'Remove small shakes',
+    'Stabilize recorded shapes',
+    'Rotate with movement',
+    'Cursor ending',
+  ];
+  const tops: number[] = [];
+  for (const name of names) {
+    const control = controls.getByLabel(name, { exact: true });
+    await expect(control).toBeVisible();
+    tops.push((await control.boundingBox())!.y);
+  }
+  expect(tops).toEqual([...tops].sort((a, b) => a - b));
+  // The five checkboxes share one left edge.
+  const lefts = new Set<number>();
+  for (const name of names.filter((name) => !name.startsWith('Cursor')))
+    lefts.add((await controls.getByLabel(name, { exact: true }).boundingBox())!.x);
+  expect(lefts.size).toBe(1);
+  for (const name of ['Cleanup', 'Advanced cursor'])
+    await expect(controls.getByText(name, { exact: true })).toHaveCount(0);
+  // The animation and ending notes sit behind toggleable info tooltips.
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
+  await controls.getByRole('button', { name: 'About cursor animation' }).click();
+  await expect(page.getByRole('tooltip')).toContainText('None steps at recorded sample times');
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
+  await controls.getByRole('button', { name: 'About cursor ending' }).click();
+  await expect(page.getByRole('tooltip')).toContainText('Ending effects use the last 0.5 s');
+  await controls.getByRole('button', { name: 'About cursor ending' }).click();
+  await expect(page.getByRole('tooltip')).toHaveCount(0);
   await expect(controls.getByLabel('Cursor time offset (ms)')).not.toBeVisible();
-  await expect(controls.getByLabel('Remove small shakes', { exact: true })).not.toBeVisible();
   const transport = page.locator('.transport');
   const timeline = page.locator('.timeline-toolbar');
   const before = [await transport.boundingBox(), await timeline.boundingBox()];
-  for (const name of ['Cleanup', 'Advanced cursor', 'Source data'])
-    await controls.getByText(name, { exact: true }).click();
+  await controls.getByText('Source data', { exact: true }).click();
   await controls.getByLabel('Cursor time offset (ms)').fill('50');
   await expect(transport).toBeInViewport();
   await expect(timeline).toBeInViewport();

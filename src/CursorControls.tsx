@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { Choice } from './components';
+import { useId, useRef, useState } from 'react';
+import { Choice, InfoNote } from './components';
 import type { Asset } from './media';
 import {
   DEFAULT_CURSOR_SETTINGS,
@@ -14,8 +14,10 @@ type ImportState = { kind: 'idle' } | { kind: 'reading' } | { kind: 'error'; mes
 const ANIMATION_STYLES = ['smooth', 'medium', 'rapid', 'none'] as const;
 
 const BEHAVIOR_FLAGS = [
+  ['hideIdle', 'Hide when idle (1 s)'],
   ['removeShakes', 'Remove small shakes'],
   ['stabilizeShapes', 'Stabilize recorded shapes'],
+  ['rotate', 'Rotate with movement'],
 ] as const;
 
 function countLabel(count: number, singular: string): string {
@@ -105,98 +107,128 @@ function CursorHiddenRanges({
   );
 }
 
-function CursorBehavior({
-  settings,
-  onChange,
-}: {
-  settings: CursorSettings;
-  onChange: (settings: CursorSettings) => void;
-}) {
+type Fields = { settings: CursorSettings; update: (next: CursorSettings) => void };
+
+function CursorBasics({ settings, update }: Fields) {
+  // An external label, so a caption press still opens the choice while the info button keeps its
+  // own press.
+  const animationId = useId();
   return (
     <>
-      <fieldset className="cursor-group">
-        <legend>Motion</legend>
-        <label>
-          Movement
-          <Choice
-            label="Cursor motion"
-            value={settings.mode}
-            options={[
-              { value: 'smooth', label: 'Smooth' },
-              { value: 'raw', label: 'Raw' },
-            ]}
-            onChange={(mode) => onChange({ ...settings, mode })}
-          />
-        </label>
-        <label>
+      <div className="cursor-field">
+        <label className="cursor-caption" htmlFor={animationId}>
           Animation
-          <Choice
-            label="Cursor animation style"
-            value={settings.animationStyle ?? 'smooth'}
-            disabled={settings.mode === 'raw'}
-            options={ANIMATION_STYLES.map((style) => ({
-              value: style,
-              label: style[0].toUpperCase() + style.slice(1),
-            }))}
-            onChange={(animationStyle) => onChange({ ...settings, animationStyle })}
-          />
+          <InfoNote label="About cursor animation">
+            {settings.mode === 'raw'
+              ? 'Raw interpolates recorded positions and bypasses animation styles.'
+              : 'None steps at recorded sample times. Raw motion still interpolates between them.'}
+          </InfoNote>
         </label>
-        <p className="cursor-note">
-          {settings.mode === 'raw'
-            ? 'Raw interpolates recorded positions and bypasses animation styles.'
-            : 'None steps at recorded sample times. Raw motion still interpolates between them.'}
-        </p>
-      </fieldset>
-      <details className="cursor-behavior">
-        <summary>Cleanup</summary>
-        <div className="cursor-appearance">
-          {BEHAVIOR_FLAGS.map(([key, label]) => (
-            <label key={key}>
-              <input
-                type="checkbox"
-                checked={Boolean(settings[key])}
-                onChange={(event) => onChange({ ...settings, [key]: event.currentTarget.checked })}
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-        <p className="cursor-note">
-          Reduce small movements and brief shape changes. Clicks stay exact.
-        </p>
-      </details>
-      <details className="cursor-behavior">
-        <summary>Advanced cursor</summary>
-        <div className="cursor-appearance">
-          <label>
-            <input
-              type="checkbox"
-              checked={Boolean(settings.rotate)}
-              onChange={(event) => onChange({ ...settings, rotate: event.currentTarget.checked })}
-            />
-            Rotate with movement
-          </label>
-          <label>
-            Per-clip ending
-            <Choice
-              label="Cursor ending"
-              value={settings.ending ?? 'none'}
-              options={[
-                { value: 'none', label: 'Recorded ending' },
-                { value: 'stop', label: 'Stop early' },
-                { value: 'loop', label: 'Return to start' },
-              ]}
-              onChange={(value) =>
-                onChange({ ...settings, ending: value === 'none' ? undefined : value })
-              }
-            />
-          </label>
-        </div>
-        <p className="cursor-note">
-          Ending effects use the last 0.5 s of each trimmed clip, or half of shorter clips.
-        </p>
-        <CursorHiddenRanges settings={settings} onChange={onChange} />
-      </details>
+        <Choice
+          id={animationId}
+          label="Cursor animation style"
+          value={settings.animationStyle ?? 'smooth'}
+          disabled={settings.mode === 'raw'}
+          options={ANIMATION_STYLES.map((style) => ({
+            value: style,
+            label: style[0].toUpperCase() + style.slice(1),
+          }))}
+          onChange={(animationStyle) => update({ ...settings, animationStyle })}
+        />
+      </div>
+      <label>
+        Style
+        <Choice
+          label="Cursor style"
+          value={settings.style ?? 'recorded'}
+          options={[
+            { value: 'recorded', label: 'Recorded shapes' },
+            { value: 'default', label: 'First embedded shape' },
+            { value: 'touch', label: 'Touch' },
+          ]}
+          onChange={(style) => update({ ...settings, style })}
+        />
+      </label>
+      <label>
+        Size
+        <input
+          type="number"
+          aria-label="Cursor size"
+          min="0.25"
+          max="4"
+          step="0.25"
+          defaultValue={settings.size}
+          onChange={(event) => {
+            const size = event.currentTarget.valueAsNumber;
+            if (Number.isFinite(size) && size >= 0.25 && size <= 4) update({ ...settings, size });
+          }}
+          onBlur={(event) => {
+            event.currentTarget.value = String(settings.size);
+          }}
+        />
+      </label>
+      <label>
+        <input
+          type="checkbox"
+          checked={settings.hidden}
+          onChange={(event) => update({ ...settings, hidden: event.currentTarget.checked })}
+        />
+        Hide cursor
+      </label>
+    </>
+  );
+}
+
+function CursorBehavior({ settings, update }: Fields) {
+  const endingId = useId();
+  return (
+    <>
+      <label>
+        Movement
+        <Choice
+          label="Cursor motion"
+          value={settings.mode}
+          options={[
+            { value: 'smooth', label: 'Smooth' },
+            { value: 'raw', label: 'Raw' },
+          ]}
+          onChange={(mode) => update({ ...settings, mode })}
+        />
+      </label>
+      {BEHAVIOR_FLAGS.map(([key, label]) => (
+        <label key={key}>
+          <input
+            type="checkbox"
+            checked={Boolean(settings[key])}
+            onChange={(event) => update({ ...settings, [key]: event.currentTarget.checked })}
+          />
+          {label}
+        </label>
+      ))}
+      <p className="cursor-note">
+        Reduce small movements and brief shape changes. Clicks stay exact.
+      </p>
+      <div className="cursor-field">
+        <label className="cursor-caption" htmlFor={endingId}>
+          Per-clip ending
+          <InfoNote label="About cursor ending">
+            Ending effects use the last 0.5 s of each trimmed clip, or half of shorter clips.
+          </InfoNote>
+        </label>
+        <Choice
+          id={endingId}
+          label="Cursor ending"
+          value={settings.ending ?? 'none'}
+          options={[
+            { value: 'none', label: 'Recorded ending' },
+            { value: 'stop', label: 'Stop early' },
+            { value: 'loop', label: 'Return to start' },
+          ]}
+          onChange={(value) =>
+            update({ ...settings, ending: value === 'none' ? undefined : value })
+          }
+        />
+      </div>
     </>
   );
 }
@@ -215,73 +247,14 @@ function CursorAppearance({
       </p>
     );
   const settings = cursor.settings ?? DEFAULT_CURSOR_SETTINGS;
+  const update = (next: CursorSettings) => onChange({ ...cursor, settings: next });
   return (
     <>
-      <fieldset className="cursor-group">
-        <legend>Appearance &amp; visibility</legend>
-        <label>
-          Style
-          <Choice
-            label="Cursor style"
-            value={settings.style ?? 'recorded'}
-            options={[
-              { value: 'recorded', label: 'Recorded shapes' },
-              { value: 'default', label: 'First embedded shape' },
-              { value: 'touch', label: 'Touch' },
-            ]}
-            onChange={(style) => onChange({ ...cursor, settings: { ...settings, style } })}
-          />
-        </label>
-        <label>
-          Size
-          <input
-            type="number"
-            aria-label="Cursor size"
-            min="0.25"
-            max="4"
-            step="0.25"
-            defaultValue={settings.size}
-            onChange={(event) => {
-              const size = event.currentTarget.valueAsNumber;
-              if (Number.isFinite(size) && size >= 0.25 && size <= 4)
-                onChange({ ...cursor, settings: { ...settings, size } });
-            }}
-            onBlur={(event) => {
-              event.currentTarget.value = String(settings.size);
-            }}
-          />
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={settings.hidden}
-            onChange={(event) =>
-              onChange({
-                ...cursor,
-                settings: { ...settings, hidden: event.currentTarget.checked },
-              })
-            }
-          />
-          Hide cursor
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={Boolean(settings.hideIdle)}
-            onChange={(event) =>
-              onChange({
-                ...cursor,
-                settings: { ...settings, hideIdle: event.currentTarget.checked },
-              })
-            }
-          />
-          Hide when idle (1 s)
-        </label>
+      <fieldset className="cursor-group" aria-label="Appearance & behavior">
+        <CursorBasics settings={settings} update={update} />
+        <CursorBehavior settings={settings} update={update} />
       </fieldset>
-      <CursorBehavior
-        settings={settings}
-        onChange={(next) => onChange({ ...cursor, settings: next })}
-      />
+      <CursorHiddenRanges settings={settings} onChange={update} />
     </>
   );
 }
@@ -359,7 +332,6 @@ export function CursorControls({
     <section className="cursor-controls" aria-label="Source cursor data">
       <div className="cursor-summary">
         <strong title={asset.name}>Cursor · {asset.name}</strong>
-        <p className="cursor-scope">Recording settings · affects all uses</p>
       </div>
       <CursorAppearance cursor={cursor} onChange={onChange} />
       <details className="cursor-behavior" open={!cursor}>

@@ -32,6 +32,25 @@ and the tooltip gone after the click.
 Hover with a real pointer move across neighbors. Setting state or dispatching events does not prove
 the delay or handoff.
 
+# Info notes
+
+Shared `InfoNote` buttons replace visible setting notes with a toggleable tooltip (UI-10). The
+cursor inspector uses them for its Animation and Per-clip ending notes.
+
+## Sub-features
+
+- The note is the button's accessible description from the start, and there is no `title`.
+- Pressing the button (pointer, Enter or Space) opens or closes the note. Escape or an outside press
+  closes it. While open, an overlay catches the outside press before it reaches the page.
+- A long multilingual note fits at 320px.
+
+## Driving it with Playwright
+
+`.agents/skills/verify-clipper/scripts/verify.mjs all` runs `tests/info-note.spec.ts` against the
+isolated Storybook iframe (`ui-infonote--normal` and `--stress`). The outside press uses raw
+`page.mouse` events because the open tooltip's overlay intercepts element clicks.
+`tests/cursor-inspector.spec.ts` checks the real inspector's two info buttons.
+
 ## Gotchas
 
 Timing assertions are wall-clock bounds in headless Chromium, not a frame-accurate animation check.

@@ -2925,6 +2925,10 @@ p {
   align-items: center;
   gap: 6px;
 }
+.cursor-appearance label:has(input[type='number']) {
+  display: grid;
+  grid-template-columns: 7ch auto;
+}
 .cursor-appearance :is(select, .select),
 .cursor-appearance input[type='number'] {
   min-height: 32px;
@@ -2958,12 +2962,6 @@ p {
   gap: 14px;
   align-content: start;
 }
-.cursor-scope {
-  margin-top: 6px;
-  font-size: 10px;
-  line-height: 1.5;
-  color: var(--muted-foreground);
-}
 .cursor-group {
   display: grid;
   gap: 10px;
@@ -2972,11 +2970,6 @@ p {
   padding: 12px 0 0;
   border: 0;
   border-top: 1px solid var(--line);
-}
-.cursor-group legend {
-  padding: 0 8px 0 0;
-  color: var(--foreground);
-  font-weight: 500;
 }
 .cursor-group label {
   display: flex;
@@ -3006,12 +2999,40 @@ p {
   opacity: 0.5;
 }
 .cursor-group label:has(:is(select, .select)),
+.cursor-group .cursor-field,
 .cursor-controls[aria-label='Source cursor data']
   .cursor-appearance
   label:has(:is(select, .select)) {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 6px;
+}
+.cursor-group .cursor-caption {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 4px;
+}
+.info-note {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.info-note:hover {
+  color: var(--foreground);
+}
+.info-note svg {
+  width: 13px;
+  height: 13px;
 }
 .cursor-group :is(select, .select),
 .cursor-controls[aria-label='Source cursor data'] .cursor-appearance :is(select, .select) {
