@@ -2597,6 +2597,25 @@ export function App() {
                 <span>
                   <span className="status-dot" /> {LAYOUTS[edit.layout.mode ?? 'side'].name}
                 </span>
+                <span
+                  className="preview-quality"
+                  title="Lays the preview out smaller so it plays lighter. Copy frame and export are unaffected."
+                >
+                  Preview
+                  <Choice
+                    label="Preview quality"
+                    value={previewQuality}
+                    options={[
+                      { value: 'full', label: 'Full' },
+                      { value: 'half', label: 'Half' },
+                      { value: 'quarter', label: 'Quarter' },
+                    ]}
+                    onChange={(quality) => {
+                      setPreviewQuality(quality);
+                      savePreviewQuality(quality);
+                    }}
+                  />
+                </span>
                 <span>
                   Fit <Maximize2 size={12} />
                 </span>
@@ -2906,25 +2925,6 @@ export function App() {
         )}
         <span role="status">
           <span className="status-dot" /> {message}
-        </span>
-        <span
-          className="preview-quality"
-          title="Lays the preview out smaller so it plays lighter. Copy frame and export are unaffected."
-        >
-          Preview
-          <Choice
-            label="Preview quality"
-            value={previewQuality}
-            options={[
-              { value: 'full', label: 'Full' },
-              { value: 'half', label: 'Half' },
-              { value: 'quarter', label: 'Quarter' },
-            ]}
-            onChange={(quality) => {
-              setPreviewQuality(quality);
-              savePreviewQuality(quality);
-            }}
-          />
         </span>
         <span>
           REMOTION × MEDIABUNNY <span className="footer-version">STEEL THREAD 0.1</span>

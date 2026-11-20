@@ -3368,7 +3368,7 @@ input[type='number'],
   cursor: default;
 }
 
-/* The footer's preview quality: a small select between the status and the version. */
+/* The compose caption's preview quality: a small select left of the fullscreen button. */
 .preview-quality {
   display: flex;
   align-items: center;
@@ -3399,9 +3399,9 @@ input[type='number'],
 [data-slot='toast-region'] {
   width: min(340px, calc(100vw - 24px));
   height: var(--toast-front-height);
-  /* Clear of the footer and the Preview quality list that opens up from it: ui-sdk raises the
-     toast layer above every popup, so a toast over that list would take its clicks. */
-  /* ponytail: sized for that three-option list; raise it if a footer list grows taller. */
+  /* Clear of the footer, and of any popup that opens from it: ui-sdk raises the toast layer above
+     every popup, so a toast over a popup would take its clicks. */
+  /* ponytail: sized for a three-option list; raise it if a footer control grows a taller popup. */
   margin: 0 12px 120px auto;
 }
 [data-slot='toast-region'][data-expanded] {
