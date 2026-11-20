@@ -41,7 +41,9 @@ cursor inspector uses them for its Animation and Per-clip ending notes.
 
 - The note is the button's accessible description from the start, and there is no `title`.
 - Pressing the button (pointer, Enter or Space) opens or closes the note. Escape or an outside press
-  closes it. While open, an overlay catches the outside press before it reaches the page.
+  closes it. While open, an overlay catches the outside press before it reaches the page. Space is
+  Storybook-only: in the real editor the deliberate global handler routes Space from any control to
+  transport play/pause (the hotkey ticket), so Enter toggles the note there.
 - A long multilingual note fits at 320px.
 
 ## Driving it with Playwright
