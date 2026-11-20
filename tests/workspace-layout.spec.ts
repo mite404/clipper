@@ -983,8 +983,9 @@ test.describe('default layout shows the whole timeline', () => {
 
 // The transport's min content width must never exceed the viewport: the audio block's rightmost
 // button keeps its hit area on screen at every width, across the 1250, 625 and 620 band edges.
-// Strictly inside: an edge flush with the viewport has lost the designed right padding, and a few
-// px of font-metric jitter between platforms then clips the hit area (the 621px regression).
+// Small widths need at least 2px of slack: an edge flush with the viewport has lost the designed
+// right padding, and font-metric jitter between platforms and browser builds then clips the hit
+// area (the 621px regression, and a fractional 0.2px clip at 320px on Chrome 157).
 test('the transport stays within the viewport from 320 to 1440 px', async ({ page }) => {
   test.setTimeout(120000);
   await page.goto('/');
@@ -1000,7 +1001,9 @@ test('the transport stays within the viewport from 320 to 1440 px', async ({ pag
         ),
     );
     const box = (await mixer.boundingBox())!;
-    expect(box.x + box.width, `mixer right edge at ${width}px`).toBeLessThan(width);
+    const edge = box.x + box.width;
+    if (width <= 390) expect(edge, `mixer right edge at ${width}px`).toBeLessThanOrEqual(width - 2);
+    else expect(edge, `mixer right edge at ${width}px`).toBeLessThan(width);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
       `document scrollWidth at ${width}px`,

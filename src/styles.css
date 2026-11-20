@@ -2649,7 +2649,9 @@ p {
 }
 @media (max-width: 360px) {
   .transport {
-    padding: 0 7px;
+    /* 4px keeps ~3px of right-edge slack at 320px in the worst-measured browser build (Chrome 157
+       reads 0.2px of hit-area overflow with 7px); a flush edge clips when font metrics shift. */
+    padding: 0 4px;
   }
   .app-header .save-button {
     font-size: 8px;
