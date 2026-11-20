@@ -866,6 +866,41 @@ test('deletes and restores from the keyboard, refuses overlapping zooms and clam
   await expect(page.getByRole('button', { name: 'Play composition', exact: true })).toBeVisible();
 });
 
+test('shift steps the playhead ten frames only while the timeline has focus', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const timecode = page.getByTestId('timecode');
+  const playhead = page.getByRole('slider', { name: 'Timeline playhead' });
+  const clip = page.getByTestId('track-screen').getByRole('button').first();
+
+  // A clip press hands the keys to the timeline panel.
+  await playhead.fill('100');
+  await clip.click();
+  await expect(timecode).toHaveText('00:03:10');
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect(timecode).toHaveText('00:03:20');
+  await page.keyboard.press('Shift+ArrowLeft');
+  await expect(timecode).toHaveText('00:03:10');
+  await page.keyboard.press('ArrowRight');
+  await expect(timecode).toHaveText('00:03:11');
+  // The step clamps at the sequence start like any other seek.
+  await playhead.fill('5');
+  await clip.click();
+  await page.keyboard.press('Shift+ArrowLeft');
+  await expect(timecode).toHaveText('00:00:00');
+
+  // Outside the timeline Shift keeps the one-frame step it has today.
+  await playhead.fill('100');
+  await page.locator('.app-header').click({ position: { x: 4, y: 4 } });
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect(timecode).toHaveText('00:03:11');
+  // A form control keeps the keys for itself.
+  const place = page.getByRole('spinbutton', { name: 'Place at seconds' });
+  await place.focus();
+  await page.keyboard.press('Shift+ArrowRight');
+  await expect(timecode).toHaveText('00:03:11');
+});
+
 test('undoes a slider drag in one step and ignores edits that change nothing', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });

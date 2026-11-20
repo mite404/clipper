@@ -1954,8 +1954,10 @@ export function App() {
         setSpeed((s) => (s > 0 ? Math.min(4, s * 2) : 1));
       }
       if (key === ' ' && !event.repeat) setSpeed((s) => (s ? 0 : 1));
-      if (key === 'arrowleft') seek(frameRef.current - 1);
-      if (key === 'arrowright') seek(frameRef.current + 1);
+      // Shift steps ten frames at a time, but only when the timeline owns the keys, like Delete.
+      const arrowStep = event.shiftKey && inTimeline.current ? 10 : 1;
+      if (key === 'arrowleft') seek(frameRef.current - arrowStep);
+      if (key === 'arrowright') seek(frameRef.current + arrowStep);
       if (key === 'c' && !event.shiftKey) setTool('razor');
       if (key === 'v' && !event.shiftKey) setTool('select');
       if (deletion) removeSelected();
