@@ -201,6 +201,7 @@ describe('portable project parsing', () => {
       edit,
       media,
       muted: ['music'],
+      solo: [],
       locked: [],
       selectedTracks: [],
       outputFps: 'auto',
@@ -306,6 +307,9 @@ describe('portable project parsing', () => {
     [JSON.stringify({ ...project(), media: undefined }), /media/i],
     [JSON.stringify({ ...project(), muted: ['other'] }), /track/i],
     [JSON.stringify({ ...project(), muted: ['music', 'music'] }), /duplicate/i],
+    [JSON.stringify({ ...project(), solo: 'music' }), /solo/i],
+    [JSON.stringify({ ...project(), solo: ['other'] }), /track/i],
+    [JSON.stringify({ ...project(), solo: ['music', 'music'] }), /duplicate/i],
     [JSON.stringify({ ...project(), locked: 'voice' }), /locked/i],
     [JSON.stringify({ ...project(), locked: null }), /locked/i],
     [JSON.stringify({ ...project(), selectedTracks: null }), /selectedTracks/i],
@@ -834,6 +838,7 @@ describe('portable project serialization', () => {
     try {
       saved = (
         await serializeProject(edit, [{ ...asset, url }], ['music'], {
+          solo: ['music'],
           locked: ['voice', 'screen'],
           selectedTracks: ['camera'],
           outputFps: '60',
@@ -852,6 +857,7 @@ describe('portable project serialization', () => {
       fps: 30,
       ...legacyEdit,
       muted: ['music'],
+      solo: ['music'],
       locked: ['voice', 'screen'],
       selectedTracks: ['camera'],
       outputFps: '60',
@@ -862,6 +868,7 @@ describe('portable project serialization', () => {
       edit,
       media,
       muted: ['music'],
+      solo: ['music'],
       locked: ['voice', 'screen'],
       selectedTracks: ['camera'],
       outputFps: '60',

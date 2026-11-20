@@ -306,6 +306,7 @@ export function parseProject(text: string): {
     transcript?: Transcript;
   }[];
   muted: Track[];
+  solo: Track[];
   locked: Track[];
   selectedTracks: Track[];
   outputFps: OutputFps;
@@ -436,7 +437,7 @@ export function parseProject(text: string): {
   const layout = layoutOf(root.layout); // → Layout
   const marked = chapters(root.chapters);
   // Track toggles validate like muted. Files saved before locks and track selection omit them.
-  const toggles = (field: 'muted' | 'locked' | 'selectedTracks', fallback?: unknown[]) => {
+  const toggles = (field: 'muted' | 'solo' | 'locked' | 'selectedTracks', fallback?: unknown[]) => {
     const list = array(root[field] === undefined ? fallback : root[field], field).map(track);
     unique(list, `${field} track`);
     return list;
@@ -445,6 +446,7 @@ export function parseProject(text: string): {
     edit: { clips, zooms, layout, tracks, ...(marked.length && { chapters: marked }) },
     media,
     muted: toggles('muted'),
+    solo: toggles('solo', []),
     locked: toggles('locked', []),
     selectedTracks: toggles('selectedTracks', []),
     outputFps: outputFps(root.outputFps),
@@ -549,16 +551,24 @@ export async function serializeProject(
   edit: Omit<Edit, 'tracks'> & Partial<Pick<Edit, 'tracks'>>,
   assets: Asset[],
   muted: Track[],
-  toggles: { locked: Track[]; selectedTracks: Track[]; outputFps?: OutputFps; gain?: number } = {
+  toggles: {
+    solo?: Track[];
+    locked: Track[];
+    selectedTracks: Track[];
+    outputFps?: OutputFps;
+    gain?: number;
+  } = {
     locked: [],
     selectedTracks: [],
   },
 ): Promise<{ file: Blob; omitted: string[] }> {
   const snapshot: Edit = { tracks: DEFAULT_TRACKS, ...structuredClone(edit) };
   // An undone track creation can leave toggles naming a track the registry no longer has.
-  const listed = (ids: Track[]) => ids.filter((id) => snapshot.tracks.some((t) => t.id === id));
+  const listed = (ids: Track[] | undefined) =>
+    (ids ?? []).filter((id) => snapshot.tracks.some((t) => t.id === id));
   const trackSnapshot = {
     muted: listed(muted),
+    solo: listed(toggles.solo),
     locked: listed(toggles.locked),
     selectedTracks: listed(toggles.selectedTracks),
     ...(toggles.outputFps && toggles.outputFps !== 'auto' && { outputFps: toggles.outputFps }),
@@ -600,6 +610,7 @@ export async function serializeProject(
         ...(tracks.tracks && { tracks: parsed.edit.tracks }),
         media: parsed.media,
         muted: parsed.muted,
+        solo: parsed.solo,
         locked: parsed.locked,
         selectedTracks: parsed.selectedTracks,
         ...(parsed.outputFps !== 'auto' && { outputFps: parsed.outputFps }),

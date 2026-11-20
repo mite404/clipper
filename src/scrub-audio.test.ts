@@ -80,6 +80,17 @@ describe('mixAt', () => {
     expect(noAudio).toEqual([]);
   });
 
+  it('narrows the mix to solo tracks, mute still winning on a solo track', () => {
+    const clips = [clip('voice'), clip('music', { track: 'music' })];
+    expect(mixAt(0, clips, TRACKS, [], ASSETS, 0, ['voice'])).toEqual([
+      { clip: 'voice', url: 'blob:voice', name: 'voice', at: 0, gain: 1 },
+    ]);
+    // Soloing one silences the other; mute wins on the solo track itself.
+    expect(mixAt(0, clips, TRACKS, ['voice'], ASSETS, 0, ['voice'])).toEqual([]);
+    // The mix rule does not check kinds: a solo naming no audio track silences them all.
+    expect(mixAt(0, clips, TRACKS, [], ASSETS, 0, ['screen'])).toEqual([]);
+  });
+
   it('lists every overlapping audio clip, two clips of one asset included', () => {
     const clips = [clip('voice'), clip('again', { assetId: 'voice', track: 'music', offset: 15 })];
     expect(mixAt(5, clips, TRACKS, [], ASSETS)).toEqual([

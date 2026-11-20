@@ -284,7 +284,7 @@ function LibraryRecord({ view, worst = false }: { view: string; worst?: boolean 
         <Timeline
           headers={{
             registry: INITIAL_EDIT.tracks,
-            tracks: { muted: [], locked: [], selected: [] },
+            tracks: { muted: [], solo: [], locked: [], selected: [] },
             onToggleTrack: () => {},
             onMoveTrack: () => {},
           }}

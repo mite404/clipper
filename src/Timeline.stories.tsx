@@ -54,7 +54,12 @@ function TimelineOverflow() {
   );
   const [selected, setSelected] = useState('');
   const [frame, setFrame] = useState(0);
-  const [tracks, setTracks] = useState<TrackToggles>({ muted: [], locked: [], selected: [] });
+  const [tracks, setTracks] = useState<TrackToggles>({
+    muted: [],
+    solo: [],
+    locked: [],
+    selected: [],
+  });
   const { count, duration, length } = mode;
   const clips: Clip[] = Array.from({ length: count }, (_, index) => ({
     id: `clip-${index}`,

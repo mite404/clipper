@@ -1,4 +1,4 @@
-import { FPS, gainFactor, type Clip, type Track, type TrackDef } from './timeline-model';
+import { FPS, audible, gainFactor, type Clip, type Track, type TrackDef } from './timeline-model';
 import type { Asset } from './media';
 
 /** One sounding source at a paused playhead: the clip, its asset, where from, at what mix gain. */
@@ -10,8 +10,8 @@ export const RESTART_MS = 70;
 
 /**
  * The playback mix at `frame`, mirrored from Composition: only clips on audio tracks sound, each at
- * its track's gain times the clip's gain times the whole-recording gain, and a muted track is
- * silent.
+ * its track's gain times the clip's gain times the whole-recording gain, a muted track is silent,
+ * and any solo narrows the mix to the solo tracks.
  * @param master The whole-recording gain in dB; 0 leaves the mix untouched.
  */
 export function mixAt(
@@ -21,6 +21,7 @@ export function mixAt(
   muted: Track[],
   assets: Asset[],
   master = 0,
+  solo: Track[] = [],
 ): Slice[] {
   const factor = gainFactor(master);
   const gains = new Map(
@@ -30,7 +31,7 @@ export function mixAt(
   );
   return clips.flatMap((clip) => {
     const gain = gains.get(clip.track); // → number | undefined
-    if (gain === undefined || muted.includes(clip.track)) return [];
+    if (gain === undefined || !audible(clip.track, muted, solo)) return [];
     if (frame < clip.start || frame >= clip.start + clip.duration) return [];
     const asset = assets.find((a) => a.id === clip.assetId); // → Asset | undefined
     if (!asset?.hasAudio) return [];

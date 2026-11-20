@@ -3,6 +3,8 @@ import {
   ChevronDown,
   ChevronUp,
   Film,
+  HeadphoneOff,
+  Headphones,
   Image,
   Lock,
   LockOpen,
@@ -60,7 +62,7 @@ import {
 import { ASSET_DRAG, IconButton, Waveform } from './components';
 
 /** Per-track toggle lists a project saves. */
-export type TrackToggles = Record<'muted' | 'locked' | 'selected', Track[]>;
+export type TrackToggles = Record<'muted' | 'solo' | 'locked' | 'selected', Track[]>;
 /** What the track headers need: the edit's ordered tracks, their saved toggles and their actions. */
 export type TrackHeaders = {
   /** Rows and V/A numbers follow the registry. */
@@ -113,6 +115,7 @@ const TrackHeader = memo(function TrackHeader({
   const { id, label } = track;
   const up = UP[track.kind];
   const muted = tracks.muted.includes(id);
+  const soloed = tracks.solo.includes(id);
   // A move that reaches the end disables its own button, so focus goes to the other one.
   const toggles = useRef<HTMLSpanElement>(null);
   // Directions to refocus after a move, the pressed one first.
@@ -150,6 +153,15 @@ const TrackHeader = memo(function TrackHeader({
             onClick={() => onToggleTrack('muted', id)}
           >
             {muted ? <VolumeX size={13} /> : <Volume2 size={13} />}
+          </IconButton>
+        )}
+        {track.kind === 'audio' && (
+          <IconButton
+            label={`${soloed ? 'Unsolo' : 'Solo'} ${label}`}
+            aria-pressed={soloed}
+            onClick={() => onToggleTrack('solo', id)}
+          >
+            {soloed ? <HeadphoneOff size={13} /> : <Headphones size={13} />}
           </IconButton>
         )}
         {MOVES.map(({ direction, sign, Icon }) => {

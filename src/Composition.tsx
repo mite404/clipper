@@ -20,6 +20,7 @@ import {
   type Layout,
 } from './stage';
 import {
+  audible,
   gainFactor,
   paintOrder,
   type Clip,
@@ -38,6 +39,8 @@ export type CompositionProps = {
   /** The ordered registry: visual tracks paint back to front, audio tracks mix at their gains. */
   tracks: TrackDef[];
   muted: Track[];
+  /** Solo audio tracks; any solo narrows the mix to them, mute still wins. Absent, all sound. */
+  solo?: Track[];
   /** The whole-recording gain in dB; absent plays at unity. */
   gain?: number;
 };
@@ -50,6 +53,7 @@ export function Composition({
   layout,
   tracks,
   muted,
+  solo = [],
   gain,
 }: CompositionProps) {
   const frame = useCurrentFrame();
@@ -179,7 +183,9 @@ export function Composition({
                   // audio element never changes route.
                   useWebAudioApi
                   volume={
-                    muted.includes(clip.track) ? 0 : gains.get(clip.track)! * gainFactor(clip.gain)
+                    audible(clip.track, muted, solo)
+                      ? gains.get(clip.track)! * gainFactor(clip.gain)
+                      : 0
                   }
                 />
               </Sequence>

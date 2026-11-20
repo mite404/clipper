@@ -32,6 +32,7 @@ import {
 import {
   DEFAULT_TRACKS,
   FPS,
+  audible,
   covers,
   gainFactor,
   outputFrames,
@@ -59,6 +60,8 @@ export type RenderVideoOptions = {
    * Omitted, it is the four legacy tracks, as a v2 or v3 project reads. */
   tracks?: TrackDef[];
   muted: Track[];
+  /** Solo audio tracks; any solo narrows the mix to them, mute still wins. Absent, all sound. */
+  solo?: Track[];
   width: 1920 | 3840;
   /** Explicit container, with no substitution. Omit for automatic MP4/WebM negotiation.
    * MOV uses AVC and uncompressed 16-bit PCM audio (about 11.5 MB/minute at stereo 48 kHz).
@@ -420,6 +423,7 @@ export async function renderVideo({
   layout,
   tracks = DEFAULT_TRACKS,
   muted,
+  solo = [],
   width,
   format,
   fps = 'auto',
@@ -442,7 +446,7 @@ export async function renderVideo({
   const audioClips = clips.filter(
     (clip) =>
       gains.has(clip.track) &&
-      !muted.includes(clip.track) &&
+      audible(clip.track, muted, solo) &&
       assets.some((asset) => asset.id === clip.assetId && asset.hasAudio),
   );
   onProgress(0);

@@ -1316,7 +1316,8 @@ export function App() {
   const [frame, setFrame] = useState(0);
   const [speed, setSpeed] = useState(0);
   const [muted, setMuted] = useState<Track[]>([]);
-  // Mutes, locks and Split's track targets are saved with the project but are never undo steps.
+  const [solo, setSolo] = useState<Track[]>([]);
+  // Mutes, solos, locks and Split's track targets are saved with the project, never undo steps.
   const [locked, setLocked] = useState<Track[]>([]);
   const [selectedTracks, setSelectedTracks] = useState<Track[]>([]);
   // Saved with the project like the track toggles, outside undo. Resolution is not saved.
@@ -1325,6 +1326,7 @@ export function App() {
   const [recordingGain, setRecordingGain] = useState(0);
   const [savedTracks, setSavedTracks] = useState({
     muted,
+    solo,
     locked,
     selectedTracks,
     outputFps,
@@ -1453,8 +1455,15 @@ export function App() {
   }, [stageFullscreen]);
 
   const compositionProps = useMemo(
-    () => ({ ...edit, zooms: markingMouse ? [] : edit.zooms, assets, muted, gain: recordingGain }),
-    [edit, assets, muted, markingMouse, recordingGain],
+    () => ({
+      ...edit,
+      zooms: markingMouse ? [] : edit.zooms,
+      assets,
+      muted,
+      solo,
+      gain: recordingGain,
+    }),
+    [edit, assets, muted, solo, markingMouse, recordingGain],
   );
 
   useEffect(() => {
@@ -1547,6 +1556,7 @@ export function App() {
   const unsaved =
     (history.length > 0 && edit !== savedEdit) ||
     !sameTracks(muted, savedTracks.muted) ||
+    !sameTracks(solo, savedTracks.solo) ||
     !sameTracks(locked, savedTracks.locked) ||
     !sameTracks(selectedTracks, savedTracks.selectedTracks) ||
     outputFps !== savedTracks.outputFps ||
@@ -1596,10 +1606,11 @@ export function App() {
             muted,
             assetsRef.current,
             recordingGain,
+            solo,
           ),
         );
     },
-    [duration, muted, recordingGain],
+    [duration, muted, solo, recordingGain],
   );
   // Cut every unlocked clip `target` accepts at the playhead as one undo step; none is no step.
   const cutAt = useCallback(
@@ -2139,11 +2150,11 @@ export function App() {
     setBusy(true);
     setSpeed(0);
     try {
-      const tracks = { locked, selectedTracks, outputFps, gain: recordingGain };
+      const tracks = { solo, locked, selectedTracks, outputFps, gain: recordingGain };
       const { file, omitted } = await serializeProject(edit, assets, muted, tracks);
       downloadBlob(file, 'developer-walkthrough.clipper.json');
       setSavedEdit(edit);
-      setSavedTracks({ muted, locked, selectedTracks, outputFps, recordingGain });
+      setSavedTracks({ muted, solo, locked, selectedTracks, outputFps, recordingGain });
       setSavedTranscripts(assets.map((a) => a.transcript));
       // The next change starts a new step, so Undo can return to exactly what was saved.
       gesture.current = null;
@@ -2191,6 +2202,7 @@ export function App() {
         ),
       });
       setMuted(project.muted);
+      setSolo(project.solo);
       setLocked(project.locked);
       setSelectedTracks(project.selectedTracks);
       setOutputFps(project.outputFps);
@@ -2198,6 +2210,7 @@ export function App() {
       setSavedTranscripts(imported.map((a) => a.transcript));
       setSavedTracks({
         muted: project.muted,
+        solo: project.solo,
         locked: project.locked,
         selectedTracks: project.selectedTracks,
         outputFps: project.outputFps,
@@ -2232,6 +2245,7 @@ export function App() {
         ...edit,
         assets,
         muted,
+        solo,
         width: exportWidth,
         format: exportFormat,
         fps: outputFps,
@@ -2292,13 +2306,13 @@ export function App() {
   };
   // Stable across playback frames, so the memoized track headers skip those renders.
   const trackToggles = useMemo(
-    () => ({ muted, locked, selected: selectedTracks }),
-    [muted, locked, selectedTracks],
+    () => ({ muted, solo, locked, selected: selectedTracks }),
+    [muted, solo, locked, selectedTracks],
   );
   const toggleTrackIn = useCallback(
     (list: keyof typeof trackToggles, track: Track) =>
-      ({ muted: setMuted, locked: setLocked, selected: setSelectedTracks })[list]((previous) =>
-        toggleTrack(previous, track),
+      ({ muted: setMuted, solo: setSolo, locked: setLocked, selected: setSelectedTracks })[list](
+        (previous) => toggleTrack(previous, track),
       ),
     [],
   );

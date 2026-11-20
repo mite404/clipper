@@ -97,6 +97,14 @@ export const GAIN_LIMITS = { min: -24, max: 12, step: 0.5 };
 /** The linear amplitude factor for a gain in dB; no gain is 1. */
 export const gainFactor = (db = 0): number => 10 ** (db / 20);
 
+/**
+ * Whether a track sounds in the mix: any solo narrows the mix to the solo tracks, and mute always
+ * wins, on a solo track too.
+ */
+export function audible(track: Track, muted: Track[], solo: Track[]): boolean {
+  return !muted.includes(track) && (solo.length === 0 || solo.includes(track));
+}
+
 /** A gain snapped to 0.5 dB and held inside the limits. */
 const snapGain = (db: number): number =>
   Math.min(

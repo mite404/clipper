@@ -212,6 +212,91 @@ test('the recording gain scales preview and paused scrub by one factor, and mute
   expect(carrying(await gains(page), 0.22 * factor)).toBe(carrying(before, 0.22 * factor) + 1);
 });
 
+test('solo narrows the preview mix to the solo tracks, saves and reopens, and mute still wins', async ({
+  page,
+}) => {
+  await spyOnAudio(page);
+  await openEditor(page);
+  // A 6 dB boost marks the voice node with a value only it carries (the master node sits at 1).
+  const marker = 10 ** (6 / 20);
+  await voiceClip(page).click();
+  await field(page).fill('6');
+  await field(page).press('Enter');
+  // Nothing soloed: Voice at the marker and Music at 0.22 both sound.
+  await expect.poll(async () => has(await gains(page), marker)).toBe(true);
+  expect(has(await gains(page), 0.22)).toBe(true);
+
+  // Solo Voiceover: the Music node drops to 0, Voice stays.
+  await page.getByRole('button', { name: 'Solo Voiceover', exact: true }).click();
+  await expect.poll(async () => has(await gains(page), 0.22)).toBe(false);
+  expect(has(await gains(page), marker)).toBe(true);
+
+  // The solo saves with the project like the other track toggles and survives a reopen.
+  const saved = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const file = JSON.parse(readFileSync((await (await saved).path())!, 'utf8'));
+  expect(file.solo).toEqual(['voice']);
+  await page.reload();
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'solo.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(file)),
+  });
+  await expect.poll(async () => has(await gains(page), 0.22)).toBe(false);
+  expect(has(await gains(page), marker)).toBe(true);
+
+  // Soloing Music as well brings it back, and muting the solo Voiceover silences it: mute wins.
+  await page.getByRole('button', { name: 'Solo Music', exact: true }).click();
+  await expect.poll(async () => has(await gains(page), 0.22)).toBe(true);
+  await page.getByRole('button', { name: 'Mute Voiceover', exact: true }).click();
+  await expect.poll(async () => has(await gains(page), marker)).toBe(false);
+  expect(has(await gains(page), 0.22)).toBe(true);
+});
+
+test('export mixes only the solo tracks', async ({ page }, info) => {
+  test.setTimeout(240000);
+  await openEditor(page);
+  await page.getByRole('button', { name: 'Solo Voiceover', exact: true }).click();
+  await page.getByRole('button', { name: 'Export video', exact: true }).click();
+  await page.getByRole('button', { name: 'Render video', exact: true }).click();
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Video exported', {
+    timeout: 180000,
+  });
+  const downloaded = page.waitForEvent('download');
+  await page.getByRole('link', { name: 'Save video', exact: true }).click();
+  const download = await downloaded;
+  const file = info.outputPath(download.suggestedFilename());
+  await download.saveAs(file);
+  const pcm = (args: string[]) =>
+    execFileSync(
+      'ffmpeg',
+      ['-v', 'error', ...args, '-f', 'f32le', '-ac', '2', '-ar', '48000', '-'],
+      { maxBuffer: 64 * 1024 * 1024 },
+    );
+  const audio = pcm(['-i', file]);
+  let energy = 0;
+  for (let i = 0; i + 4 <= audio.length; i += 4) energy += audio.readFloatLE(i) ** 2;
+  expect(Math.sqrt(energy / (audio.length / 4))).toBeGreaterThan(0.001);
+  // Voiceover spans the 12 s demo at full length; solo drops Music from the mix entirely, so the
+  // reference is the voice alone. Music left in would put the error near its 0.22 gain.
+  const reference = pcm([
+    '-i',
+    'public/media/voice.wav',
+    '-af',
+    'atrim=start=0:end=12,asetpts=PTS-STARTPTS,volume=1,pan=stereo|c0=c0|c1=c0',
+  ]);
+  let squaredError = 0,
+    referenceEnergy = 0;
+  for (let i = 0; i + 4 <= Math.min(audio.length, reference.length); i += 4) {
+    const expected = reference.readFloatLE(i);
+    squaredError += (audio.readFloatLE(i) - expected) ** 2;
+    referenceEnergy += expected ** 2;
+  }
+  console.log(`solo export audio error ${Math.sqrt(squaredError / referenceEnergy)}`);
+  expect(Math.sqrt(squaredError / referenceEnergy)).toBeLessThan(0.12);
+});
+
 test('export scales the whole mix by the recording gain', async ({ page }, info) => {
   test.setTimeout(240000);
   await openEditor(page);
