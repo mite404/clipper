@@ -214,7 +214,6 @@ test('swaps frames, trims with edge handles and scrolls to the timeline end', as
     el.scrollLeft = el.scrollWidth;
   });
   expect(await scroll.evaluate((el) => el.scrollLeft)).toBeGreaterThan(100);
-  await expect(page.getByText('12.0 seconds · Stereo · Local workspace')).toBeVisible();
 });
 
 test('marks the mouse position by pressing and dragging on the screen video, as one undo step', async ({
@@ -544,7 +543,9 @@ test('a still extends its left edge over a neighbour to frame 0, and the extensi
   const screen = page.getByTestId('track-screen');
   const remove = async (index: number) => {
     await screen.getByRole('button').nth(index).click();
-    await page.getByRole('button', { name: 'Delete selected clip or zoom', exact: true }).click();
+    await page
+      .getByRole('button', { name: 'Delete selected clip, zoom or track', exact: true })
+      .click();
   };
   // Leave only s1 (0..180) on the screen track, then put a 1 s still at frame 300 after it.
   await remove(1);

@@ -1790,11 +1790,47 @@ export function App() {
     if (!change(next)) return;
     setMessage('Background image removed.');
   };
+  // Selected tracks go with their clips as one undo step; change() refuses a locked lane, as ever.
+  const removeSelectedTracks = useCallback(() => {
+    const removed = {
+      ...edit,
+      tracks: edit.tracks.filter((t) => !selectedTracks.includes(t.id)),
+      clips: edit.clips.filter((c) => !selectedTracks.includes(c.track)),
+    };
+    if (!change(removed)) return;
+    setSelectedTracks([]);
+    const labels = selectedTracks.map((id) => edit.tracks.find((t) => t.id === id)?.label ?? id);
+    setMessage(
+      labels.length === 1
+        ? `${labels[0]} and its clips removed.`
+        : `${labels.length} tracks and their clips removed.`,
+    );
+  }, [edit, selectedTracks, change]);
   const removeSelected = useCallback(() => {
-    if (selectedZoom) change({ ...edit, zooms: edit.zooms.filter((z) => z.id !== selected) });
-    else if (selectedClip) change({ ...edit, clips: edit.clips.filter((c) => c.id !== selected) });
-    else removeMarked();
-  }, [edit, selected, selectedZoom, selectedClip, change, removeMarked]);
+    // A selected track owns Delete, finer selections included: Split keeps both alive at once.
+    if (selectedTracks.length) {
+      removeSelectedTracks();
+      return;
+    }
+    if (selectedZoom) {
+      change({ ...edit, zooms: edit.zooms.filter((z) => z.id !== selected) });
+      return;
+    }
+    if (selectedClip) {
+      change({ ...edit, clips: edit.clips.filter((c) => c.id !== selected) });
+      return;
+    }
+    removeMarked();
+  }, [
+    edit,
+    selected,
+    selectedZoom,
+    selectedClip,
+    selectedTracks,
+    change,
+    removeMarked,
+    removeSelectedTracks,
+  ]);
 
   const hasAssets = assets.length > 0;
   useEffect(() => {
@@ -2796,8 +2832,10 @@ export function App() {
                 <Scissors size={15} /> Split
               </button>
               <IconButton
-                label="Delete selected clip or zoom"
-                disabled={!selectedClip && !selectedZoom && !selectedChapter}
+                label="Delete selected clip, zoom or track"
+                disabled={
+                  !selectedClip && !selectedZoom && !selectedChapter && !selectedTracks.length
+                }
                 onClick={removeSelected}
               >
                 <Trash2 size={14} />
@@ -3072,7 +3110,7 @@ export function App() {
           ['[ / ]', "Trim the selected clip's start / end to the playhead · no ripple"],
           ['M', 'Mark a chapter at the playhead · Delete removes the selected one'],
           ['- / =', 'Zoom the timeline out / in · changes the display only, never a clip'],
-          ['Delete', 'Remove selected clip or zoom · only from the timeline'],
+          ['Delete', 'Remove selected clip, zoom or track · only from the timeline'],
           ['⌘ / Ctrl Z', 'Undo last edit'],
         ].map(([key, text]) => (
           <div className="shortcut-row" key={key}>

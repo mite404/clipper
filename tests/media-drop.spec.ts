@@ -16,7 +16,7 @@ const lane = (page: Page, label: string) =>
 // Header labels and numbers top to bottom, as a person reads them.
 const headers = (page: Page) =>
   page
-    .locator('.track-row:not(.create-row) .track-label')
+    .locator('.track-row:not(.create-row) .track-name')
     .evaluateAll((rows) =>
       rows.map(
         (r) => `${r.querySelector('.track-code')!.textContent} ${r.children[2].textContent}`,

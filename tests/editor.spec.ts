@@ -120,7 +120,9 @@ test('imports still images with editable clip duration, alpha and portable reope
   await page.getByRole('slider', { name: 'Timeline playhead' }).fill('45');
   await page.getByRole('button', { name: 'Split selected clip', exact: true }).click();
   await expect(screen.getByRole('button')).toHaveCount(4);
-  await page.getByRole('button', { name: 'Delete selected clip or zoom', exact: true }).click();
+  await page
+    .getByRole('button', { name: 'Delete selected clip, zoom or track', exact: true })
+    .click();
   await expect(screen.getByRole('button')).toHaveCount(3);
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(screen.getByRole('button')).toHaveCount(4);

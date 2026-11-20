@@ -226,9 +226,11 @@ test('locks refuse delete, trim and insert, while toggles save, dirty and reopen
   await expect(status(page)).not.toContainText('Inserted');
   await expect(undo).toBeDisabled();
 
-  const unselected = await icon(`Select ${NAMES.camera} track`).getAttribute('class');
-  await toggle(page, `Select ${NAMES.camera} track`).click();
-  await expect(icon(`Select ${NAMES.camera} track`)).not.toHaveAttribute('class', unselected!);
+  const name = toggle(page, `Select ${NAMES.camera} track`);
+  const unselected = await name.evaluate((button) => getComputedStyle(button).color);
+  await name.click();
+  await expect(name).toHaveAttribute('aria-pressed', 'true');
+  expect(await name.evaluate((button) => getComputedStyle(button).color)).not.toBe(unselected);
   let prompts = 0;
   page.on('dialog', (dialog) => {
     prompts++;

@@ -628,7 +628,7 @@ test('copies the frame and edit held at activation, not what changed while it re
   const clipB = page.getByRole('button', { name: 'Synthetic frames at 0.3 seconds' });
   await clipB.click();
   await expect(clipB).toHaveAttribute('aria-pressed', 'true');
-  await page.getByRole('button', { name: 'Delete selected clip or zoom' }).click();
+  await page.getByRole('button', { name: 'Delete selected clip, zoom or track' }).click();
   await expect(clipB).toHaveCount(0);
   await expect(page.getByTestId('timecode')).toContainText('13');
   await page.evaluate(() => (window as unknown as { __release: () => void }).__release());

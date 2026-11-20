@@ -1298,9 +1298,38 @@ p {
 /* Toggles sit under the name so adding them never truncates it. */
 .track-label:has(> .track-toggles) {
   display: grid;
-  grid-template-columns: 17px 14px minmax(0, 1fr);
   align-content: center;
   row-gap: 3px;
+}
+/* The track name is the selection button: the same pressed styling the toggles use. */
+.track-name {
+  display: grid;
+  grid-template-columns: 17px 14px minmax(0, 1fr);
+  align-items: center;
+  column-gap: 8px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.track-name:hover {
+  color: var(--foreground);
+}
+.track-name[aria-pressed='true'] {
+  color: var(--primary);
+  background: #ffffff0a;
+}
+.track-name > span:last-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.track-name > svg {
+  color: var(--muted-foreground);
 }
 .track-toggles {
   /* From under the track number, so an audio track's five buttons fit the narrowest header. */

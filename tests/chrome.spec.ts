@@ -7,6 +7,28 @@ async function ready(page: Page) {
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
 }
 
+test('a track name selects its track and Delete removes it with its clips as one undo step', async ({
+  page,
+}) => {
+  await ready(page);
+  const name = page.getByRole('button', { name: 'Select Voiceover track', exact: true });
+  await name.click();
+  await expect(name).toHaveAttribute('aria-pressed', 'true');
+
+  // The click left the name focused in the timeline pane, so Delete owns the key.
+  await page.keyboard.press('Delete');
+  await expect(page.getByTestId('track-voice')).toHaveCount(0);
+  await expect(name).toHaveCount(0);
+  await expect(page.locator('.app-footer [role="status"]')).toContainText(
+    'Voiceover and its clips removed',
+  );
+
+  // One undo brings the track and its clips back together.
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(page.getByTestId('track-voice')).toHaveCount(1);
+  await expect(page.getByTestId('track-voice').locator('.timeline-clip')).toHaveCount(1);
+});
+
 test('a media card shows its add hint only while hovered or focused', async ({ page }) => {
   await ready(page);
   const card = page.getByRole('button', { name: 'Select Flower study' }).first();

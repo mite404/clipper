@@ -10,8 +10,6 @@ import {
   LockOpen,
   Mic,
   Music2,
-  Square,
-  SquareCheckBig,
   Volume2,
   VolumeX,
   ZoomIn,
@@ -29,6 +27,7 @@ import {
   type MouseEvent,
   type PointerEvent,
   type ReactNode,
+  type RefObject,
 } from 'react';
 import { bindDrag, createAutoScroll } from '@ui-sdk/core';
 import { stillAt, type Asset } from './media';
@@ -113,9 +112,6 @@ const TrackHeader = memo(function TrackHeader({
   onMoveTrack: (id: Track, step: 1 | -1) => void;
 }) {
   const { id, label } = track;
-  const up = UP[track.kind];
-  const muted = tracks.muted.includes(id);
-  const soloed = tracks.solo.includes(id);
   // A move that reaches the end disables its own button, so focus goes to the other one.
   const toggles = useRef<HTMLSpanElement>(null);
   // Directions to refocus after a move, the pressed one first.
@@ -129,9 +125,17 @@ const TrackHeader = memo(function TrackHeader({
   }, [registry]);
   return (
     <div className="track-label">
-      <span className="track-code">{trackNumber(registry, id)}</span>
-      {createElement(icon(track), { size: 14 })}
-      <span>{label}</span>
+      <button
+        type="button"
+        className="track-name"
+        aria-label={`Select ${label} track`}
+        aria-pressed={tracks.selected.includes(id)}
+        onClick={() => onToggleTrack('selected', id)}
+      >
+        <span className="track-code">{trackNumber(registry, id)}</span>
+        {createElement(icon(track), { size: 14 })}
+        <span>{label}</span>
+      </button>
       <span className="track-toggles" ref={toggles}>
         {TOGGLES.map(({ list, name, icons }) => {
           const pressed = tracks[list].includes(id);
@@ -148,43 +152,78 @@ const TrackHeader = memo(function TrackHeader({
           );
         })}
         {track.kind === 'audio' && (
-          <IconButton
-            label={`${muted ? 'Unmute' : 'Mute'} ${label}`}
-            onClick={() => onToggleTrack('muted', id)}
-          >
-            {muted ? <VolumeX size={13} /> : <Volume2 size={13} />}
-          </IconButton>
+          <AudioToggles track={track} tracks={tracks} onToggleTrack={onToggleTrack} />
         )}
-        {track.kind === 'audio' && (
-          <IconButton
-            label={`${soloed ? 'Unsolo' : 'Solo'} ${label}`}
-            aria-pressed={soloed}
-            onClick={() => onToggleTrack('solo', id)}
-          >
-            {soloed ? <HeadphoneOff size={13} /> : <Headphones size={13} />}
-          </IconButton>
-        )}
-        {MOVES.map(({ direction, sign, Icon }) => {
-          const step = (sign * up) as 1 | -1;
-          return (
-            <IconButton
-              key={direction}
-              label={`Move ${label} ${direction}`}
-              data-move={direction}
-              disabled={moveTrack(registry, id, step) === registry}
-              onClick={() => {
-                moved.current = direction === 'up' ? ['up', 'down'] : ['down', 'up'];
-                onMoveTrack(id, step);
-              }}
-            >
-              <Icon size={13} />
-            </IconButton>
-          );
-        })}
+        <MoveButtons track={track} registry={registry} moved={moved} onMoveTrack={onMoveTrack} />
       </span>
     </div>
   );
 });
+
+// An audio track's mix toggles: mute and solo. Solo shows its pressed state; mute never looked
+// pressed, so it keeps the icon swap alone.
+function AudioToggles({
+  track,
+  tracks,
+  onToggleTrack,
+}: {
+  track: TrackDef;
+  tracks: TrackToggles;
+  onToggleTrack: (list: keyof TrackToggles, track: Track) => void;
+}) {
+  const { id, label } = track;
+  const muted = tracks.muted.includes(id);
+  const soloed = tracks.solo.includes(id);
+  const mute = muted
+    ? { name: `Unmute ${label}`, Icon: VolumeX }
+    : { name: `Mute ${label}`, Icon: Volume2 };
+  const solo = soloed
+    ? { name: `Unsolo ${label}`, Icon: HeadphoneOff }
+    : { name: `Solo ${label}`, Icon: Headphones };
+  return (
+    <>
+      <IconButton label={mute.name} onClick={() => onToggleTrack('muted', id)}>
+        <mute.Icon size={13} />
+      </IconButton>
+      <IconButton label={solo.name} aria-pressed={soloed} onClick={() => onToggleTrack('solo', id)}>
+        <solo.Icon size={13} />
+      </IconButton>
+    </>
+  );
+}
+
+// The track move buttons; a press records where focus lands after the registry re-renders.
+function MoveButtons({
+  track,
+  registry,
+  moved,
+  onMoveTrack,
+}: {
+  track: TrackDef;
+  registry: TrackDef[];
+  moved: RefObject<string[]>;
+  onMoveTrack: (id: Track, step: 1 | -1) => void;
+}) {
+  const { id, label } = track;
+  const up = UP[track.kind];
+  return MOVES.map(({ direction, sign, Icon }) => {
+    const step = (sign * up) as 1 | -1;
+    return (
+      <IconButton
+        key={direction}
+        label={`Move ${label} ${direction}`}
+        data-move={direction}
+        disabled={moveTrack(registry, id, step) === registry}
+        onClick={() => {
+          moved.current = direction === 'up' ? ['up', 'down'] : ['down', 'up'];
+          onMoveTrack(id, step);
+        }}
+      >
+        <Icon size={13} />
+      </IconButton>
+    );
+  });
+}
 
 // What a lane says while a pool item is over it: why it would refuse, or where it would land.
 function dropHint(
@@ -295,12 +334,8 @@ const MOVES = [
   { direction: 'down', sign: -1, Icon: ChevronDown },
 ] as const;
 // Header toggles draw an off icon and an on icon, so an unpressed one never looks pressed.
+// Selection lives on the track name itself; these are the header's remaining pressed toggles.
 const TOGGLES = [
-  {
-    list: 'selected',
-    name: (label: string) => `Select ${label} track`,
-    icons: [Square, SquareCheckBig],
-  },
   { list: 'locked', name: (label: string) => `Lock ${label}`, icons: [LockOpen, Lock] },
 ] as const;
 

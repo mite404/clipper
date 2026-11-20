@@ -420,7 +420,7 @@ test('fit scale follows the viewport and stays finite for empty and one-frame se
   await expect(scale).toHaveValue(clamped);
   for (let clip = 0; clip < 5; clip++) {
     await page.locator('.timeline-clip').first().click();
-    await page.getByRole('button', { name: 'Delete selected clip or zoom' }).click();
+    await page.getByRole('button', { name: 'Delete selected clip, zoom or track' }).click();
   }
   await expect(scale).toBeDisabled();
   const emptyMin = Number(await scale.getAttribute('min'));
@@ -459,7 +459,7 @@ test('the ruler and readouts stay readable at 105 minutes and at the 24-hour cap
   const screen = page.getByTestId('track-screen').locator('.timeline-clip');
   while (await screen.count()) {
     await screen.first().click();
-    await page.getByRole('button', { name: 'Delete selected clip or zoom' }).click();
+    await page.getByRole('button', { name: 'Delete selected clip, zoom or track' }).click();
   }
   await page.getByRole('button', { name: 'Select still.png', exact: true }).click();
   const seconds = (label: string) =>
@@ -520,7 +520,7 @@ test('deep zoom resolves frames on an hour timeline and stays inside the browser
   const screen = page.getByTestId('track-screen').locator('.timeline-clip');
   while (await screen.count()) {
     await screen.first().click();
-    await page.getByRole('button', { name: 'Delete selected clip or zoom' }).click();
+    await page.getByRole('button', { name: 'Delete selected clip, zoom or track' }).click();
   }
   await page.getByRole('button', { name: 'Select still.png', exact: true }).click();
   const field = page.getByLabel('Still duration seconds', { exact: true });
