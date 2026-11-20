@@ -1030,7 +1030,6 @@ export function Inspector({
   onLayout,
   onZoom,
   onRemoveZoom,
-  onAddZoom,
   duration,
   onScrubStart,
   onScrubEnd,
@@ -1042,7 +1041,6 @@ export function Inspector({
   onLayout: (layout: Layout) => void;
   onZoom: (zoom: Zoom) => void;
   onRemoveZoom: () => void;
-  onAddZoom: () => void;
   duration: number;
   /** A label drag starts and ends: its edits apply live and the app records them as one undo step. */
   onScrubStart?: () => void;
@@ -1269,14 +1267,9 @@ export function Inspector({
             </button>
           </>
         ) : (
-          <>
-            <p className="inspector-copy">
-              Guide the eye to what matters. Add a zoom, then choose its timing and focus.
-            </p>
-            <button className="secondary-button" onClick={onAddZoom}>
-              <Plus size={14} /> Add zoom at playhead
-            </button>
-          </>
+          <p className="inspector-copy">
+            Guide the eye to what matters. Add a zoom, then choose its timing and focus.
+          </p>
         )}
       </div>
       <div className="inspector-tip">
@@ -2797,7 +2790,6 @@ export function App() {
               onRemove={removeBackground}
             />
           }
-          onAddZoom={addZoom}
           onRemoveZoom={removeSelected}
           onZoom={(zoom) => {
             if (zoomsOverlap(edit.zooms, zoom)) {

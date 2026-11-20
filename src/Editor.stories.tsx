@@ -258,7 +258,6 @@ function LibraryRecord({ view, worst = false }: { view: string; worst?: boolean 
           zoom={zoom}
           onZoom={setZoom}
           onRemoveZoom={() => {}}
-          onAddZoom={() => {}}
           duration={360}
         />
       </div>
