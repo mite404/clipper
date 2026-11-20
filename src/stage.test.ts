@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   cameraTransform,
+  clampMask,
   clipRect,
   cropPosition,
+  defaultMaskRect,
   fillCss,
   gradientLine,
+  MASK_MIN,
   maskRect,
   maskShadowCss,
   panelShadow,
@@ -12,6 +15,7 @@ import {
   STAGE,
   stageValueFromText,
   withBackdropStyle,
+  withMaskBounds,
   withShadow,
 } from './stage';
 
@@ -125,6 +129,85 @@ describe('laying out the stage', () => {
       expect(point.y / height).toBeCloseTo(0.5);
       expect(cropPosition('screen', swapped)).toEqual({ x: 20, y: 70 });
     }
+  });
+
+  it('places custom mask bounds over the proportional geometry, clamped on stage', () => {
+    const custom = {
+      ...layout,
+      screenMask: { x: 100, y: 60, width: 500, height: 400 },
+      cameraMask: { x: 900, y: 300, width: 300, height: 300 },
+    };
+    expect(maskRect('screen', custom)).toEqual({ x: 100, y: 60, width: 500, height: 400 });
+    expect(maskRect('camera', custom)).toEqual({ x: 900, y: 300, width: 300, height: 300 });
+    // The other role keeps the proportional geometry, and bounds hold in PiP too.
+    expect(maskRect('camera', { ...custom, cameraMask: undefined })).toEqual({
+      x: 908,
+      y: 10,
+      width: 362,
+      height: 700,
+    });
+    expect(maskRect('screen', { ...custom, mode: 'pip' as const })).toEqual(custom.screenMask);
+    // Actual pixels scale the same bounds.
+    expect(maskRect('screen', custom, { width: 1920, height: 1080 })).toEqual({
+      x: 150,
+      y: 90,
+      width: 750,
+      height: 600,
+    });
+  });
+
+  it('clamps custom bounds so a mask can never invert or leave the stage', () => {
+    expect(clampMask({ x: -50, y: -20, width: 500, height: 400 })).toEqual({
+      x: 0,
+      y: 0,
+      width: 500,
+      height: 400,
+    });
+    // A right/bottom overflow pulls the origin back, keeping the size.
+    expect(clampMask({ x: 1200, y: 700, width: 500, height: 400 })).toEqual({
+      x: 780,
+      y: 320,
+      width: 500,
+      height: 400,
+    });
+    // Sides below MASK_MIN grow to it; sides past the stage shrink to it.
+    expect(clampMask({ x: 10, y: 10, width: 3, height: 0 })).toEqual({
+      x: 10,
+      y: 10,
+      width: MASK_MIN,
+      height: MASK_MIN,
+    });
+    expect(clampMask({ x: 0, y: 0, width: 9999, height: 9999 })).toEqual({ x: 0, y: 0, ...STAGE });
+    // maskRect clamps too, so a hand-edited file cannot draw off stage.
+    expect(
+      maskRect('screen', { ...layout, screenMask: { x: 1200, y: 0, width: 500, height: 100 } }),
+    ).toEqual({ x: 780, y: 0, width: 500, height: 100 });
+  });
+
+  it('writes custom bounds with withMaskBounds and removes them back at the default', () => {
+    const bounds = { x: 100, y: 60, width: 500, height: 400 };
+    const moved = withMaskBounds(layout, 'screen', bounds);
+    expect(moved.screenMask).toEqual(bounds);
+    expect(moved.cameraMask).toBeUndefined();
+    // Bounds equal to the proportional geometry remove the field again.
+    expect(
+      withMaskBounds(moved, 'screen', defaultMaskRect('screen', layout)).screenMask,
+    ).toBeUndefined();
+    // Clamped input still compares against the default after clamping.
+    expect(
+      withMaskBounds(layout, 'screen', { x: 10.2, y: 10.1, width: 880.2, height: 700.1 })
+        .screenMask,
+    ).toBeUndefined();
+    // The camera's own default, in PiP its corner inset.
+    const pip = { ...layout, mode: 'pip' as const };
+    expect(defaultMaskRect('camera', pip)).toEqual({
+      x: 840,
+      y: 463.75,
+      width: 420,
+      height: 236.25,
+    });
+    const pinned = withMaskBounds(pip, 'camera', { x: 40, y: 40, width: 420, height: 236.25 });
+    expect(pinned.cameraMask).toEqual({ x: 40, y: 40, width: 420, height: 236.25 });
   });
 
   it('reads each track its own crop position', () => {

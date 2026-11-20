@@ -255,6 +255,25 @@ describe('portable project parsing', () => {
     });
   });
 
+  it('reads custom mask bounds when present, and rejects off-stage or partial ones', () => {
+    const custom = project();
+    const screenMask = { x: 100, y: 60, width: 500, height: 400 };
+    Object.assign(custom.layout, { screenMask });
+    expect(parseProject(JSON.stringify(custom)).edit.layout).toMatchObject({ screenMask });
+    // A legacy file writes no bounds and opens with none.
+    expect(parseProject(JSON.stringify(project())).edit.layout.screenMask).toBeUndefined();
+    const bad = (mask: unknown) => {
+      const value = project();
+      Object.assign(value.layout, { cameraMask: mask });
+      return JSON.stringify(value);
+    };
+    expect(() => parseProject(bad({ x: -1, y: 0, width: 100, height: 100 }))).toThrow(
+      'layout.cameraMask.x',
+    );
+    expect(() => parseProject(bad({ x: 0, y: 0, width: 100 }))).toThrow('layout.cameraMask.height');
+    expect(() => parseProject(bad('wide'))).toThrow('layout.cameraMask must be an object.');
+  });
+
   it('accepts zooms that touch without overlapping', () => {
     const value = project();
     value.zooms.push({ ...value.zooms[0], id: 'second', start: 30, duration: 6 });

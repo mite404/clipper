@@ -4,8 +4,10 @@ import {
   PIP_SIZE_LIMITS,
   SCREEN_SHARE_LIMITS,
   SHADOW_MAX,
+  STAGE,
   type Corner,
   type Layout,
+  type Rect,
 } from './stage';
 import { openMedia, type Asset } from './media';
 import {
@@ -151,6 +153,23 @@ function geometryOf(settings: Record<string, unknown>): Partial<Layout> {
     ...(settings.pipSize !== undefined && {
       pipSize: number(settings.pipSize, 'layout.pipSize', PIP_SIZE_LIMITS.min, PIP_SIZE_LIMITS.max),
     }),
+    ...(settings.screenMask !== undefined && {
+      screenMask: maskOf(settings.screenMask, 'layout.screenMask'),
+    }),
+    ...(settings.cameraMask !== undefined && {
+      cameraMask: maskOf(settings.cameraMask, 'layout.cameraMask'),
+    }),
+  };
+}
+
+// Custom mask bounds in edit px. Each side must start on stage; maskRect clamps the rest.
+function maskOf(value: unknown, field: string): Rect {
+  const rect = object(value, field);
+  return {
+    x: number(rect.x, `${field}.x`, 0, STAGE.width),
+    y: number(rect.y, `${field}.y`, 0, STAGE.height),
+    width: number(rect.width, `${field}.width`, 0, STAGE.width),
+    height: number(rect.height, `${field}.height`, 0, STAGE.height),
   };
 }
 

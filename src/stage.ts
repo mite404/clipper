@@ -21,6 +21,10 @@ export type Layout = {
   padding?: number;
   screenShare?: number;
   pipSize?: number;
+  // A role's custom mask bounds in edit px; absent is the proportional geometry. They clamp to
+  // the stage with MASK_MIN sides and apply in both modes, so they also pin a PiP inset's place.
+  screenMask?: Rect;
+  cameraMask?: Rect;
   radius: number;
   screenX: number;
   screenY: number;
@@ -36,7 +40,8 @@ type Camera = { scale: number; x: number; y: number };
 // stage = local * scale + (x, y), all in stage pixels.
 type Affine = { scale: number; x: number; y: number };
 const STILL: Camera = { scale: 1, x: 0, y: 0 };
-type VideoTrack = 'screen' | 'camera';
+/** A mask-owning role: the two video panels. */
+export type VideoTrack = 'screen' | 'camera';
 const CENTER: Point = { x: 50, y: 50 };
 
 /** Normalized edit coordinates. Actual composer and export dimensions are selected separately. */
@@ -106,6 +111,20 @@ const GAP = 18;
 /** The padding around the panels in edit px, and its bound; absent is today's 10. */
 export const DEFAULT_PADDING = 10;
 export const PADDING_MAX = 120;
+/** The smallest side of a custom mask in edit px, so it can never invert or vanish. */
+export const MASK_MIN = 40;
+
+/** A mask rect pulled inside the stage with at least MASK_MIN sides: it cannot invert or leave. */
+export function clampMask({ x, y, width, height }: Rect): Rect {
+  const w = Math.min(Math.max(width, MASK_MIN), STAGE.width); // → width within the stage
+  const h = Math.min(Math.max(height, MASK_MIN), STAGE.height); // → height within the stage
+  return {
+    x: Math.min(Math.max(x, 0), STAGE.width - w),
+    y: Math.min(Math.max(y, 0), STAGE.height - h),
+    width: w,
+    height: h,
+  };
+}
 
 /**
  * The value a stage field's text commits: a rounded number held inside the field's bounds, or
@@ -162,9 +181,20 @@ function insetRect(
  */
 export function maskRect(track: VisualRole, layout: Layout, size: Size = STAGE): Rect {
   if (track === 'background') return { x: 0, y: 0, ...size };
-  const first: VideoTrack = layout.swapped ? 'camera' : 'screen';
   const scaleX = size.width / STAGE.width;
   const scaleY = size.height / STAGE.height;
+  // Custom bounds replace the proportional geometry wholesale; clampMask keeps them on stage.
+  const custom = track === 'screen' ? layout.screenMask : layout.cameraMask;
+  if (custom) {
+    const rect = clampMask(custom); // → edit rect inside the stage
+    return {
+      x: rect.x * scaleX,
+      y: rect.y * scaleY,
+      width: rect.width * scaleX,
+      height: rect.height * scaleY,
+    };
+  }
+  const first: VideoTrack = layout.swapped ? 'camera' : 'screen';
   const panels = geometry(layout); // → panels, mask widths and inset in edit coordinates
   if (layout.mode === 'pip') {
     const rect = track === 'screen' ? panels.full : insetRect(layout.corner, panels); // → edit rect
@@ -181,6 +211,27 @@ export function maskRect(track: VisualRole, layout: Layout, size: Size = STAGE):
     width: panels.maskWidth[track] * scaleX,
     height: panels.full.height * scaleY,
   };
+}
+
+/** A role's proportional mask bounds in edit px: what maskRect computes without custom bounds. */
+export function defaultMaskRect(track: VideoTrack, layout: Layout): Rect {
+  const { screenMask: _screen, cameraMask: _camera, ...proportional } = layout;
+  return maskRect(track, proportional); // → edit rect
+}
+
+/**
+ * The layout with a role's custom mask bounds, clamped on stage. Bounds equal to the proportional
+ * geometry remove the field, so the saved file keeps today's look (like padding above).
+ */
+export function withMaskBounds(layout: Layout, track: VideoTrack, bounds: Rect): Layout {
+  const key = track === 'screen' ? 'screenMask' : 'cameraMask';
+  const { [key]: _previous, ...rest } = layout;
+  const clamped = clampMask(bounds); // → edit rect inside the stage
+  const proportional = defaultMaskRect(track, rest); // → edit rect
+  const same = (['x', 'y', 'width', 'height'] as const).every(
+    (side) => Math.abs(clamped[side] - proportional[side]) < 0.5,
+  );
+  return same ? rest : { ...rest, [key]: clamped };
 }
 
 /** Crop position of a role in percent, with the meaning of CSS `object-position`. */
