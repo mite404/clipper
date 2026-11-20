@@ -128,6 +128,7 @@ import { useMediaDrawer } from './useMediaDrawer';
 import { PanelResizeHandle, usePanelLayout } from './PanelResizeHandle';
 import { AgentPanel } from './AgentPanel';
 import { timelineLines } from './agent';
+import { mixAt, playSlices, stopSlices } from './scrub-audio';
 import './styles.css';
 
 const assistantToggle = () => document.querySelector<HTMLElement>('.assistant-toggle');
@@ -1393,16 +1394,23 @@ export function App() {
       setMessage('Undid last edit.');
     }
   }, [history]);
+  // A paused seek sounds a short slice of the mix, so edit points can be found by ear. Seeks that
+  // playback follows at once (L or Play at the end) or that no gesture drives (reopening a
+  // project) pass sound: false - a 90 ms chirp there would read as a bug.
   const seek = useCallback(
-    (next: number) => {
+    (next: number, sound = true) => {
       const target = Math.max(0, Math.min(duration - 1, Math.round(next)));
       setSpeed(0);
       player.current?.pause();
       player.current?.seekTo(target);
       frameRef.current = target;
       setFrame(target);
+      if (sound)
+        playSlices(
+          mixAt(target, editRef.current.clips, editRef.current.tracks, muted, assetsRef.current),
+        );
     },
-    [duration],
+    [duration, muted],
   );
   // Cut every unlocked clip `target` accepts at the playhead as one undo step; none is no step.
   const cutAt = useCallback(
@@ -1618,6 +1626,8 @@ export function App() {
   // Flush the last rewind seek before a paused or changed-speed readout can paint.
   useLayoutEffect(() => {
     rewinding.current = speed < 0;
+    // Shuttle or rewind owns the transport's sound; no scrub slice may ring over it.
+    if (speed !== 0) stopSlices();
     if (speed > 0) {
       player.current?.play();
       return;
@@ -1812,7 +1822,7 @@ export function App() {
       if (key === 'j') setSpeed((s) => (s < 0 ? Math.max(-4, s * 2) : -1));
       if (key === 'k') setSpeed(0);
       if (key === 'l') {
-        if (frameRef.current >= duration - 1) seek(0);
+        if (frameRef.current >= duration - 1) seek(0, false);
         setSpeed((s) => (s > 0 ? Math.min(4, s * 2) : 1));
       }
       if (key === ' ' && !event.repeat) setSpeed((s) => (s ? 0 : 1));
@@ -1975,7 +1985,7 @@ export function App() {
       setHistory([]);
       setSelected(project.edit.clips[0]?.id ?? '');
       setSourceId(imported[0]?.id ?? '');
-      seek(0);
+      seek(0, false);
       setTimeout(() => previous.forEach((a) => URL.revokeObjectURL(a.url)), 0);
       const done = 'Project reopened. Embedded media restored locally; no relinking or upload.';
       announce(setMessage, done);
@@ -2440,7 +2450,7 @@ export function App() {
                 className="play-button"
                 aria-label={speed ? 'Pause playback' : 'Play composition'}
                 onClick={() => {
-                  if (frame >= duration - 1) seek(0);
+                  if (frame >= duration - 1) seek(0, false);
                   setSpeed(speed ? 0 : 1);
                 }}
               >
