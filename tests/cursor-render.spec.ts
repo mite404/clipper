@@ -243,7 +243,6 @@ test('draws source-offset cursors through a cut, crop, side swap and zoom in pre
     346.5 * 1.5,
   );
   await choose(page.getByLabel('Cursor style', { exact: true }), 'touch');
-  await page.getByText('Advanced cursor', { exact: true }).click();
   await choose(page.getByLabel('Cursor ending', { exact: true }), 'loop');
   for (let frame = 0; frame < 3; frame++)
     await page.getByRole('button', { name: 'Previous frame', exact: true }).click();

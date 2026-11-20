@@ -164,7 +164,6 @@ test('rotates about the recorded hotspot in preview and encoded output with offs
       const matrix = new DOMMatrix(getComputedStyle(element).transform);
       return (Math.atan2(matrix.b, matrix.a) * 180) / Math.PI;
     });
-  await page.getByText('Advanced cursor', { exact: true }).click();
   await expect(page.getByLabel('Rotate with movement', { exact: true })).toBeChecked();
   await expect.poll(angle).toBeCloseTo(0);
   for (let frame = 1; frame <= 9; frame++) {
