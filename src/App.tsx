@@ -897,8 +897,10 @@ function LayoutChoice({
 const PERCENT = { min: 0, max: 100, step: 1 };
 
 // One Stage row field: the label scrubs live by dragging, while the number field types as a draft
-// and commits on blur (Enter blurs), clamped then, so a multi-digit entry is not clamped per
-// keystroke. Text that names no number puts the current value back. ClipGain's draft/commit split.
+// only while focused and commits on blur (Enter blurs), clamped then, so a multi-digit entry is
+// not clamped per keystroke. Unfocused it derives from the committed value, so text naming no
+// number restores on blur, and no draft can outlive the blur itself - a stale draft once survived
+// a mid-reopen blur and showed the pre-open value. ClipGain's draft/commit split.
 function StageField({
   label,
   aria,
@@ -916,9 +918,10 @@ function StageField({
   onCommit: (value: number) => void;
   drag: Record<string, unknown>;
 }) {
-  const [draft, setDraft] = useState(String(value));
+  const [draft, setDraft] = useState<string | null>(null);
   const [previous, setPrevious] = useState(value);
-  if (previous !== value) {
+  // A value changing under focus (undo, a reopened project) re-seeds the draft.
+  if (draft !== null && previous !== value) {
     setPrevious(value);
     setDraft(String(value));
   }
@@ -930,15 +933,20 @@ function StageField({
         type="number"
         min={min}
         max={max}
-        value={draft}
+        value={draft ?? String(value)}
+        onFocus={() => {
+          setPrevious(value);
+          setDraft(String(value));
+        }}
         onChange={(event) => setDraft(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Enter') event.currentTarget.blur();
         }}
         onBlur={() => {
-          const next = stageValueFromText(draft, min, max);
+          // An untouched blur seeds draft from value, so it can never commit a stale value.
+          const next = draft === null ? undefined : stageValueFromText(draft, min, max);
           if (next !== undefined && next !== value) onCommit(next);
-          setDraft(String(value)); // a committed change re-syncs the draft through the new value
+          setDraft(null);
         }}
       />
     </label>

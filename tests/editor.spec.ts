@@ -1,4 +1,4 @@
-import { test, expect, type Locator } from '@playwright/test';
+import { test, expect, type Locator, type Page } from '@playwright/test';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
@@ -1508,4 +1508,72 @@ test('stage fields commit typed text on blur, clamped then', async ({ page }) =>
   await share.press('Delete');
   await share.press('Tab');
   await expect(share).toHaveValue('50');
+});
+
+// The preview owner's second escape: the owner's exact session before a legacy reopen. Commits
+// Share 60, 80, 50, PiP 20 then 50, Pad 120 then 0, restores Share, then reopens a project with
+// the layout of a legacy file: no padding, screenShare or pipSize keys. Nothing but the typing
+// touches focus, so the last Tab leaves the PiP field focused through the reopen.
+async function reopenLegacyLayout(page: Page) {
+  const pad = page.getByLabel('stage padding');
+  const share = page.getByLabel('screen share percent');
+  const pip = page.getByLabel('pip size percent');
+  const saving = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const legacy = JSON.parse(readFileSync((await (await saving).path())!, 'utf8'));
+  legacy.layout = { radius: 22, screenX: 50, screenY: 50, cameraX: 50, cameraY: 15 };
+
+  const type = async (input: typeof pad, text: string) => {
+    await input.click();
+    await input.press('Control+a');
+    await input.pressSequentially(text);
+    await input.press('Tab');
+  };
+  await type(share, '60');
+  await type(share, '500');
+  await type(share, '3');
+  await type(pip, '1');
+  await type(pip, '999');
+  await type(pad, '999');
+  await type(pad, '-5');
+  await share.click();
+  await share.press('Control+a');
+  await share.press('Delete');
+  await share.press('Tab');
+  await expect(share).toHaveValue('50');
+
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'legacy.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(legacy)),
+  });
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Project reopened');
+  return { pad, share, pip };
+}
+
+test('a legacy reopen re-syncs every stage field to the opened layout', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const { pad, share, pip } = await reopenLegacyLayout(page);
+  await expect(pad).toHaveValue('10');
+  await expect(share).toHaveValue('71');
+  await expect(pip).toHaveValue('33');
+});
+
+test('a stage field blurred untouched writes nothing on the next save', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  const { pip } = await reopenLegacyLayout(page);
+  const savingBefore = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const before = readFileSync((await (await savingBefore).path())!, 'utf8');
+
+  await pip.click();
+  await pip.press('Tab');
+  const savingAfter = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const after = readFileSync((await (await savingAfter).path())!, 'utf8');
+  expect(JSON.parse(after).layout.pipSize).toBeUndefined();
+  expect(after).toBe(before);
 });
