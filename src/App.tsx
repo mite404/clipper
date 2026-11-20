@@ -2778,8 +2778,6 @@ export function App() {
             });
           }}
         >
-          {/* The whole recording's level, always visible above the clip and composition rows. */}
-          <ClipGain label="Recording gain" gain={recordingGain} onGain={setRecordingGain} />
           {selectedClip && assets.find((a) => a.id === selectedClip.assetId)?.kind === 'image' && (
             <section className="cursor-controls" aria-label="Still image clip">
               <h3>Still image</h3>

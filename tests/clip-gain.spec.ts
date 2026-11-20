@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 
 type Spy = {
   nodes: { node: GainNode }[];
@@ -57,6 +58,22 @@ const voiceClip = (page: Page) => page.getByTestId('track-voice').getByRole('but
 const field = (page: Page) => page.getByRole('spinbutton', { name: 'Clip gain dB' });
 const undo = (page: Page) => page.getByRole('button', { name: 'Undo', exact: true });
 const has = (values: number[], wanted: number) => values.some((v) => Math.abs(v - wanted) < 1e-3);
+
+// The Inspector no longer renders the recording gain row, so a non-zero gain comes from a saved
+// project: save the demo, set the root gain the parse path still honours, and reopen the file.
+async function seedGain(page: Page, db: number) {
+  const saved = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const file = JSON.parse(readFileSync((await (await saved).path())!, 'utf8'));
+  file.gain = db;
+  await page.reload();
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'gain.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(file)),
+  });
+}
 
 test('the gain field appears for an audio-track clip with sound only, and commits one undo step', async ({
   page,
@@ -171,17 +188,13 @@ test('the recording gain scales preview and paused scrub by one factor, and mute
 }) => {
   await spyOnAudio(page);
   await openEditor(page);
-  const recording = page.getByRole('spinbutton', { name: 'Recording gain dB' });
-  // The row is always visible, no clip selected.
-  await expect(recording).toHaveValue('0');
-  await recording.fill('6');
-  await recording.press('Enter');
+  // The Inspector renders without the recording gain row.
+  await expect(page.getByRole('spinbutton', { name: 'Recording gain dB' })).toHaveCount(0);
+  await seedGain(page, 6);
   const factor = 10 ** (6 / 20);
   // Preview: every clip node carries track x clip x recording, the 0.22 music lane included.
   await expect.poll(async () => has(await gains(page), factor)).toBe(true);
   expect(has(await gains(page), 0.22 * factor)).toBe(true);
-  // Saved with the project, never an undo step.
-  await expect(undo(page)).toBeDisabled();
   // Mute still wins over the recording gain: the voice node drops to 0.
   await page.getByRole('button', { name: 'Mute Voiceover', exact: true }).click();
   await expect.poll(async () => has(await gains(page), factor)).toBe(false);
@@ -202,9 +215,7 @@ test('the recording gain scales preview and paused scrub by one factor, and mute
 test('export scales the whole mix by the recording gain', async ({ page }, info) => {
   test.setTimeout(240000);
   await openEditor(page);
-  const recording = page.getByRole('spinbutton', { name: 'Recording gain dB' });
-  await recording.fill('-6');
-  await recording.press('Enter');
+  await seedGain(page, -6);
   await page.getByRole('button', { name: 'Export video', exact: true }).click();
   await page.getByRole('button', { name: 'Render video', exact: true }).click();
   await expect(page.locator('.app-footer [role="status"]')).toContainText('Video exported', {
