@@ -21,3 +21,36 @@ test('a media card shows its add hint only while hovered or focused', async ({ p
   await card.focus();
   await expect(hint).toHaveCSS('opacity', '1');
 });
+
+test('the Fit button plays the compose canvas fullscreen until Esc', async ({ page }) => {
+  await ready(page);
+  const stage = page.getByTestId('compose-monitor');
+  const fit = page.getByRole('button', { name: 'Fit' });
+  const pill = stage.locator('.esc-pill');
+  // Hovered in the main view: the pill belongs to fullscreen only.
+  await stage.hover();
+  await expect(pill).toHaveCount(0);
+  await fit.click();
+  await expect(fit).toHaveAttribute('aria-pressed', 'true');
+  await page.waitForFunction(
+    () => document.fullscreenElement?.getAttribute('data-testid') === 'compose-monitor',
+  );
+  // Hovering the fullscreen video shows the pill; it stays rendered until Esc exits.
+  const box = await stage.boundingBox();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await expect(pill).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.fullscreenElement === null);
+  await expect(fit).toHaveAttribute('aria-pressed', 'false');
+  await expect(pill).toHaveCount(0);
+});
+
+test('the Fit caption stays static when the Fullscreen API is unavailable', async ({ page }) => {
+  // Deleting on the prototype survives the document swap; an own property set this early does not.
+  await page.addInitScript(() => {
+    Reflect.deleteProperty(Element.prototype, 'requestFullscreen');
+  });
+  await ready(page);
+  await expect(page.getByRole('button', { name: 'Fit' })).toHaveCount(0);
+  await expect(page.locator('.compose-caption').getByText('Fit', { exact: true })).toBeVisible();
+});

@@ -828,10 +828,39 @@ p {
   font-size: 8px;
   color: var(--muted-foreground);
 }
-.compose-caption > span {
+.compose-caption > span,
+.fit-fullscreen {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+.fit-fullscreen {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.fit-fullscreen:hover {
+  color: var(--foreground);
+}
+.compose-stage:fullscreen {
+  border: 0;
+  border-radius: 0;
+}
+.esc-pill {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 20;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #0009;
+  color: #ffffffe6;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  pointer-events: none;
 }
 .loading-preview,
 .empty-preview {

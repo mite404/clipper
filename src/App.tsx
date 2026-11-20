@@ -1339,6 +1339,11 @@ export function App() {
   const [mark, setMark] = useState<{ id: string; x: number; y: number } | null>(null);
   const [exportWidth, setExportWidth] = useState<1920 | 3840>(1920);
   const [previewQuality, setPreviewQuality] = useState(savedPreviewQuality);
+  // Fullscreen preview: the browser owns Esc; we mirror fullscreenchange and stage hover so the
+  // "esc" pill renders only while the pointer is over the fullscreen video.
+  const [stageFullscreen, setStageFullscreen] = useState(false);
+  const [stageHover, setStageHover] = useState(false);
+  const stage = useRef<HTMLDivElement>(null);
   const [exportFormat, setExportFormat] = useState<'mp4' | 'mov' | 'webm'>('mp4');
   const [exportProgress, setExportProgress] = useState<number | null>(null);
   // A finished render waits for the user's own click to download: Chrome blocks and Safari asks
@@ -1428,6 +1433,25 @@ export function App() {
     window.addEventListener('keydown', cancel);
     return () => window.removeEventListener('keydown', cancel);
   }, [markingMouse]);
+
+  useEffect(() => {
+    const sync = () => setStageFullscreen(document.fullscreenElement === stage.current);
+    document.addEventListener('fullscreenchange', sync);
+    return () => document.removeEventListener('fullscreenchange', sync);
+  }, []);
+
+  useEffect(() => {
+    if (!stageFullscreen) return;
+    const exit = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      // Real browsers exit fullscreen on Esc themselves; where no browser UI handles it
+      // (headless, embedded), the page asks instead. A double exit is a no-op.
+      void document.exitFullscreen().catch(() => {});
+    };
+    window.addEventListener('keydown', exit);
+    return () => window.removeEventListener('keydown', exit);
+  }, [stageFullscreen]);
+
   const compositionProps = useMemo(
     () => ({ ...edit, zooms: markingMouse ? [] : edit.zooms, assets, muted, gain: recordingGain }),
     [edit, assets, muted, markingMouse, recordingGain],
@@ -2514,7 +2538,13 @@ export function App() {
                   Composition <span className="active-pill">LIVE</span>
                 </span>
               </div>
-              <div className="compose-stage" data-testid="compose-monitor">
+              <div
+                ref={stage}
+                className="compose-stage"
+                data-testid="compose-monitor"
+                onPointerEnter={() => setStageHover(true)}
+                onPointerLeave={() => setStageHover(false)}
+              >
                 {assets.length > 0 ? (
                   playerView
                 ) : (
@@ -2592,6 +2622,7 @@ export function App() {
                     {mark && <span style={{ left: `${mark.x}%`, top: `${mark.y}%` }} />}
                   </div>
                 )}
+                {stageFullscreen && stageHover && <span className="esc-pill">esc</span>}
               </div>
               <div className="compose-caption">
                 <span>
@@ -2616,9 +2647,26 @@ export function App() {
                     }}
                   />
                 </span>
-                <span>
-                  Fit <Maximize2 size={12} />
-                </span>
+                {typeof document.documentElement.requestFullscreen === 'function' ? (
+                  <button
+                    type="button"
+                    className="fit-fullscreen"
+                    title="Play the composition fullscreen (Esc exits)"
+                    aria-pressed={stageFullscreen}
+                    onClick={() => {
+                      const target = stage.current;
+                      if (!target) return;
+                      if (document.fullscreenElement === target) void document.exitFullscreen();
+                      else void target.requestFullscreen();
+                    }}
+                  >
+                    Fit <Maximize2 size={12} />
+                  </button>
+                ) : (
+                  <span>
+                    Fit <Maximize2 size={12} />
+                  </span>
+                )}
               </div>
             </section>
           </div>
