@@ -32,6 +32,9 @@ export type Zoom = {
   instant?: boolean;
   /** How the ramp eases; without one it eases on the Smooth curve. */
   curve?: ZoomCurve;
+  /** Authored durations in frames. Omitted sides use the legacy ramp where room permits. */
+  rampIn?: number;
+  rampOut?: number;
 };
 /** A ramp's cubic-bezier control points `[x1, y1, x2, y2]`, each 0..1, like CSS `cubic-bezier()`. */
 export type ZoomCurve = [number, number, number, number];
@@ -317,16 +320,39 @@ function curveAt([x1, y1, x2, y2]: ZoomCurve, x: number): number {
   return at(y1, y2, (lo + hi) / 2);
 }
 
-/**
- * Evaluate the eased zoom scale at an absolute composition frame. The ramp out is the ramp in
- * played backwards.
- */
+/** Effective ramp lengths in frames, retaining authored lengths when a trimmed zoom grows again. */
+export function zoomRamps({ duration, rampIn, rampOut }: Zoom) {
+  const auto = Math.min(24, duration / 2);
+  const enter = rampIn ?? Math.min(auto, Math.max(0, duration - (rampOut ?? 0)));
+  const exit = rampOut ?? Math.min(auto, Math.max(0, duration - enter));
+  const total = enter + exit;
+  return total > duration
+    ? { rampIn: (enter / total) * duration, rampOut: (exit / total) * duration }
+    : { rampIn: enter, rampOut: exit };
+}
+
+/** Set one ramp in frames without moving the other ramp or either edge of the region. */
+export function withZoomRamp(zoom: Zoom, side: 'rampIn' | 'rampOut', frames: number): Zoom {
+  const ramps = zoomRamps(zoom);
+  const other = side === 'rampIn' ? 'rampOut' : 'rampIn';
+  const next = Math.max(0, Math.min(zoom.duration - ramps[other], frames));
+  if (next === ramps[side]) return zoom;
+  const edited = { ...zoom, [side]: next };
+  if (zoomRamps(edited)[other] !== ramps[other]) edited[other] = ramps[other];
+  return edited;
+}
+
+/** Evaluate the eased scale at an absolute frame, with the same curve reversed on the way out. */
 export function zoomAt(zooms: Zoom[], frame: number): number {
   const zoom = zooms.find((z) => covers(z, frame));
   if (!zoom) return 1;
   if (zoom.instant) return zoom.scale;
-  const ramp = Math.min(24, zoom.duration / 2);
-  const t = Math.min(1, (frame - zoom.start) / ramp, (zoom.start + zoom.duration - frame) / ramp);
+  const { rampIn, rampOut } = zoomRamps(zoom);
+  const t = Math.min(
+    rampIn ? (frame - zoom.start) / rampIn : 1,
+    rampOut ? (zoom.start + zoom.duration - frame) / rampOut : 1,
+    1,
+  );
   // A zoom without a curve keeps the exact smoothstep it always had.
   const eased = zoom.curve ? curveAt(zoom.curve, t) : t * t * (3 - 2 * t);
   return 1 + (zoom.scale - 1) * eased;

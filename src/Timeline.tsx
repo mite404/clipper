@@ -49,6 +49,8 @@ import {
   trackNumber,
   trimBounds,
   trimClip,
+  withZoomRamp,
+  zoomRamps,
   type Chapter,
   type Clip,
   type TrimBounds,
@@ -565,6 +567,8 @@ const arrowStep = (event: {
 export type ZoomEdits = {
   move: (id: string, start: number) => void;
   resize: (id: string, edge: 'left' | 'right', frame: number) => void;
+  /** Commit a ramp drag without moving or resizing the region. */
+  ramp: (zoom: Zoom) => void;
 };
 
 // The state of an edge-grip drag on one zoom. A press follows the pointer past the threshold,
@@ -793,6 +797,7 @@ function ZoomBlock({
   onSelect,
   onMove,
   onResize,
+  onRamp,
 }: {
   zoom: Zoom;
   zooms: Zoom[];
@@ -801,17 +806,31 @@ function ZoomBlock({
   onSelect: (id: string) => void;
   onMove?: (id: string, start: number) => void;
   onResize?: (id: string, edge: 'left' | 'right', frame: number) => void;
+  onRamp?: ZoomEdits['ramp'];
 }) {
   // The previewed start once a drag passes the threshold; release overwrites the zooms it covers.
   const [preview, setPreview] = useState<number>();
   // Ends the live drag without committing, for a lost pointer capture.
   const stopDrag = useRef<(() => void) | null>(null);
   const { sized, dragEdge } = useEdgeDrag(zoom, zooms, duration, onResize);
+  const [heldRamp, setHeldRamp] = useState<Zoom>();
+  const stopRamp = useRef<(() => void) | null>(null);
+  useEffect(() => () => stopRamp.current?.(), []);
+  const ramps = zoomRamps(heldRamp ?? zoom);
+  const enter = (ramps.rampIn / zoom.duration) * 100;
+  const exit = 100 - (ramps.rampOut / zoom.duration) * 100;
+  const style = {
+    ...zoomStyle(zoom, duration, dragSpan(zoom, preview, sized)),
+    '--ramp-in': `${enter}%`,
+    '--ramp-out': `${exit}%`,
+  };
   return (
     <button
       aria-label="Select zoom"
       className={`zoom-block ${selected ? 'selected' : ''}`}
-      style={zoomStyle(zoom, duration, dragSpan(zoom, preview, sized))}
+      data-instant={zoom.instant}
+      data-ramp-editable={Boolean(onRamp)}
+      style={style}
       onClick={() => onSelect(zoom.id)}
       onKeyDown={(event) => {
         const step = arrowStep(event);
@@ -854,6 +873,37 @@ function ZoomBlock({
     >
       <ZoomIn size={12} />
       <span>{zoom.scale.toFixed(1)}× zoom</span>
+      {(['rampIn', 'rampOut'] as const).map((side) => (
+        <i
+          key={side}
+          aria-hidden="true"
+          className="zoom-ramp-grip"
+          data-ramp={side}
+          style={{ left: `${side === 'rampIn' ? enter : exit}%` }}
+          onPointerDown={(event) => {
+            if (event.button !== 0) return;
+            event.stopPropagation();
+            const down = event.clientX;
+            const lane = event.currentTarget.closest('.zoom-lane')!.getBoundingClientRect();
+            const direction = side === 'rampIn' ? 1 : -1;
+            let edited = zoom;
+            stopRamp.current = bindDrag(event.currentTarget, event.nativeEvent, {
+              threshold: DRAG_THRESHOLD,
+              cancelOnEscape: true,
+              onMove: ({ x }) => {
+                const delta = Math.round(((x - down) / lane.width) * duration) * direction;
+                edited = withZoomRamp(zoom, side, ramps[side] + delta);
+                setHeldRamp(edited);
+              },
+              onEnd: (_up, canceled) => {
+                stopRamp.current = null;
+                setHeldRamp(undefined);
+                if (!canceled && edited !== zoom) onRamp?.(edited);
+              },
+            });
+          }}
+        />
+      ))}
       {(['left', 'right'] as const).map((edge) => (
         <ZoomGrip
           key={edge}
@@ -877,6 +927,7 @@ function ZoomLane({
   onSelect,
   onMove,
   onResize,
+  onRamp,
 }: {
   zooms: Zoom[];
   duration: number;
@@ -884,6 +935,7 @@ function ZoomLane({
   onSelect: (id: string) => void;
   onMove?: (id: string, start: number) => void;
   onResize?: (id: string, edge: 'left' | 'right', frame: number) => void;
+  onRamp?: ZoomEdits['ramp'];
 }) {
   return (
     <div className="zoom-lane timeline-lane">
@@ -897,6 +949,7 @@ function ZoomLane({
           onSelect={onSelect}
           onMove={onMove}
           onResize={onResize}
+          onRamp={onRamp}
         />
       ))}
       {!zooms.length && <span className="lane-hint">Add a zoom to bring the details closer</span>}
@@ -1279,6 +1332,7 @@ export function Timeline({
             onSelect={onSelect}
             onMove={zoomEdits?.move}
             onResize={zoomEdits?.resize}
+            onRamp={zoomEdits?.ramp}
           />
           {createRow('screen')}
           {visualRows(registry).map(laneRow)}

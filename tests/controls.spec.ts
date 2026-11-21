@@ -6,6 +6,54 @@ async function openEditor(page: Page) {
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
 }
 
+test('edits zoom ramps independently and undoes the duration without moving the zoom', async ({
+  page,
+}) => {
+  await openEditor(page);
+  await page.getByRole('slider', { name: 'Timeline playhead' }).fill('60');
+  await page.getByRole('button', { name: 'Add zoom at playhead' }).first().click();
+  const zoom = page.getByRole('button', { name: 'Select zoom', exact: true }).first();
+  const length = await zoom.evaluate((block) => block.getBoundingClientRect().width);
+  const enter = page.getByRole('spinbutton', { name: 'Ramp in frames' });
+  const exit = page.getByRole('spinbutton', { name: 'Ramp out frames' });
+  const initial = await enter.inputValue();
+  const originalExit = await exit.inputValue();
+  await enter.fill('4.5');
+  await enter.press('Enter');
+  await expect(enter).toHaveValue('4.5');
+  await expect(exit).toHaveValue(originalExit);
+  expect(await zoom.evaluate((block) => block.getBoundingClientRect().width)).toBe(length);
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(enter).toHaveValue(initial);
+
+  const block = (await zoom.boundingBox())!;
+  const grip = (await zoom.locator('[data-ramp="rampOut"]').boundingBox())!;
+  const x = grip.x + grip.width / 2;
+  const y = grip.y + grip.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x - (block.width * 12) / 120, y, { steps: 8 });
+  await page.mouse.up();
+  await expect(exit).toHaveValue('36');
+  await expect(enter).toHaveValue(initial);
+  expect(await zoom.boundingBox()).toEqual(block);
+  const saving = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const saved = (await (await saving).path())!;
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expect(exit).toHaveValue(originalExit);
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.getByLabel('Open local project').setInputFiles(saved);
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Project reopened');
+  await zoom.click();
+  await expect(exit).toHaveValue('36');
+  await expect(enter).toHaveValue(initial);
+  await enter.fill('120');
+  await enter.press('Enter');
+  await expect(enter).toHaveValue('84');
+  await expect(exit).toHaveValue('36');
+});
+
 test('visible native playhead aligns with ruler and tracks through seeking, scale and scroll', async ({
   page,
 }) => {

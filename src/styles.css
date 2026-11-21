@@ -1484,17 +1484,48 @@ p {
   white-space: nowrap;
   container-type: inline-size;
 }
+.zoom-block:not([data-instant='true']) {
+  background-image: linear-gradient(
+    90deg,
+    #252031 0%,
+    #494059 var(--ramp-in),
+    #494059 var(--ramp-out),
+    #252031 100%
+  );
+}
 /* Below the width two grips and the label need, the icon and label would pile under the grips as
    clipped text, so a short block shows only its grips. It keeps its accessible name, and the
    Inspector shows the scale. */
 @container (max-width: 96px) {
-  .zoom-block > :not(.zoom-grip) {
+  .zoom-block > :not(.zoom-grip, .zoom-ramp-grip) {
     display: none;
   }
 }
 .zoom-block.selected {
   border-color: #d0b5f1;
   filter: brightness(1.4);
+}
+/* Stagger the ramp grips so both remain draggable even when the ramps meet. The middle
+   of the block and the ends remain available for moving and resizing the region. */
+.zoom-ramp-grip {
+  display: none;
+  position: absolute;
+  translate: -50% 0;
+  z-index: 2;
+  width: 9px;
+  height: 8px;
+  cursor: ew-resize;
+  touch-action: none;
+  background: linear-gradient(90deg, transparent 3px, #decaf5 3px 6px, transparent 6px);
+}
+.zoom-block.selected[data-ramp-editable='true']:not([data-instant='true']) .zoom-ramp-grip {
+  display: block;
+}
+.zoom-ramp-grip[data-ramp='rampIn'] {
+  top: 0;
+}
+.zoom-ramp-grip[data-ramp='rampOut'] {
+  bottom: 0;
 }
 /* Edge grips resize the zoom. Like .clip-grip they show on a selected, hovered or focused block.
    Each takes at most 40% of the block, so a six-frame zoom keeps a sliver of body between them. */

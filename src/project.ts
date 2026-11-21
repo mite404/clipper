@@ -423,6 +423,12 @@ export function parseProject(text: string): {
       return { curve: curve as ZoomCurve };
     throw new Error('Zoom curve must be four numbers from 0 to 1.');
   };
+  const zoomRamps = (item: Record<string, unknown>) => ({
+    ...(item.rampIn !== undefined && { rampIn: number(item.rampIn, 'Zoom rampIn', 0, MAX_FRAMES) }),
+    ...(item.rampOut !== undefined && {
+      rampOut: number(item.rampOut, 'Zoom rampOut', 0, MAX_FRAMES),
+    }),
+  });
   const zooms: AnchoredZoom[] = array(root.zooms, 'zooms').map((entry, i) => {
     const item = object(entry, `zooms[${i}]`);
     const id = string(item.id, `zooms[${i}].id`);
@@ -443,6 +449,7 @@ export function parseProject(text: string): {
       ...(item.follow === undefined ? {} : { follow: item.follow }),
       ...(item.instant === undefined ? {} : { instant: item.instant }),
       ...zoomCurve(item.curve),
+      ...zoomRamps(item),
       ...(item.source === undefined
         ? {}
         : { source: zoomSource(item.source, clips, tracks, duration) }),

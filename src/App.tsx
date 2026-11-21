@@ -3090,6 +3090,11 @@ export function App() {
                     change({ ...edit, zooms: moveZoom(edit.zooms, id, start, duration) }),
                   resize: (id, edge, frame) =>
                     change({ ...edit, zooms: resizeZoom(edit.zooms, id, edge, frame, duration) }),
+                  ramp: (zoom) =>
+                    change(
+                      { ...edit, zooms: edit.zooms.map((z) => (z.id === zoom.id ? zoom : z)) },
+                      true,
+                    ),
                 }}
               />
             </ClipEditContext>

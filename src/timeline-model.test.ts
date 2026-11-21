@@ -224,6 +224,24 @@ describe('editing a timeline in frames', () => {
     expect(zoomAt([zoom], 149)).toBeCloseTo(1.00506, 4);
   });
 
+  it('eases over independent durations and fits them to a shortened zoom', () => {
+    const zoom = {
+      id: 'z',
+      start: 30,
+      duration: 100,
+      scale: 2,
+      x: 25,
+      y: 60,
+      rampIn: 8,
+      rampOut: 32,
+    };
+    expect([34, 38, 98, 114, 130].map((at) => zoomAt([zoom], at))).toEqual([1.5, 2, 2, 1.5, 1]);
+    const short = { ...zoom, duration: 20 };
+    expect([32, 34, 42].map((at) => zoomAt([short], at))).toEqual([1.5, 2, 1.5]);
+    const cutIn = { ...zoom, rampIn: 0 };
+    expect(zoomAt([cutIn], 30)).toBe(2);
+  });
+
   it('eases a zoom with a curve by that cubic-bezier, mirrored on the way out', () => {
     const zoom = { id: 'z', start: 30, duration: 120, scale: 2, x: 25, y: 60 };
     const at = (curve: ZoomCurve, frame: number) => zoomAt([{ ...zoom, curve }], frame);

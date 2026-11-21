@@ -1,7 +1,7 @@
 import { bindDrag } from '@ui-sdk/core';
 import { useState, type PointerEvent } from 'react';
 import { Choice } from './components';
-import { ZOOM_CURVES, type Zoom, type ZoomCurve } from './timeline-model';
+import { withZoomRamp, zoomRamps, ZOOM_CURVES, type Zoom, type ZoomCurve } from './timeline-model';
 
 type Preset = keyof typeof ZOOM_CURVES;
 const PRESETS = Object.keys(ZOOM_CURVES) as Preset[];
@@ -115,6 +115,40 @@ function RampCurve({
   );
 }
 
+function RampDurations({ zoom, onChange }: { zoom: Zoom; onChange: (zoom: Zoom) => void }) {
+  const ramps = zoomRamps(zoom);
+  return (['rampIn', 'rampOut'] as const).map((side) => {
+    const other = side === 'rampIn' ? 'rampOut' : 'rampIn';
+    const label = side === 'rampIn' ? 'Ramp in' : 'Ramp out';
+    const value = ramps[side];
+    const max = zoom.duration - ramps[other];
+    return (
+      <label key={side} className="slider-label">
+        {label} (frames)
+        <input
+          key={`${zoom.id}:${value}`}
+          type="number"
+          min={0}
+          max={max}
+          step="any"
+          aria-label={`${label} frames`}
+          defaultValue={value}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur();
+          }}
+          onBlur={(event) => {
+            const input = event.currentTarget;
+            const raw = input.valueAsNumber;
+            const edited = Number.isFinite(raw) ? withZoomRamp(zoom, side, raw) : zoom;
+            input.value = String(zoomRamps(edited)[side]);
+            if (edited !== zoom) onChange(edited);
+          }}
+        />
+      </label>
+    );
+  });
+}
+
 /** Per-shot camera motion, shared by the editor inspector and its Storybook preview. */
 export function ZoomMotionControls({
   zoom,
@@ -152,13 +186,16 @@ export function ZoomMotionControls({
         </span>
       </label>
       {!zoom.instant && (
-        <RampCurve
-          curve={zoom.curve}
-          onChange={(curve) => {
-            const { curve: _old, ...rest } = zoom;
-            onChange(curve ? { ...rest, curve } : rest);
-          }}
-        />
+        <>
+          <RampDurations zoom={zoom} onChange={onChange} />
+          <RampCurve
+            curve={zoom.curve}
+            onChange={(curve) => {
+              const { curve: _old, ...rest } = zoom;
+              onChange(curve ? { ...rest, curve } : rest);
+            }}
+          />
+        </>
       )}
       <p className="inspector-copy">
         Follow needs recorded pointer data. Fixed focus works without it.
