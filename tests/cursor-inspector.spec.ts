@@ -52,6 +52,7 @@ test('screen selection edits its recording in a scrolling inspector without disp
   await expect(page.getByRole('tooltip')).toHaveCount(0);
   await controls.getByRole('button', { name: 'About cursor animation' }).click();
   await expect(page.getByRole('tooltip')).toContainText('None steps at recorded sample times');
+  await expect(page.locator('[data-slot="select-content"][data-open]')).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('tooltip')).toHaveCount(0);
   await controls.getByRole('button', { name: 'About cursor ending' }).click();
