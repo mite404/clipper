@@ -144,6 +144,7 @@ export async function runRequest(
   ];
   for (let step = 0; step < MAX_STEPS; step++) {
     const reply = await complete(provider, messages, tools, signal); // → assistant message
+    signal.throwIfAborted();
     messages.push(reply);
     if (!reply.tool_calls?.length) return reply.content?.trim() || 'Done.';
     for (const call of reply.tool_calls) {
@@ -151,6 +152,7 @@ export async function runRequest(
       const output = await options.run(call.function.name, input).catch((error: unknown) => ({
         error: error instanceof Error ? error.message : String(error),
       }));
+      signal.throwIfAborted();
       options.onStep({ tool: call.function.name, input, output });
       messages.push({ role: 'tool', tool_call_id: call.id, content: JSON.stringify(output) });
     }
@@ -232,22 +234,23 @@ export function canSend(request: string, running: boolean, connected: boolean) {
 
 /**
  * Probes the configured server, then marks the agent present with its display name.
- * @throws when the server can't be reached or refuses the key
+ * @throws when the server can't be reached, refuses the key, or the probe is aborted
  */
-export async function connectAgent(provider: Provider, hosted: boolean) {
-  await probeProvider(provider, hosted);
+export async function connectAgent(provider: Provider, hosted: boolean, signal: AbortSignal) {
+  await probeProvider(provider, hosted, signal);
+  signal.throwIfAborted();
   connectSession(agentName(provider.model));
 }
 
 // Checks the configured model server answers before presence shows: a hosted server with the
 // person's key, a local one by listing its models. Throws when it can't be reached or refuses.
-async function probeProvider(provider: Provider, hosted: boolean, signal?: AbortSignal) {
+async function probeProvider(provider: Provider, hosted: boolean, signal: AbortSignal) {
   const base = provider.baseUrl.replace(/\/+$/, '');
   const response = await fetch(`${base}${hosted ? '/auth/key' : '/models'}`, {
     signal,
     headers: provider.key ? { Authorization: `Bearer ${provider.key}` } : {},
   }).catch((error: unknown) => {
-    if (signal?.aborted) throw error;
+    if (signal.aborted) throw error;
     throw new Error(
       `Could not reach ${base}. Check the address, or that the model server is running.`,
     );

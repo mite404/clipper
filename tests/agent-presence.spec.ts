@@ -8,6 +8,12 @@ const CHAT = 'https://openrouter.ai/api/v1/chat/completions';
 const KEY_CHECK = 'https://openrouter.ai/api/v1/auth/key';
 const CHIP = /Claude Sonnet 5\.5/;
 
+function gate() {
+  let resolve = () => {};
+  const promise = new Promise<void>((done) => (resolve = done));
+  return { promise, resolve };
+}
+
 async function open(page: Page) {
   await page.goto('/?agent-test');
   await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
@@ -128,4 +134,69 @@ test('editing the model config ends the session', async ({ page }) => {
   await page.getByLabel('Model id').fill('openai/gpt-6.1-sol');
   await expect(page.getByRole('button', { name: 'Assistant', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: CHIP })).toHaveCount(0);
+});
+
+test('a probe for a previous model cannot connect the edited configuration', async ({ page }) => {
+  const arrived = gate();
+  const release = gate();
+  await page.route(KEY_CHECK, async (route) => {
+    arrived.resolve();
+    await release.promise;
+    await route.fulfill({ json: { data: { label: 'clipper' } } });
+  });
+  await open(page);
+  await page.getByRole('button', { name: 'Assistant', exact: true }).click();
+  await page.getByLabel('OpenRouter key').fill('sk-test');
+  await page.getByRole('textbox', { name: 'Request' }).fill('Cut the talking head');
+  const connectButton = page.getByRole('button', { name: 'Connect', exact: true });
+  await connectButton.click();
+  await arrived.promise;
+  await page.getByLabel('Model id').fill('openai/gpt-6.1-sol');
+  release.resolve();
+  await expect(connectButton).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: CHIP })).toHaveCount(0);
+  await connectButton.click();
+  await expect(page.getByRole('button', { name: 'Gpt 6.1 Sol', exact: true })).toBeVisible();
+});
+
+test('disconnect prevents a pending model reply from editing the timeline', async ({ page }) => {
+  const arrived = gate();
+  const release = gate();
+  let posts = 0;
+  await mockKeyCheck(page);
+  await page.route(CHAT, async (route) => {
+    const first = ++posts === 1;
+    if (first) {
+      arrived.resolve();
+      await release.promise;
+    }
+    const toolCalls = [
+      {
+        id: 'edit',
+        type: 'function',
+        function: {
+          name: 'act',
+          arguments: JSON.stringify({
+            steps: [{ ref: 'A conversation', action: 'split', args: [6] }],
+          }),
+        },
+      },
+    ];
+    const message = first
+      ? { role: 'assistant', content: null, tool_calls: toolCalls }
+      : { role: 'assistant', content: 'Split the clip' };
+    await route.fulfill({ json: { choices: [{ message }] } });
+  });
+  await open(page);
+  await connect(page);
+  const input = page.getByRole('textbox', { name: 'Request' });
+  await input.fill('Split the talking head at six seconds');
+  await input.press('Enter');
+  await arrived.promise;
+  await page.getByRole('button', { name: 'Disconnect', exact: true }).click();
+  release.resolve();
+  await expect(page.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Undo', exact: true })).toBeDisabled();
+  expect(posts).toBe(1);
 });

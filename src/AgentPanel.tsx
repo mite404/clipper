@@ -194,34 +194,60 @@ function composeKey(event: KeyboardEvent, send: () => void) {
   send();
 }
 
-// Connect checks the server answers before the agent shows as present (CLIP-51); a refusal says
-// why and keeps the plain button. Disconnect ends the session.
-function ConnectSection({ provider }: { provider: Provider }) {
+function useAgentConnection(provider: Provider, running: AbortController | null) {
   const session = useSession();
-  const [connecting, setConnecting] = useState(false);
+  const [probe, setProbe] = useState<AbortController | null>(null);
   const [connectError, setConnectError] = useState('');
+  const hosted = provider.baseUrl === PRESETS.openrouter.baseUrl;
+  const disconnect = () => {
+    probe?.abort();
+    running?.abort();
+    setProbe(null);
+    setConnectError('');
+    disconnectSession();
+  };
+  const connect = () => {
+    const controller = new AbortController();
+    setConnectError('');
+    setProbe(controller);
+    connectAgent(provider, hosted, controller.signal)
+      .catch((error) => {
+        if (!controller.signal.aborted) setConnectError(errorMessage(error));
+      })
+      .finally(() => setProbe((current) => (current === controller ? null : current)));
+  };
+  return {
+    session,
+    connecting: probe !== null,
+    connectDisabled: !canConnect(probe !== null, hosted, provider.key),
+    connectError,
+    connect,
+    disconnect,
+  };
+}
+
+function ConnectSection({
+  session,
+  connecting,
+  connectDisabled,
+  connectError,
+  connect,
+  disconnect,
+}: ReturnType<typeof useAgentConnection>) {
   if (session)
     return (
       <div className="assistant-connect">
-        <button type="button" className="text-button" onClick={() => disconnectSession()}>
+        <button type="button" className="text-button" onClick={disconnect}>
           Disconnect
         </button>
       </div>
     );
-  const hosted = provider.baseUrl === PRESETS.openrouter.baseUrl;
-  const connect = () => {
-    setConnectError('');
-    setConnecting(true);
-    connectAgent(provider, hosted)
-      .catch((error) => setConnectError(errorMessage(error)))
-      .finally(() => setConnecting(false));
-  };
   return (
     <div className="assistant-connect">
       <button
         type="button"
         className="secondary-button"
-        disabled={!canConnect(connecting, hosted, provider.key)}
+        disabled={connectDisabled}
         aria-busy={connecting}
         onClick={connect}
       >
@@ -251,8 +277,10 @@ export function AgentPanel({
   const [draft, setDraft] = useState('');
   const [transcript, setTranscript] = useState(false);
   const [dictating, setDictating] = useState(false);
-  const session = useSession();
   const { log, running, run } = useAgentRun(lines);
+  const provider = { baseUrl: PRESETS[preset].baseUrl, model, key };
+  const connection = useAgentConnection(provider, running);
+  const { session, disconnect } = connection;
   const input = useRef<HTMLTextAreaElement>(null);
 
   // After the drawer opens or dictation ends; the box is disabled while dictating, so it waits.
@@ -264,7 +292,7 @@ export function AgentPanel({
     const request = draft.trim();
     if (!canSend(request, running !== null, session !== null)) return;
     setDraft('');
-    void run({ baseUrl: PRESETS[preset].baseUrl, model, key }, request, transcript);
+    void run(provider, request, transcript);
   };
 
   return (
@@ -292,20 +320,20 @@ export function AgentPanel({
         model={model}
         apiKey={key}
         onPreset={(next) => {
-          disconnectSession();
+          disconnect();
           setPreset(next);
           setModel(next === 'openrouter' ? OPENROUTER_MODELS[0] : 'llama3.2');
         }}
         onModel={(next) => {
-          disconnectSession();
+          disconnect();
           setModel(next);
         }}
         onKey={(next) => {
-          disconnectSession();
+          disconnect();
           setKey(next);
         }}
       />
-      <ConnectSection provider={{ baseUrl: PRESETS[preset].baseUrl, model, key }} />
+      <ConnectSection {...connection} />
       <AgentLog log={log} running={!!running} />
       <TranscriptOptIn
         checked={transcript}
