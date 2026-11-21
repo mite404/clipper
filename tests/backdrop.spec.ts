@@ -176,6 +176,7 @@ test('a gradient preset is one undo and survives save, copy and reopen', async (
   await openEditor(page);
   await choose(style(page), 'gradient');
   const preset = page.getByRole('combobox', { name: 'Gradient preset' });
+  await expect(preset.locator('xpath=..')).toContainText('Gradient preset');
   await expectChoice(preset, 'custom');
   await choose(preset, 'aurora');
   await expect(color(page, 'Gradient start')).toHaveValue('#123b5a');
@@ -218,7 +219,9 @@ test('a gradient preset is one undo and survives save, copy and reopen', async (
     .toBe('linear-gradient(90deg, rgb(18, 59, 90), rgb(83, 214, 182))');
 });
 
-test('Custom is derived from manual edits and cannot replace an active preset', async ({ page }) => {
+test('Custom is derived from manual edits and cannot replace an active preset', async ({
+  page,
+}) => {
   await openEditor(page);
   await choose(style(page), 'gradient');
   const preset = page.getByRole('combobox', { name: 'Gradient preset' });
@@ -231,6 +234,28 @@ test('Custom is derived from manual edits and cannot replace an active preset', 
     'aria-disabled',
     'true',
   );
+  await expect(page.getByRole('option', { name: 'Custom', exact: true })).toHaveCSS(
+    'opacity',
+    '0.35',
+  );
+
+  const list = page.getByRole('listbox');
+  const custom = page.getByRole('option', { name: 'Custom', exact: true });
+  const customBox = await custom.boundingBox();
+  if (!customBox) throw new Error('Custom option is not visible');
+  await page.mouse.click(customBox.x + customBox.width / 2, customBox.y + customBox.height / 2);
+  await expect(list).toBeVisible();
+  await expectChoice(preset, 'aurora');
+  await expect(color(page, 'Gradient start')).toHaveValue('#123b5a');
+
+  await preset.focus();
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Home');
+  await page.keyboard.press('Enter');
+  await expectChoice(preset, 'aurora');
+
+  await preset.focus();
+  await page.keyboard.press('Enter');
   await page.keyboard.press('ArrowDown');
   await page.keyboard.press('Enter');
   await expectChoice(preset, 'ember');

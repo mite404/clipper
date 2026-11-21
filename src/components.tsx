@@ -202,7 +202,7 @@ export function Choice<V extends string>({
   /** Accessible name of the trigger. */
   label?: string;
   value: V;
-  options: { value: V; label: string }[];
+  options: { value: V; label: string; disabled?: boolean }[];
   onChange: (value: V) => void;
   disabled?: boolean;
   className?: string;
@@ -262,7 +262,13 @@ export function Choice<V extends string>({
       </SelectTrigger>
       <SelectContent className="select-menu" sideOffset={4} collisionPadding={8} align={align}>
         {options.map((option) => (
-          <SelectItem key={option.value} value={option.value} data-value={option.value}>
+          <SelectItem
+            key={option.value}
+            value={option.value}
+            data-value={option.value}
+            disabled={option.disabled}
+            style={option.disabled ? { opacity: 0.35, cursor: 'not-allowed' } : undefined}
+          >
             <SelectItemText>{option.label}</SelectItemText>
             <SelectItemIndicator>
               <Check size={12} aria-hidden="true" />

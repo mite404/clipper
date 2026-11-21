@@ -1,14 +1,4 @@
-import { useCallback, useLayoutEffect, useRef, useState } from 'react';
-import { Check, ChevronDown } from 'lucide-react';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectItemIndicator,
-  SelectItemText,
-  SelectTrigger,
-  SelectValue,
-} from '@ui-sdk/react/select';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Choice } from './components';
 import {
   DEFAULT_FILL,
@@ -26,8 +16,12 @@ const GRADIENT_PRESETS = [
   { name: 'dusk', label: 'Dusk', fill: '#362c67', fillTo: '#c66b9b', angle: 160 },
 ] as const;
 type GradientPreset = 'custom' | (typeof GRADIENT_PRESETS)[number]['name'];
-const GRADIENT_PRESET_OPTIONS: { value: GradientPreset; label: string }[] = [
-  { value: 'custom', label: 'Custom' },
+const GRADIENT_PRESET_OPTIONS: {
+  value: GradientPreset;
+  label: string;
+  disabled?: boolean;
+}[] = [
+  { value: 'custom', label: 'Custom', disabled: true },
   ...GRADIENT_PRESETS.map(({ name, label }) => ({ value: name, label })),
 ];
 
@@ -128,20 +122,14 @@ function GradientPresetField({
     (preset) =>
       preset.fill === layout.fill && preset.fillTo === fillTo && preset.angle === fillAngle,
   );
-  const [container, setContainer] = useState<Element | null>(null);
-  const portalFor = useCallback(
-    (trigger: HTMLElement | null) => setContainer(trigger?.closest('dialog') ?? document.body),
-    [],
-  );
   return (
     <label className="slider-label choice-row">
       Gradient preset
-      <Select
+      <Choice
+        label="Gradient preset"
         value={activePreset?.name ?? 'custom'}
-        items={GRADIENT_PRESET_OPTIONS}
-        modal="pointer"
-        container={container}
-        onValueChange={(name) => {
+        options={GRADIENT_PRESET_OPTIONS}
+        onChange={(name) => {
           const preset = GRADIENT_PRESETS.find((candidate) => candidate.name === name);
           if (preset)
             onLayout({
@@ -151,38 +139,7 @@ function GradientPresetField({
               fillAngle: preset.angle,
             });
         }}
-      >
-        <SelectTrigger
-          className="select"
-          aria-label="Gradient preset"
-          data-value={activePreset?.name ?? 'custom'}
-          ref={portalFor}
-        >
-          <SelectValue />
-          <ChevronDown size={12} aria-hidden="true" />
-        </SelectTrigger>
-        <SelectContent className="select-menu" sideOffset={4} collisionPadding={8}>
-          <SelectItem
-            value="custom"
-            data-value="custom"
-            disabled
-            style={{ opacity: 0.35, cursor: 'not-allowed' }}
-          >
-            <SelectItemText>Custom</SelectItemText>
-            <SelectItemIndicator>
-              <Check size={12} aria-hidden="true" />
-            </SelectItemIndicator>
-          </SelectItem>
-          {GRADIENT_PRESETS.map(({ name, label }) => (
-            <SelectItem key={name} value={name} data-value={name}>
-              <SelectItemText>{label}</SelectItemText>
-              <SelectItemIndicator>
-                <Check size={12} aria-hidden="true" />
-              </SelectItemIndicator>
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      />
     </label>
   );
 }
