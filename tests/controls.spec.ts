@@ -54,6 +54,47 @@ test('edits zoom ramps independently and undoes the duration without moving the 
   await expect(exit).toHaveValue('36');
 });
 
+test('held zoom edge resize shows the same ramp lengths as release', async ({ page }) => {
+  await openEditor(page);
+  await page.getByRole('slider', { name: 'Timeline playhead' }).fill('60');
+  await page.getByRole('button', { name: 'Add zoom at playhead' }).first().click();
+  const zoom = page.getByRole('button', { name: 'Select zoom', exact: true }).first();
+  const edge = zoom.getByRole('slider', { name: 'Resize zoom right edge' });
+  const lane = (await page.locator('.zoom-lane').boundingBox())!;
+  const displayed = () =>
+    zoom.evaluate((block: HTMLElement) => {
+      const length = (parseFloat(block.style.width) / 100) * 360;
+      const [enter, exit] = ['--ramp-in', '--ramp-out'].map((name) =>
+        parseFloat(block.style.getPropertyValue(name)),
+      );
+      return [length, (enter / 100) * length, ((100 - exit) / 100) * length].map(
+        (frames) => Math.round(frames * 100) / 100,
+      );
+    });
+  const resize = async (delta: number, expected: number[]) => {
+    const box = (await edge.boundingBox())!;
+    const x = box.x + box.width / 2;
+    const y = box.y + box.height / 2;
+    await page.mouse.move(x, y);
+    await page.mouse.down();
+    await page.mouse.move(x + (lane.width * delta) / 360, y, { steps: 8 });
+    await expect.poll(displayed, { message: 'while holding the edge' }).toEqual(expected);
+    await page.mouse.up();
+    await expect.poll(displayed, { message: 'after releasing the edge' }).toEqual(expected);
+  };
+  await resize(60, [180, 24, 24]);
+  await resize(-160, [20, 10, 10]);
+  await resize(100, [120, 24, 24]);
+  const enter = page.getByRole('spinbutton', { name: 'Ramp in frames' });
+  await enter.fill('36');
+  await enter.press('Enter');
+  const exit = page.getByRole('spinbutton', { name: 'Ramp out frames' });
+  await exit.fill('12');
+  await exit.press('Enter');
+  await resize(-100, [20, 15, 5]);
+  await resize(100, [120, 36, 12]);
+});
+
 test('visible native playhead aligns with ruler and tracks through seeking, scale and scroll', async ({
   page,
 }) => {

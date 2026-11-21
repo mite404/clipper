@@ -816,9 +816,11 @@ function ZoomBlock({
   const [heldRamp, setHeldRamp] = useState<Zoom>();
   const stopRamp = useRef<(() => void) | null>(null);
   useEffect(() => () => stopRamp.current?.(), []);
-  const ramps = zoomRamps(heldRamp ?? zoom);
-  const enter = (ramps.rampIn / zoom.duration) * 100;
-  const exit = 100 - (ramps.rampOut / zoom.duration) * 100;
+  const tentative = { ...zoom, ...heldRamp, ...sized };
+  const length = tentative.duration;
+  const ramps = zoomRamps(tentative);
+  const enter = (ramps.rampIn / length) * 100;
+  const exit = 100 - (ramps.rampOut / length) * 100;
   const style = {
     ...zoomStyle(zoom, duration, dragSpan(zoom, preview, sized)),
     '--ramp-in': `${enter}%`,
