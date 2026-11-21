@@ -12,6 +12,7 @@ import {
 import {
   Check,
   ChevronDown,
+  Download,
   Film,
   Image,
   Info,
@@ -513,6 +514,7 @@ export function MediaLibrary({
   const [view, setView] = useState<LibraryView>('thumbnails');
   // Each card's own scrub position, kept so a select can adopt it. Never the source preview's.
   const positions = useRef(new Map<string, number>());
+  const original = busy ? undefined : assets.find((asset) => asset.id === selected);
   return (
     <aside className="library">
       <div className="section-title">
@@ -536,21 +538,34 @@ export function MediaLibrary({
           <span className="count">{assets.length}</span>
         </span>
       </div>
-      <label className="import-button">
-        <Upload size={15} /> Import media
-        <input
-          aria-label="Import local media"
-          type="file"
-          multiple
-          accept="video/*,audio/*,.mov,.mp4,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
-          disabled={busy}
-          onChange={(event) => {
-            if (event.target.files) onImport(event.target.files);
-            event.target.value = '';
-          }}
-        />
-        <span>↗</span>
-      </label>
+      <div style={{ display: 'flex', alignItems: 'baseline', minWidth: 0 }}>
+        <label className="import-button" style={{ flex: 1, whiteSpace: 'nowrap' }}>
+          <Upload size={15} /> Import media
+          <input
+            aria-label="Import local media"
+            type="file"
+            multiple
+            accept="video/*,audio/*,.mov,.mp4,.png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp"
+            disabled={busy}
+            onChange={(event) => {
+              if (event.target.files) onImport(event.target.files);
+              event.target.value = '';
+            }}
+          />
+          {!original?.url.startsWith('blob:') && <span>↗</span>}
+        </label>
+        {original?.url.startsWith('blob:') && (
+          <a
+            className="icon-button"
+            href={original.url}
+            download={original.name}
+            aria-label="Download original"
+            title="Download original"
+          >
+            <Download size={15} aria-hidden="true" />
+          </a>
+        )}
+      </div>
       <div className="library-note">Files stay on your device</div>
       <div className="asset-list">
         {assets.map((asset, index) => (
