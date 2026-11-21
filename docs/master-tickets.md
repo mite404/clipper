@@ -44,12 +44,12 @@ predecessor small lane had no unpushed work. No CI watch was pending at transfer
 
 [outgoing-coordinator]: https://ampcode.com/threads/T-01a1f458-64c3-77cd-b7dd-7a1f78923a04
 
-## Two-lane queue audit, 2026-11-19
+## Historical queue audit, 2026-11-19
 
 Audited against `origin/main` `d9d3b6f3e22301197ec07bc0f3b98978d595308e` (green exact-SHA
-CI44440331315, promoted) and the coordinator's staged batches. Each ticket row below carries its own
-state; this section only summarizes. 55 tickets remain open: 9 in flight, 5 partly delivered with
-named scope left, 32 to scope (some held on another ticket) and 9 gated on an environment, a real
+CI44440331315, promoted) and the coordinator's staged batches. This snapshot is not the current
+queue; see [Order of work](#order-of-work). At the time, 55 tickets were open: 9 in flight, 5 partly
+delivered with named scope left, 32 to scope (some held on another ticket) and 9 gated on a real
 fixture or the owner. Decision rows (D-1 to D-10), closed REF-23 and CLIP-44, parked UI-12, CLIP-46
 and CLIP-47, conditional REF-24/29/34 and the CLIP-31 umbrella are not counted.
 
@@ -103,7 +103,7 @@ T-9f34d223 replaced the Fable reviewer T-2d1e888a. These old threads retain thei
 concurrent implementation grants. Research-only owners retain research, not source ownership. Main
 pushes and full/performance acceptance remain coordinator-serialized; no review gate changes.
 
-### Active two-worker grants
+### Previous grants and lane transfers
 
 | Lane                 | Worker                                                                                | Current grant                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | -------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -225,63 +225,62 @@ Moved to [history](master-tickets-history.md#all-new-opus-cutoff-audit).
 
 ## Order of work
 
-This is the one order of work. It supersedes older numeric/default ordering, historical reservation
-language and the grouping of the queue tables. Delivered means accepted main with exact-SHA green
-CI. Research, a preserved branch and source LAND alone are not delivery. It was set by the audit of
-2026-11-16 against accepted main `d8776cde2f1fc381da7bd4a5b069501c5ded73c5` (not a moving
-latest-main pointer) and updated on 2026-11-18 against `c30c509`.
+Current audit: 2026-11-21 against `origin/main` `8f1be90`. Continue through eligible tickets without
+routine reapproval. Delivered means accepted main with exact-SHA green CI. Research, preserved
+source and a LAND verdict alone do not count. Historical dates and grants below are not current
+assignments. The [Owners](#owners) and [path reservations](#current-path-reservations) say who can
+edit now.
 
-Done from that audit's steps 1-3 and 8:
+Removed from the active sequence: CLIP-17 gain-row polish (`66b0d5`, later hidden by `2422716`),
+CLIP-49 phase 1 (`a8848cb`), REF-69 (`1407036`), CLIP-15 scrub (`671df17`), CLIP-19 crop bounds
+(`bec5594`), UI-10 and its test follow-up (`9d85767`, `5af5718`), and CLIP-51 (`41039a9`). REF-35/36
+are delivered; CLIP-32's delivered transcription is the baseline for subtitle work. CLIP-9b does not
+repeat REF-58 edge resizing or CLIP-9c curve editing. Its remaining work is independent ramp
+durations, timeline ramp handles and numeric equivalents.
 
-- CLIP-9b creation/panel removal and the **Add zoom** label/map follow-up were accepted at
-  `acb62f7`, with green exact-main CI43938067635. Full ramps stay open (step 5 below).
-- UI-7 delivered at `b9c2e83` and UI-5 at `601ba78`, both extending UI-2. REF-32 delivered at
-  `4b49623`. CLIP-2e delivered selected-target/all-unlocked splits on the no-link project model at
-  `a26c7e7`, using stable track IDs and saved locks/track selection.
-- REF-27 real export formats/resolution delivered at `27099dc`, then CLIP-20b media-kind support at
-  `6156fb4` and CLIP-2c stable tracks/insertion/Background role at `1de89b5`. CLIP-2c's
-  pointer-release lane targeting and video-only pool-drop contract stand.
-- UI-6 removed the requested remnants at `f164235`.
+Advance these chains as paths clear:
 
-Remaining, in this order:
+1. CLIP-50 finishes browser and isolated performance verification, then review and delivery. In
+   parallel, Sol design builds CLIP-18's standalone command menu and Luna builds the CLIP-20
+   built-in gradient wallpaper preset slice. Owner allocation: Luna takes low-risk code and test
+   tickets; Sol takes more complex work. REF-37's synthetic lookup qualification is separate from
+   fixture- or recurrence-gated diagnosis. Keep browser performance runs isolated.
+2. Finish CLIP-9b ramps, CLIP-11b targeted attachment, UI-11 selected-type Inspector and CLIP-2d
+   whole-clip visibility in separate units. UI-11 must preserve CLIP-11b source access; CLIP-2d
+   includes hidden-clip dashed outlines, not UI-10. Resolve shared App, parser, timeline and
+   renderer paths before grants. The optional CLIP-19 mask-row follow-up also waits on CLIP-50.
+3. Settle explicit source-audio mapping and membership for CLIP-2b with UI-9. Then implement linked
+   movement and qualify partial cuts on CLIP-2e before UI-9 header-targeted insertion. Remove UI-8's
+   old selector only after UI-9 works. CLIP-26 needs stable association and mix semantics; never
+   clone the primary audio mix across selected targets.
+4. Scope CLIP-21, remaining CLIP-22, then CLIP-23. Other candidates to scope as paths free up:
+   CLIP-24, CLIP-13, manual CLIP-16, CLIP-18 editor integration and custom shortcuts, CLIP-27 then
+   CLIP-28, remaining CLIP-20 then CLIP-39, CLIP-40 then CLIP-45, CLIP-41 power saving, CLIP-42,
+   CLIP-30, and CLIP-35 then CLIP-37. CLIP-33 and CLIP-34 build on delivered CLIP-32. CLIP-34 also
+   waits on CLIP-33's cue contract; CLIP-36 needs CLIP-33. Scope model, feasibility and ownership
+   before a subtitle source grant. REF-22 and REF-30 need a saved-data contract before CLIP-38
+   relies on them. PUB-1 remains contract-held and PUB-2 depends on it; D-10 chooses Netlify, not a
+   deployment approval. CLIP-11's remaining video-wide ending parity is distinct from delivered
+   per-trimmed-clip endings; qualify real recordings separately under D-7.
 
-1. Batch 5 is delivered at `8e7b506` and promoted. Batch 6 (CLIP-20c, Layout choice fix, UI-14) is
-   delivered at `5f75096`, CLIP-20d at `046eedc`. Next: the CLIP-17 gain-row polish (`3a73afb`),
-   then CLIP-49 phase 1 (`cfe4c57`), then REF-69 (owner-reported pool scrub coupling) ahead of
-   CLIP-15 audio scrub. REF-66, UI-15, UI-13, CLIP-9c, UI-16, REF-67, CLIP-22 PiP, CLIP-41 preview
-   quality, CLIP-17 per-clip gain and CLIP-21b are delivered. Owner direction (2026-11-18): keep
-   going through every remaining ticket; gated chains stay visible and skipped.
-2. Settle explicit source-audio membership/component mapping in CLIP-2b with UI-9, then implement
-   association creation/persistence and linked movement before UI-9 consumes them. Do not duplicate
-   the primary audio mix across selected lanes. UI-9 validates header-targeted insertion atomically.
-   CLIP-2b must qualify partial-cut membership on delivered CLIP-2e before linked movement delivery.
-   No fragment lifecycle/schema is approved by the split research. UI-8's old target selector goes
-   only after UI-9 works.
-3. Complete CLIP-9b ramps, CLIP-11b targeted sidecars, UI-11 selected-type inspector and CLIP-2d
-   whole-clip visibility in separate verified units. UI-10 adoption/polish follows a scoped decision
-   on its preserved experiment; it does not block these features or authorize wholesale replacement.
-4. Then take ungated backlog features in this dependency order: CLIP-19, CLIP-20 wallpapers,
-   CLIP-21, CLIP-23, CLIP-22 remainder, CLIP-24, CLIP-12, CLIP-13, CLIP-15 audio scrub, CLIP-16,
-   CLIP-18, CLIP-27, CLIP-28, CLIP-39, CLIP-40, CLIP-45, CLIP-41 power saving, CLIP-42, CLIP-26 and
-   CLIP-30. These remain proposals until their bounded acceptance is scoped, not new source grants.
-
-Prepare tests/research in parallel only when paths are disjoint; serialize App, Timeline, model,
-parser, renderer and export changes. REF-35/36 may take independent test/tool paths, but must not
-compete with a feature's acceptance run. REF-28/37 qualify actual decoder/performance risks before
-affected changes land. REF-22/30 precede CLIP-38 only if its saved-data work needs them. REF-23 is
-closed (D-1: no); REF-24/29/34 are conditional work, never automatic prerequisites.
-
-Keep gated chains visible and skip them rather than blocking other work: CLIP-31a then CLIP-31b then
-CLIP-31c needs Premiere qualification (D-9); CLIP-32 (Whisper `tiny.en`, approved) then CLIP-33/34
-then CLIP-36; CLIP-35 (D-5 settled) then CLIP-37; CLIP-7b/43 needs D-4; CLIP-14 and typing
-suggestions need key events; CLIP-44 is dropped; CLIP-46 (voice-over only) and CLIP-47 are parked;
-native CLIP-48 needs a device path. CLIP-11 real recording qualification stays under D-7. PUB-1 then
-PUB-2 (host Netlify, D-10). UI-12 remains parked. CLIP-31 is an umbrella, not a fourth XML
-implementation.
+Skip explicit holds until their conditions change: CLIP-49 autodetect and the 626px transport P3
+need Mite's go; UI-12 and CLIP-46/47 are parked; chapter expansion is deferred. CLIP-14 and typing
+suggestions need a key-event source; CLIP-12 needs licensed or original sound; CLIP-48 needs a
+native device path; REF-33 needs another supported WebCodecs browser. D-4 needs a real Screen Studio
+fixture for CLIP-7b/43. D-7 needs real OpenScreen Mac qualification without private uploads. D-9
+needs a real Premiere import (CLIP-31a, then implementation in CLIP-31b, then CLIP-31c). D-8 does
+not authorize history rewrite. CLIP-31 is only an umbrella; REF-23 and CLIP-44 are closed.
+REF-24/29/34 stay conditional. Do not claim production release, private-media compatibility or other
+environments from these deliveries.
 
 This order grants no additional source paths, experiment landing, deployment or history rewrite. The
 coordinator remains the only main writer, rebases each tested ticket onto latest main and waits for
 exact-SHA green CI before releasing the slot.
+
+The first CLIP-18 unit uses a standalone searchable dialog with caller-supplied commands. Storybook
+proves focus and return, filtering and empty results, keyboard selection, dismissal and dispatch.
+Editor wiring and shortcut remapping require a later shared-path grant. The standalone candidate is
+preparation, not delivery of the command menu to editor users.
 
 ### Publish dialog
 
@@ -373,7 +372,7 @@ PUB-1's renderer and intent link, and in the gated chains, because no other tick
 | --------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | Queue and delivery    | [T-ece3431c](https://ampcode.com/threads/T-ece3431c-d973-4e4a-a681-2a53c307e478)      | Grants, review dispatch, acceptance, exclusive main push slot and promotion requests |
 | Main implementation   | [T-01a1fc9d-05a4](https://ampcode.com/threads/T-01a1fc9d-05a4-7256-812f-f7bbf1424807) | CLIP-50                                                                              |
-| Small implementation  | [T-01a1fc9d-17f5](https://ampcode.com/threads/T-01a1fc9d-17f5-749f-8f67-516324d617fa) | UI-10 follow-up delivered; no active grant                                           |
+| Small implementation  | [T-01a1fc9d-17f5](https://ampcode.com/threads/T-01a1fc9d-17f5-749f-8f67-516324d617fa) | CLIP-20 gradient wallpaper presets                                                   |
 | Code review           | [T-0f957ef1](https://ampcode.com/threads/T-0f957ef1-ca72-4659-af83-2787cd53508f)      | The one review per ticket, with `ce-code-review`                                     |
 | Cursor implementation | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a)      | Speed-style unit delivered; no active implementation grant                           |
 | Cursor inspector      | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214)      | Inspector delivered; no active implementation grant                                  |
@@ -384,7 +383,7 @@ PUB-1's renderer and intent link, and in the gated chains, because no other tick
 | Editor and bootstrap  | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da)      | `.agents/setup`, `.agents/resume`                                                    |
 | Verification tools    | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc)      | Archived after delivery; no active path reservation                                  |
 | Canonical preview     | [T-6dd30293](https://ampcode.com/threads/T-6dd30293-c740-418a-8174-5d2a1b69da89)      | Accepted-main promotion and revision/check receipts                                  |
-| Design and UI SDK     | [T-01a1fc9d-0de5](https://ampcode.com/threads/T-01a1fc9d-0de5-74eb-bd7b-0d1084acc1e5) | CLIP-51 delivered; no active grant                                                   |
+| Design and UI SDK     | [T-01a1fc9d-0de5](https://ampcode.com/threads/T-01a1fc9d-0de5-74eb-bd7b-0d1084acc1e5) | CLIP-18 standalone command menu                                                      |
 
 The archival audit has coordinator ownership clearance for the completed UI-3 worker/reviewer,
 REF-18/20/31 transport worker, tooltip pilot/repair, VERIFY-5, fresh-orb qualifier and OpenScreen
@@ -702,6 +701,8 @@ against `aa6db5b`.
 | Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5; exact-path grant before edits (UI-7 delivered)                                                                                                                                                                                                                                                |
 | Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                                                                                                                                                                                                                     |
 | Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                                                                                                                                                                                                                                                           |
+| Small implementation     | CLIP-20: `src/BackdropControls.tsx`, `tests/backdrop.spec.ts`                                                                                                                                                                                                                                                                                            |
+| Design and UI SDK        | CLIP-18: new `src/CommandMenu.tsx`, `src/CommandMenu.stories.tsx`, `tests/command-menu.spec.ts`                                                                                                                                                                                                                                                          |
 | Main implementation      | CLIP-50: `src/App.tsx`, `src/Composition.tsx`, `src/Mixer.stories.tsx`, `src/Mixer.tsx`, `src/audio-meter.ts`, `src/components.tsx`, `src/export.ts`, `src/project.test.ts`, `src/project.ts`, `src/scrub-audio.test.ts`, `src/scrub-audio.ts`, `src/styles.css`, `src/timeline-model.ts`, `tests/mixer-strips.spec.ts`, `tests/transport-audio.spec.ts` |
 | Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                                                                                                                                                                                                         |
 
@@ -1108,9 +1109,8 @@ Moved to [history](master-tickets-history.md#ref-32-acceptance).
 
 Moved to [history](master-tickets-history.md#verify-7-and-verify-6-delivery).
 
-CLIP-9b retains the reference inventory's remaining zoom-edge interaction. `Timeline.tsx` renders
-zoom intervals as selection buttons only; inspector start/duration fields do not supply timeline
-edge dragging. CLIP-9's delivered row describes generation, not completion of this reference extra.
+REF-58 delivered timeline zoom-edge resizing at `79a058b`. CLIP-9c delivered Inspector curve editing
+at `beefd03`. Neither adds CLIP-9b's independent ramp-duration handles and fields.
 
 Moved to [history](master-tickets-history.md#clip-9b-creation-slice-and-add-zoom-follow-up).
 
@@ -1189,7 +1189,10 @@ Those mappings resolve to this list. That did not previously mean every informat
 had a queued disposition. The following **33 notes** now do too. R, T and A are source-note labels
 in original order, not ticket IDs or new queues.
 
-### Informational recommendation coverage
+### Historical informational recommendation coverage
+
+This table records the original observations. Later dispositions, including REF-28 and REF-35/36,
+live at the linked ticket rows rather than in a second status column here.
 
 Dispositions use commit diffs and existing receipts, not a fresh mutation or browser audit. "Open"
 means the exact recommended edge case is not established by those receipts. Related work does not
@@ -1544,9 +1547,14 @@ SRT/VTT remains the existing backlog scope, not a reason to duplicate the burned
 Scope and acceptance for the image part of CLIP-20, added on 2026-11-16. The
 [reuse research thread](https://ampcode.com/threads/T-01a1ddd8-535c-7129-a7d7-9a0c28f41449) relayed
 it as the owner's explicit request; the queue thread did not see the owner's message itself. Ticket
-maintenance only: CLIP-20 keeps its place, its REF-1 gate and its other parts (wallpaper, gradient,
-color, inset, shadow). Not started as a CLIP-20 background control; CLIP-2c (`1de89b5`) delivered a
-Background track role that can hold a full-stage still underlay, which may cover part of this scope.
+maintenance only for the original request. CLIP-2c (`1de89b5`) delivered the Background track role.
+CLIP-20c delivered colour, gradients and shadow; CLIP-20d delivered the image controls and WebP.
+CLIP-19 owns inset geometry. Do not repeat those changes under the wallpaper preset slice.
+
+Luna's grant is limited to built-in gradient wallpaper presets in the existing background panel.
+Apply a preset as one existing layout edit. Reuse the persisted colour, gradient and angle fields so
+preview, frame copy and export stay on the same path. Keep custom editing and the image workflow.
+Use original gradients only. No new layout field, asset, renderer, shared styles or dependency.
 
 Outcome: import a local still image as the composition background. The file stays in the browser.
 
