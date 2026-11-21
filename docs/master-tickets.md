@@ -373,7 +373,7 @@ PUB-1's renderer and intent link, and in the gated chains, because no other tick
 | --------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | Queue and delivery    | [T-ece3431c](https://ampcode.com/threads/T-ece3431c-d973-4e4a-a681-2a53c307e478)      | Grants, review dispatch, acceptance, exclusive main push slot and promotion requests |
 | Main implementation   | [T-01a1fc9d-05a4](https://ampcode.com/threads/T-01a1fc9d-05a4-7256-812f-f7bbf1424807) | CLIP-50                                                                              |
-| Small implementation  | [T-01a1fc9d-17f5](https://ampcode.com/threads/T-01a1fc9d-17f5-749f-8f67-516324d617fa) | UI-10 InfoNote test follow-up                                                        |
+| Small implementation  | [T-01a1fc9d-17f5](https://ampcode.com/threads/T-01a1fc9d-17f5-749f-8f67-516324d617fa) | UI-10 follow-up delivered; no active grant                                           |
 | Code review           | [T-0f957ef1](https://ampcode.com/threads/T-0f957ef1-ca72-4659-af83-2787cd53508f)      | The one review per ticket, with `ce-code-review`                                     |
 | Cursor implementation | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a)      | Speed-style unit delivered; no active implementation grant                           |
 | Cursor inspector      | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214)      | Inspector delivered; no active implementation grant                                  |
@@ -703,7 +703,6 @@ against `aa6db5b`.
 | Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                                                                                                                                                                                                                     |
 | Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                                                                                                                                                                                                                                                           |
 | Main implementation      | CLIP-50: `src/App.tsx`, `src/Composition.tsx`, `src/Mixer.stories.tsx`, `src/Mixer.tsx`, `src/audio-meter.ts`, `src/components.tsx`, `src/export.ts`, `src/project.test.ts`, `src/project.ts`, `src/scrub-audio.test.ts`, `src/scrub-audio.ts`, `src/styles.css`, `src/timeline-model.ts`, `tests/mixer-strips.spec.ts`, `tests/transport-audio.spec.ts` |
-| Small implementation     | UI-10 follow-up: `tests/cursor-inspector.spec.ts` only                                                                                                                                                                                                                                                                                                   |
 | Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                                                                                                                                                                                                         |
 
 Moved to [history](master-tickets-history.md#released-path-reservations).
@@ -865,10 +864,14 @@ the requested separate local polish only after checking keyboard behavior, legac
 final-head gates and inspected states. It does not own UI-11 selection semantics, CLIP-2d saved
 visibility, or already delivered UI-1 tooltips. Preserve the original candidate and backup.
 
-UI-10 review P3 follow-up, granted to Luna high on 2026-11-21: add one browser assertion in
-`tests/cursor-inspector.spec.ts` that pressing the InfoNote inside the Choice label opens the note
-but not the Choice popup. Reuse the existing browser coverage. If main fails this check, report the
-defect before editing production code. This grant does not reopen UI-10's delivered scope.
+UI-10 review P3 follow-up delivered on 2026-11-21 at `5af5718` with [green exact-SHA
+CI][ui10-test-ci]. Luna added one assertion in `tests/cursor-inspector.spec.ts`: pressing the
+Animation InfoNote opens the note but not the Choice popup. The sole reviewer issued LAND on tree
+`7c16da1` and confirmed the assertion fails when the Choice actually opens. Coordinator acceptance
+passed the focused production browser spec, 397 unit tests, both builds, and static and Fallow
+gates. No runtime change. The test path reservation is released.
+
+[ui10-test-ci]: https://github.com/mite404/clipper/actions/runs/44880710844
 
 UI-11 preserves recording-wide cursor settings ownership while changing which editable controls are
 visible. Verify relevant selection, unrelated selection, no selection and source-sidecar access. Do
@@ -1169,7 +1172,12 @@ isolated performance checks precede the sole review. Neither acceptance nor LAND
 smoke passed 34 paused and playing states across 17 widths. It verified the live tool count,
 Disconnect cancellation, stale-probe rejection, and byte-matched public assets.
 
+Supplemental verification closed the local sparse-file gap. The unchanged refusal spec passed 1/1 on
+`b309160` (docs-only over `41039a9`) in a 6 GiB orb, with no retries or skips. Peak memory was 3.42
+GiB, above the earlier 3 GiB cap. See the [medium-orb receipt][clip51-sparse].
+
 [clip51-ci]: https://github.com/mite404/clipper/actions/runs/44875088169/attempts/2
+[clip51-sparse]: https://ampcode.com/threads/T-01a1fcf3-bf90-7302-9d75-38f9c0a496db?message=16
 
 ## Delta audit, 2026-11-16
 
