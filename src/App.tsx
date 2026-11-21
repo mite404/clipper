@@ -44,6 +44,7 @@ import {
   ZoomIn,
   Sparkles,
 } from 'lucide-react';
+import { CommandMenu } from './CommandMenu';
 import { Composition } from './Composition';
 import {
   Choice,
@@ -1490,6 +1491,11 @@ export function App() {
   const [mixer, setMixer] = useState(false);
   const [message, setMessage] = useState('Ready for your next story.');
   const [help, setHelp] = useState(false);
+  const [commandMenuOpen, setCommandMenuOpen] = useState(false);
+  const commandOpener = useRef<HTMLElement | undefined>(undefined);
+  const commandTrigger = useRef<HTMLButtonElement>(null);
+  const exportAfterCommands = useRef(false);
+  const projectPicker = useRef<HTMLInputElement>(null);
   // The mouse focus being dragged on the screen video, committed to its zoom on release.
   const [mark, setMark] = useState<{ id: string; x: number; y: number } | null>(null);
   const [exportWidth, setExportWidth] = useState<1920 | 3840>(1920);
@@ -2136,6 +2142,7 @@ export function App() {
 
   useLayoutEffect(() => {
     const keydown = (event: KeyboardEvent) => {
+      if (commandMenuOpen) return;
       if (help || busy || exportProgress !== null || markingMouse || exportDialog.current?.open)
         return;
       // A label drag owns the edit until it ends: a shortcut now would be overwritten by the next
@@ -2174,6 +2181,21 @@ export function App() {
         }
         if (key !== ' ' && !slider) return;
       } else if (target?.tagName === 'TEXTAREA' || target?.isContentEditable) return;
+      if (
+        key === '?' &&
+        !event.defaultPrevented &&
+        !event.isComposing &&
+        !event.metaKey &&
+        !event.ctrlKey &&
+        !event.altKey &&
+        target?.closest('#sequence-pane')
+      ) {
+        if (event.repeat) return;
+        event.preventDefault();
+        commandOpener.current = target;
+        setCommandMenuOpen(true);
+        return;
+      }
       // Physical K, so Option+K's dead key still matches; only the platform's one modifier.
       if (
         event.code === 'KeyK' &&
@@ -2274,6 +2296,7 @@ export function App() {
     removeSelected,
     undo,
     help,
+    commandMenuOpen,
     busy,
     exportProgress,
     markingMouse,
@@ -2590,6 +2613,13 @@ export function App() {
     [compositionProps, duration, speed, previewWidth],
   );
 
+  const projectActionsBlocked = busy || exportProgress !== null;
+  const exportBlocked = projectActionsBlocked || !edit.clips.length;
+  const openExport = () => {
+    setSpeed(0);
+    exportDialog.current?.showModal();
+  };
+
   return (
     <main className="editor">
       <header className="app-header">
@@ -2610,17 +2640,18 @@ export function App() {
         <button
           className="save-button"
           onClick={() => void saveProject()}
-          disabled={busy || exportProgress !== null}
+          disabled={projectActionsBlocked}
         >
           <ArrowDownToLine size={14} /> Save project
         </button>
         <label className="save-button project-open">
           <FolderOpen size={14} /> Open project
           <input
+            ref={projectPicker}
             aria-label="Open local project"
             type="file"
             accept=".json,.clipper"
-            disabled={busy || exportProgress !== null}
+            disabled={projectActionsBlocked}
             onChange={(event) => {
               const file = event.target.files?.[0];
               if (file && mayDiscard()) void openProject(file);
@@ -2676,11 +2707,8 @@ export function App() {
             <button
               ref={exportButton}
               className="secondary-button"
-              disabled={busy || !edit.clips.length || exportProgress !== null}
-              onClick={() => {
-                setSpeed(0);
-                exportDialog.current?.showModal();
-              }}
+              disabled={exportBlocked}
+              onClick={openExport}
             >
               Export video
             </button>
@@ -2697,6 +2725,58 @@ export function App() {
         >
           <CircleHelp size={14} /> Shortcuts
         </button>
+        <span>
+          <CommandMenu
+            triggerRef={commandTrigger}
+            open={commandMenuOpen}
+            disabled={projectActionsBlocked}
+            onOpenChange={(next) => {
+              if (next) {
+                if (projectActionsBlocked) return;
+                commandOpener.current = undefined;
+              }
+              setCommandMenuOpen(next);
+            }}
+            returnFocus={() => commandOpener.current}
+            onClosed={() => {
+              if (!exportAfterCommands.current) return;
+              exportAfterCommands.current = false;
+              if (exportBlocked) return;
+              // Native dialogs restore the focus that is active at showModal().
+              (commandOpener.current ?? commandTrigger.current)?.focus();
+              openExport();
+            }}
+            commands={[
+              { id: 'undo', label: 'Undo', disabled: !history.length, run: undo },
+              {
+                id: 'split',
+                label: 'Split selected clip',
+                disabled: !selectedClip && !selectedTracks.length,
+                run: split,
+              },
+              {
+                id: 'save',
+                label: 'Save project',
+                disabled: projectActionsBlocked,
+                run: () => void saveProject(),
+              },
+              {
+                id: 'open',
+                label: 'Open project',
+                disabled: projectActionsBlocked,
+                run: () => projectPicker.current?.click(),
+              },
+              {
+                id: 'export',
+                label: 'Export video',
+                disabled: exportBlocked,
+                run: () => {
+                  exportAfterCommands.current = true;
+                },
+              },
+            ]}
+          />
+        </span>
       </div>
       {exportProgress !== null && (
         <div className="export-progress" role="status">

@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from '@ui-sdk/react/dialog';
 import { Search } from 'lucide-react';
-import { useRef } from 'react';
+import { useRef, type Ref } from 'react';
 
 type EditorCommand = { id: string; label: string; disabled?: boolean; run: () => void };
 
@@ -68,18 +68,40 @@ export function CommandMenu({
   open,
   onOpenChange,
   commands,
+  disabled,
+  triggerRef,
+  returnFocus,
+  onClosed,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   commands: readonly EditorCommand[];
+  disabled?: boolean;
+  triggerRef?: Ref<HTMLButtonElement>;
+  returnFocus?: () => HTMLElement | undefined;
+  onClosed?: () => void;
 }) {
   const search = useRef<HTMLInputElement>(null);
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger className="secondary-button">Search commands</DialogTrigger>
+    <Dialog
+      open={open}
+      onOpenChange={onOpenChange}
+      onOpenChangeComplete={(next) => !next && onClosed?.()}
+    >
+      <DialogTrigger
+        ref={triggerRef}
+        className="text-button"
+        aria-disabled={disabled || undefined}
+        onKeyDown={(event) => {
+          if (event.key === ' ') event.stopPropagation();
+        }}
+      >
+        <Search size={14} aria-hidden="true" /> Search commands
+      </DialogTrigger>
       <DialogContent
         className="command-menu"
         initialFocus={() => search.current}
+        finalFocus={returnFocus}
         onKeyDownCapture={(event) => {
           if (event.key !== 'Escape' || event.nativeEvent.isComposing) return;
           // Command consumes Escape to clear its query. Here Escape dismisses the menu instead.
