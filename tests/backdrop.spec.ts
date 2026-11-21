@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { choose, expectChoice } from './choice';
+import { choose, expectChoice, expectChoiceLabel } from './choice';
 
 test.use({ permissions: ['clipboard-read', 'clipboard-write'], deviceScaleFactor: 2 });
 
@@ -216,6 +216,32 @@ test('a gradient preset is one undo and survives save, copy and reopen', async (
   await expect
     .poll(() => stageStyle(page, 'backgroundImage'))
     .toBe('linear-gradient(90deg, rgb(18, 59, 90), rgb(83, 214, 182))');
+});
+
+test('Custom is derived from manual edits and cannot replace an active preset', async ({ page }) => {
+  await openEditor(page);
+  await choose(style(page), 'gradient');
+  const preset = page.getByRole('combobox', { name: 'Gradient preset' });
+  await choose(preset, 'aurora');
+
+  await preset.focus();
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('listbox')).toBeVisible();
+  await expect(page.getByRole('option', { name: 'Custom', exact: true })).toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
+  await page.keyboard.press('ArrowDown');
+  await page.keyboard.press('Enter');
+  await expectChoice(preset, 'ember');
+  await expect(color(page, 'Gradient start')).toHaveValue('#4d2547');
+
+  await color(page, 'Gradient start').fill('#abcdef');
+  await expectChoice(preset, 'custom');
+  await expectChoiceLabel(preset, 'Custom');
+  await choose(preset, 'tidal');
+  await expect(color(page, 'Gradient start')).toHaveValue('#123d4a');
+  await expectChoice(preset, 'tidal');
 });
 
 test('Panel shadow draws under the panels, and 0 takes it off the saved file again', async ({
