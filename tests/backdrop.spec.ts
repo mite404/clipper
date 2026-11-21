@@ -172,6 +172,52 @@ test('Gradient starts from #3b2a6b to #172324 at 135 degrees, edits each part, a
   expect(await savedLayout(page)).not.toHaveProperty('fillAngle');
 });
 
+test('a gradient preset is one undo and survives save, copy and reopen', async ({ page }) => {
+  await openEditor(page);
+  await choose(style(page), 'gradient');
+  const preset = page.getByRole('combobox', { name: 'Gradient preset' });
+  await expectChoice(preset, 'custom');
+  await choose(preset, 'aurora');
+  await expect(color(page, 'Gradient start')).toHaveValue('#123b5a');
+  await expect(color(page, 'Gradient end')).toHaveValue('#53d6b6');
+  await expect(slider(page, 'Gradient angle')).toHaveValue('90');
+  await expect
+    .poll(() => stageStyle(page, 'backgroundImage'))
+    .toBe('linear-gradient(90deg, rgb(18, 59, 90), rgb(83, 214, 182))');
+  await expect(undo(page)).toBeEnabled();
+  await undo(page).click();
+  await expectChoice(preset, 'custom');
+  await expect(color(page, 'Gradient start')).toHaveValue('#3b2a6b');
+  await expect(color(page, 'Gradient end')).toHaveValue('#172324');
+  await expect(slider(page, 'Gradient angle')).toHaveValue('135');
+  await choose(preset, 'aurora');
+
+  const preview = await sample(page, await stage(page).screenshot(), PROBES);
+  const copy = await sample(page, await copiedFrame(page), PROBES);
+  PROBES.forEach((_, i) => expect(near(copy[i], preview[i], 8)).toBe(true));
+
+  const saved = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Save project', exact: true }).click();
+  const file = readFileSync((await (await saved).path())!);
+  expect(JSON.parse(file.toString()).layout).toMatchObject({
+    fill: '#123b5a',
+    fillTo: '#53d6b6',
+    fillAngle: 90,
+  });
+  await page.reload();
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await page
+    .getByLabel('Open local project')
+    .setInputFiles({ name: 'gradient.clipper.json', mimeType: 'application/json', buffer: file });
+  await expectChoice(preset, 'aurora');
+  await expect(color(page, 'Gradient start')).toHaveValue('#123b5a');
+  await expect(color(page, 'Gradient end')).toHaveValue('#53d6b6');
+  await expect(slider(page, 'Gradient angle')).toHaveValue('90');
+  await expect
+    .poll(() => stageStyle(page, 'backgroundImage'))
+    .toBe('linear-gradient(90deg, rgb(18, 59, 90), rgb(83, 214, 182))');
+});
+
 test('Panel shadow draws under the panels, and 0 takes it off the saved file again', async ({
   page,
 }) => {

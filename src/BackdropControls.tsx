@@ -9,6 +9,18 @@ import {
   type Layout,
 } from './stage';
 
+const GRADIENT_PRESETS = [
+  { name: 'aurora', label: 'Aurora', fill: '#123b5a', fillTo: '#53d6b6', angle: 90 },
+  { name: 'ember', label: 'Ember', fill: '#4d2547', fillTo: '#f18b5d', angle: 135 },
+  { name: 'tidal', label: 'Tidal', fill: '#123d4a', fillTo: '#7bbbd1', angle: 35 },
+  { name: 'dusk', label: 'Dusk', fill: '#362c67', fillTo: '#c66b9b', angle: 160 },
+] as const;
+type GradientPreset = 'custom' | (typeof GRADIENT_PRESETS)[number]['name'];
+const GRADIENT_PRESET_OPTIONS: { value: GradientPreset; label: string }[] = [
+  { value: 'custom', label: 'Custom' },
+  ...GRADIENT_PRESETS.map(({ name, label }) => ({ value: name, label })),
+];
+
 /**
  * A colour field: the browser's picker with its hex beside it. A pick commits once, when the
  * picker applies it or the field loses focus, so dragging through the picker is one undo step.
@@ -94,6 +106,40 @@ function Slider({
   );
 }
 
+function GradientPresetField({
+  layout,
+  onLayout,
+}: {
+  layout: Layout;
+  onLayout: (layout: Layout) => void;
+}) {
+  const { fillTo, fillAngle = DEFAULT_GRADIENT.angle } = layout;
+  const activePreset = GRADIENT_PRESETS.find(
+    (preset) =>
+      preset.fill === layout.fill && preset.fillTo === fillTo && preset.angle === fillAngle,
+  );
+  return (
+    <label className="slider-label choice-row">
+      Gradient preset
+      <Choice
+        label="Gradient preset"
+        value={activePreset?.name ?? 'custom'}
+        options={GRADIENT_PRESET_OPTIONS}
+        onChange={(name) => {
+          const preset = GRADIENT_PRESETS.find((candidate) => candidate.name === name);
+          if (preset)
+            onLayout({
+              ...layout,
+              fill: preset.fill,
+              fillTo: preset.fillTo,
+              fillAngle: preset.angle,
+            });
+        }}
+      />
+    </label>
+  );
+}
+
 // The colours and angle that belong to the current style: one colour, or a gradient's two and angle.
 function BackdropColors({
   layout,
@@ -113,6 +159,7 @@ function BackdropColors({
     );
   return (
     <>
+      <GradientPresetField layout={layout} onLayout={onLayout} />
       <ColorField
         label="Gradient start"
         value={layout.fill ?? DEFAULT_GRADIENT.from}
