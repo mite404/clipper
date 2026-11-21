@@ -260,6 +260,18 @@ describe('portable project parsing', () => {
     });
   });
 
+  it('reads only the nondefault square aspect and preserves the saved mask coordinates', () => {
+    const square = project();
+    const screenMask = { x: 128, y: 180, width: 640, height: 360 };
+    Object.assign(square.layout, { aspect: 'square', screenMask });
+    expect(parseProject(JSON.stringify(square)).edit.layout).toMatchObject({
+      aspect: 'square',
+      screenMask,
+    });
+    Object.assign(square.layout, { aspect: 'portrait' });
+    expect(() => parseProject(JSON.stringify(square))).toThrow(/layout\.aspect/);
+  });
+
   it('reads custom mask bounds when present, and rejects off-stage or partial ones', () => {
     const custom = project();
     const screenMask = { x: 100, y: 60, width: 500, height: 400 };

@@ -849,6 +849,29 @@ p {
   border: 0;
   border-radius: 0;
 }
+.compose-stage[data-aspect='square']:not(:fullscreen) {
+  aspect-ratio: 1;
+  max-width: min(100%, max(180px, 100dvh - 756px));
+  margin-inline: auto;
+}
+@media (max-width: 960px) {
+  .compose-stage[data-aspect='square']:not(:fullscreen) {
+    max-width: min(100%, 34dvh);
+  }
+}
+.compose-frame {
+  display: contents;
+}
+.compose-stage[data-aspect='square']:fullscreen {
+  display: grid;
+  place-items: center;
+}
+.compose-stage[data-aspect='square']:fullscreen .compose-frame {
+  display: block;
+  position: relative;
+  width: min(100vw, 100dvh);
+  aspect-ratio: 1;
+}
 .esc-pill {
   position: absolute;
   top: 12px;

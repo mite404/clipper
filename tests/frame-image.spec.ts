@@ -350,6 +350,39 @@ test('applies crop position and zoom, and the 4K width', async ({ page }) => {
   expect(near(uhd.px[0], [255, 255, 255], 12)).toBe(true);
 });
 
+test('renders square pixels with a projected custom mask and uniform source cover', async ({
+  page,
+}) => {
+  await buildFixture(page);
+  const { w, h, px } = await renderAt(
+    page,
+    4,
+    [
+      [625, 640],
+      [525, 640],
+      [100, 640],
+    ],
+    {
+      width: 1080,
+      layout: {
+        aspect: 'square',
+        radius: 0,
+        screenX: 50,
+        screenY: 50,
+        cameraX: 50,
+        cameraY: 50,
+        screenMask: { x: 128, y: 180, width: 640, height: 360 },
+        cameraMask: { x: 880, y: 10, width: 380, height: 700 },
+      },
+    },
+  );
+  expect([w, h]).toEqual([1080, 1080]);
+  // Width 1600 scales to 1024 at 640 high; the white band lands at x=550.4..652.8.
+  expect(near(px[0], [255, 255, 255], 12)).toBe(true);
+  expect(near(px[1], hue(7))).toBe(true);
+  expect(near(px[2], [23, 35, 36], 6)).toBe(true);
+});
+
 test('draws the rotated cursor about its hotspot and nothing without rotation', async ({
   page,
 }) => {

@@ -22,6 +22,23 @@ import {
 const layout = { radius: 22, screenX: 20, screenY: 70, cameraX: 80, cameraY: 25 };
 
 describe('laying out the stage', () => {
+  it('reflows square panels and projects custom bounds without resizing the source unevenly', () => {
+    const square = { ...layout, aspect: 'square' as const };
+    expect(maskRect('screen', square)).toEqual({ x: 10, y: 10, width: 880, height: 1260 });
+    expect(maskRect('camera', { ...square, mode: 'pip' })).toEqual({
+      x: 840,
+      y: 1023.75,
+      width: 420,
+      height: 236.25,
+    });
+    const screenMask = { x: 128, y: 180, width: 640, height: 360 };
+    const mask = maskRect('screen', { ...square, screenMask }, { width: 1080, height: 1080 });
+    expect(mask).toEqual({ x: 108, y: 270, width: 540, height: 540 });
+    const image = clipRect(mask, { width: 960, height: 480 }, { x: 50, y: 50 }, {});
+    expect(image.width).toBe(image.height * 2);
+    expect(defaultMaskRect('screen', square)).toEqual(defaultMaskRect('screen', layout));
+  });
+
   it('places the screen and camera masks, and swaps their sides', () => {
     expect(STAGE).toEqual({ width: 1280, height: 720 });
     expect(maskRect('screen', layout)).toEqual({ x: 10, y: 10, width: 880, height: 700 });

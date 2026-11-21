@@ -19,7 +19,8 @@ import { openMedia, type Asset } from './media';
 import {
   DEFAULT_FILL,
   DEFAULT_GRADIENT,
-  STAGE,
+  OUTPUT_SIZES,
+  stageSize,
   cameraTransform,
   clipRect,
   cropPosition,
@@ -62,7 +63,7 @@ export type RenderVideoOptions = {
   muted: Track[];
   /** Solo audio tracks; any solo narrows the mix to them, mute still wins. Absent, all sound. */
   solo?: Track[];
-  width: 1920 | 3840;
+  width: keyof typeof OUTPUT_SIZES;
   /** Explicit container, with no substitution. Omit for automatic MP4/WebM negotiation.
    * MOV uses AVC and uncompressed 16-bit PCM audio (about 11.5 MB/minute at stereo 48 kHz).
    */
@@ -171,21 +172,30 @@ type Layer = {
   sizing: Pick<Clip, 'fit' | 'scale'>;
 };
 
+function rasterSize(width: keyof typeof OUTPUT_SIZES, layout: Layout) {
+  const output = OUTPUT_SIZES[width];
+  const stage = stageSize(layout);
+  if (!output || width * stage.height !== output.height * stage.width)
+    throw new Error('Output resolution must match the layout aspect.');
+  return { height: output.height, scale: width / stage.width };
+}
+
 // Paint one composition frame in stage pixels: backdrop, then each visual track back to front in
 // its role's rect, crop and zoom. Anything that must move with the screen, such as a recorded
 // cursor, is drawn inside its clip.
 // The stage behind the panels: the layout's colour or gradient over the whole stage.
 function paintBackdrop(context: CanvasRenderingContext2D, layout: Layout): void {
   const { fill = DEFAULT_FILL, fillTo, fillAngle = DEFAULT_GRADIENT.angle } = layout;
+  const stage = stageSize(layout);
   if (fillTo === undefined) context.fillStyle = fill;
   else {
-    const { x0, y0, x1, y1 } = gradientLine(fillAngle, STAGE);
+    const { x0, y0, x1, y1 } = gradientLine(fillAngle, stage);
     const gradient = context.createLinearGradient(x0, y0, x1, y1);
     gradient.addColorStop(0, fill);
     gradient.addColorStop(1, fillTo);
     context.fillStyle = gradient;
   }
-  context.fillRect(0, 0, STAGE.width, STAGE.height);
+  context.fillRect(0, 0, stage.width, stage.height);
 }
 
 // A panel's drop shadow, only outside its rounded box as CSS `box-shadow` has it. Canvas shadow
@@ -202,7 +212,8 @@ function paintShadow(
   const radius = Math.max(0, layout.radius);
   context.save();
   context.beginPath();
-  context.rect(0, 0, STAGE.width, STAGE.height);
+  const stage = stageSize(layout);
+  context.rect(0, 0, stage.width, stage.height);
   context.roundRect(mask.x, mask.y, mask.width, mask.height, radius);
   context.clip('evenodd');
   context.beginPath();
@@ -357,12 +368,11 @@ export async function renderFrameImage({
 }: RenderFrameImageOptions): Promise<Blob> {
   const check = () => signal?.throwIfAborted();
   check();
-  if (width !== 1920 && width !== 3840) throw new Error('Image width must be 1920 or 3840.');
   const frames = Math.max(0, ...clips.map((clip) => clip.start + clip.duration));
   if (frames <= 0) throw new Error('Add clips before copying a frame.');
   if (!Number.isInteger(frame) || frame < 0 || frame >= frames)
     throw new Error('That frame is outside the timeline.');
-  const height = (width * 9) / 16;
+  const { height, scale } = rasterSize(width, layout);
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
@@ -380,7 +390,7 @@ export async function renderFrameImage({
       check();
       if (image) layers.push({ track: clip.track, image, sizing: clip });
     }
-    context.setTransform(width / STAGE.width, 0, 0, height / STAGE.height, 0, 0);
+    context.setTransform(scale, 0, 0, scale, 0, 0);
     const paths = prepareFraming(zooms, clips, assets, layout, tracks);
     drawFrame(
       context,
@@ -433,10 +443,9 @@ export async function renderVideo({
 }: RenderVideoOptions): Promise<Blob> {
   const check = () => signal?.throwIfAborted();
   check();
-  if (width !== 1920 && width !== 3840) throw new Error('Export width must be 1920 or 3840.');
+  const { height, scale } = rasterSize(width, layout);
   const frames = Math.max(0, ...clips.map((clip) => clip.start + clip.duration));
   if (!Number.isInteger(frames) || frames <= 0) throw new Error('Add clips before exporting.');
-  const height = (width * 9) / 16;
   const rate = outputRate(fps); // → exact p/q
   const samples = outputFrames(frames, rate);
   const master = gainFactor(gain);
@@ -537,7 +546,7 @@ export async function renderVideo({
       await audio.add(mixed);
       audio.close();
     }
-    context.setTransform(width / STAGE.width, 0, 0, height / STAGE.height, 0, 0);
+    context.setTransform(scale, 0, 0, scale, 0, 0);
     const paths = prepareFraming(zooms, clips, assets, layout, tracks);
     for (let index = 0; index < samples; index++) {
       check();

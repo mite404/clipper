@@ -191,6 +191,10 @@ function layoutOf(value: unknown): Layout {
     if (settings.mode !== 'pip') throw new Error('layout.mode must be pip when present.');
     layout.mode = settings.mode;
   }
+  if (settings.aspect !== undefined) {
+    if (settings.aspect !== 'square') throw new Error('layout.aspect must be square when present.');
+    layout.aspect = settings.aspect;
+  }
   if (settings.corner !== undefined) {
     if (!CORNERS.includes(settings.corner as Corner))
       throw new Error('layout.corner must be top-left, top-right, bottom-left or bottom-right.');

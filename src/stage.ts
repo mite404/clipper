@@ -4,6 +4,7 @@ import type { Clip, VisualRole } from './timeline-model';
 export const CORNERS = ['top-left', 'top-right', 'bottom-left', 'bottom-right'] as const;
 export type Corner = (typeof CORNERS)[number];
 export type Layout = {
+  aspect?: 'square';
   // Side by side when absent. In PiP, swapped is kept but not applied.
   mode?: 'pip';
   // The PiP inset's corner; bottom-right when absent.
@@ -46,6 +47,19 @@ const CENTER: Point = { x: 50, y: 50 };
 
 /** Normalized edit coordinates. Actual composer and export dimensions are selected separately. */
 export const STAGE = { width: 1280, height: 720 };
+const SQUARE_STAGE = { width: STAGE.width, height: STAGE.width };
+
+/** The render coordinate box; persisted mask coordinates always use the wide STAGE. */
+export function stageSize({ aspect }: Layout): Size {
+  return aspect === 'square' ? SQUARE_STAGE : STAGE;
+}
+
+/** The three supported output presets, keyed by their unique width. */
+export const OUTPUT_SIZES = {
+  1080: { width: 1080, height: 1080, suffix: 'square' },
+  1920: { width: 1920, height: 1080, suffix: '1080p' },
+  3840: { width: 3840, height: 2160, suffix: '4k' },
+} as const;
 
 /** The stage colour with no fill chosen. */
 export const DEFAULT_FILL = '#172324';
@@ -143,16 +157,19 @@ export const DEFAULT_PIP_SIZE = 1 / 3;
 
 // A layout's panel geometry in edit coordinates: the panels' bounds, their side-by-side widths,
 // and the PiP inset's 16:9 size.
-function geometry({
-  padding = DEFAULT_PADDING,
-  screenShare = DEFAULT_SCREEN_SHARE,
-  pipSize = DEFAULT_PIP_SIZE,
-}: Layout) {
+function geometry(
+  {
+    padding = DEFAULT_PADDING,
+    screenShare = DEFAULT_SCREEN_SHARE,
+    pipSize = DEFAULT_PIP_SIZE,
+  }: Layout,
+  size: Size,
+) {
   const full: Rect = {
     x: padding,
     y: padding,
-    width: STAGE.width - 2 * padding,
-    height: STAGE.height - 2 * padding,
+    width: size.width - 2 * padding,
+    height: size.height - 2 * padding,
   };
   const screen = screenShare * (full.width - GAP);
   const insetWidth = full.width * pipSize;
@@ -179,23 +196,24 @@ function insetRect(
  * Where a visual role paints, in render pixels or normalized edit coordinates when size is
  * omitted: a background fills the whole stage, a screen or camera its mask.
  */
-export function maskRect(track: VisualRole, layout: Layout, size: Size = STAGE): Rect {
+export function maskRect(track: VisualRole, layout: Layout, size: Size = stageSize(layout)): Rect {
   if (track === 'background') return { x: 0, y: 0, ...size };
-  const scaleX = size.width / STAGE.width;
-  const scaleY = size.height / STAGE.height;
+  const stage = stageSize(layout);
   // Custom bounds replace the proportional geometry wholesale; clampMask keeps them on stage.
   const custom = track === 'screen' ? layout.screenMask : layout.cameraMask;
   if (custom) {
     const rect = clampMask(custom); // → edit rect inside the stage
     return {
-      x: rect.x * scaleX,
-      y: rect.y * scaleY,
-      width: rect.width * scaleX,
-      height: rect.height * scaleY,
+      x: rect.x * (size.width / STAGE.width),
+      y: rect.y * (size.height / STAGE.height),
+      width: rect.width * (size.width / STAGE.width),
+      height: rect.height * (size.height / STAGE.height),
     };
   }
   const first: VideoTrack = layout.swapped ? 'camera' : 'screen';
-  const panels = geometry(layout); // → panels, mask widths and inset in edit coordinates
+  const panels = geometry(layout, stage); // → panels, mask widths and inset in stage coordinates
+  const scaleX = size.width / stage.width;
+  const scaleY = size.height / stage.height;
   if (layout.mode === 'pip') {
     const rect = track === 'screen' ? panels.full : insetRect(layout.corner, panels); // → edit rect
     return {
@@ -215,7 +233,7 @@ export function maskRect(track: VisualRole, layout: Layout, size: Size = STAGE):
 
 /** A role's proportional mask bounds in edit px: what maskRect computes without custom bounds. */
 export function defaultMaskRect(track: VideoTrack, layout: Layout): Rect {
-  const { screenMask: _screen, cameraMask: _camera, ...proportional } = layout;
+  const { screenMask: _screen, cameraMask: _camera, aspect: _aspect, ...proportional } = layout;
   return maskRect(track, proportional); // → edit rect
 }
 

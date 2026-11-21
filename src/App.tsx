@@ -147,10 +147,12 @@ import {
   DEFAULT_SCREEN_SHARE,
   defaultMaskRect,
   maskRect,
+  OUTPUT_SIZES,
   PADDING_MAX,
   PIP_SIZE_LIMITS,
   SCREEN_SHARE_LIMITS,
   STAGE,
+  stageSize,
   stageValueFromText,
   withMaskBounds,
   type Layout,
@@ -1498,7 +1500,7 @@ export function App() {
   const projectPicker = useRef<HTMLInputElement>(null);
   // The mouse focus being dragged on the screen video, committed to its zoom on release.
   const [mark, setMark] = useState<{ id: string; x: number; y: number } | null>(null);
-  const [exportWidth, setExportWidth] = useState<1920 | 3840>(1920);
+  const [wideWidth, setWideWidth] = useState<1920 | 3840>(1920);
   const [previewQuality, setPreviewQuality] = useState(savedPreviewQuality);
   // Fullscreen preview: the browser owns Esc; we mirror fullscreenchange and stage hover so the
   // "esc" pill renders only while the pointer is over the fullscreen video.
@@ -1567,6 +1569,7 @@ export function App() {
   // A press on the screen video marks the selected zoom, else the one under the playhead.
   const markZoom =
     selectedZoom ?? edit.zooms.find((z) => frame >= z.start && frame < z.start + z.duration);
+  const stageGeometry = stageSize(edit.layout);
   const screenMask = maskRect('screen', edit.layout); // → stage rect the mouse target covers
   const selectedClip = edit.clips.find((c) => c.id === selected);
   // Chapters past the end of the sequence stay in the file but are neither drawn nor listed.
@@ -2457,7 +2460,8 @@ export function App() {
       setBusy(false);
     }
   };
-  const exportBasename = `developer-walkthrough-${exportWidth === 1920 ? '1080p' : '4k'}`;
+  const output = OUTPUT_SIZES[edit.layout.aspect === 'square' ? 1080 : wideWidth];
+  const exportBasename = `developer-walkthrough-${output.suffix}`;
   const exportVideo = async () => {
     setSpeed(0);
     setExportProgress(0);
@@ -2472,7 +2476,7 @@ export function App() {
         assets,
         muted,
         solo,
-        width: exportWidth,
+        width: output.width,
         format: exportFormat,
         fps: outputFps,
         gain: recordingGain,
@@ -2490,7 +2494,7 @@ export function App() {
         size: blob.size,
         saved: false,
       });
-      const done = `Video exported at ${exportWidth} × ${(exportWidth * 9) / 16}, ${fpsName(outputFps)}. Rendered locally.`;
+      const done = `Video exported at ${output.width} × ${output.height}, ${fpsName(outputFps)}. Rendered locally.`;
       announce(setMessage, done);
     } catch (error) {
       if (controller.signal.aborted) setMessage('Export cancelled.');
@@ -2512,7 +2516,7 @@ export function App() {
     const snapshot = {
       ...edit,
       assets,
-      width: exportWidth,
+      width: output.width,
       frame: Math.min(Math.max(0, frameRef.current), duration - 1),
     };
     setCopying(true);
@@ -2521,7 +2525,7 @@ export function App() {
       // The promise goes straight into the item so the write starts inside the click.
       const png = import('./export').then(({ renderFrameImage }) => renderFrameImage(snapshot));
       await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
-      const done = `Frame ${snapshot.frame} copied as ${snapshot.width} × ${(snapshot.width * 9) / 16} PNG. Rendered locally.`;
+      const done = `Frame ${snapshot.frame} copied as ${output.width} × ${output.height} PNG. Rendered locally.`;
       announce(setMessage, done);
     } catch (error) {
       const text = `Could not copy frame. ${error instanceof Error ? error.message : 'Unknown error.'}`;
@@ -2591,7 +2595,9 @@ export function App() {
   );
   // The preview is laid out at most 1920 wide, and at a fraction of that, then scaled to the pane:
   // a 4K export must not make it a 3840 layout. Copy frame and export always render the full output.
-  const previewWidth = Math.min(exportWidth, 1920) / PREVIEW_DIVISORS[previewQuality];
+  const previewSize = output.width === 3840 ? OUTPUT_SIZES[1920] : output;
+  const previewWidth = previewSize.width / PREVIEW_DIVISORS[previewQuality];
+  const previewHeight = previewSize.height / PREVIEW_DIVISORS[previewQuality];
   const playerView = useMemo(
     () => (
       <Player
@@ -2600,17 +2606,17 @@ export function App() {
         inputProps={compositionProps}
         durationInFrames={duration}
         compositionWidth={previewWidth}
-        compositionHeight={(previewWidth * 9) / 16}
+        compositionHeight={previewHeight}
         fps={FPS}
         playbackRate={Math.max(1, speed)}
         controls={false}
         clickToPlay={false}
         moveToBeginningWhenEnded={false}
         numberOfSharedAudioTags={8}
-        style={{ width: '100%', aspectRatio: '16 / 9' }}
+        style={{ width: '100%', aspectRatio: `${previewWidth} / ${previewHeight}` }}
       />
     ),
-    [compositionProps, duration, speed, previewWidth],
+    [compositionProps, duration, speed, previewWidth, previewHeight],
   );
 
   const projectActionsBlocked = busy || exportProgress !== null;
@@ -2679,13 +2685,21 @@ export function App() {
           <div className="export-controls">
             <Choice
               label="Export resolution"
-              value={String(exportWidth)}
+              value={String(output.width)}
               disabled={exportProgress !== null}
-              options={[
-                { value: '1920', label: '1920 × 1080' },
-                { value: '3840', label: '3840 × 2160' },
-              ]}
-              onChange={(value) => setExportWidth(value === '3840' ? 3840 : 1920)}
+              options={Object.values(OUTPUT_SIZES).map(({ width, height }) => ({
+                value: String(width),
+                label: `${width} × ${height}`,
+              }))}
+              onChange={(value) => {
+                if (value === '1080') {
+                  change({ ...edit, layout: { ...edit.layout, aspect: 'square' } }, true);
+                  return;
+                }
+                setWideWidth(value === '3840' ? 3840 : 1920);
+                const { aspect, ...layout } = edit.layout;
+                if (aspect) change({ ...edit, layout }, true);
+              }}
             />
             <Choice
               label="Output FPS"
@@ -2846,87 +2860,90 @@ export function App() {
               <div
                 ref={stage}
                 className="compose-stage"
+                data-aspect={edit.layout.aspect}
                 data-testid="compose-monitor"
                 onPointerEnter={() => setStageHover(true)}
                 onPointerLeave={() => setStageHover(false)}
               >
-                {assets.length > 0 ? (
-                  playerView
-                ) : (
-                  <div className="loading-preview">
-                    {busy ? 'Preparing your cutting room…' : 'Import media to start composing'}
-                  </div>
-                )}
-                {edit.layout.mode === 'pip' && !markZoom && (
-                  // Editor-only corner targets over the live preview; Copy frame and export draw the
-                  // composition itself, so these never reach a frame.
-                  <div className="pip-corners" role="group" aria-label="Camera corner">
-                    {CORNERS.map((corner) => {
-                      const slot = maskRect('camera', { ...edit.layout, corner }); // → stage rect
-                      const current = (edit.layout.corner ?? 'bottom-right') === corner;
-                      return (
-                        <button
-                          key={corner}
-                          type="button"
-                          aria-label={`Camera ${corner.replace('-', ' ')}`}
-                          aria-pressed={current}
-                          style={{
-                            left: `${(slot.x / STAGE.width) * 100}%`,
-                            top: `${(slot.y / STAGE.height) * 100}%`,
-                            width: `${(slot.width / STAGE.width) * 100}%`,
-                            height: `${(slot.height / STAGE.height) * 100}%`,
-                            borderRadius: `${(edit.layout.radius / slot.width) * 100}% / ${(edit.layout.radius / slot.height) * 100}%`,
-                          }}
-                          onClick={() => {
-                            if (current) return;
-                            change({ ...edit, layout: { ...edit.layout, corner } });
-                            setMessage(`Camera moved to the ${corner.replace('-', ' ')} corner.`);
-                          }}
-                        />
-                      );
-                    })}
-                  </div>
-                )}
-                {markZoom && (
-                  <div
-                    className="mouse-target"
-                    data-testid="mouse-target"
-                    data-marking={markingMouse || undefined}
-                    aria-hidden="true"
-                    style={{
-                      left: `${(screenMask.x / STAGE.width) * 100}%`,
-                      top: `${(screenMask.y / STAGE.height) * 100}%`,
-                      width: `${(screenMask.width / STAGE.width) * 100}%`,
-                      height: `${(screenMask.height / STAGE.height) * 100}%`,
-                      borderRadius: `${(edit.layout.radius / screenMask.width) * 100}% / ${(edit.layout.radius / screenMask.height) * 100}%`,
-                    }}
-                    onPointerDown={(event) => {
-                      if (event.button !== 0) return;
-                      event.currentTarget.setPointerCapture(event.pointerId);
-                      setSpeed(0);
-                      setSelected(markZoom.id);
-                      setMark({ id: markZoom.id, ...maskPoint(event) });
-                      // Each mark is its own undo step, never merged into the previous edit.
-                      gesture.current = null;
-                    }}
-                    onPointerMove={(event) => mark && setMark({ ...mark, ...maskPoint(event) })}
-                    onPointerUp={(event) => {
-                      if (!mark) return;
-                      const { x, y } = maskPoint(event);
-                      setMark(null);
-                      change({
-                        ...edit,
-                        zooms: edit.zooms.map((z) => (z.id === mark.id ? { ...z, x, y } : z)),
-                      });
-                      setMessage(`Mouse focus marked at ${x}%, ${y}%. Preview the zoom hold.`);
-                    }}
-                    // Cancelled or interrupted gestures leave the focus as it was, with no undo step.
-                    onPointerCancel={() => setMark(null)}
-                    onLostPointerCapture={() => setMark(null)}
-                  >
-                    {mark && <span style={{ left: `${mark.x}%`, top: `${mark.y}%` }} />}
-                  </div>
-                )}
+                <div className="compose-frame">
+                  {assets.length > 0 ? (
+                    playerView
+                  ) : (
+                    <div className="loading-preview">
+                      {busy ? 'Preparing your cutting room…' : 'Import media to start composing'}
+                    </div>
+                  )}
+                  {edit.layout.mode === 'pip' && !markZoom && (
+                    // Editor-only corner targets over the live preview; Copy frame and export draw the
+                    // composition itself, so these never reach a frame.
+                    <div className="pip-corners" role="group" aria-label="Camera corner">
+                      {CORNERS.map((corner) => {
+                        const slot = maskRect('camera', { ...edit.layout, corner }); // → stage rect
+                        const current = (edit.layout.corner ?? 'bottom-right') === corner;
+                        return (
+                          <button
+                            key={corner}
+                            type="button"
+                            aria-label={`Camera ${corner.replace('-', ' ')}`}
+                            aria-pressed={current}
+                            style={{
+                              left: `${(slot.x / stageGeometry.width) * 100}%`,
+                              top: `${(slot.y / stageGeometry.height) * 100}%`,
+                              width: `${(slot.width / stageGeometry.width) * 100}%`,
+                              height: `${(slot.height / stageGeometry.height) * 100}%`,
+                              borderRadius: `${(edit.layout.radius / slot.width) * 100}% / ${(edit.layout.radius / slot.height) * 100}%`,
+                            }}
+                            onClick={() => {
+                              if (current) return;
+                              change({ ...edit, layout: { ...edit.layout, corner } });
+                              setMessage(`Camera moved to the ${corner.replace('-', ' ')} corner.`);
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+                  {markZoom && (
+                    <div
+                      className="mouse-target"
+                      data-testid="mouse-target"
+                      data-marking={markingMouse || undefined}
+                      aria-hidden="true"
+                      style={{
+                        left: `${(screenMask.x / stageGeometry.width) * 100}%`,
+                        top: `${(screenMask.y / stageGeometry.height) * 100}%`,
+                        width: `${(screenMask.width / stageGeometry.width) * 100}%`,
+                        height: `${(screenMask.height / stageGeometry.height) * 100}%`,
+                        borderRadius: `${(edit.layout.radius / screenMask.width) * 100}% / ${(edit.layout.radius / screenMask.height) * 100}%`,
+                      }}
+                      onPointerDown={(event) => {
+                        if (event.button !== 0) return;
+                        event.currentTarget.setPointerCapture(event.pointerId);
+                        setSpeed(0);
+                        setSelected(markZoom.id);
+                        setMark({ id: markZoom.id, ...maskPoint(event) });
+                        // Each mark is its own undo step, never merged into the previous edit.
+                        gesture.current = null;
+                      }}
+                      onPointerMove={(event) => mark && setMark({ ...mark, ...maskPoint(event) })}
+                      onPointerUp={(event) => {
+                        if (!mark) return;
+                        const { x, y } = maskPoint(event);
+                        setMark(null);
+                        change({
+                          ...edit,
+                          zooms: edit.zooms.map((z) => (z.id === mark.id ? { ...z, x, y } : z)),
+                        });
+                        setMessage(`Mouse focus marked at ${x}%, ${y}%. Preview the zoom hold.`);
+                      }}
+                      // Cancelled or interrupted gestures leave the focus as it was, with no undo step.
+                      onPointerCancel={() => setMark(null)}
+                      onLostPointerCapture={() => setMark(null)}
+                    >
+                      {mark && <span style={{ left: `${mark.x}%`, top: `${mark.y}%` }} />}
+                    </div>
+                  )}
+                </div>
                 {stageFullscreen && stageHover && <span className="esc-pill">esc</span>}
               </div>
               <div className="compose-caption">
@@ -3333,7 +3350,7 @@ export function App() {
         <dl>
           <dt>Resolution</dt>
           <dd>
-            {exportWidth} × {(exportWidth * 9) / 16}
+            {output.width} × {output.height}
           </dd>
           <dt>Frame rate</dt>
           <dd id="output-fps-auto">

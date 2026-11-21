@@ -17,7 +17,7 @@ import {
   fillCss,
   maskRect,
   maskShadowCss,
-  STAGE,
+  stageSize,
   type Layout,
 } from './stage';
 import {
@@ -72,7 +72,7 @@ export function Composition({
 }: CompositionProps) {
   const frame = useCurrentFrame();
   const size = useVideoConfig();
-  const scale = size.width / STAGE.width;
+  const scale = size.width / stageSize(layout).width;
   const paths = useMemo(
     () => prepareFraming(zooms, clips, assets, layout, tracks),
     [zooms, clips, assets, layout, tracks],

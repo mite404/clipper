@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { execFileSync } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import { choose, expectChoice } from './choice';
 
 test.use({ permissions: ['clipboard-read', 'clipboard-write'] });
@@ -71,6 +72,58 @@ test('Copy frame stays at the full 1920px output size when the preview is Quarte
   expect(size).toEqual([1920, 1080]);
 });
 
+test('keeps square preview and Copy frame in sync through Undo and reopen', async ({ page }) => {
+  await openEditor(page);
+  const resolution = page.getByRole('combobox', { name: 'Export resolution' });
+  const monitor = page.getByTestId('compose-monitor');
+  const save = async () => {
+    const saving = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Save project', exact: true }).click();
+    return (await (await saving).path())!;
+  };
+  const wide = await readFile(await save());
+  await choose(resolution, '1080');
+  for (const [name, width] of [
+    ['full', 1080],
+    ['half', 540],
+    ['quarter', 270],
+  ] as const) {
+    await choose(quality(page), name);
+    await expect
+      .poll(async () => {
+        const size = await layout(page);
+        return [size.width, size.height];
+      })
+      .toEqual([width, width]);
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect
+    .poll(async () => {
+      const box = await monitor.boundingBox();
+      return box && Math.abs(box.width - box.height);
+    })
+    .toBeLessThan(2);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByRole('button', { name: 'Copy frame', exact: true }).click();
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('1080 × 1080');
+  const size = await page.evaluate(async () => {
+    const [item] = await navigator.clipboard.read();
+    const bitmap = await createImageBitmap(await item.getType('image/png'));
+    return [bitmap.width, bitmap.height];
+  });
+  expect(size).toEqual([1080, 1080]);
+
+  const saved = await save();
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  await expectChoice(resolution, '1920');
+  await expect.poll(() => layout(page).then((size) => size.width)).toBe(480);
+  expect((await readFile(await save())).equals(wide)).toBe(true);
+  page.once('dialog', (dialog) => dialog.accept());
+  await page.getByLabel('Open local project').setInputFiles(saved);
+  await expectChoice(resolution, '1080');
+  await expect.poll(() => layout(page).then((size) => size.width)).toBe(270);
+});
+
 test('remembers the choice on this device, starts at Full, and ignores a value it does not know', async ({
   page,
 }) => {
@@ -92,44 +145,49 @@ test('remembers the choice on this device, starts at Full, and ignores a value i
   expect(text).not.toMatch(/preview|quality/i);
 });
 
-// A 4K export makes no 4K preview, but the file it writes is still 3840 wide.
-test('a 3840px export keeps a 1920 wide preview layout and still writes a 3840 wide file', async ({
-  page,
-}, info) => {
-  test.setTimeout(240000);
-  await openEditor(page);
-  await choose(page.getByRole('combobox', { name: 'Export resolution' }), '3840');
-  await expect.poll(() => layout(page).then((l) => l.width)).toBe(1920);
-  await page.getByRole('button', { name: 'Export video', exact: true }).click();
-  const dialog = page.getByRole('dialog', { name: 'Export video' });
-  await choose(dialog.getByRole('combobox', { name: 'Format' }), 'webm');
-  await page.getByRole('button', { name: 'Render video', exact: true }).click();
-  await expect(page.locator('.app-footer [role="status"]')).toContainText(
-    'Video exported at 3840',
-    {
-      timeout: 200000,
-    },
-  );
-  const downloaded = page.waitForEvent('download');
-  await page.getByRole('link', { name: 'Save video', exact: true }).click();
-  const file = (await (await downloaded).path())!;
-  const probe = execFileSync(
-    'ffprobe',
-    [
-      '-v',
-      'error',
-      '-select_streams',
-      'v:0',
-      '-show_entries',
-      'stream=width,height',
-      '-of',
-      'csv=p=0',
-      file,
-    ],
-    { encoding: 'utf8' },
-  );
-  expect(probe.trim()).toBe('3840,2160');
-  // The layout was never 3840 wide at any point of the render.
-  expect((await layout(page)).width).toBe(1920);
-  info.annotations.push({ type: 'export', description: 'one real 4K WebM render' });
-});
+for (const [width, height, preview] of [
+  [1080, 1080, 1080],
+  [3840, 2160, 1920],
+] as const)
+  test(`writes ${width}px × ${height}px while keeping the preview ${preview} wide`, async ({
+    page,
+  }, info) => {
+    test.setTimeout(240000);
+    await openEditor(page);
+    await choose(page.getByRole('combobox', { name: 'Export resolution' }), String(width));
+    await expect.poll(() => layout(page).then((l) => l.width)).toBe(preview);
+    await page.getByRole('button', { name: 'Export video', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Export video' });
+    await choose(dialog.getByRole('combobox', { name: 'Format' }), 'webm');
+    await page.getByRole('button', { name: 'Render video', exact: true }).click();
+    await expect(page.locator('.app-footer [role="status"]')).toContainText(
+      `Video exported at ${width} × ${height}`,
+      {
+        timeout: 200000,
+      },
+    );
+    const downloaded = page.waitForEvent('download');
+    await page.getByRole('link', { name: 'Save video', exact: true }).click();
+    const file = (await (await downloaded).path())!;
+    const probe = execFileSync(
+      'ffprobe',
+      [
+        '-v',
+        'error',
+        '-select_streams',
+        'v:0',
+        '-show_entries',
+        'stream=width,height',
+        '-of',
+        'csv=p=0',
+        file,
+      ],
+      { encoding: 'utf8' },
+    );
+    expect(probe.trim()).toBe(`${width},${height}`);
+    expect((await layout(page)).width).toBe(preview);
+    info.annotations.push({
+      type: 'export',
+      description: `one real ${width} × ${height} WebM render`,
+    });
+  });

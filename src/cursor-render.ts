@@ -1,6 +1,6 @@
 import type { Asset } from './media';
 import { covers, paintOrder, sourceFrame, FPS, type Clip, type TrackDef } from './timeline-model';
-import { clipRect, cropPosition, maskRect, STAGE, type Layout, type Rect } from './stage';
+import { clipRect, cropPosition, maskRect, stageSize, type Layout, type Rect } from './stage';
 import { cursorAt, TOUCH_CURSOR_ASSET } from './cursor-motion';
 
 export type CursorFrame = Rect & {
@@ -82,7 +82,7 @@ export function cursorFrame(
   frame: number,
   layout: Layout,
   tracks: TrackDef[],
-  renderSize = STAGE,
+  renderSize = stageSize(layout),
 ): CursorFrame | undefined {
   const clip = cursorOwner(clips, assets, tracks, frame);
   const source = assets.find((asset) => asset.id === clip?.assetId);
