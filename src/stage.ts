@@ -231,10 +231,10 @@ export function maskRect(track: VisualRole, layout: Layout, size: Size = stageSi
   };
 }
 
-/** A role's proportional mask bounds in edit px: what maskRect computes without custom bounds. */
+/** The active aspect's proportional mask bounds projected back into stored edit coordinates. */
 export function defaultMaskRect(track: VideoTrack, layout: Layout): Rect {
-  const { screenMask: _screen, cameraMask: _camera, aspect: _aspect, ...proportional } = layout;
-  return maskRect(track, proportional); // → edit rect
+  const { screenMask: _screen, cameraMask: _camera, ...proportional } = layout;
+  return maskRect(track, proportional, STAGE); // → edit rect
 }
 
 /**

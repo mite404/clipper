@@ -1,5 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
+import { choose } from './choice';
 
 // CLIP-19's closing unit: arbitrary crop bounds. Each mask's edges move past the proportional
 // presets through the Inspector's Screen/Camera rows (X, Y, W, H in edit px), with the same
@@ -18,6 +19,50 @@ async function saveProject(page: Page) {
   await page.getByRole('button', { name: 'Save project', exact: true }).click();
   return readFileSync((await (await saving).path())!, 'utf8');
 }
+
+test('the first square mask X edit preserves the other edges through Undo and reopen', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+  await choose(page.getByRole('combobox', { name: 'Export resolution' }), '1080');
+  const { x } = fields(page);
+  const initialX = await x.inputValue();
+  const bounds = () =>
+    page.getByTestId('screen-mask').evaluate((mask) => {
+      const { left, top, width, height } = (mask as HTMLElement).style;
+      return {
+        left: parseFloat(left),
+        top: parseFloat(top),
+        width: parseFloat(width),
+        height: parseFloat(height),
+      };
+    });
+  const before = await bounds();
+  await x.fill('200');
+  await x.press('Enter');
+  await expect(x).toHaveValue('200');
+  const after = await bounds();
+  expect(after.left).toBeCloseTo(168.75, 6);
+  for (const side of ['top', 'width', 'height'] as const)
+    expect(after[side]).toBeCloseTo(before[side], 6);
+
+  const saved = await saveProject(page);
+  await page.getByRole('button', { name: 'Undo', exact: true }).click();
+  expect(await bounds()).toEqual(before);
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.getByLabel('Open local project').setInputFiles({
+    name: 'square-mask.clipper.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(saved),
+  });
+  await expect(page.locator('.app-footer [role="status"]')).toContainText('Project reopened');
+  expect(await bounds()).toEqual(after);
+  await x.fill(initialX);
+  await x.press('Enter');
+  expect(await bounds()).toEqual(before);
+  expect(JSON.parse(await saveProject(page)).layout.screenMask).toBeUndefined();
+});
 
 test('mask bounds edit by number, keyboard and label drag, clamped on stage, one undo step each', async ({
   page,

@@ -36,7 +36,12 @@ describe('laying out the stage', () => {
     expect(mask).toEqual({ x: 108, y: 270, width: 540, height: 540 });
     const image = clipRect(mask, { width: 960, height: 480 }, { x: 50, y: 50 }, {});
     expect(image.width).toBe(image.height * 2);
-    expect(defaultMaskRect('screen', square)).toEqual(defaultMaskRect('screen', layout));
+    expect(defaultMaskRect('screen', square)).toEqual({
+      x: 10,
+      y: 5.625,
+      width: 880,
+      height: 708.75,
+    });
   });
 
   it('places the screen and camera masks, and swaps their sides', () => {

@@ -1112,7 +1112,7 @@ function MaskBounds({
     height: Math.round(current.height),
   };
   const setSide = (side: keyof Rect) => (value: number) =>
-    onLayout(withMaskBounds(layout, track, { ...shown, [side]: value }));
+    onLayout(withMaskBounds(layout, track, { ...current, [side]: value }));
   const sides = [
     ['x', 'X', STAGE.width],
     ['y', 'Y', STAGE.height],
