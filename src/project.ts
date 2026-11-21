@@ -200,6 +200,12 @@ function layoutOf(value: unknown): Layout {
       throw new Error('layout.corner must be top-left, top-right, bottom-left or bottom-right.');
     layout.corner = settings.corner as Corner;
   }
+  const readMirror = (value: unknown) => {
+    if (value === true) return { cameraMirrored: true } as const;
+    if (value === false || value === undefined) return {};
+    throw new Error('layout.cameraMirrored must be boolean.');
+  };
+  Object.assign(layout, readMirror(settings.cameraMirrored));
   Object.assign(layout, backdropOf(settings));
   return layout;
 }

@@ -1189,6 +1189,18 @@ export function Inspector({
           Composition <span>16:9</span>
         </h3>
         <LayoutChoice layout={layout} onLayout={onLayout} />
+        <label className="slider-label">
+          <span>
+            <input
+              type="checkbox"
+              checked={layout.cameraMirrored === true}
+              onChange={(event) =>
+                onLayout({ ...layout, cameraMirrored: event.currentTarget.checked || undefined })
+              }
+            />{' '}
+            Mirror camera
+          </span>
+        </label>
         <label
           className="slider-label"
           {...drag(layout.radius, { min: 0, max: 60, step: 1 }, (radius) =>

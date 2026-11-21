@@ -291,6 +291,23 @@ describe('portable project parsing', () => {
     expect(() => parseProject(bad('wide'))).toThrow('layout.cameraMask must be an object.');
   });
 
+  it('round trips camera mirroring without writing the off default', async () => {
+    const empty = { ...edit, clips: [], zooms: [] };
+    const legacy = await serializeProject(empty, [], []);
+    const save = async (cameraMirrored: boolean) => {
+      const input = project();
+      Object.assign(input.layout, { cameraMirrored });
+      const { layout } = parseProject(JSON.stringify(input)).edit;
+      const saved = await serializeProject({ ...empty, layout }, [], []);
+      return saved.file.text();
+    };
+    expect(parseProject(await save(true)).edit.layout).toMatchObject({ cameraMirrored: true });
+    expect(await save(false)).toBe(await legacy.file.text());
+    const malformed = project();
+    Object.assign(malformed.layout, { cameraMirrored: 'false' });
+    expect(() => parseProject(JSON.stringify(malformed))).toThrow('layout.cameraMirrored');
+  });
+
   it('accepts zooms that touch without overlapping', () => {
     const value = project();
     value.zooms.push({ ...value.zooms[0], id: 'second', start: 30, duration: 6 });

@@ -31,6 +31,8 @@ export type Layout = {
   screenY: number;
   cameraX: number;
   cameraY: number;
+  /** Reflect the cropped camera image horizontally. Absent leaves it unmirrored. */
+  cameraMirrored?: true;
 };
 export type Rect = { x: number; y: number; width: number; height: number };
 // A point in pixels, or a crop position in percent, depending on the function.

@@ -95,6 +95,10 @@ export function Composition({
         const mask = maskRect(role, layout, size); // → actual render-pixel rect
         const view = cameraTransform(mask, role === 'screen' ? camera : undefined); // → affine
         const crop = cropPosition(role, layout); // → percent
+        const contentTransform = () =>
+          role === 'camera' && layout.cameraMirrored
+            ? 'translateX(100%) scaleX(-1)'
+            : `translate(${view.x - mask.x}px, ${view.y - mask.y}px) scale(${view.scale})`;
         return (
           <div
             key={id}
@@ -117,7 +121,7 @@ export function Composition({
               style={{
                 width: '100%',
                 height: '100%',
-                transform: `translate(${view.x - mask.x}px, ${view.y - mask.y}px) scale(${view.scale})`,
+                transform: contentTransform(),
                 transformOrigin: '0 0',
               }}
             >

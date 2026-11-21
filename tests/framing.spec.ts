@@ -1,5 +1,163 @@
 import { expect, test } from '@playwright/test';
+import { execFileSync } from 'node:child_process';
+import { readFile } from 'node:fs/promises';
 import { choose, expectChoice } from './choice';
+
+for (const mode of ['side', 'pip'] as const) {
+  test(`mirrors cropped camera pixels in ${mode} preview, Copy frame and export`, async ({
+    page,
+    context,
+  }, info) => {
+    test.setTimeout(90000);
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    await page.goto('/');
+    await expect(page.getByTestId('media-status')).toHaveText('4 assets ready', { timeout: 30000 });
+    const fixture = await page.evaluate((mode) => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 640;
+      canvas.height = 360;
+      const paint = canvas.getContext('2d')!;
+      paint.fillStyle = '#ff0000';
+      paint.fillRect(0, 0, 640, 360);
+      const screen = canvas.toDataURL();
+      paint.fillStyle = '#0000ff';
+      paint.fillRect(0, 0, 120, 360);
+      paint.fillStyle = '#00ff00';
+      paint.fillRect(120, 0, 240, 360);
+      paint.fillStyle = '#ffff00';
+      paint.fillRect(360, 0, 280, 360);
+      return JSON.stringify({
+        version: 3,
+        fps: 30,
+        clips: ['screen', 'camera'].map((track) => ({
+          id: track,
+          assetId: track,
+          track,
+          start: 0,
+          duration: 12,
+          offset: 0,
+        })),
+        zooms: [],
+        muted: [],
+        layout: {
+          ...(mode === 'pip' && { mode }),
+          radius: 0,
+          screenX: 50,
+          screenY: 50,
+          cameraX: 0,
+          cameraY: 50,
+          cameraMask: { x: 900, y: 100, width: 300, height: 300 },
+        },
+        media: [
+          { id: 'screen', kind: 'image', name: 'screen.png', data: screen },
+          { id: 'camera', kind: 'image', name: 'camera.png', data: canvas.toDataURL() },
+        ],
+      });
+    }, mode);
+    const status = page.locator('.app-footer [role="status"]');
+    const open = async (buffer: Buffer) => {
+      await page.getByLabel('Open local project').setInputFiles({
+        name: 'mirror.clipper.json',
+        mimeType: 'application/json',
+        buffer,
+      });
+      await expect(status).toContainText('Project reopened');
+    };
+    const save = async () => {
+      const saving = page.waitForEvent('download');
+      await page.getByRole('button', { name: 'Save project', exact: true }).click();
+      return readFile((await (await saving).path())!);
+    };
+    await open(Buffer.from(fixture));
+    const mirror = page.getByRole('checkbox', { name: 'Mirror camera' });
+    const mask = page.getByTestId('camera-mask');
+    await expect(mask.locator('img')).toBeVisible();
+    const cameraBox = await mask.boundingBox();
+    const screenBox = await page.getByTestId('screen-mask').boundingBox();
+    const stage = page.getByTestId('screen-mask').locator('..');
+    const probes = [
+      [930, 250],
+      [1080, 250],
+      [1170, 250],
+      [400, 250],
+    ];
+    const pixels = async (preview?: Buffer) =>
+      page.evaluate(
+        async ({ png, probes }) => {
+          const blob = png
+            ? await (await fetch(`data:image/png;base64,${png}`)).blob()
+            : await (await navigator.clipboard.read())[0].getType('image/png');
+          const bitmap = await createImageBitmap(blob);
+          const ctx = new OffscreenCanvas(1280, 720).getContext('2d')!;
+          ctx.drawImage(bitmap, 0, 0, 1280, 720);
+          return probes.map(([x, y]) => Array.from(ctx.getImageData(x, y, 1, 1).data).slice(0, 3));
+        },
+        { png: preview?.toString('base64'), probes },
+      );
+    const preview = () => stage.screenshot({ scale: 'css' }).then(pixels);
+    const off = [
+      [0, 0, 255],
+      [0, 255, 0],
+      [0, 255, 0],
+      [255, 0, 0],
+    ];
+    const on = [
+      [0, 255, 0],
+      [0, 255, 0],
+      [0, 0, 255],
+      [255, 0, 0],
+    ];
+    await expect.poll(preview).toEqual(off);
+    const legacy = await save();
+    await expect(mirror).toBeVisible();
+    await mirror.check();
+    await expect.poll(preview).toEqual(on);
+    expect(await mask.boundingBox()).toEqual(cameraBox);
+    expect(await page.getByTestId('screen-mask').boundingBox()).toEqual(screenBox);
+    const mirrored = await save();
+    expect(JSON.parse(mirrored.toString()).layout.cameraMirrored).toBe(true);
+    await page.getByRole('button', { name: 'Undo', exact: true }).click();
+    await expect(mirror).not.toBeChecked();
+    await expect.poll(preview).toEqual(off);
+    expect(await save()).toEqual(legacy);
+    await open(mirrored);
+    await expect(mirror).toBeChecked();
+    await expect.poll(preview).toEqual(on);
+
+    await page.getByRole('button', { name: 'Copy frame', exact: true }).click();
+    await expect(status).toContainText('copied');
+    expect(await pixels()).toEqual(on);
+    const rendering = page.waitForEvent('download', { timeout: 60000 });
+    await page.getByRole('button', { name: 'Export video', exact: true }).click();
+    await page.getByRole('button', { name: 'Render video', exact: true }).click();
+    await page.getByRole('link', { name: 'Save video', exact: true }).click({ timeout: 60000 });
+    const path = info.outputPath('mirrored.mp4');
+    await (await rendering).saveAs(path);
+    const bytes = execFileSync(
+      'ffmpeg',
+      [
+        '-v',
+        'error',
+        '-i',
+        path,
+        '-vf',
+        'scale=1280:720',
+        '-frames:v',
+        '1',
+        '-pix_fmt',
+        'rgb24',
+        '-f',
+        'rawvideo',
+        '-',
+      ],
+      { maxBuffer: 4 * 1024 * 1024 },
+    );
+    const decoded = probes.map(([x, y]) =>
+      Array.from(bytes.subarray((y * 1280 + x) * 3, (y * 1280 + x) * 3 + 3)),
+    );
+    expect(decoded.map((rgb) => rgb.map((channel) => (channel > 128 ? 255 : 0)))).toEqual(on);
+  });
+}
 
 for (const width of [1920, 3840]) {
   for (const target of [

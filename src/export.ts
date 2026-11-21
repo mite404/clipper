@@ -250,6 +250,12 @@ function drawFrame(
     const view = cameraTransform(mask, role === 'screen' ? camera : undefined); // → affine
     context.translate(view.x, view.y);
     context.scale(view.scale, view.scale);
+    const mirrorCamera = () => {
+      if (role !== 'camera' || !layout.cameraMirrored) return;
+      context.translate(mask.width, 0);
+      context.scale(-1, 1);
+    };
+    mirrorCamera();
     for (const layer of layers) {
       if (layer.track !== id) continue;
       const cover = clipRect(mask, layer.image, cropPosition(role, layout), layer.sizing); // → local rect
