@@ -36,6 +36,14 @@ The repository is `https://github.com/mite404/clipper.git`. The Amp project has 
 primary repository since 2026-11-16; the Amp-hosted scaffold is gone. See
 [Known limits](#known-limits) for the historical private-media hosting record.
 
+On 2026-11-21, by owner approval, the Sol medium coordinator in [Owners](#owners) took the sole
+delivery slot from [the outgoing coordinator][outgoing-coordinator]. The old coordinator and four
+replaced lanes retain their work and receipts without active grants. CLIP-50's original and rebased
+bundles were verified and imported. CLIP-51 is promoted, the reviewer ledger is recovered, and the
+predecessor small lane had no unpushed work. No CI watch was pending at transfer.
+
+[outgoing-coordinator]: https://ampcode.com/threads/T-01a1f458-64c3-77cd-b7dd-7a1f78923a04
+
 ## Two-lane queue audit, 2026-11-19
 
 Audited against `origin/main` `d9d3b6f3e22301197ec07bc0f3b98978d595308e` (green exact-SHA
@@ -361,22 +369,22 @@ PUB-1's renderer and intent link, and in the gated chains, because no other tick
 
 ## Owners
 
-| Lane                  | Thread                                                                                | Owns                                                                  |
-| --------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------- |
-| Queue and delivery    | [T-01a1f458](https://ampcode.com/threads/T-01a1f458-64c3-77cd-b7dd-7a1f78923a04)      | This file, acceptance and exclusive main push slot                    |
-| Main implementation   | [T-2a7c5d23](https://ampcode.com/threads/T-2a7c5d23-64d3-4375-ba55-68cd48570f8d)      | UI-14                                                                 |
-| Small implementation  | [T-01a1f45a-296f](https://ampcode.com/threads/T-01a1f45a-296f-7511-96f2-7e665d921cda) | CLIP-20d, CLIP-17 polish                                              |
-| Code review           | [T-0f957ef1](https://ampcode.com/threads/T-0f957ef1-ca72-4659-af83-2787cd53508f)      | The one review per ticket, with `ce-code-review`                      |
-| Cursor implementation | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a)      | Speed-style unit delivered; no active implementation grant            |
-| Cursor inspector      | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214)      | Inspector delivered; no active implementation grant                   |
-| Workspace layout      | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea)      | UI-2 delivered; no active implementation grant                        |
-| Transport lifecycle   | [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59)      | REF-31 delivered; no active implementation grant                      |
-| Zoom preservation     | [T-46d4a5ee](https://ampcode.com/threads/T-46d4a5ee-39f1-46ae-bde0-eced0da19a5a)      | Quiescent historical candidate/evidence only; no implementation grant |
-| Cursor preservation   | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94)      | Frozen original CLIP-11 work, no implementation or push               |
-| Editor and bootstrap  | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da)      | `.agents/setup`, `.agents/resume`                                     |
-| Verification tools    | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc)      | Archived after delivery; no active path reservation                   |
-| Canonical preview     | [T-6dd30293](https://ampcode.com/threads/T-6dd30293-c740-418a-8174-5d2a1b69da89)      | Accepted-main promotion and revision/check receipts                   |
-| Design and UI SDK     | [T-01a1f45a-212a](https://ampcode.com/threads/T-01a1f45a-212a-738f-ad28-f5ee679393cb) | UI-16, UI-17 and REF-68 delivered in batch 5; CLIP-49 phase 1         |
+| Lane                  | Thread                                                                                | Owns                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Queue and delivery    | [T-ece3431c](https://ampcode.com/threads/T-ece3431c-d973-4e4a-a681-2a53c307e478)      | Grants, review dispatch, acceptance, exclusive main push slot and promotion requests |
+| Main implementation   | [T-01a1fc9d-05a4](https://ampcode.com/threads/T-01a1fc9d-05a4-7256-812f-f7bbf1424807) | CLIP-50                                                                              |
+| Small implementation  | [T-01a1fc9d-17f5](https://ampcode.com/threads/T-01a1fc9d-17f5-749f-8f67-516324d617fa) | UI-10 InfoNote test follow-up                                                        |
+| Code review           | [T-0f957ef1](https://ampcode.com/threads/T-0f957ef1-ca72-4659-af83-2787cd53508f)      | The one review per ticket, with `ce-code-review`                                     |
+| Cursor implementation | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a)      | Speed-style unit delivered; no active implementation grant                           |
+| Cursor inspector      | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214)      | Inspector delivered; no active implementation grant                                  |
+| Workspace layout      | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea)      | UI-2 delivered; no active implementation grant                                       |
+| Transport lifecycle   | [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59)      | REF-31 delivered; no active implementation grant                                     |
+| Zoom preservation     | [T-46d4a5ee](https://ampcode.com/threads/T-46d4a5ee-39f1-46ae-bde0-eced0da19a5a)      | Quiescent historical candidate/evidence only; no implementation grant                |
+| Cursor preservation   | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94)      | Frozen original CLIP-11 work, no implementation or push                              |
+| Editor and bootstrap  | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da)      | `.agents/setup`, `.agents/resume`                                                    |
+| Verification tools    | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc)      | Archived after delivery; no active path reservation                                  |
+| Canonical preview     | [T-6dd30293](https://ampcode.com/threads/T-6dd30293-c740-418a-8174-5d2a1b69da89)      | Accepted-main promotion and revision/check receipts                                  |
+| Design and UI SDK     | [T-01a1fc9d-0de5](https://ampcode.com/threads/T-01a1fc9d-0de5-74eb-bd7b-0d1084acc1e5) | CLIP-51 delivered; no active grant                                                   |
 
 The archival audit has coordinator ownership clearance for the completed UI-3 worker/reviewer,
 REF-18/20/31 transport worker, tooltip pilot/repair, VERIFY-5, fresh-orb qualifier and OpenScreen
@@ -689,12 +697,14 @@ against `aa6db5b`.
 
 ### Current path reservations
 
-| Owner                    | Paths                                                                                                            |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------- |
-| Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5; exact-path grant before edits (UI-7 delivered)        |
-| Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits             |
-| Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                   |
-| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md` |
+| Owner                    | Paths                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5; exact-path grant before edits (UI-7 delivered)                                                                                                                                                                                                                                                |
+| Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                                                                                                                                                                                                                     |
+| Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                                                                                                                                                                                                                                                           |
+| Main implementation      | CLIP-50: `src/App.tsx`, `src/Composition.tsx`, `src/Mixer.stories.tsx`, `src/Mixer.tsx`, `src/audio-meter.ts`, `src/components.tsx`, `src/export.ts`, `src/project.test.ts`, `src/project.ts`, `src/scrub-audio.test.ts`, `src/scrub-audio.ts`, `src/styles.css`, `src/timeline-model.ts`, `tests/mixer-strips.spec.ts`, `tests/transport-audio.spec.ts` |
+| Small implementation     | UI-10 follow-up: `tests/cursor-inspector.spec.ts` only                                                                                                                                                                                                                                                                                                   |
+| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                                                                                                                                                                                                         |
 
 Moved to [history](master-tickets-history.md#released-path-reservations).
 
@@ -854,6 +864,11 @@ UI-10's source is the UI SDK design parent and candidate thread linked below. Ac
 the requested separate local polish only after checking keyboard behavior, legacy projects, actual
 final-head gates and inspected states. It does not own UI-11 selection semantics, CLIP-2d saved
 visibility, or already delivered UI-1 tooltips. Preserve the original candidate and backup.
+
+UI-10 review P3 follow-up, granted to Luna high on 2026-11-21: add one browser assertion in
+`tests/cursor-inspector.spec.ts` that pressing the InfoNote inside the Choice label opens the note
+but not the Choice popup. Reuse the existing browser coverage. If main fails this check, report the
+defect before editing production code. This grant does not reopen UI-10's delivered scope.
 
 UI-11 preserves recording-wide cursor settings ownership while changing which editable controls are
 visible. Verify relevant selection, unrelated selection, no selection and source-sidecar access. Do
@@ -1142,6 +1157,19 @@ editable easing input. Its range-selection overlay and `curveMonotoneX` interpol
 editable ramp semantics. Coordinate exact adopted source/API/dependencies and pointer/keyboard/
 numeric/reduced-motion contracts before curve edits; do not import the entire chart registry
 blindly.
+
+### CLIP-50 and CLIP-51 delivery follow-up
+
+[CLIP-50](#clip-50) remains unpushed. The main lane rebased the preserved mixer work to `47973bd` on
+`b309160`, retaining both CLIP-50 and CLIP-51 imports in `src/App.tsx`. Exact-candidate browser and
+isolated performance checks precede the sole review. Neither acceptance nor LAND is recorded.
+
+[CLIP-51](#clip-51) was promoted on 2026-11-21. The canonical preview owner verified product
+`41039a9` after [green exact-SHA CI][clip51-ci], with `1b81360` retained for rollback. Public Chrome
+smoke passed 34 paused and playing states across 17 widths. It verified the live tool count,
+Disconnect cancellation, stale-probe rejection, and byte-matched public assets.
+
+[clip51-ci]: https://github.com/mite404/clipper/actions/runs/44875088169/attempts/2
 
 ## Delta audit, 2026-11-16
 
