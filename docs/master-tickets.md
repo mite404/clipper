@@ -225,7 +225,25 @@ Moved to [history](master-tickets-history.md#all-new-opus-cutoff-audit).
 
 ## Order of work
 
-Current audit: 2026-11-21 against `origin/main` `8f1be90`. Continue through eligible tickets without
+On 2026-11-24 Mite resumed Clipper and made T-22fd6cae the coordinator. The paused coordinator, Sol
+and Luna lanes stay preserved; their unfinished work moved to the lanes in [Owners](#owners). The
+transcription and dictation follow-up hold stands until Mite lifts it. Mite observed 30-second or
+longer playback delays inside an Amp thread, but not when opening the same portal in a standalone
+browser. This is a report, not a diagnosis of the cadence test.
+
+Serialized acceptance order: CLIP-20 (`0886270`), CLIP-9b (`dcbb6e9`), CLIP-18 (`8f48cd4`), CLIP-21
+(`7b8a29d`), CLIP-42 (`f79347d`), CLIP-22 (`b54d0ef`), then CLIP-50 after its review. The
+cursor-follow cadence miss reproduces on unchanged main, so it moves to [REF-37](#ref-37) instead of
+holding CLIP-20; exact-SHA CI still runs the performance project for every push. No threshold
+changes. The light lane classified the miss on 2026-11-24 as orb CPU saturation, not a product
+regression: CI's `test:ui` runs the performance project and held the follow case at rafP75 33.4 ms
+on `be39408`, while 18 paired orb runs missed equally on main and CLIP-20 (permutation p ≥ 0.21).
+Under 4x throttle the follow play costs about 4.8 s of main thread per 5 s in CI, so per-frame
+headroom is thin. Its profile found the 10 Hz playing `setFrame` in App re-rendering unchanged
+chrome; skipping it cut script time per play from 2.79 to 2.04 s in 8 pairs. The frame-store unit is
+granted for preparation; delivery waits for the App.tsx candidates ahead of it.
+
+Current audit: 2026-11-24 against `origin/main` `be39408`. Continue through eligible tickets without
 routine reapproval. Delivered means accepted main with exact-SHA green CI. Research, preserved
 source and a LAND verdict alone do not count. Historical dates and grants below are not current
 assignments. The [Owners](#owners) and [path reservations](#current-path-reservations) say who can
@@ -279,8 +297,9 @@ exact-SHA green CI before releasing the slot.
 
 The first CLIP-18 unit uses a standalone searchable dialog with caller-supplied commands. Storybook
 proves focus and return, filtering and empty results, keyboard selection, dismissal and dispatch.
-Editor wiring and shortcut remapping require a later shared-path grant. The standalone candidate is
-preparation, not delivery of the command menu to editor users.
+The editor-wired candidate `8f48cd4` on `be39408` has an exact LAND verdict. The menu uses existing
+Undo, Split, Save, Open and Export actions; `?` opens it only from the timeline. The candidate is
+frozen and unpushed pending full acceptance. Shortcut remapping is outside this slice.
 
 ### Publish dialog
 
@@ -368,22 +387,22 @@ PUB-1's renderer and intent link, and in the gated chains, because no other tick
 
 ## Owners
 
-| Lane                  | Thread                                                                                | Owns                                                                                 |
-| --------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Queue and delivery    | [T-ece3431c](https://ampcode.com/threads/T-ece3431c-d973-4e4a-a681-2a53c307e478)      | Grants, review dispatch, acceptance, exclusive main push slot and promotion requests |
-| Main implementation   | [T-01a1fc9d-05a4](https://ampcode.com/threads/T-01a1fc9d-05a4-7256-812f-f7bbf1424807) | CLIP-50                                                                              |
-| Small implementation  | [T-01a1fc9d-17f5](https://ampcode.com/threads/T-01a1fc9d-17f5-749f-8f67-516324d617fa) | CLIP-20 gradient wallpaper presets                                                   |
-| Code review           | [T-0f957ef1](https://ampcode.com/threads/T-0f957ef1-ca72-4659-af83-2787cd53508f)      | The one review per ticket, with `ce-code-review`                                     |
-| Cursor implementation | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a)      | Speed-style unit delivered; no active implementation grant                           |
-| Cursor inspector      | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214)      | Inspector delivered; no active implementation grant                                  |
-| Workspace layout      | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea)      | UI-2 delivered; no active implementation grant                                       |
-| Transport lifecycle   | [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59)      | REF-31 delivered; no active implementation grant                                     |
-| Zoom preservation     | [T-46d4a5ee](https://ampcode.com/threads/T-46d4a5ee-39f1-46ae-bde0-eced0da19a5a)      | Quiescent historical candidate/evidence only; no implementation grant                |
-| Cursor preservation   | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94)      | Frozen original CLIP-11 work, no implementation or push                              |
-| Editor and bootstrap  | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da)      | `.agents/setup`, `.agents/resume`                                                    |
-| Verification tools    | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc)      | Archived after delivery; no active path reservation                                  |
-| Canonical preview     | [T-6dd30293](https://ampcode.com/threads/T-6dd30293-c740-418a-8174-5d2a1b69da89)      | Accepted-main promotion and revision/check receipts                                  |
-| Design and UI SDK     | [T-01a1fc9d-0de5](https://ampcode.com/threads/T-01a1fc9d-0de5-74eb-bd7b-0d1084acc1e5) | CLIP-18 standalone command menu                                                      |
+| Lane                  | Thread                                                                                                      | Owns                                                                                 |
+| --------------------- | ----------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| Queue and delivery    | [T-22fd6cae](https://ampcode.com/threads/T-22fd6cae-e4e6-4cd0-861b-e33bf015b3b1)                            | Grants, review dispatch, acceptance, exclusive main push slot and promotion requests |
+| Design implementation | [T-01a20fad-d0ff](https://ampcode.com/threads/T-01a20fad-d0ff-7386-998c-ee64b4303ab0)                       | CLIP-50 verification recovery                                                        |
+| Light implementation  | [T-ba8bbe4f](https://ampcode.com/threads/T-ba8bbe4f-c453-4b4a-b84c-73e60b2dc090)                            | REF-37 frame-store unit (prep on `be39408`)                                          |
+| Code review           | [T-1ba8a5c7](https://ampcode.com/threads/T-1ba8a5c7-830e-43db-bcc4-bce41296eaf7)                            | The one review per ticket, with `ce-code-review`                                     |
+| Paused, preserved     | T-ece3431c, T-01a1fc9d-05a4, T-01a1fc9d-17f5, T-0f957ef1, T-01a1fc9d-0de5, T-01a20fad-e3d0, T-01a20fad-da10 | Receipts and bundles only; no grants                                                 |
+| Cursor implementation | [T-77c027fc](https://ampcode.com/threads/T-77c027fc-1240-4757-bef9-fcac238ea35a)                            | Speed-style unit delivered; no active implementation grant                           |
+| Cursor inspector      | [T-c7f554cb](https://ampcode.com/threads/T-c7f554cb-b157-4f8c-b515-6b07a23b4214)                            | Inspector delivered; no active implementation grant                                  |
+| Workspace layout      | [T-2a8c77a8](https://ampcode.com/threads/T-2a8c77a8-9a49-4cc2-ae3f-9c4a2550fbea)                            | UI-2 delivered; no active implementation grant                                       |
+| Transport lifecycle   | [T-0f030227](https://ampcode.com/threads/T-0f030227-5357-4bc3-baf5-7974b220dd59)                            | REF-31 delivered; no active implementation grant                                     |
+| Zoom preservation     | [T-46d4a5ee](https://ampcode.com/threads/T-46d4a5ee-39f1-46ae-bde0-eced0da19a5a)                            | Quiescent historical candidate/evidence only; no implementation grant                |
+| Cursor preservation   | [T-930219f2](https://ampcode.com/threads/T-930219f2-6c3a-4543-a9e0-9a1073cc4d94)                            | Frozen original CLIP-11 work, no implementation or push                              |
+| Editor and bootstrap  | [T-01a1ddd7](https://ampcode.com/threads/T-01a1ddd7-317f-7312-a2ce-db23a9d866da)                            | `.agents/setup`, `.agents/resume`                                                    |
+| Verification tools    | [T-282b9f84](https://ampcode.com/threads/T-282b9f84-b86a-4498-b4cf-b8fb963a33cc)                            | Archived after delivery; no active path reservation                                  |
+| Canonical preview     | [T-6dd30293](https://ampcode.com/threads/T-6dd30293-c740-418a-8174-5d2a1b69da89)                            | Accepted-main promotion and revision/check receipts                                  |
 
 The archival audit has coordinator ownership clearance for the completed UI-3 worker/reviewer,
 REF-18/20/31 transport worker, tooltip pilot/repair, VERIFY-5, fresh-orb qualifier and OpenScreen
@@ -696,15 +715,14 @@ against `aa6db5b`.
 
 ### Current path reservations
 
-| Owner                    | Paths                                                                                                                                                                                                                                                                                                                                                    |
-| ------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5; exact-path grant before edits (UI-7 delivered)                                                                                                                                                                                                                                                |
-| Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                                                                                                                                                                                                                     |
-| Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                                                                                                                                                                                                                                                           |
-| Small implementation     | CLIP-20: `src/BackdropControls.tsx`, `tests/backdrop.spec.ts`                                                                                                                                                                                                                                                                                            |
-| Design and UI SDK        | CLIP-18: new `src/CommandMenu.tsx`, `src/CommandMenu.stories.tsx`, `tests/command-menu.spec.ts`                                                                                                                                                                                                                                                          |
-| Main implementation      | CLIP-50: `src/App.tsx`, `src/Composition.tsx`, `src/Mixer.stories.tsx`, `src/Mixer.tsx`, `src/audio-meter.ts`, `src/components.tsx`, `src/export.ts`, `src/project.test.ts`, `src/project.ts`, `src/scrub-audio.test.ts`, `src/scrub-audio.ts`, `src/styles.css`, `src/timeline-model.ts`, `tests/mixer-strips.spec.ts`, `tests/transport-audio.spec.ts` |
-| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                                                                                                                                                                                                         |
+| Owner                    | Paths                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Media-pool views         | UI-8 reference/source research only; canonical T-fd12a7e5; exact-path grant before edits (UI-7 delivered)                                                                                                                                                                                                                                                                                         |
+| Track targets/visibility | UI-9 research only; canonical T-cbade74d, insertion/model contract and exact-path grant before edits                                                                                                                                                                                                                                                                                              |
+| Queue implementation     | Queue/docs and acceptance; sole main push slot                                                                                                                                                                                                                                                                                                                                                    |
+| Light implementation     | REF-37 frame-store: `src/App.tsx` frame tick, zoom fallback, timecode, end check and playhead hunks; `src/Timeline.tsx` playhead only; new `src/frame-store.ts`, `src/frame-store.test.ts`                                                                                                                                                                                                        |
+| Design implementation    | CLIP-50, in an independent checkout of `47973bd`: `src/App.tsx`, `src/Composition.tsx`, `src/Mixer.stories.tsx`, `src/Mixer.tsx`, `src/audio-meter.ts`, `src/components.tsx`, `src/export.ts`, `src/project.test.ts`, `src/project.ts`, `src/scrub-audio.test.ts`, `src/scrub-audio.ts`, `src/styles.css`, `src/timeline-model.ts`, `tests/mixer-strips.spec.ts`, `tests/transport-audio.spec.ts` |
+| Shared, keep edits small | `src/App.tsx`, other `tests/**`, `package.json`, `playwright.config.ts`, `.github/workflows/ci.yml`, `README.md`                                                                                                                                                                                                                                                                                  |
 
 Moved to [history](master-tickets-history.md#released-path-reservations).
 
@@ -1161,11 +1179,90 @@ editable ramp semantics. Coordinate exact adopted source/API/dependencies and po
 numeric/reduced-motion contracts before curve edits; do not import the entire chart registry
 blindly.
 
+### CLIP-20 gradient preset acceptance
+
+Coordinator T-22fd6cae accepted the stack `3f4ef9c`, `67527b9`, `0886270` on `be39408` on
+2026-11-24: format, lint, typed lint, both typechecks, ticket check, Fallow against `be39408`,
+397/397 units, both builds and `verify.mjs all` 313/313 (0 skipped, 0 flaky), with a 6 GiB swapfile
+after the first run was OOM-killed on the 3 GiB orb. Delivery waits for exact-SHA CI.
+
+The gradient preset candidate `3f4ef9c` has LAND and remains frozen for full browser acceptance. The
+separate Custom follow-up `67527b9`, based on `3f4ef9c`, also has LAND. Custom displays manual edits
+but cannot be selected; the reviewer confirmed that Space on the closed picker controls playback.
+The shared Choice cleanup is nonblocking. Neither candidate is accepted or pushed.
+
+Luna had a separate follow-up grant from `67527b9`: shared `Choice` in `src/components.tsx`,
+`GradientPresetField` in `src/BackdropControls.tsx`, and the backdrop and focused-controls specs.
+The grant excluded the mixer, MediaLibrary and the frozen delivery trees. Luna handed back `0886270`
+(tree `6d6f94ad`), now LAND for that exact delta. Review confirmed derived Custom stays disabled by
+pointer and keyboard, closed Space still controls playback, and Insert onto track keeps its keyboard
+behavior. The broader preset save/copy/reopen check timed out at reload in review; Luna's separate
+focused production run passed 21/21. No full acceptance or push. The edit grant is released.
+
+The original preset still owns the acceptance slot. Full browser verification reached 310/312; the
+scroll check timed out in Playwright context teardown and passed on isolated base and candidate
+reruns. Isolated performance was 14/20 on main and 15/20 on the preset candidate; all five
+cursor-follow repetitions failed on each. Main hit one 266.7 ms stall and four cadence failures; the
+candidate hit five cadence failures. Neither run measured host load. The scenario uses the
+350-sample playback fixture, not the large-telemetry lookup benchmark. A balanced same-host
+comparison with CPU sampling passed 0/5 on main and 1/5 on the preset candidate. All nine misses
+were 66.6–66.7 ms against the 42 ms gate. This reproduces the failure on unchanged main, but does
+not establish its cause or replace full acceptance. No threshold change or push.
+
+### Current lane grants
+
+CLIP-9b original ramp candidate `56234a2` (tree `9f0b36f3`) remains frozen. Its resize P2 displayed
+24-frame ramps as 36 during a held extension from 120 to 180 frames. The sole reviewer reproduced
+that failure on the parent and gave the correction `dcbb6e9` (tree `72a1ba6`) LAND after 2/2 focused
+production specs. Held and released bounds agree for legacy auto ramps and asymmetric authored
+ramps; independent edits, Undo and reopen passed. The earlier legacy preview/Copy/decoded-export
+fixtures passed. CLIP-9b is queued for serialized full acceptance, unpushed. Luna completed the
+read-only REF-37 cadence comparison; no source paths were reserved or changed.
+
+Sol design handed back CLIP-22 camera mirror `b54d0ef` (tree `e935f8f`, base `be39408`). The sole
+reviewer gave that exact tree LAND after 2/2 isolated browser checks and 201/201 stage and project
+tests. Preview, Copy Frame and decoded export matched after an asymmetric crop in both layouts. Undo
+restored the original pixels and byte-identical save; reopen restored mirroring. Sol separately
+passed 398/398 units. The edit grant is released; full acceptance remains pending. The candidate is
+limited to these hunks: `src/stage.ts` Layout field after `cameraY`; `src/project.ts` validation
+after layout corner handling; `src/App.tsx` checkbox immediately after LayoutChoice;
+`src/Composition.tsx` camera-role inner content transform; `src/export.ts` camera draw in
+`drawFrame`; a portable round-trip case in `src/project.test.ts` after mask cases; and asymmetric
+camera coverage in `tests/framing.spec.ts`. Mirror cropped camera content inside the unchanged mask
+in Side by side and PiP. Off omits the optional field. Keep hide, independent radius, geometry,
+audio and other reserved hunks out of scope. Any actual overlap returns to the coordinator before
+editing. Review and acceptance remain separate.
+
+### CLIP-21 square output grant
+
+Sol design owns the 1080×1080 vertical slice in an independent checkout. The grant covers only
+output geometry in `src/App.tsx`, `src/styles.css`, `src/Composition.tsx` and `src/export.ts`; stage
+and cursor geometry in `src/stage.ts` and `src/cursor-render.ts`; layout aspect handling in
+`src/project.ts`; and the stage, project, preview-quality, frame-image and export tests. An actual
+hunk collision with a frozen candidate requires coordinator resolution before editing it.
+
+Retain the wide default and legacy saves. Keep square geometry shared across preview, copy and
+export, with uniform source fitting, and persist only the nondefault aspect as a layout edit.
+
+The sole reviewer cleared the square-mask P2 on `7b8a29d` after reproducing the first X edit jump on
+its parent `1062ba7`. Exact production crop-bounds checks passed 3/3 and stage/project units passed
+202/202. The candidate is frozen pending serialized acceptance; nothing is pushed.
+
 ### CLIP-50 and CLIP-51 delivery follow-up
 
 [CLIP-50](#clip-50) remains unpushed. The main lane rebased the preserved mixer work to `47973bd` on
 `b309160`, retaining both CLIP-50 and CLIP-51 imports in `src/App.tsx`. Exact-candidate browser and
 isolated performance checks precede the sole review. Neither acceptance nor LAND is recorded.
+
+The former main lane is inactive for CLIP-50. It keeps its original checkout and receipts without an
+active grant. The coordinator owns verification recovery and remains the sole main writer. The
+verified `47973bd` bundle is preserved, with separate candidate and `b309160` comparison checkouts.
+The later browser run progressed past the earlier thumbnail failure but did not finish. Three
+transcription specs reported the model was not installed; dictation produced no text. Mite paused
+transcription and dictation follow-up until he is back at his laptop. Keep model setup and those
+reruns paused. Cursor-follow playback diagnosis can continue independently: the base missed the
+cadence gate, and the mixer candidate had one 450 ms browser animation callback gap against 250 ms.
+Do not request review until the required failures are classified.
 
 [CLIP-51](#clip-51) was promoted on 2026-11-21. The canonical preview owner verified product
 `41039a9` after [green exact-SHA CI][clip51-ci], with `1b81360` retained for rollback. Public Chrome
@@ -1189,6 +1286,16 @@ Those mappings resolve to this list. That did not previously mean every informat
 had a queued disposition. The following **33 notes** now do too. R, T and A are source-note labels
 in original order, not ticket IDs or new queues.
 
+### REF-37 R1 synthetic lookup
+
+[Luna's receipts](https://ampcode.com/threads/T-01a1fc9d-17f5-749f-8f67-516324d617fa) qualify warm
+`cursorAt` lookup at `be39408`: 3 million analytic seek checks passed, with no misses in 15 million
+timed lookups. The slowest pass of 200,000 seeks took 272.29 ms across five independent Node
+processes. Use 1,000 ms per pass as a provisional budget for this specific quiet-host workload, not
+a CI gate or an editor responsiveness guarantee. The median cold first lookup (including cache
+preparation) took 41 ms. No production change. Browser cadence and large-telemetry scrub remain
+open.
+
 ### Historical informational recommendation coverage
 
 This table records the original observations. Later dispositions, including REF-28 and REF-35/36,
@@ -1200,41 +1307,41 @@ imply the entire recommendation is done. The full source wording stays in the hi
 [Coverage](refactor/refactor01.md#coverage) and
 [Agent-Native Gaps](refactor/refactor01.md#agent-native-gaps) sections.
 
-| Ticket mapping                                          | Source | Recommendation                                       | Disposition and delta evidence                                                            |
-| ------------------------------------------------------- | ------ | ---------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| [CLIP-8](#clip-8), [REF-37](#ref-37)                    | R1     | Indexed pointer lookup and large-fixture time budget | Binary lookup delivered in `1195cda`; explicit 200k-sample budget still open              |
-| [REF-27](#ref-27)                                       | R2     | MP4 AVC and AAC qualification                        | Delivered 27099dc; HD/4K output qualified and exact-SHA CI44001648378 green               |
-| [REF-25](#ref-25)                                       | R3     | Case-insensitive timeline filenames                  | Delivered `90cf4b4`; actual Mac rerun still unverified                                    |
-| [REF-19](#ref-19), [REF-35](#ref-35), [REF-23](#ref-23) | R4     | Playhead and zoom bounds after shortening            | Explicit seek clamps delivered; edit-induced clamp and stranded zoom cases remain open    |
-| [REF-28](#ref-28)                                       | R5     | Missing or early-ended decoded frames                | Open; exporter still omits missing samples                                                |
-| [REF-29](#ref-29)                                       | R6     | Count-only Fallow baseline blind spots               | Deferred; REF-13 fixed comparison base, not score tracking                                |
-| [REF-30](#ref-30)                                       | R7     | Import, Open and Save progress and cancel            | Open; REF-21 limits size but does not add cancellation                                    |
-| [REF-31](#ref-31)                                       | R8     | Hidden-tab rewind and held Space                     | Delivered `9132ecf`; exact-main CI green                                                  |
-| [REF-32](#ref-32)                                       | R9     | SourceMonitor play rejection and busy lifecycle      | Delivered at `4b49623`; exact-SHA CI green                                                |
-| [REF-33](#ref-33)                                       | R10    | Download lifetime outside Chromium                   | Open; Chromium downloads alone are proven                                                 |
-| [REF-34](#ref-34)                                       | R11    | Player listener attachment assumptions               | Deferred; effect still depends on `hasAssets`                                             |
-| [REF-35](#ref-35)                                       | T1     | Cross-track ripple mutation survivors                | Open; existing voice fixture begins before insertion                                      |
-| [REF-35](#ref-35)                                       | T2     | Fractional trim rounding                             | Open; current trim assertions use integer deltas                                          |
-| [REF-4](#ref-4), [REF-35](#ref-35)                      | T3     | Parser zoom and layout bounds                        | Partial; overlap and short duration added in `43cb368`; remaining boundary rows open      |
-| [REF-35](#ref-35)                                       | T4     | Camera and music source-track validation             | Open; no new assertions for these arms in delta                                           |
-| [REF-21](#ref-21), [REF-35](#ref-35)                    | T5     | Save snapshot, validation and chunk-size assertions  | Partial; REF-21 added size preflight, not all original mutation survivors                 |
-| [REF-36](#ref-36)                                       | T6     | Exactly one audio track muted                        | Open; existing test mutes both                                                            |
-| [REF-36](#ref-36)                                       | T7     | Cancel export from UI, cleanup, retry                | Open; existing cancellation test calls renderer directly                                  |
-| [REF-1](#ref-1), [CLIP-8](#clip-8), [CLIP-10](#clip-10) | T8     | Preview and exported geometry agree                  | Delivered shared stage `4cc0761`, decoded cursor `1195cda` and follow `c2a6be0` cases     |
-| [REF-21](#ref-21), [REF-36](#ref-36)                    | T9     | Unreadable Save and Export UI recovery               | Partial; REF-21 names bad sources and tests repair; exact failed-export state case open   |
-| [REF-36](#ref-36)                                       | T10    | Partial decode failure while opening valid project   | Open; malformed-project test stops before media decode                                    |
-| [CLIP-10](#clip-10), [REF-37](#ref-37)                  | T11    | Performance beyond forward demo, video cadence       | Partial; focused follow case delivered, dropped video frames, rewind and scrub still open |
-| [VERIFY-1](#verify-1)                                   | A1     | Focused commands select a fresh target               | Delivered `2bb8263`; isolated CLI and servers                                             |
-| [VERIFY-1](#verify-1)                                   | A2     | Executable full-run prerequisites                    | Delivered `2bb8263`; builds and servers selected per journey                              |
-| [D-2](#d-2)                                             | A3     | Branch and PR CI policy                              | Owner decision; direct-main CI remains default                                            |
-| [VERIFY-2](#verify-2), [VERIFY-3](#verify-3)            | A4     | Exact local and CI gate documentation                | Delivered; current skill includes shrink-only growth and baseline comparison flags        |
-| [VERIFY-1](#verify-1)                                   | A5     | Five unprofiled performance repetitions              | Delivered `2bb8263`; performance journey selects repeats and disables tracing             |
-| [VERIFY-2](#verify-2)                                   | A6     | Wrong story count                                    | Delivered `de27f06`; stale tally removed                                                  |
-| [VERIFY-1](#verify-1), [VERIFY-2](#verify-2)            | A7     | Doctor accepts missing-media HTML                    | Delivered new doctor `2bb8263`; obsolete helper removed `de27f06`                         |
-| [VERIFY-1](#verify-1), [VERIFY-2](#verify-2)            | A8     | Stop strands state and doctor ignores saved port     | Superseded by isolated lifecycle; old stateful helper removed                             |
-| [VERIFY-2](#verify-2)                                   | A9     | Exact test-title instructions incomplete             | Superseded by named journey selectors `de27f06`                                           |
-| [VERIFY-1](#verify-1)                                   | A10    | Evidence cleanup loses previous runs                 | Delivered unique evidence directories `2bb8263`                                           |
-| [VERIFY-3](#verify-3)                                   | A11    | Frame-step and zoom-field map and journeys           | Delivered tests and current feature map at `f76a702`; exact-SHA CI green                  |
+| Ticket mapping                                          | Source | Recommendation                                       | Disposition and delta evidence                                                                           |
+| ------------------------------------------------------- | ------ | ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [CLIP-8](#clip-8), [REF-37](#ref-37)                    | R1     | Indexed pointer lookup and large-fixture time budget | Binary lookup delivered in `1195cda`; [synthetic 200k-sample qualification](#ref-37-r1-synthetic-lookup) |
+| [REF-27](#ref-27)                                       | R2     | MP4 AVC and AAC qualification                        | Delivered 27099dc; HD/4K output qualified and exact-SHA CI44001648378 green                              |
+| [REF-25](#ref-25)                                       | R3     | Case-insensitive timeline filenames                  | Delivered `90cf4b4`; actual Mac rerun still unverified                                                   |
+| [REF-19](#ref-19), [REF-35](#ref-35), [REF-23](#ref-23) | R4     | Playhead and zoom bounds after shortening            | Explicit seek clamps delivered; edit-induced clamp and stranded zoom cases remain open                   |
+| [REF-28](#ref-28)                                       | R5     | Missing or early-ended decoded frames                | Open; exporter still omits missing samples                                                               |
+| [REF-29](#ref-29)                                       | R6     | Count-only Fallow baseline blind spots               | Deferred; REF-13 fixed comparison base, not score tracking                                               |
+| [REF-30](#ref-30)                                       | R7     | Import, Open and Save progress and cancel            | Open; REF-21 limits size but does not add cancellation                                                   |
+| [REF-31](#ref-31)                                       | R8     | Hidden-tab rewind and held Space                     | Delivered `9132ecf`; exact-main CI green                                                                 |
+| [REF-32](#ref-32)                                       | R9     | SourceMonitor play rejection and busy lifecycle      | Delivered at `4b49623`; exact-SHA CI green                                                               |
+| [REF-33](#ref-33)                                       | R10    | Download lifetime outside Chromium                   | Open; Chromium downloads alone are proven                                                                |
+| [REF-34](#ref-34)                                       | R11    | Player listener attachment assumptions               | Deferred; effect still depends on `hasAssets`                                                            |
+| [REF-35](#ref-35)                                       | T1     | Cross-track ripple mutation survivors                | Open; existing voice fixture begins before insertion                                                     |
+| [REF-35](#ref-35)                                       | T2     | Fractional trim rounding                             | Open; current trim assertions use integer deltas                                                         |
+| [REF-4](#ref-4), [REF-35](#ref-35)                      | T3     | Parser zoom and layout bounds                        | Partial; overlap and short duration added in `43cb368`; remaining boundary rows open                     |
+| [REF-35](#ref-35)                                       | T4     | Camera and music source-track validation             | Open; no new assertions for these arms in delta                                                          |
+| [REF-21](#ref-21), [REF-35](#ref-35)                    | T5     | Save snapshot, validation and chunk-size assertions  | Partial; REF-21 added size preflight, not all original mutation survivors                                |
+| [REF-36](#ref-36)                                       | T6     | Exactly one audio track muted                        | Open; existing test mutes both                                                                           |
+| [REF-36](#ref-36)                                       | T7     | Cancel export from UI, cleanup, retry                | Open; existing cancellation test calls renderer directly                                                 |
+| [REF-1](#ref-1), [CLIP-8](#clip-8), [CLIP-10](#clip-10) | T8     | Preview and exported geometry agree                  | Delivered shared stage `4cc0761`, decoded cursor `1195cda` and follow `c2a6be0` cases                    |
+| [REF-21](#ref-21), [REF-36](#ref-36)                    | T9     | Unreadable Save and Export UI recovery               | Partial; REF-21 names bad sources and tests repair; exact failed-export state case open                  |
+| [REF-36](#ref-36)                                       | T10    | Partial decode failure while opening valid project   | Open; malformed-project test stops before media decode                                                   |
+| [CLIP-10](#clip-10), [REF-37](#ref-37)                  | T11    | Performance beyond forward demo, video cadence       | Partial; focused follow case delivered, dropped video frames, rewind and scrub still open                |
+| [VERIFY-1](#verify-1)                                   | A1     | Focused commands select a fresh target               | Delivered `2bb8263`; isolated CLI and servers                                                            |
+| [VERIFY-1](#verify-1)                                   | A2     | Executable full-run prerequisites                    | Delivered `2bb8263`; builds and servers selected per journey                                             |
+| [D-2](#d-2)                                             | A3     | Branch and PR CI policy                              | Owner decision; direct-main CI remains default                                                           |
+| [VERIFY-2](#verify-2), [VERIFY-3](#verify-3)            | A4     | Exact local and CI gate documentation                | Delivered; current skill includes shrink-only growth and baseline comparison flags                       |
+| [VERIFY-1](#verify-1)                                   | A5     | Five unprofiled performance repetitions              | Delivered `2bb8263`; performance journey selects repeats and disables tracing                            |
+| [VERIFY-2](#verify-2)                                   | A6     | Wrong story count                                    | Delivered `de27f06`; stale tally removed                                                                 |
+| [VERIFY-1](#verify-1), [VERIFY-2](#verify-2)            | A7     | Doctor accepts missing-media HTML                    | Delivered new doctor `2bb8263`; obsolete helper removed `de27f06`                                        |
+| [VERIFY-1](#verify-1), [VERIFY-2](#verify-2)            | A8     | Stop strands state and doctor ignores saved port     | Superseded by isolated lifecycle; old stateful helper removed                                            |
+| [VERIFY-2](#verify-2)                                   | A9     | Exact test-title instructions incomplete             | Superseded by named journey selectors `de27f06`                                                          |
+| [VERIFY-1](#verify-1)                                   | A10    | Evidence cleanup loses previous runs                 | Delivered unique evidence directories `2bb8263`                                                          |
+| [VERIFY-3](#verify-3)                                   | A11    | Frame-step and zoom-field map and journeys           | Delivered tests and current feature map at `f76a702`; exact-SHA CI green                                 |
 
 ### Ticket identity and local details
 
@@ -1528,6 +1635,23 @@ CLIP-38 has a delivered warning subpart only. Existing subparts must not be coun
 | <a id="clip-46"></a>[CLIP-46](#clip-46)              | Voice-over audio recording                                                                                                     | parked by the owner 2026-11-18; OpenScreen covers screen recording                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
 | <a id="clip-47"></a>[CLIP-47](#clip-47)              | Speaker-note teleprompter                                                                                                      | CLIP-46; parked                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | <a id="clip-48"></a>[CLIP-48](#clip-48)              | iPhone and iPad capture, device frames                                                                                         | native capture; not possible in a browser orb                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+
+### CLIP-42: download a whole original source
+
+The design lane has an independent-checkout grant for `MediaLibrary` in `src/components.tsx` (plus
+any required import) and new `tests/source-download.spec.ts`. This is the only exception to the
+CLIP-50 shared-file reservation: preserve the mixer and verify the separate hunks before serialized
+integration. CLIP-18 stays frozen awaiting editor integration.
+
+Download the selected local asset as its original whole file using its existing blob URL and name.
+Timeline trims and audio edits do not affect those bytes. Verify native pointer and keyboard
+downloads, names, and byte equality before and after save/reopen; a muxed file remains muxed.
+Separate stream extraction still needs an explicit stream and role contract.
+
+Candidate `f79347d` on `be39408` has an exact LAND verdict. Moving the link beside Import media
+closed the thumbnail hit-target regression in `7f18e38`. The reviewer verified native import and
+download at 320, 390, 620 and 1440 px, and the production download, source-scrub and media-drop
+checks passed 16/16. The candidate is frozen and unpushed pending serialized acceptance.
 
 ### CLIP-33: clip-linked subtitle story
 
