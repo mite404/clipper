@@ -57,7 +57,8 @@ export type Mask = MaskBase &
  * Smallest mask: whole frames and fractions of the panel; nothing a viewer could not see. Strength
  * runs from half a percent of the panel width, a light softening, to a tenth of it, a heavy one.
  * That is a visual range, not a privacy guarantee: large text can stay recognizable at the maximum
- * and a small label can stay readable at the minimum. For real redaction use `solid`.
+ * and a small label can stay readable at the minimum. Use `solid` at opacity 1 to fully cover the
+ * region in rendered output.
  */
 export const MASK_LIMITS = {
   minFrames: 6,
