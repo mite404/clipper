@@ -302,7 +302,14 @@ Undo, Split, Save, Open and Export actions; `?` opens it only from the timeline.
 frozen and unpushed pending full acceptance. Shortcut remapping is outside this slice. On 2026-11-25
 the coordinator rebased it onto `37b61dc` with identical patches and accepted it locally: static
 gates, both builds and `verify.mjs all` 318/319; the one failure, an Up/Down edit-point timeout,
-passed 5/5 alone on the candidate and on `37b61dc`. Delivery waits for exact-SHA CI.
+passed 5/5 alone on the candidate and on `37b61dc`. Delivered on main at
+[`905962f`](https://github.com/mite404/clipper/commit/905962fb4fbaf49767c2b48975f937ba5990e4fe) with
+green exact-SHA [CI45533009201](https://github.com/mite404/clipper/actions/runs/45533009201). The
+preview owner held promotion: at 320x480 the save-success toast covers the menu's Export option and
+intercepts its click. The light lane owns the toast correction; promotion waits for it. The sole
+reviewer rejected pointer pass-through (`f80cfcd`): a visible error toast's Dismiss ran a covered
+menu command. The revision `944996d` hides the toast region while a dialog is open and restores it
+on close; it is in re-review.
 
 ### Publish dialog
 
@@ -1260,6 +1267,10 @@ export, with uniform source fitting, and persist only the nondefault aspect as a
 The sole reviewer cleared the square-mask P2 on `7b8a29d` after reproducing the first X edit jump on
 its parent `1062ba7`. Exact production crop-bounds checks passed 3/3 and stage/project units passed
 202/202. The candidate is frozen pending serialized acceptance; nothing is pushed.
+
+Coordinator acceptance on 2026-11-25: rebased onto `905962f` as `fc8dd9d` and `7c709bb`, with only
+context lines changed versus the reviewed `7b8a29d`. All gates passed, including the full browser
+run (323 passed, 0 failed, 0 flaky). Pushed to main; Delivered waits on green exact-SHA CI.
 
 ### CLIP-50 and CLIP-51 delivery follow-up
 
