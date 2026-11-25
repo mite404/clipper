@@ -81,8 +81,11 @@ test('keeps square preview and Copy frame in sync through Undo and reopen', asyn
     await page.getByRole('button', { name: 'Save project', exact: true }).click();
     return (await (await saving).path())!;
   };
+  const caption = page.locator('.inspector-section h3', { hasText: 'Composition' });
+  await expect(caption).toHaveText('Composition 16:9');
   const wide = await readFile(await save());
   await choose(resolution, '1080');
+  await expect(caption).toHaveText('Composition 1:1');
   for (const [name, width] of [
     ['full', 1080],
     ['half', 540],
@@ -116,11 +119,13 @@ test('keeps square preview and Copy frame in sync through Undo and reopen', asyn
   const saved = await save();
   await page.getByRole('button', { name: 'Undo', exact: true }).click();
   await expectChoice(resolution, '1920');
+  await expect(caption).toHaveText('Composition 16:9');
   await expect.poll(() => layout(page).then((size) => size.width)).toBe(480);
   expect((await readFile(await save())).equals(wide)).toBe(true);
   page.once('dialog', (dialog) => dialog.accept());
   await page.getByLabel('Open local project').setInputFiles(saved);
   await expectChoice(resolution, '1080');
+  await expect(caption).toHaveText('Composition 1:1');
   await expect.poll(() => layout(page).then((size) => size.width)).toBe(270);
 });
 

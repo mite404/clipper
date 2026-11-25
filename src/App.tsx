@@ -1186,7 +1186,7 @@ export function Inspector({
       </div>
       <div className="inspector-section">
         <h3>
-          Composition <span>16:9</span>
+          Composition <span>{layout.aspect === 'square' ? '1:1' : '16:9'}</span>
         </h3>
         <LayoutChoice layout={layout} onLayout={onLayout} />
         <label className="slider-label">
