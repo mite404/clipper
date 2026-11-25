@@ -9,7 +9,7 @@ delivered at `6fa99af`.
   edit, assets, output width and held frame together.
 - The PNG comes from the export renderer's `drawFrame`, framing and cursor path, with no encoder:
   source offsets, repeated cuts, crop, side swap, zoom, follow and the rotated cursor all apply.
-- Size follows Export resolution: 1920 × 1080 or 3840 × 2160.
+- Size follows Export resolution: 1920 × 1080, 3840 × 2160 or square 1080 × 1080.
 - Status reads `Frame N copied as W × H PNG. Rendered locally.` A denied or unsupported clipboard,
   or unreadable media, reads `Could not copy frame.` plus the reason, never a `blob:` URL. The edit
   is untouched and the button is enabled again.

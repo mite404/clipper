@@ -50,8 +50,8 @@ service holds 5173, so beside it run `npm run dev -- --port <free port>`.
   on the Background track.
 - Timed screen zooms with editable scale, manually marked mouse focus, and smooth in/hold/out.
 - Portable project save/reopen with embedded original media and no relinking requirement.
-- Local rendered video export at 1920×1080 or 3840×2160 as MP4, MOV or WebM, chosen in the export
-  dialog, with the exact filename shown, progress and cancellation.
+- Local rendered video export at 1920×1080, 3840×2160 or square 1080×1080 as MP4, MOV or WebM,
+  chosen in the export dialog, with the exact filename shown, progress and cancellation.
 - English transcription of a video or audio source with Whisper `tiny.en`, run in a worker on this
   device, with progress and Cancel; the transcript is saved with the project.
 - Shared Storybook records, including mouse-marking mode, and realistic stress-data toggles.
