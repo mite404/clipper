@@ -299,7 +299,10 @@ The first CLIP-18 unit uses a standalone searchable dialog with caller-supplied 
 proves focus and return, filtering and empty results, keyboard selection, dismissal and dispatch.
 The editor-wired candidate `8f48cd4` on `be39408` has an exact LAND verdict. The menu uses existing
 Undo, Split, Save, Open and Export actions; `?` opens it only from the timeline. The candidate is
-frozen and unpushed pending full acceptance. Shortcut remapping is outside this slice.
+frozen and unpushed pending full acceptance. Shortcut remapping is outside this slice. On 2026-11-25
+the coordinator rebased it onto `37b61dc` with identical patches and accepted it locally: static
+gates, both builds and `verify.mjs all` 318/319; the one failure, an Up/Down edit-point timeout,
+passed 5/5 alone on the candidate and on `37b61dc`. Delivery waits for exact-SHA CI.
 
 ### Publish dialog
 
@@ -1223,8 +1226,11 @@ ramps; independent edits, Undo and reopen passed. The earlier legacy preview/Cop
 fixtures passed. On 2026-11-25 the coordinator rebased it onto `b6400e7` with identical patches
 (range-diff) and accepted it locally: static gates, units, both builds and `verify.mjs all` 314/315.
 The one failure, a context-teardown timeout in the long-sequence scroll test, passed 3/3 alone on
-the candidate and on `b6400e7`; focused controls passed 10/10. Delivery waits for exact-SHA CI. Luna
-completed the read-only REF-37 cadence comparison; no source paths were reserved or changed.
+the candidate and on `b6400e7`; focused controls passed 10/10. Delivered on main at
+[`37b61dc`](https://github.com/mite404/clipper/commit/37b61dcf1aa9059aa960b163815352249ab61618) with
+green exact-SHA [CI45522915254](https://github.com/mite404/clipper/actions/runs/45522915254);
+promoted, with public Chrome checks of both ramp handles, resize and save/reopen. Luna completed the
+read-only REF-37 cadence comparison; no source paths were reserved or changed.
 
 Sol design handed back CLIP-22 camera mirror `b54d0ef` (tree `e935f8f`, base `be39408`). The sole
 reviewer gave that exact tree LAND after 2/2 isolated browser checks and 201/201 stage and project
@@ -1270,6 +1276,13 @@ transcription and dictation follow-up until he is back at his laptop. Keep model
 reruns paused. Cursor-follow playback diagnosis can continue independently: the base missed the
 cadence gate, and the mixer candidate had one 450 ms browser animation callback gap against 250 ms.
 Do not request review until the required failures are classified.
+
+On 2026-11-25 the design lane classified them (312/312 browser checks under the transcription hold;
+the 450 ms gap did not recur in 20 cold plays) and the sole reviewer T-1ba8a5c7 gave `47973bd`
+through `ebe94c8` LAND after five rounds on the mixer's horizontal scrolling. The final round
+removed all scripted scrolling for native focus scrolling with scroll padding. Coordinator ruling:
+clicking a slider already partly visible at the strips' edge and pressing arrows does not scroll it.
+CLIP-50 waits for acceptance after CLIP-21, CLIP-42 and CLIP-22.
 
 [CLIP-51](#clip-51) was promoted on 2026-11-21. The canonical preview owner verified product
 `41039a9` after [green exact-SHA CI][clip51-ci], with `1b81360` retained for rollback. Public Chrome
