@@ -55,8 +55,9 @@ export type Mask = MaskBase &
 
 /**
  * Smallest mask: whole frames and fractions of the panel; nothing a viewer could not see. Strength
- * runs from half a percent of the panel width, barely softening, to a tenth of it, which no text
- * survives.
+ * runs from half a percent of the panel width, a light softening, to a tenth of it, a heavy one.
+ * That is a visual range, not a privacy guarantee: large text can stay recognizable at the maximum
+ * and a small label can stay readable at the minimum. For real redaction use `solid`.
  */
 export const MASK_LIMITS = {
   minFrames: 6,
@@ -93,10 +94,10 @@ export function maskOnStage(
 }
 
 /**
- * The blur radius, or the pixelate block edge, in stage pixels for a blur or pixelate mask: its
- * strength times the panel's width, times the zoom scale, since a zoom magnifies the content the
- * mask hides. Preview, Copy frame and export all map the strength through this, so they agree at
- * any render size. Undefined for `solid` and `spotlight`.
+ * The blur radius, or the pixelate block edge, for a blur or pixelate mask: its strength times the
+ * panel's width, times the zoom scale once, since a zoom magnifies the content the mask hides. The
+ * result is in the units of the `panel` you pass in (stage pixels for a stage rect, render pixels
+ * for a render rect). Undefined for `solid` and `spotlight`.
  */
 export function maskStrengthPx(
   mask: Mask,
