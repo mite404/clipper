@@ -3,23 +3,17 @@ import { MAX_FRAMES } from './timeline-model';
 
 /**
  * What a mask does to the screen panel: `solid` paints over the region, `spotlight` dims everything
- * outside it. Blur and pixelate are not here until the owner picks them.
+ * outside it, `blur` blurs the region and `pixelate` turns it into coarse blocks (a mosaic).
  */
-const MASK_KINDS = ['solid', 'spotlight'] as const;
-export type MaskKind = (typeof MASK_KINDS)[number];
+const MASK_KINDS = ['solid', 'spotlight', 'blur', 'pixelate'] as const;
+const STRENGTH_KINDS = ['blur', 'pixelate'] as const;
 
-/**
- * A timed region of the screen panel. It lives on the timeline like a zoom (frames, not source
- * time) and, unlike zooms, may overlap others. The rect is in fractions of the panel at camera
- * scale 1, so it follows crop, zoom and pan with the content it covers. Screen panel only.
- */
-export type Mask = {
+type MaskBase = {
   id: string;
   /** First frame it shows on. */
   start: number;
   /** Frames it shows for; it is gone from frame `start + duration`. */
   duration: number;
-  kind: MaskKind;
   /** Left edge, 0 to 1 of the panel width. */
   x: number;
   /** Top edge, 0 to 1 of the panel height. */
@@ -28,12 +22,49 @@ export type Mask = {
   width: number;
   /** 0 to 1 of the panel height. */
   height: number;
-  /** 0 to 1: how strongly the solid fill or the dimming shows. */
-  opacity: number;
 };
 
-/** Smallest mask: whole frames and fractions of the panel; nothing a viewer could not see. */
-export const MASK_LIMITS = { minFrames: 6, minSize: 0.02, minOpacity: 0.05 };
+/**
+ * A timed region of the screen panel. It lives on the timeline like a zoom (frames, not source
+ * time) and, unlike zooms, may overlap others. The rect is in fractions of the panel at camera
+ * scale 1, anchored to the screen panel after crop; it follows zoom and pan with the content it
+ * covers. Screen panel only.
+ *
+ * `solid` and `spotlight` have an `opacity`: how strongly the fill or the dimming shows. `blur` and
+ * `pixelate` are always fully applied, so they have no opacity and take a `strength` instead.
+ */
+export type Mask = MaskBase &
+  (
+    | {
+        kind: 'solid' | 'spotlight';
+        /** 0 to 1: how strongly the solid fill or the dimming shows. */
+        opacity: number;
+        strength?: undefined;
+      }
+    | {
+        kind: 'blur' | 'pixelate';
+        /**
+         * How hard the video underneath is to read, as a fraction of the screen panel's width at
+         * camera scale 1, so it does not depend on the export size. For `blur` it is the blur
+         * radius, for `pixelate` the edge of one block; see {@link maskStrengthPx}.
+         */
+        strength: number;
+        opacity?: undefined;
+      }
+  );
+
+/**
+ * Smallest mask: whole frames and fractions of the panel; nothing a viewer could not see. Strength
+ * runs from half a percent of the panel width, barely softening, to a tenth of it, which no text
+ * survives.
+ */
+export const MASK_LIMITS = {
+  minFrames: 6,
+  minSize: 0.02,
+  minOpacity: 0.05,
+  minStrength: 0.005,
+  maxStrength: 0.1,
+};
 
 const EPSILON = 1e-9; // → slack for fractions that sum to 1 in floating point
 
@@ -59,6 +90,21 @@ export function maskOnStage(
     width: mask.width * panel.width * view.scale,
     height: mask.height * panel.height * view.scale,
   };
+}
+
+/**
+ * The blur radius, or the pixelate block edge, in stage pixels for a blur or pixelate mask: its
+ * strength times the panel's width, times the zoom scale, since a zoom magnifies the content the
+ * mask hides. Preview, Copy frame and export all map the strength through this, so they agree at
+ * any render size. Undefined for `solid` and `spotlight`.
+ */
+export function maskStrengthPx(
+  mask: Mask,
+  panel: Rect,
+  camera?: Parameters<typeof cameraTransform>[1],
+): number | undefined {
+  if (mask.strength === undefined) return undefined;
+  return mask.strength * panel.width * (camera?.scale ?? 1);
 }
 
 const clamp = (value: number, low: number, high: number) => Math.min(high, Math.max(low, value));
@@ -105,6 +151,12 @@ export function validateMask(mask: Mask): Mask {
   between(mask.height, MASK_LIMITS.minSize, 1, 'height');
   if (mask.x + mask.width > 1 + EPSILON || mask.y + mask.height > 1 + EPSILON)
     fail('rect', 'inside the panel');
-  between(mask.opacity, MASK_LIMITS.minOpacity, 1, 'opacity');
+  if ((STRENGTH_KINDS as readonly string[]).includes(mask.kind)) {
+    if (mask.opacity !== undefined) fail('opacity', 'absent for blur and pixelate');
+    between(mask.strength as number, MASK_LIMITS.minStrength, MASK_LIMITS.maxStrength, 'strength');
+  } else {
+    if (mask.strength !== undefined) fail('strength', 'absent for solid and spotlight');
+    between(mask.opacity as number, MASK_LIMITS.minOpacity, 1, 'opacity');
+  }
   return mask;
 }

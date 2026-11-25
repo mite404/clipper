@@ -4,23 +4,30 @@ import {
   activeMasks,
   clampMaskRect,
   maskOnStage,
+  maskStrengthPx,
   validateMask,
   type Mask,
 } from './masks';
 import { MAX_FRAMES } from './timeline-model';
 
-const mask = (over: Partial<Mask> = {}): Mask => ({
-  id: 'm1',
-  start: 30,
-  duration: 60,
-  kind: 'solid',
-  x: 0.25,
-  y: 0.5,
-  width: 0.5,
-  height: 0.25,
-  opacity: 1,
-  ...over,
-});
+// Loosely typed on purpose: the tests build the invalid masks the validator must refuse.
+const mask = (over: Record<string, unknown> = {}): Mask =>
+  ({
+    id: 'm1',
+    start: 30,
+    duration: 60,
+    kind: 'solid',
+    x: 0.25,
+    y: 0.5,
+    width: 0.5,
+    height: 0.25,
+    opacity: 1,
+    ...over,
+  }) as Mask;
+
+// Blur and pixelate are always fully applied, so they carry a strength and no opacity.
+const strong = (kind: 'blur' | 'pixelate', strength: number, over: Record<string, unknown> = {}) =>
+  mask({ kind, strength, opacity: undefined, ...over });
 
 describe('activeMasks', () => {
   it('holds a mask from its first frame up to, not including, start + duration', () => {
@@ -65,6 +72,28 @@ describe('maskOnStage', () => {
   });
 });
 
+describe('maskStrengthPx', () => {
+  const panel = { x: 100, y: 50, width: 800, height: 400 };
+
+  it('is the strength as a fraction of the panel width, so every output size gets the same look', () => {
+    expect(maskStrengthPx(strong('blur', 0.02), panel)).toBe(16);
+    expect(maskStrengthPx(strong('pixelate', 0.05), panel)).toBe(40);
+    // The same panel at twice the render size doubles the pixels, not the look.
+    const big = { ...panel, width: 1600, height: 800 };
+    expect(maskStrengthPx(strong('blur', 0.02), big)).toBe(32);
+  });
+
+  it('grows with the zoom camera, since the content it hides grows too', () => {
+    expect(maskStrengthPx(strong('blur', 0.02), panel, { scale: 2, x: 5, y: -5 })).toBe(32);
+    expect(maskStrengthPx(strong('blur', 0.02), panel, { scale: 1, x: 0, y: 0 })).toBe(16);
+  });
+
+  it('has none for solid and spotlight', () => {
+    expect(maskStrengthPx(mask(), panel)).toBeUndefined();
+    expect(maskStrengthPx(mask({ kind: 'spotlight' }), panel)).toBeUndefined();
+  });
+});
+
 describe('clampMaskRect', () => {
   it('pulls a rect back inside the panel without changing a rect already inside', () => {
     expect(clampMaskRect(mask())).toEqual(mask());
@@ -90,14 +119,38 @@ describe('validateMask', () => {
       mask({ start: 0, duration: MASK_LIMITS.minFrames, opacity: 1 }),
       mask({ x: 0, y: 0, width: 1, height: 1 }),
       mask({ start: MAX_FRAMES - 10, duration: 10 }),
+      strong('blur', 0.03),
+      strong('pixelate', 0.03),
+      strong('blur', MASK_LIMITS.minStrength),
+      strong('pixelate', MASK_LIMITS.maxStrength),
     ])
       expect(validateMask(ok)).toBe(ok);
   });
 
+  it('takes blur and pixelate with a strength and no opacity, and refuses the other combinations', () => {
+    const bad: [Record<string, unknown>, RegExp][] = [
+      [strong('blur', 0.03, { strength: undefined }), /mask\.strength/],
+      [strong('pixelate', 0.03, { strength: undefined }), /mask\.strength/],
+      [strong('blur', MASK_LIMITS.minStrength / 2), /mask\.strength/],
+      [strong('pixelate', 0), /mask\.strength/],
+      [strong('blur', MASK_LIMITS.maxStrength * 1.01), /mask\.strength/],
+      [strong('pixelate', Number.NaN), /mask\.strength/],
+      [strong('blur', Number.POSITIVE_INFINITY), /mask\.strength/],
+      [strong('blur', 0.03, { opacity: 0.5 }), /mask\.opacity/],
+      [strong('pixelate', 0.03, { opacity: 1 }), /mask\.opacity/],
+      [mask({ strength: 0.03 }), /mask\.strength/],
+      [mask({ kind: 'spotlight', strength: 0.03 }), /mask\.strength/],
+      [strong('blur', 0.03, { x: 0.6, width: 0.5 }), /inside the panel/],
+    ];
+    for (const [over, message] of bad) expect(() => validateMask(mask(over))).toThrow(message);
+    // Solid and spotlight still need their opacity.
+    expect(() => validateMask(mask({ opacity: undefined }))).toThrow(/mask\.opacity/);
+  });
+
   it('rejects what it cannot draw faithfully, naming the field', () => {
-    const bad: [Partial<Mask>, RegExp][] = [
+    const bad: [Record<string, unknown>, RegExp][] = [
       [{ id: '' }, /mask\.id/],
-      [{ kind: 'blur' as Mask['kind'] }, /mask\.kind/],
+      [{ kind: 'mosaic' }, /mask\.kind/],
       [{ start: -1 }, /mask\.start/],
       [{ start: 1.5 }, /mask\.start/],
       [{ duration: 0 }, /mask\.duration/],
