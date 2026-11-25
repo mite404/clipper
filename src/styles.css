@@ -3639,6 +3639,17 @@ input[type='number'],
   /* ponytail: sized for a three-option list; raise it if a footer control grows a taller popup. */
   margin: 0 12px 120px auto;
 }
+/* ui-sdk raises the toast layer above every popup, so a toast over an open dialog covers its controls
+   and takes their clicks, and an error toast's Dismiss would run a command under it or be reached by
+   F6 and Tab. While a dialog is open (a native modal, or a ui-sdk dialog: the suffix matches the slot
+   name, not modality) the toast list is hidden: no pointer, focus or accessibility-tree presence. The
+   announcement still goes through ui-sdk's own live regions, filled from the toast's text nodes, so
+   hiding the list does not change it. Whether a screen reader speaks it is not guaranteed: in the
+   native Help and Export dialogs Chromium's accessibility tree does not expose those regions, a
+   limit that predates this rule. The toasts come back when the dialog closes. */
+body:has(dialog:modal, [data-slot$='dialog-content']:popover-open) [data-slot='toast-region'] {
+  visibility: hidden;
+}
 [data-slot='toast-region'][data-expanded] {
   height: calc(var(--toast-stack-height) + (var(--toast-count) - 1) * 8px);
 }
