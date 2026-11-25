@@ -1423,10 +1423,10 @@ CLIP-24 unit 1 is reviewer LAND at `8b2eef3` (chain `8f897ea`, `e7c4a43`, `e6ca2
 only new pure files (`src/masks.ts` and its test) with no caller, so it is not a shared editor
 change; gates were format, lint, typed lint, typecheck, tsc, ticket audit, Fallow without baseline
 growth, unit 414/414, app and Storybook builds, and diff check, all passing. The browser sweep waits
-for the wiring unit; CI runs the full pipeline. CLIP-16 unit 1 `86d2b49` (ref
-`candidate/clip-16-retime-86d2b49`) got a second CHANGES: the last output frames at 2x sample the
-excluded source frame, and an epsilon drops a real end after chained speeds. The fix is with the
-light lane.
+for the wiring unit; CI runs the full pipeline. Delivered: pushed `3be178b`, exact-SHA CI45664718436
+green 2026-11-25. CLIP-16 unit 1 `86d2b49` (ref `candidate/clip-16-retime-86d2b49`) got a second
+CHANGES: the last output frames at 2x sample the excluded source frame, and an epsilon drops a real
+end after chained speeds. The fix is with the light lane.
 
 Caption fix acceptance (2026-11-25): the full gate run passed 329/329 in the browser, but Fallow
 failed: `Inspector` reached CRAP 30.0. The coordinator added `6a06e00` (aspect label moved to a
@@ -1437,18 +1437,28 @@ Fallow included; the browser sweep passed 328/329. The only miss was `performanc
 (cursor-follow cadence, rafP75 66.6 ms against 42). It failed 3/3 on `6a06e00` and 3/3 on unchanged
 `af02562` in the same orb, so it is the known orb CPU limit (REF-37), not this change; exact-SHA CI
 decides. Delivered: pushed `6219031` (fix chain plus ledger), exact-SHA CI45659178566 green
-2026-11-25; promotion requested from the preview owner. CLIP-16 `cc970f2` (after `1cf0b35`) fixed
-the in point and fractional samples, but got CHANGES: a decoder probe shows the end-minus-epsilon
-tail still decodes the excluded frame. `5b52c10` holds the tail at `ceil(end) - 1`. That passes on
-30 fps footage but rewinds the last picture on 60 fps footage, because it rounds on the edit grid.
+2026-11-25; promoted to the canonical preview by T-6dd30293 (public revision and assets byte-match
+the release; 16:9 default and 1:1 square checked at all qualities, with Undo and reopen); `af02562`
+is kept for rollback. Follow-up granted to the light lane: the preview footer's quality select and
+Fit control touch. Fix `871c057` on `3be178b` (`gap: 6px` on `.compose-caption`, ref
+`candidate/preview-gap-871c057`): reviewer LAND (0 to 6 px at 360, 620, 625 and 1440 with the layout
+name, Fit and the fallback span unmoved, rows stay 18 px, no overflow), queued; as a shared CSS
+change it needs the full browser sweep at acceptance. CLIP-16 `cc970f2` (after `1cf0b35`) fixed the
+in point and fractional samples, but got CHANGES: a decoder probe shows the end-minus-epsilon tail
+still decodes the excluded frame. `5b52c10` holds the tail at `ceil(end) - 1`. That passes on 30 fps
+footage but rewinds the last picture on 60 fps footage, because it rounds on the edit grid.
 Coordinator decision on resume: drop the uncalled `videoSampleAt` from unit 1 and keep `sourceAt`
 with its exclusive end. The render unit then holds the last decoded picture by source presentation
 timestamp, with the reviewer's 30 fps and 60 fps decoder probes as regressions. Light lane `55b0fb6`
 on `5b52c10` drops `videoSampleAt`; reviewer LAND on `55b0fb6` (ref
-`candidate/clip-16-retime-55b0fb6`), queued for acceptance. Render unit contract: draw the picture
-with the greatest source PTS below the cut, also on a direct seek into the tail, and keep both
-probes (240, 241, 241, 241 on 60 fps). P3 for that unit: the test comment should say 30 fps edit
-grid, 60 fps source, 120 fps output.
+`candidate/clip-16-retime-55b0fb6`), queued for acceptance. Accepted 2026-11-25 as one commit
+`24f8a4a` on `3be178b`, with `src/retime.ts` and its test byte-identical to the reviewed `55b0fb6`
+tree (the six iteration commits are folded). It adds only new pure files with no caller; format,
+lint, typed lint, typecheck, tsc, ticket audit, Fallow, unit 444/444, both builds and diff check
+pass; pushed on `3be178b` after its CI was green; Delivered waits on exact-SHA CI. Render unit
+contract: draw the picture with the greatest source PTS below the cut, also on a direct seek into
+the tail, and keep both probes (240, 241, 241, 241 on 60 fps). P3 for that unit: the test comment
+should say 30 fps edit grid, 60 fps source, 120 fps output.
 
 CLIP-13 scope (light lane, 2026-11-25): temporal sampling with independent cursor, zoom and pan
 strengths (0 is off), exact accumulation in export and Copy frame, exact cursor ghosts and an
