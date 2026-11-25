@@ -1138,6 +1138,9 @@ function MaskBounds({
   );
 }
 
+// Kept outside Inspector so the aspect branch doesn't count against its complexity.
+const aspectLabel = ({ aspect }: Layout) => (aspect === 'square' ? '1:1' : '16:9');
+
 /** Editing controls for a selected zoom and the two composition masks. */
 export function Inspector({
   zoom,
@@ -1186,7 +1189,7 @@ export function Inspector({
       </div>
       <div className="inspector-section">
         <h3>
-          Composition <span>{layout.aspect === 'square' ? '1:1' : '16:9'}</span>
+          Composition <span>{aspectLabel(layout)}</span>
         </h3>
         <LayoutChoice layout={layout} onLayout={onLayout} />
         <label className="slider-label">
